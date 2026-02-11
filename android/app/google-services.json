@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1030635596347",
+    "project_id": "kktc-market-dfda7",
+    "storage_bucket": "kktc-market-dfda7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1030635596347:android:ce34ce14d2b3e26ff14a1e",
+        "android_client_info": {
+          "package_name": "com.kktcmarket.kktc_market"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCnJtvQ5GI-Z-uxKGwvLfFQ02XAq1tBthQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
