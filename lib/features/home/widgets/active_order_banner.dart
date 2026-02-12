@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:kktc_market/models/order.dart' as model;
-import 'package:kktc_market/features/orders/order_detail_page.dart';
+import 'package:hoppa/models/order.dart' as model;
+import 'package:hoppa/features/orders/order_detail_page.dart';
 
 class ActiveOrderBanner extends StatelessWidget {
   final model.Order order;

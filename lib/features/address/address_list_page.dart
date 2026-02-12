@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:kktc_market/core/services/address_service.dart';
-import 'package:kktc_market/models/address.dart';
-import 'package:kktc_market/features/address/add_address_page.dart';
+import 'package:hoppa/core/services/address_service.dart';
+import 'package:hoppa/models/address.dart';
+import 'package:hoppa/features/address/add_address_page.dart';
 
 class AddressListPage extends StatelessWidget {
   final bool isSelectionMode;
@@ -39,8 +39,9 @@ class AddressListPage extends StatelessWidget {
             child: StreamBuilder<List<Address>>(
               stream: addressService.getUserAddresses(),
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting)
+                if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
+                }
 
                 final addresses = snapshot.data ?? [];
 

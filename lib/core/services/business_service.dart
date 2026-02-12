@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kktc_market/models/business.dart';
-import 'package:kktc_market/models/business_type.dart';
+import 'package:hoppa/models/business.dart';
+import 'package:hoppa/models/business_type.dart';
 
 class BusinessService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;

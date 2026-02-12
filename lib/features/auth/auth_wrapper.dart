@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:kktc_market/core/services/auth_service.dart';
-import 'package:kktc_market/features/auth/login_page.dart';
-import 'package:kktc_market/features/main_layout/main_layout_page.dart';
+import 'package:hoppa/core/services/auth_service.dart';
+import 'package:hoppa/features/auth/login_page.dart';
+import 'package:hoppa/features/main_layout/main_layout_page.dart';
 
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});

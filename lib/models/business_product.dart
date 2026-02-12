@@ -1,4 +1,4 @@
-import 'package:kktc_market/models/product.dart';
+import 'package:hoppa/models/product.dart';
 
 class BusinessProduct {
   final String id; // Envanter ID'si

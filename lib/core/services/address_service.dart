@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kktc_market/core/services/auth_service.dart';
-import 'package:kktc_market/models/address.dart';
+import 'package:hoppa/core/services/auth_service.dart';
+import 'package:hoppa/models/address.dart';
 
 class AddressService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -37,8 +37,9 @@ class AddressService {
 
   // Adres Güncelle
   Future<void> updateAddress(Address address) async {
-    if (address.id.isEmpty)
+    if (address.id.isEmpty) {
       throw Exception("Güncellenecek adresin ID'si eksik!");
+    }
     await _addressRef.doc(address.id).update(address.toMap());
   }
 }

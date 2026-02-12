@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:kktc_market/features/home/product_provider.dart';
-import 'package:kktc_market/features/home/widgets/modern_product_card.dart';
-import 'package:kktc_market/core/services/navigation_provider.dart';
+import 'package:hoppa/features/home/product_provider.dart';
+import 'package:hoppa/features/home/widgets/modern_product_card.dart';
+import 'package:hoppa/core/services/navigation_provider.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});

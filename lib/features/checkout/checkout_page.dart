@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:kktc_market/core/services/auth_service.dart';
-import 'package:kktc_market/models/address.dart';
-import 'package:kktc_market/features/address/delivery_provider.dart';
-import 'package:kktc_market/features/business/business_provider.dart';
-import 'package:kktc_market/features/checkout/payment_page.dart';
-import 'package:kktc_market/core/widgets/animated_sliding_toggle.dart';
-import 'package:kktc_market/features/address/address_list_page.dart';
+import 'package:hoppa/core/services/auth_service.dart';
+import 'package:hoppa/models/address.dart';
+import 'package:hoppa/features/address/delivery_provider.dart';
+import 'package:hoppa/features/business/business_provider.dart';
+import 'package:hoppa/features/checkout/payment_page.dart';
+import 'package:hoppa/core/widgets/animated_sliding_toggle.dart';
+import 'package:hoppa/features/address/address_list_page.dart';
 
 class CheckoutPage extends StatefulWidget {
   const CheckoutPage({super.key});
@@ -117,14 +117,15 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   String _getDeliverySummaryText() {
     String typeText = _isPickUp ? "Teslim alma zamanı:" : "Teslimat zamanı:";
-    if (!_isScheduled)
+    if (!_isScheduled) {
       return "$typeText Ortalama ${_isPickUp ? '15-20' : '25-45'} dakika.";
+    }
     if (_selectedTimeSlot == null) return "Lütfen bir saat aralığı seçiniz.";
 
     String dayName = "";
-    if (_selectedDayIndex == 0)
+    if (_selectedDayIndex == 0) {
       dayName = "Bugün";
-    else if (_selectedDayIndex == 1)
+    } else if (_selectedDayIndex == 1)
       dayName = "Yarın";
     else {
       final date = DateTime.now().add(Duration(days: _selectedDayIndex));
@@ -534,9 +535,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
                             Duration(days: index),
                           );
                           String dayName;
-                          if (index == 0)
+                          if (index == 0) {
                             dayName = "Bugün";
-                          else if (index == 1)
+                          } else if (index == 1)
                             dayName = "Yarın";
                           else
                             dayName = DateFormat(

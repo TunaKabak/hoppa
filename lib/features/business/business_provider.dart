@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:kktc_market/models/business.dart';
+import 'package:hoppa/models/business.dart';
 
 class BusinessProvider extends ChangeNotifier {
   Business? _selectedBusiness;

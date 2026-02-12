@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kktc_market/core/services/order_service.dart';
+import 'package:hoppa/core/services/order_service.dart';
 
 class MerchantOrderListPage extends StatelessWidget {
   final String? filterStatus;
@@ -18,8 +18,9 @@ class MerchantOrderListPage extends StatelessWidget {
       body: StreamBuilder<QuerySnapshot>(
         stream: orderService.getIncomingOrders(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData)
+          if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
+          }
 
           var orders = snapshot.data!.docs;
 

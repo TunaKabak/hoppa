@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:kktc_market/models/business_product.dart';
-import 'package:kktc_market/features/cart/cart_provider.dart';
+import 'package:hoppa/models/business_product.dart';
+import 'package:hoppa/features/cart/cart_provider.dart';
 
 class ModernProductCard extends StatelessWidget {
   final BusinessProduct businessProduct;

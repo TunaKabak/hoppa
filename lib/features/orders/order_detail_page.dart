@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:kktc_market/models/order.dart' as model;
+import 'package:hoppa/models/order.dart' as model;
 
 class OrderDetailPage extends StatelessWidget {
   final model.Order order;

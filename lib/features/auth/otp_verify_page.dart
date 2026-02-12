@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:kktc_market/core/services/auth_service.dart';
-import 'package:kktc_market/features/auth/widgets/auth_layout.dart';
+import 'package:hoppa/core/services/auth_service.dart';
+import 'package:hoppa/features/auth/widgets/auth_layout.dart';
 
 class OtpVerifyPage extends StatefulWidget {
   final String verificationId;

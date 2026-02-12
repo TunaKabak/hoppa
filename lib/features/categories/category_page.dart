@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:kktc_market/features/home/product_provider.dart';
-import 'package:kktc_market/core/services/navigation_provider.dart';
+import 'package:hoppa/features/home/product_provider.dart';
+import 'package:hoppa/core/services/navigation_provider.dart';
 
 class CategoryPage extends StatelessWidget {
   const CategoryPage({super.key});

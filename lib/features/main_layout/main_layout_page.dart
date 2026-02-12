@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 
 import 'package:provider/provider.dart';
-import 'package:kktc_market/features/home/home_page.dart';
-import 'package:kktc_market/features/cart/cart_page.dart';
-import 'package:kktc_market/features/cart/cart_provider.dart';
-import 'package:kktc_market/features/profile/profile_page.dart';
-import 'package:kktc_market/core/services/navigation_provider.dart'; // YENİ
+import 'package:hoppa/features/home/home_page.dart';
+import 'package:hoppa/features/cart/cart_page.dart';
+import 'package:hoppa/features/cart/cart_provider.dart';
+import 'package:hoppa/features/profile/profile_page.dart';
+import 'package:hoppa/core/services/navigation_provider.dart'; // YENİ
 
-import 'package:kktc_market/features/business/business_provider.dart'; // YENİ
-import 'package:kktc_market/features/home/search_page.dart';
-import 'package:kktc_market/core/services/auth_service.dart';
+import 'package:hoppa/features/business/business_provider.dart'; // YENİ
+import 'package:hoppa/features/home/search_page.dart';
+import 'package:hoppa/core/services/auth_service.dart';
 
 class MainLayoutPage extends StatefulWidget {
   const MainLayoutPage({super.key});

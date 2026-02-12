@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kktc_market/features/cart/cart_provider.dart';
-import 'package:kktc_market/models/order.dart' as model; // Alias added
+import 'package:hoppa/features/cart/cart_provider.dart';
+import 'package:hoppa/models/order.dart' as model; // Alias added
 
 class OrderService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -102,7 +102,6 @@ class OrderService {
     return _db
         .collection('orders')
         .where('user_id', isEqualTo: userId)
-        .where('status', whereIn: ['pending', 'preparing', 'on_way'])
         .orderBy('created_at', descending: true)
         .limit(1)
         .snapshots()

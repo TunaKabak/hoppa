@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kktc_market/core/services/auth_service.dart';
-import 'package:kktc_market/features/address/delivery_provider.dart';
-import 'package:kktc_market/features/address/address_list_page.dart';
-import 'package:kktc_market/features/business/business_provider.dart';
-import 'package:kktc_market/features/business/widgets/category_grid_item.dart';
-import 'package:kktc_market/features/home/widgets/promo_slider.dart';
+import 'package:hoppa/core/services/auth_service.dart';
+import 'package:hoppa/features/address/delivery_provider.dart';
+import 'package:hoppa/features/address/address_list_page.dart';
+import 'package:hoppa/features/business/business_provider.dart';
+import 'package:hoppa/features/business/widgets/category_grid_item.dart';
+import 'package:hoppa/features/home/widgets/promo_slider.dart';
 
 class SelectionCategoryPage extends StatelessWidget {
   const SelectionCategoryPage({super.key});
@@ -237,7 +237,7 @@ class _SelectionHeader extends StatelessWidget {
                 child: Row(
                   children: [
                     Icon(Icons.logout, color: Colors.red, size: 20),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Text("Çıkış Yap", style: TextStyle(color: Colors.red)),
                   ],
                 ),

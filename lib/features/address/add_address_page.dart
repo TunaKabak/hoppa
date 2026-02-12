@@ -3,9 +3,9 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:kktc_market/core/services/address_service.dart';
-import 'package:kktc_market/models/address.dart';
-import 'package:kktc_market/core/data/kktc_districts.dart';
+import 'package:hoppa/core/services/address_service.dart';
+import 'package:hoppa/models/address.dart';
+import 'package:hoppa/core/data/kktc_districts.dart';
 
 class AddAddressPage extends StatefulWidget {
   final Address? addressToEdit; // Düzenlenecek adres (Opsiyonel)
@@ -226,8 +226,8 @@ class _AddAddressPageState extends State<AddAddressPage> {
                       initialZoom: 15.0,
                       onPositionChanged: (position, hasGesture) {
                         if (hasGesture) {
-                          _latitude = position.center!.latitude;
-                          _longitude = position.center!.longitude;
+                          _latitude = position.center.latitude;
+                          _longitude = position.center.longitude;
                         }
                       },
                       onMapEvent: (event) {

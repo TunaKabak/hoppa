@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.kktcmarket.kktc_market"
+    namespace = "com.hoppa.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,7 +21,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.kktcmarket.kktc_market"
+        applicationId = "com.hoppa.app"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

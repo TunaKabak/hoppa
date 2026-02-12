@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:kktc_market/core/services/navigation_provider.dart';
-import 'package:kktc_market/features/cart/cart_provider.dart';
+import 'package:hoppa/core/services/navigation_provider.dart';
+import 'package:hoppa/features/cart/cart_provider.dart';
 
 class CartPriceBadge extends StatelessWidget {
   const CartPriceBadge({super.key});

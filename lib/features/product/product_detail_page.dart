@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:kktc_market/features/cart/cart_provider.dart';
-import 'package:kktc_market/models/business_product.dart';
-import 'package:kktc_market/features/cart/widgets/cart_price_badge.dart'; // YENİ
+import 'package:hoppa/features/cart/cart_provider.dart';
+import 'package:hoppa/models/business_product.dart';
+import 'package:hoppa/features/cart/widgets/cart_price_badge.dart'; // YENİ
 import 'package:provider/provider.dart';
 
 class ProductDetailPage extends StatelessWidget {

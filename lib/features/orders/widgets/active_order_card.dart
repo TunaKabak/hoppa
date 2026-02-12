@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:kktc_market/core/services/order_service.dart';
-import 'package:kktc_market/models/order.dart' as model;
+import 'package:hoppa/core/services/order_service.dart';
+import 'package:hoppa/models/order.dart' as model;
 
 class ActiveOrderCard extends StatefulWidget {
-  const ActiveOrderCard({Key? key}) : super(key: key);
+  const ActiveOrderCard({super.key});
 
   @override
   State<ActiveOrderCard> createState() => _ActiveOrderCardState();
@@ -20,7 +20,7 @@ class _ActiveOrderCardState extends State<ActiveOrderCard> {
   void initState() {
     super.initState();
     if (_userId != null) {
-      _orderStream = _orderService.getActiveOrderStream(_userId!);
+      _orderStream = _orderService.getActiveOrderStream(_userId);
     } else {
       _orderStream = const Stream.empty();
     }
@@ -34,159 +34,180 @@ class _ActiveOrderCardState extends State<ActiveOrderCard> {
     return StreamBuilder<model.Order?>(
       stream: _orderStream,
       builder: (context, snapshot) {
-        if (!snapshot.hasData || snapshot.data == null) {
+        // Fail-Safe: Herhangi bir yüklenme, hata veya veri yok durumunda GİZLE
+        if (snapshot.connectionState == ConnectionState.waiting ||
+            snapshot.hasError ||
+            !snapshot.hasData ||
+            snapshot.data == null) {
           return const SizedBox.shrink();
         }
 
-        final order = snapshot.data!;
-        final status = order.status;
+        try {
+          final order = snapshot.data!;
+          final status = order.status;
 
-        return Card(
-          color: Colors.white,
-          elevation: 4,
-          shadowColor: Colors.black12,
-          margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(0),
-            child: Column(
-              children: [
-                InkWell(
-                  onTap: () {
-                    setState(() {
-                      _isExpanded = !_isExpanded;
-                    });
-                  },
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(16),
+          print('DEBUG: Gelen Sipariş Durumu: $status');
+
+          // Eğer sipariş tamamlanmış veya iptal edilmişse gösterme
+          if (status == 'delivered' || status == 'cancelled') {
+            return const SizedBox.shrink();
+          }
+
+          return Card(
+            color: Colors.white,
+            elevation: 4,
+            shadowColor: Colors.black12,
+            margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(0),
+              child: Column(
+                children: [
+                  InkWell(
+                    onTap: () {
+                      setState(() {
+                        _isExpanded = !_isExpanded;
+                      });
+                    },
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(16),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              _buildStatusIcon(status),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _getStatusText(status),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.black87,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Tahmini Teslimat: ${order.deliveryTime}',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(color: Colors.grey[600]),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(
+                                _isExpanded
+                                    ? Icons.keyboard_arrow_up
+                                    : Icons.keyboard_arrow_down,
+                                color: Colors.grey,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          _buildStepProgressBar(context, status),
+                        ],
+                      ),
+                    ),
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            _buildStatusIcon(status),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                  AnimatedCrossFade(
+                    firstChild: const SizedBox.shrink(),
+                    secondChild: Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: const BorderRadius.vertical(
+                          bottom: Radius.circular(16),
+                        ),
+                      ),
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Divider(height: 1),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Sipariş Özeti',
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black54,
+                                ),
+                          ),
+                          const SizedBox(height: 8),
+                          ...order.items.map(
+                            (item) => Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 4.0,
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    _getStatusText(status),
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.black87,
-                                        ),
+                                    '${item.quantity.toInt()}x ${item.name}',
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.black87,
+                                    ),
                                   ),
-                                  const SizedBox(height: 4),
                                   Text(
-                                    'Tahmini Teslimat: ${order.deliveryTime}',
-                                    style: Theme.of(context).textTheme.bodySmall
-                                        ?.copyWith(color: Colors.grey[600]),
+                                    '${item.price.toStringAsFixed(2)} ₺',
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
-                            Icon(
-                              _isExpanded
-                                  ? Icons.keyboard_arrow_up
-                                  : Icons.keyboard_arrow_down,
-                              color: Colors.grey,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        _buildStepProgressBar(context, status),
-                      ],
-                    ),
-                  ),
-                ),
-                AnimatedCrossFade(
-                  firstChild: const SizedBox.shrink(),
-                  secondChild: Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[50],
-                      borderRadius: const BorderRadius.vertical(
-                        bottom: Radius.circular(16),
+                          ),
+                          const SizedBox(height: 12),
+                          const Divider(),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Toplam',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                '${order.totalAmount.toStringAsFixed(2)} ₺',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.orange,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Divider(height: 1),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Sipariş Özeti',
-                          style: Theme.of(context).textTheme.titleSmall
-                              ?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black54,
-                              ),
-                        ),
-                        const SizedBox(height: 8),
-                        ...order.items.map(
-                          (item) => Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4.0),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  '${item.quantity.toInt()}x ${item.name}',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                                Text(
-                                  '${item.price.toStringAsFixed(2)} ₺',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        const Divider(),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Toplam',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            Text(
-                              '${order.totalAmount.toStringAsFixed(2)} ₺',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.orange,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+                    crossFadeState: _isExpanded
+                        ? CrossFadeState.showSecond
+                        : CrossFadeState.showFirst,
+                    duration: const Duration(milliseconds: 300),
                   ),
-                  crossFadeState: _isExpanded
-                      ? CrossFadeState.showSecond
-                      : CrossFadeState.showFirst,
-                  duration: const Duration(milliseconds: 300),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        );
+          );
+        } catch (e) {
+          // Veri işleme hatasında (örn: eksik alan, parse hatası) sessizce gizle
+          return const SizedBox.shrink();
+        }
       },
     );
   }

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:kktc_market/models/product.dart';
-import 'package:kktc_market/features/home/product_provider.dart';
-import 'package:kktc_market/features/home/widgets/modern_product_card.dart';
+import 'package:hoppa/features/home/product_provider.dart';
+import 'package:hoppa/features/home/widgets/modern_product_card.dart';
 
 class ProductSearchDelegate extends SearchDelegate {
   @override

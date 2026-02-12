@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:kktc_market/features/cart/cart_provider.dart';
-import 'package:kktc_market/features/checkout/checkout_page.dart';
-import 'package:kktc_market/core/services/navigation_provider.dart';
-import 'package:kktc_market/features/home/widgets/modern_product_card.dart';
+import 'package:hoppa/features/cart/cart_provider.dart';
+import 'package:hoppa/features/checkout/checkout_page.dart';
+import 'package:hoppa/core/services/navigation_provider.dart';
+import 'package:hoppa/features/home/widgets/modern_product_card.dart';
 
 class CartPage extends StatefulWidget {
   const CartPage({super.key});
@@ -36,7 +36,7 @@ class _CartPageState extends State<CartPage> {
         : 0;
 
     return Scaffold(
-      backgroundColor: colorScheme.background,
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
         title: Text(
           "Sepetim",

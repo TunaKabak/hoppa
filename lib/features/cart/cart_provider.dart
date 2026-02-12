@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:kktc_market/models/business_product.dart';
+import 'package:hoppa/models/business_product.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -82,9 +82,7 @@ class CartProvider extends ChangeNotifier {
                 quantity: (data['quantity'] as num).toDouble(),
               ),
             );
-            if (_currentBusinessId == null) {
-              _currentBusinessId = bp.businessId;
-            }
+            _currentBusinessId ??= bp.businessId;
           } catch (e) {
             print("Cart Parse Error: $e");
           }

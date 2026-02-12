@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:kktc_market/features/auth/auth_wrapper.dart';
+import 'package:hoppa/features/auth/auth_wrapper.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class SplashPage extends StatefulWidget {
@@ -30,7 +30,7 @@ class _SplashPageState extends State<SplashPage>
     _navigateToHome();
   }
 
-  _navigateToHome() async {
+  Future<void> _navigateToHome() async {
     await Future.delayed(const Duration(seconds: 3));
     if (mounted) {
       Navigator.pushReplacement(

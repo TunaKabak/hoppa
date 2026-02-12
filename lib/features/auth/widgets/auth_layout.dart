@@ -107,7 +107,7 @@ class _AuthLayoutState extends State<AuthLayout> with WidgetsBindingObserver {
             child: Image.asset(
               'assets/images/auth_bg.png',
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(color: Colors.white),
+              errorBuilder: (_, _, _) => Container(color: Colors.white),
             ),
           ),
 

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:kktc_market/models/address.dart';
+import 'package:hoppa/models/address.dart';
 
 class DeliveryProvider extends ChangeNotifier {
   Address? _selectedAddress;

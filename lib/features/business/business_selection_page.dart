@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:kktc_market/core/services/business_service.dart';
-import 'package:kktc_market/features/business/business_provider.dart';
-import 'package:kktc_market/features/home/product_provider.dart';
-import 'package:kktc_market/models/business.dart';
-import 'package:kktc_market/features/address/delivery_provider.dart';
-import 'package:kktc_market/features/address/address_list_page.dart';
+import 'package:hoppa/core/services/business_service.dart';
+import 'package:hoppa/features/business/business_provider.dart';
+import 'package:hoppa/features/home/product_provider.dart';
+import 'package:hoppa/models/business.dart';
+import 'package:hoppa/features/address/delivery_provider.dart';
+import 'package:hoppa/features/address/address_list_page.dart';
 import 'package:latlong2/latlong.dart'; // Mesafe hesaplama için
 
 class BusinessSelectionPage extends StatelessWidget {

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:kktc_market/core/services/order_service.dart';
-import 'package:kktc_market/core/services/auth_service.dart';
-import 'package:kktc_market/features/cart/cart_provider.dart';
-import 'package:kktc_market/models/address.dart';
+import 'package:hoppa/core/services/order_service.dart';
+import 'package:hoppa/core/services/auth_service.dart';
+import 'package:hoppa/features/cart/cart_provider.dart';
+import 'package:hoppa/models/address.dart';
 
 class PaymentPage extends StatefulWidget {
   final Address deliveryAddress;
@@ -240,7 +240,7 @@ class _PaymentPageState extends State<PaymentPage> {
                           Icons.notifications_off_outlined,
                           color: _dontRingBell ? kPrimaryColor : Colors.grey,
                         ),
-                        activeColor: kPrimaryColor,
+                        activeThumbColor: kPrimaryColor,
                         value: _dontRingBell,
                         onChanged: (val) => setState(() => _dontRingBell = val),
                       ),
@@ -391,7 +391,9 @@ class _PaymentPageState extends State<PaymentPage> {
                                                     .businessProduct
                                                     .product
                                                     .isWeighted
-                                                ? "${item.quantity.toStringAsFixed(1)}"
+                                                ? item.quantity.toStringAsFixed(
+                                                    1,
+                                                  )
                                                 : "${item.quantity.toInt()}",
                                             style: TextStyle(
                                               color: kPrimaryColor,

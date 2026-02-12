@@ -2,8 +2,8 @@ import 'dart:async'; // StreamSubscription için
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:kktc_market/core/services/order_service.dart';
-import 'package:kktc_market/features/merchant/merchant_order_list_page.dart';
+import 'package:hoppa/core/services/order_service.dart';
+import 'package:hoppa/features/merchant/merchant_order_list_page.dart';
 
 class MerchantDashboardPage extends StatefulWidget {
   const MerchantDashboardPage({super.key});

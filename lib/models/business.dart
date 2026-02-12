@@ -1,4 +1,4 @@
-import 'package:kktc_market/models/business_type.dart';
+import 'package:hoppa/models/business_type.dart';
 
 class Business {
   final String id;

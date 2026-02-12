@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:kktc_market/core/services/auth_service.dart';
-import 'package:kktc_market/core/services/order_service.dart';
-import 'package:kktc_market/core/widgets/animated_sliding_toggle.dart'; // YENİ BİLEŞEN
+import 'package:hoppa/core/services/auth_service.dart';
+import 'package:hoppa/core/services/order_service.dart';
+import 'package:hoppa/core/widgets/animated_sliding_toggle.dart'; // YENİ BİLEŞEN
 
 class OrderHistoryPage extends StatefulWidget {
   const OrderHistoryPage({super.key});

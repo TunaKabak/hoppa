@@ -1,5 +1,6 @@
 /// Core module exports
 /// Includes constants, services, and utilities
+library;
 
 export 'constants/app_colors.dart';
 export 'constants/app_strings.dart';

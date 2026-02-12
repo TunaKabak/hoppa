@@ -1,8 +1,8 @@
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kktc_market/core/data/dummy_products.dart';
-import 'package:kktc_market/models/business.dart';
-import 'package:kktc_market/models/business_type.dart';
+import 'package:hoppa/core/data/dummy_products.dart';
+import 'package:hoppa/models/business.dart';
+import 'package:hoppa/models/business_type.dart';
 
 class DatabaseSeeder {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -58,8 +58,9 @@ class DatabaseSeeder {
       if (item['category'] == 'Meyve & Sebze') isWeighted = true;
       if (item['category'] == 'Et & Kasap' &&
           (item['subCategory'] == 'Kırmızı Et' ||
-              item['subCategory'] == 'Beyaz Et'))
+              item['subCategory'] == 'Beyaz Et')) {
         isWeighted = true;
+      }
 
       Map<String, dynamic> globalData = {
         'barcode': barcode,

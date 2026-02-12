@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kktc_market/models/business_product.dart';
+import 'package:hoppa/models/business_product.dart';
 
 class ProductProvider extends ChangeNotifier {
   final FirebaseFirestore _db = FirebaseFirestore.instance;

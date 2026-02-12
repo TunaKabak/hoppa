@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:kktc_market/core/services/auth_service.dart';
-import 'package:kktc_market/core/services/language_provider.dart';
-import 'package:kktc_market/core/l10n/app_localizations.dart';
-import 'package:kktc_market/features/address/address_list_page.dart';
-import 'package:kktc_market/features/orders/order_history_page.dart';
-import 'package:kktc_market/features/auth/login_page.dart'; // Login importu
+import 'package:hoppa/core/services/auth_service.dart';
+import 'package:hoppa/core/services/language_provider.dart';
+import 'package:hoppa/core/l10n/app_localizations.dart';
+import 'package:hoppa/features/address/address_list_page.dart';
+import 'package:hoppa/features/orders/order_history_page.dart';
+import 'package:hoppa/features/auth/login_page.dart'; // Login importu
 
-import 'package:kktc_market/features/cart/cart_provider.dart';
-import 'package:kktc_market/core/services/database_seeder.dart'; // YENİ
+import 'package:hoppa/features/cart/cart_provider.dart';
+import 'package:hoppa/core/services/database_seeder.dart'; // YENİ
 
 import 'package:cloud_firestore/cloud_firestore.dart'; // YENİ
-import 'package:kktc_market/models/order.dart' as kktc_market; // Aliased
+import 'package:hoppa/models/order.dart' as kktc_market; // Aliased
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});

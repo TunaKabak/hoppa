@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:kktc_market/core/services/auth_service.dart';
-import 'package:kktc_market/core/services/database_seeder.dart';
-import 'package:kktc_market/features/auth/otp_verify_page.dart';
-import 'package:kktc_market/features/auth/register_page.dart';
-import 'package:kktc_market/features/auth/widgets/auth_layout.dart';
-import 'package:kktc_market/features/auth/widgets/auth_text_field.dart';
+import 'package:hoppa/core/services/auth_service.dart';
+import 'package:hoppa/core/services/database_seeder.dart';
+import 'package:hoppa/features/auth/otp_verify_page.dart';
+import 'package:hoppa/features/auth/register_page.dart';
+import 'package:hoppa/features/auth/widgets/auth_layout.dart';
+import 'package:hoppa/features/auth/widgets/auth_text_field.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class LoginPage extends StatefulWidget {

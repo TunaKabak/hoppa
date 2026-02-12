@@ -1,4 +1,4 @@
-package com.kktcmarket.kktc_market
+package com.hoppa.app
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:kktc_market/features/cart/cart_provider.dart';
-import 'package:kktc_market/features/home/product_provider.dart';
-import 'package:kktc_market/core/services/navigation_provider.dart';
-import 'package:kktc_market/features/business/business_provider.dart';
-import 'package:kktc_market/features/business/business_selection_page.dart';
-import 'package:kktc_market/features/business/selection_category_page.dart';
-import 'package:kktc_market/features/cart/widgets/cart_price_badge.dart';
-import 'package:kktc_market/features/home/widgets/modern_product_card.dart';
-import 'package:kktc_market/features/home/widgets/promo_slider.dart';
-import 'package:kktc_market/features/orders/widgets/active_order_card.dart';
-import 'package:kktc_market/features/product/product_detail_page.dart';
+import 'package:hoppa/features/cart/cart_provider.dart';
+import 'package:hoppa/features/home/product_provider.dart';
+import 'package:hoppa/core/services/navigation_provider.dart';
+import 'package:hoppa/features/business/business_provider.dart';
+import 'package:hoppa/features/business/business_selection_page.dart';
+import 'package:hoppa/features/business/selection_category_page.dart';
+import 'package:hoppa/features/cart/widgets/cart_price_badge.dart';
+import 'package:hoppa/features/home/widgets/modern_product_card.dart';
+import 'package:hoppa/features/home/widgets/promo_slider.dart';
+import 'package:hoppa/features/orders/widgets/active_order_card.dart';
+import 'package:hoppa/features/product/product_detail_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -30,7 +30,7 @@ class _HomePageState extends State<HomePage>
   List<GlobalKey> _subCategoryKeys = [];
 
   int _crossAxisCount = 2;
-  String _sortOption = 'Önerilen';
+  final String _sortOption = 'Önerilen';
 
   final List<String> _sortOptions = [
     'Önerilen',
@@ -509,19 +509,17 @@ class _HomePageState extends State<HomePage>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Active Order Banner (Self-contained)
-                  const Padding(
-                    padding: EdgeInsets.only(left: 16, right: 16, top: 16),
-                    child: ActiveOrderCard(),
-                  ),
-
-                  const SizedBox(height: 16),
-
                   if (productProvider.selectedCategory == 'Tümü')
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 16.0),
                       child: PromoSlider(),
                     ),
+
+                  // Active Order Banner (Moved here)
+                  const Padding(
+                    padding: EdgeInsets.only(left: 16, right: 16, bottom: 16),
+                    child: ActiveOrderCard(),
+                  ),
 
                   const SizedBox(height: 24),
 
