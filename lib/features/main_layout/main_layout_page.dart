@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:provider/provider.dart';
 import 'package:hoppa/features/home/home_page.dart';
@@ -93,7 +94,7 @@ class _MainLayoutPageState extends State<MainLayoutPage> {
 
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) async {
+      onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
 
         // 1. Profil Sekmesindeysek (Index 3)
@@ -113,10 +114,8 @@ class _MainLayoutPageState extends State<MainLayoutPage> {
         }
 
         // 3. Ana Sayfadayız (Index 0) -> Uygulamadan Çık
-        // canPop: false olduğu için manuel çıkış yapmamız lazım.
-        if (context.mounted) {
-          Navigator.of(context).pop();
-        }
+        // SystemNavigator.pop() ile düzgün çıkış yap (Android)
+        SystemNavigator.pop();
       },
       child: Scaffold(
         body: PageStorage(

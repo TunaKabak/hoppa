@@ -42,9 +42,8 @@ class AuthService {
       'email': user.email,
       'phone': user.phoneNumber,
       'uid': user.uid,
-      'marketId': 'market_1', // Kullanıcının varsayılan marketi
-      'name': ?name,
-      'surname': ?surname,
+      'name': name,
+      'surname': surname,
       'last_login': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }

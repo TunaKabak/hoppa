@@ -44,6 +44,12 @@ class ModernProductCard extends StatelessWidget {
               offset: const Offset(0, 2),
             ),
           ],
+          border: Border.all(
+            color: quantity > 0
+                ? const Color(0xFF00A651) // Hoppa green for items in cart
+                : Colors.grey.shade200,
+            width: quantity > 0 ? 2 : 1,
+          ),
         ),
         child: Row(
           children: [
@@ -146,7 +152,12 @@ class ModernProductCard extends StatelessWidget {
             offset: const Offset(0, 4),
           ),
         ],
-        border: Border.all(color: Colors.grey.shade100),
+        border: Border.all(
+          color: quantity > 0
+              ? const Color(0xFF00A651) // Hoppa green for items in cart
+              : Colors.grey.shade100,
+          width: quantity > 0 ? 2.5 : 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -395,8 +406,9 @@ class ModernProductCard extends StatelessWidget {
     );
   }
 
-  void _handleAdd(BuildContext context, CartProvider cartProvider) {
-    final result = cartProvider.addToCart(businessProduct);
+  void _handleAdd(BuildContext context, CartProvider cartProvider) async {
+    final result = await cartProvider.addToCart(businessProduct);
+    if (!context.mounted) return;
     if (result == AddToCartResult.marketConflict) {
       _showErrorDialog(context, cartProvider);
     } else if (result == AddToCartResult.outOfStock) {
@@ -422,7 +434,7 @@ class ModernProductCard extends StatelessWidget {
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
-              cartProvider.clearCart();
+              cartProvider.clearCart(deleteFromDb: true);
               cartProvider.addToCart(businessProduct);
             },
             child: const Text(

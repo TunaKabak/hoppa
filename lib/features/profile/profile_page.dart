@@ -12,6 +12,7 @@ import 'package:hoppa/core/services/database_seeder.dart'; // YENİ
 
 import 'package:cloud_firestore/cloud_firestore.dart'; // YENİ
 import 'package:hoppa/models/order.dart' as kktc_market; // Aliased
+import 'package:hoppa/models/order_status.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -38,7 +39,7 @@ class ProfilePage extends StatelessWidget {
             onPressed: () {
               Navigator.pop(context);
               auth.signOut();
-              cartProvider.clearCart(); // Sepeti Temizle
+              cartProvider.clearCart(deleteFromDb: true); // Sepeti Temizle
             },
             child: const Text(
               "Evet, Çıkış Yap",
@@ -433,7 +434,9 @@ class ProfilePage extends StatelessWidget {
                     id: 'test_order_${DateTime.now().millisecondsSinceEpoch}',
                     userId: auth.currentUser!.uid,
                     businessId: 'test_business',
-                    status: 'preparing', // Bu status banner'da görünmeli
+                    status: OrderStatus
+                        .preparing
+                        .value, // Bu status banner'da görünmeli
                     totalAmount: 150.0,
                     userAddress: 'Test Adresi',
                     items: [

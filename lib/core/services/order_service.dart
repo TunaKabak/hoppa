@@ -15,7 +15,11 @@ class OrderService {
     required String deliveryTime,
     required List<CartItem> items,
     required double totalAmount,
-    required bool isPickUp,
+    String deliveryMethod = 'delivery', // NEW: 'delivery' or 'pickup'
+    String orderNote = '', // NEW: User's order note
+    bool dontRingBell = false, // NEW: Doorbell preference
+    double addressLatitude = 0.0, // NEW: Address latitude
+    double addressLongitude = 0.0, // NEW: Address longitude
   }) async {
     if (items.isEmpty) return;
 
@@ -27,11 +31,15 @@ class OrderService {
         'business_id': businessId, // Dinamik Business ID
         'user_id': userId,
         'user_phone': userPhone,
-        'user_address': address,
+        'user_address': address, // Clean address, no prefixes or notes
         'delivery_time': deliveryTime,
         'total_amount': totalAmount,
         'payment_method': 'cash_on_delivery',
-        'is_pickup': isPickUp,
+        'delivery_method': deliveryMethod, // NEW: Separate field
+        'order_note': orderNote, // NEW: Separate field
+        'dont_ring_bell': dontRingBell, // NEW: Separate field
+        'address_latitude': addressLatitude, // NEW: Location field
+        'address_longitude': addressLongitude, // NEW: Location field
         'status': 'pending',
         'created_at': FieldValue.serverTimestamp(),
         'items': items.map((item) {
@@ -98,17 +106,28 @@ class OrderService {
   //       });
   // }
 
-  Stream<model.Order?> getActiveOrderStream(String userId) {
-    return _db
-        .collection('orders')
-        .where('user_id', isEqualTo: userId)
+  Stream<model.Order?> getActiveOrderStream(
+    String userId, {
+    String? businessId,
+  }) {
+    Query query = _db.collection('orders').where('user_id', isEqualTo: userId);
+
+    // Filter by businessId if provided
+    if (businessId != null) {
+      query = query.where('business_id', isEqualTo: businessId);
+    }
+
+    return query
         .orderBy('created_at', descending: true)
         .limit(1)
         .snapshots()
         .map((snapshot) {
           if (snapshot.docs.isNotEmpty) {
             final doc = snapshot.docs.first;
-            return model.Order.fromMap(doc.data(), doc.id);
+            return model.Order.fromMap(
+              doc.data() as Map<String, dynamic>,
+              doc.id,
+            );
           }
           return null;
         });

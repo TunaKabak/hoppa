@@ -50,35 +50,34 @@ class _PaymentPageState extends State<PaymentPage> {
       double deliveryFee = widget.isPickUp ? 0.0 : 20.0;
       double finalTotal = cart.totalAmount + deliveryFee;
 
-      String fullAddressNote =
+      // Clean address - just the actual address, no prefixes or notes
+      String cleanAddress =
           "${widget.deliveryAddress.title} - ${widget.deliveryAddress.formattedAddress}";
-      String userNote = _noteController.text.trim();
 
-      if (widget.isPickUp) {
-        fullAddressNote = "[GEL AL] $fullAddressNote";
-      }
+      // Delivery method
+      String deliveryMethod = widget.isPickUp ? 'pickup' : 'delivery';
 
-      if (_dontRingBell) {
-        userNote = userNote.isEmpty
-            ? "[ZİLİ ÇALMA!]"
-            : "$userNote - [ZİLİ ÇALMA!]";
-      }
+      // User's order note - just the text
+      String orderNote = _noteController.text.trim();
 
-      if (userNote.isNotEmpty) {
-        fullAddressNote += " (Not: $userNote)";
-      }
+      // Doorbell preference
+      bool dontRingBell = _dontRingBell;
 
       await orderService.createOrder(
         userId: auth.currentUser?.uid ?? 'guest',
         userPhone: widget.phoneNumber,
-        address: fullAddressNote,
+        address: cleanAddress, // Clean address only
         deliveryTime: widget.deliveryTime,
         items: cart.items,
         totalAmount: finalTotal,
-        isPickUp: widget.isPickUp, // YENİ: Bilgiyi gönderiyoruz
+        deliveryMethod: deliveryMethod, // Separate field
+        orderNote: orderNote, // Separate field
+        dontRingBell: dontRingBell, // Separate field
+        addressLatitude: widget.deliveryAddress.latitude, // Location data
+        addressLongitude: widget.deliveryAddress.longitude, // Location data
       );
 
-      cart.clearCart();
+      cart.clearCart(deleteFromDb: true);
       if (mounted) {
         Navigator.popUntil(context, (route) => route.isFirst);
         _showSuccessDialog();

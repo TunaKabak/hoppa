@@ -488,7 +488,7 @@ class _CartPageState extends State<CartPage> {
           ),
           TextButton(
             onPressed: () {
-              cart.clearCart();
+              cart.clearCart(deleteFromDb: true);
               Navigator.pop(context);
             },
             child: const Text(

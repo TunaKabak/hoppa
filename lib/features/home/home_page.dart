@@ -162,7 +162,10 @@ class _HomePageState extends State<HomePage>
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              Provider.of<CartProvider>(context, listen: false).clearCart();
+              Provider.of<CartProvider>(
+                context,
+                listen: false,
+              ).clearCart(deleteFromDb: true);
               Provider.of<BusinessProvider>(
                 context,
                 listen: false,
@@ -516,9 +519,13 @@ class _HomePageState extends State<HomePage>
                     ),
 
                   // Active Order Banner (Moved here)
-                  const Padding(
-                    padding: EdgeInsets.only(left: 16, right: 16, bottom: 16),
-                    child: ActiveOrderCard(),
+                  Padding(
+                    padding: const EdgeInsets.only(
+                      left: 16,
+                      right: 16,
+                      bottom: 16,
+                    ),
+                    child: ActiveOrderCard(businessId: selectedBusiness.id),
                   ),
 
                   const SizedBox(height: 24),

@@ -12,21 +12,64 @@ class SelectionCategoryPage extends StatelessWidget {
   const SelectionCategoryPage({super.key});
 
   static final List<Map<String, dynamic>> _categories = [
-    {'name': 'Market', 'icon': Icons.shopping_basket, 'color': Colors.green},
-    {'name': 'Restoran', 'icon': Icons.restaurant, 'color': Colors.orange},
-    {'name': 'Su', 'icon': Icons.water_drop, 'color': Colors.blue},
-    {'name': 'Kuruyemiş', 'icon': Icons.grain, 'color': Colors.brown},
-    {'name': 'Kahve', 'icon': Icons.coffee, 'color': Colors.brown.shade700},
-    {'name': 'Çiçek', 'icon': Icons.local_florist, 'color': Colors.pink},
+    {
+      'name': 'Market',
+      'icon': Icons.shopping_basket,
+      'color': Colors.green,
+      'badge': 'popular',
+      'businessCount': 45,
+      'avgDeliveryTime': '20-30 dk',
+      'subtitle': 'Market alışverişi',
+    },
+    {
+      'name': 'Restoran',
+      'icon': Icons.restaurant,
+      'color': Colors.orange,
+      'badge': 'popular',
+      'businessCount': 32,
+      'avgDeliveryTime': '25-35 dk',
+      'subtitle': 'Yemek siparişi',
+    },
+    {
+      'name': 'Su',
+      'icon': Icons.water_drop,
+      'color': Colors.blue,
+      'businessCount': 12,
+      'avgDeliveryTime': '15-25 dk',
+      'subtitle': 'Su ve içecek',
+    },
+    {
+      'name': 'Kuruyemiş',
+      'icon': Icons.grain,
+      'color': Colors.brown,
+      'badge': 'new',
+      'businessCount': 8,
+      'avgDeliveryTime': '20-30 dk',
+      'subtitle': 'Kuruyemiş çeşitleri',
+    },
+    {
+      'name': 'Kahve',
+      'icon': Icons.coffee,
+      'color': Colors.brown.shade700,
+      'businessCount': 18,
+      'avgDeliveryTime': '15-20 dk',
+      'subtitle': 'Kahve ve içecek',
+    },
+    {
+      'name': 'Çiçek',
+      'icon': Icons.local_florist,
+      'color': Colors.pink,
+      'businessCount': 6,
+      'avgDeliveryTime': '30-45 dk',
+      'subtitle': 'Çiçek siparişi',
+    },
   ];
 
   static const Map<String, String> _featuredImages = {
     'Market': 'assets/images/market_bg.png',
     'Restoran': 'assets/images/restaurant_bg.png',
-    'Su': 'assets/images/water_bg.png',
-    'Kahve': 'assets/images/coffee_bg.png',
-    'Kuruyemiş': 'assets/images/nuts_bg.png',
-    'Çiçek': 'assets/images/flowers_bg.png',
+    // Only Market and Restoran are featured with background images
+    // Other categories will show detailed info instead
   };
 
   @override
@@ -38,51 +81,78 @@ class SelectionCategoryPage extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
+            // FIXED HEADER
             const _SelectionHeader(),
             const SizedBox(height: 10),
-            const PromoSlider(),
-            const SizedBox(height: 24),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "İşletme Kategorisi",
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: GridView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 1.1,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                ),
-                itemCount: _categories.length,
-                itemBuilder: (context, index) {
-                  final cat = _categories[index];
-                  final catName = cat['name'] as String;
-                  final isFeatured = _featuredImages.containsKey(catName);
-                  final bgImage = _featuredImages[catName];
 
-                  return CategoryGridItem(
-                    category: cat,
-                    isFeatured: isFeatured,
-                    backgroundImage: bgImage,
-                    onTap: () {
-                      Provider.of<BusinessProvider>(
-                        context,
-                        listen: false,
-                      ).setCategory(catName);
-                    },
-                  );
-                },
+            // SCROLLABLE CONTENT
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Promo Slider (scrolls away)
+                    const PromoSlider(),
+                    const SizedBox(height: 24),
+
+                    // Category Title (scrolls with content)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        "İşletme Kategorisi",
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Category Grid (non-scrollable, expands to content)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: GridView.builder(
+                        shrinkWrap: true, // Takes only needed space
+                        physics:
+                            const NeverScrollableScrollPhysics(), // Disable internal scroll
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              childAspectRatio: 1.1,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                            ),
+                        itemCount: _categories.length,
+                        itemBuilder: (context, index) {
+                          final cat = _categories[index];
+                          final catName = cat['name'] as String;
+                          final isFeatured = _featuredImages.containsKey(
+                            catName,
+                          );
+                          final bgImage = _featuredImages[catName];
+
+                          return CategoryGridItem(
+                            category: cat,
+                            isFeatured: isFeatured,
+                            backgroundImage: bgImage,
+                            badge: cat['badge'] as String?,
+                            businessCount: cat['businessCount'] as int?,
+                            avgDeliveryTime: cat['avgDeliveryTime'] as String?,
+                            subtitle: cat['subtitle'] as String?,
+                            index: index,
+                            onTap: () {
+                              Provider.of<BusinessProvider>(
+                                context,
+                                listen: false,
+                              ).setCategory(catName);
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 16), // Bottom padding
+                  ],
+                ),
               ),
             ),
           ],

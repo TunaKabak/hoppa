@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hoppa/core/services/order_service.dart';
+import 'package:hoppa/models/order_status.dart';
 
 class MerchantOrderListPage extends StatelessWidget {
   final String? filterStatus;
@@ -24,15 +25,17 @@ class MerchantOrderListPage extends StatelessWidget {
 
           var orders = snapshot.data!.docs;
 
-          if (filterStatus == 'pending') {
-            orders = orders.where((d) => d['status'] == 'pending').toList();
+          if (filterStatus == OrderStatus.pending.value) {
+            orders = orders
+                .where((d) => d['status'] == OrderStatus.pending.value)
+                .toList();
           } else if (filterStatus == 'active') {
             orders = orders
                 .where(
                   (d) => [
-                    'preparing',
-                    'on_way',
-                    'ready_for_pickup',
+                    OrderStatus.preparing.value,
+                    OrderStatus.onWay.value,
+                    OrderStatus.readyForPickup.value,
                   ].contains(d['status']),
                 )
                 .toList();
@@ -66,7 +69,7 @@ class MerchantOrderListPage extends StatelessWidget {
   }
 
   String _getAppBarTitle() {
-    if (filterStatus == 'pending') return 'Onay Bekleyenler';
+    if (filterStatus == OrderStatus.pending.value) return 'Onay Bekleyenler';
     if (filterStatus == 'active') return 'Aktif Siparişler';
     return 'Tüm Siparişler';
   }
@@ -77,11 +80,12 @@ class MerchantOrderListPage extends StatelessWidget {
     OrderService service,
   ) {
     final data = orderDoc.data() as Map<String, dynamic>;
-    final status = data['status'] ?? 'pending';
+    final status = data['status'] ?? OrderStatus.pending.value;
     final items = (data['items'] as List<dynamic>);
 
     // YENİ: Gel Al kontrolü
-    final bool isPickUp = data['is_pickup'] ?? false;
+    final bool isPickUp =
+        (data['is_pickup'] ?? false) || (data['delivery_method'] == 'pickup');
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -198,43 +202,50 @@ class MerchantOrderListPage extends StatelessWidget {
     bool isPickUp,
     OrderService service,
   ) {
-    switch (status) {
-      case 'pending':
+    final statusEnum = OrderStatus.fromString(status);
+
+    switch (statusEnum) {
+      case OrderStatus.pending:
         return FilledButton.icon(
-          onPressed: () => service.updateOrderStatus(id, 'preparing'),
+          onPressed: () =>
+              service.updateOrderStatus(id, OrderStatus.preparing.value),
           icon: const Icon(Icons.check),
           label: const Text("ONAYLA"),
           style: FilledButton.styleFrom(backgroundColor: Colors.green),
         );
-      case 'preparing':
+      case OrderStatus.preparing:
         // Eğer Gel Al ise "Kuryeye Ver" yerine "Hazır, Müşteri Bekleniyor" butonunu göster
         if (isPickUp) {
           return FilledButton.icon(
-            onPressed: () => service.updateOrderStatus(id, 'ready_for_pickup'),
+            onPressed: () =>
+                service.updateOrderStatus(id, OrderStatus.readyForPickup.value),
             icon: const Icon(Icons.store),
-            label: const Text("HAZIR (BEKLİYOR)"),
+            label: Text(OrderStatus.readyForPickup.label),
             style: FilledButton.styleFrom(backgroundColor: Colors.teal),
           );
         } else {
           return FilledButton.icon(
-            onPressed: () => service.updateOrderStatus(id, 'on_way'),
+            onPressed: () =>
+                service.updateOrderStatus(id, OrderStatus.onWay.value),
             icon: const Icon(Icons.motorcycle),
             label: const Text("KURYEYE VER"),
             style: FilledButton.styleFrom(backgroundColor: Colors.blue),
           );
         }
-      case 'on_way':
+      case OrderStatus.onWay:
         return FilledButton.icon(
-          onPressed: () => service.updateOrderStatus(id, 'delivered'),
+          onPressed: () =>
+              service.updateOrderStatus(id, OrderStatus.delivered.value),
           icon: const Icon(Icons.done),
           label: const Text("TESLİM ET"),
           style: FilledButton.styleFrom(backgroundColor: Colors.grey),
         );
-      case 'ready_for_pickup': // Yeni Durum
+      case OrderStatus.readyForPickup: // Yeni Durum
         return FilledButton.icon(
-          onPressed: () => service.updateOrderStatus(id, 'delivered'),
-          icon: const Icon(Icons.handshake),
-          label: const Text("MÜŞTERİYE VERİLDİ"),
+          onPressed: () =>
+              service.updateOrderStatus(id, OrderStatus.delivered.value),
+          icon: const Icon(Icons.done_all),
+          label: const Text("TESLİM ET"),
           style: FilledButton.styleFrom(backgroundColor: Colors.green.shade700),
         );
       default:
@@ -243,18 +254,10 @@ class MerchantOrderListPage extends StatelessWidget {
   }
 
   Color _getStatusColor(String status) {
-    if (status == 'pending') return Colors.red;
-    if (status == 'preparing') return Colors.orange;
-    if (status == 'on_way') return Colors.blue;
-    if (status == 'ready_for_pickup') return Colors.teal; // Yeni renk
-    return Colors.green;
+    return OrderStatus.fromString(status).color;
   }
 
   IconData _getStatusIcon(String status) {
-    if (status == 'pending') return Icons.notifications_active;
-    if (status == 'preparing') return Icons.inventory;
-    if (status == 'on_way') return Icons.directions_bike;
-    if (status == 'ready_for_pickup') return Icons.shopping_bag; // Yeni ikon
-    return Icons.check_circle;
+    return OrderStatus.fromString(status).icon;
   }
 }

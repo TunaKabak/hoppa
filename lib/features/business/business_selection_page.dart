@@ -17,10 +17,11 @@ class BusinessSelectionPage extends StatelessWidget {
   Widget build(BuildContext context) {
     const kPrimaryColor = Color(0xFF00A651);
 
-    return WillPopScope(
-      onWillPop: () async {
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
         Provider.of<BusinessProvider>(context, listen: false).clearCategory();
-        return false;
       },
       child: Scaffold(
         backgroundColor: const Color(0xFFF4F7F6),

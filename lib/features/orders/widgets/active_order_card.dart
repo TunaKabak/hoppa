@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hoppa/core/services/order_service.dart';
 import 'package:hoppa/models/order.dart' as model;
+import 'package:hoppa/models/order_status.dart';
+import 'package:hoppa/features/orders/order_detail_page.dart';
 
 class ActiveOrderCard extends StatefulWidget {
-  const ActiveOrderCard({super.key});
+  final String? businessId;
+
+  const ActiveOrderCard({super.key, this.businessId});
 
   @override
   State<ActiveOrderCard> createState() => _ActiveOrderCardState();
@@ -13,14 +17,16 @@ class ActiveOrderCard extends StatefulWidget {
 class _ActiveOrderCardState extends State<ActiveOrderCard> {
   final OrderService _orderService = OrderService();
   final String? _userId = FirebaseAuth.instance.currentUser?.uid;
-  bool _isExpanded = false;
   late Stream<model.Order?> _orderStream;
 
   @override
   void initState() {
     super.initState();
     if (_userId != null) {
-      _orderStream = _orderService.getActiveOrderStream(_userId);
+      _orderStream = _orderService.getActiveOrderStream(
+        _userId,
+        businessId: widget.businessId,
+      );
     } else {
       _orderStream = const Stream.empty();
     }
@@ -44,12 +50,10 @@ class _ActiveOrderCardState extends State<ActiveOrderCard> {
 
         try {
           final order = snapshot.data!;
-          final status = order.status;
-
-          print('DEBUG: Gelen Sipariş Durumu: $status');
+          final statusEnum = OrderStatus.fromString(order.status);
 
           // Eğer sipariş tamamlanmış veya iptal edilmişse gösterme
-          if (status == 'delivered' || status == 'cancelled') {
+          if (statusEnum.isCompleted) {
             return const SizedBox.shrink();
           }
 
@@ -61,146 +65,60 @@ class _ActiveOrderCardState extends State<ActiveOrderCard> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(0),
-              child: Column(
-                children: [
-                  InkWell(
-                    onTap: () {
-                      setState(() {
-                        _isExpanded = !_isExpanded;
-                      });
-                    },
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(16),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              _buildStatusIcon(status),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      _getStatusText(status),
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.black87,
-                                          ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Tahmini Teslimat: ${order.deliveryTime}',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall
-                                          ?.copyWith(color: Colors.grey[600]),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Icon(
-                                _isExpanded
-                                    ? Icons.keyboard_arrow_up
-                                    : Icons.keyboard_arrow_down,
-                                color: Colors.grey,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          _buildStepProgressBar(context, status),
-                        ],
-                      ),
-                    ),
+            child: InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => OrderDetailPage(order: order),
                   ),
-                  AnimatedCrossFade(
-                    firstChild: const SizedBox.shrink(),
-                    secondChild: Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[50],
-                        borderRadius: const BorderRadius.vertical(
-                          bottom: Radius.circular(16),
-                        ),
-                      ),
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Divider(height: 1),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Sipariş Özeti',
-                            style: Theme.of(context).textTheme.titleSmall
-                                ?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black54,
-                                ),
-                          ),
-                          const SizedBox(height: 8),
-                          ...order.items.map(
-                            (item) => Padding(
-                              padding: const EdgeInsets.symmetric(
-                                vertical: 4.0,
-                              ),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    '${item.quantity.toInt()}x ${item.name}',
-                                    style: const TextStyle(
-                                      fontSize: 14,
+                );
+              },
+              borderRadius: BorderRadius.circular(16),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        _buildStatusIcon(order.status),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _getStatusText(order.status),
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.bold,
                                       color: Colors.black87,
                                     ),
-                                  ),
-                                  Text(
-                                    '${item.price.toStringAsFixed(2)} ₺',
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
                               ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          const Divider(),
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Toplam',
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
+                              const SizedBox(height: 4),
                               Text(
-                                '${order.totalAmount.toStringAsFixed(2)} ₺',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.orange,
-                                ),
+                                'Tahmini Teslimat: ${order.deliveryTime}',
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(color: Colors.grey[600]),
                               ),
                             ],
                           ),
-                        ],
-                      ),
+                        ),
+                        const Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          color: Colors.grey,
+                          size: 16,
+                        ),
+                      ],
                     ),
-                    crossFadeState: _isExpanded
-                        ? CrossFadeState.showSecond
-                        : CrossFadeState.showFirst,
-                    duration: const Duration(milliseconds: 300),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                    _buildStepProgressBar(
+                      context,
+                      order.status,
+                      order.deliveryMethod,
+                    ),
+                  ],
+                ),
               ),
             ),
           );
@@ -213,58 +131,68 @@ class _ActiveOrderCardState extends State<ActiveOrderCard> {
   }
 
   Widget _buildStatusIcon(String status) {
-    IconData icon;
-    Color color;
-
-    switch (status) {
-      case 'on_way':
-        icon = Icons.delivery_dining;
-        color = Colors.orange;
-        break;
-      case 'preparing':
-      case 'pending':
-      default:
-        icon = Icons.soup_kitchen;
-        color = Colors.orange;
-        break;
-    }
+    final s = OrderStatus.fromString(status);
+    final color = Colors.orange;
 
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withAlpha(26),
         shape: BoxShape.circle,
       ),
-      child: Icon(icon, color: color, size: 28),
+      child: Icon(s.icon, color: color, size: 28),
     );
   }
 
   String _getStatusText(String status) {
-    switch (status) {
-      case 'pending':
-        return 'Siparişiniz Alındı';
-      case 'preparing':
-        return 'Hazırlanıyor';
-      case 'on_way':
-        return 'Yolda';
-      default:
-        return 'İşlemde';
-    }
+    final s = OrderStatus.fromString(status);
+    if (s == OrderStatus.pending) return 'Siparişiniz Alındı';
+    return s.label;
   }
 
-  Widget _buildStepProgressBar(BuildContext context, String status) {
-    int currentStep = 0;
-    if (status == 'pending') currentStep = 1;
-    if (status == 'preparing') currentStep = 2;
-    if (status == 'on_way') currentStep = 3;
+  Widget _buildStepProgressBar(
+    BuildContext context,
+    String status,
+    String deliveryMethod,
+  ) {
+    final s = OrderStatus.fromString(status);
+    final isPickup = deliveryMethod == 'pickup';
+
+    if (isPickup) {
+      // Gel Al: 3 adım (Alındı -> Hazırlanıyor -> Hazır)
+      // "Teslim Edildi" zaten kartta gösterilmediği için son adım "Hazır" olmalı
+      int currentStep = 1; // Default Pending
+
+      if (s == OrderStatus.preparing) currentStep = 2;
+      if (s == OrderStatus.readyForPickup) currentStep = 3;
+      if (s == OrderStatus.delivered) currentStep = 3; // Tamamlandı
+
+      return Row(
+        children: [
+          _buildStep(context, 1, currentStep >= 1, 'Alındı'),
+          _buildConnector(currentStep >= 2),
+          _buildStep(context, 2, currentStep >= 2, OrderStatus.preparing.label),
+          _buildConnector(currentStep >= 3),
+          _buildStep(
+            context,
+            3,
+            currentStep >= 3,
+            OrderStatus.readyForPickup.label,
+          ),
+        ],
+      );
+    }
+
+    // Teslimat: 3 adım (Alındı, Hazırlanıyor, Yolda)
+    final currentStep = s.stepIndex + 1;
 
     return Row(
       children: [
         _buildStep(context, 1, currentStep >= 1, 'Alındı'),
         _buildConnector(currentStep >= 2),
-        _buildStep(context, 2, currentStep >= 2, 'Hazırlanıyor'),
+        _buildStep(context, 2, currentStep >= 2, OrderStatus.preparing.label),
         _buildConnector(currentStep >= 3),
-        _buildStep(context, 3, currentStep >= 3, 'Yolda'),
+        _buildStep(context, 3, currentStep >= 3, OrderStatus.onWay.label),
       ],
     );
   }

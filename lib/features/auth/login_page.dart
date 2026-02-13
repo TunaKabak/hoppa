@@ -5,6 +5,7 @@ import 'package:hoppa/features/auth/otp_verify_page.dart';
 import 'package:hoppa/features/auth/register_page.dart';
 import 'package:hoppa/features/auth/widgets/auth_layout.dart';
 import 'package:hoppa/features/auth/widgets/auth_text_field.dart';
+import 'package:hoppa/features/merchant/merchant_dashboard_page.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class LoginPage extends StatefulWidget {
@@ -347,6 +348,33 @@ class _LoginPageState extends State<LoginPage>
                   fontSize: 13,
                   decoration: TextDecoration.underline,
                   decorationColor: Colors.grey.shade500,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            // İŞLETME GİRİŞİ
+            TextButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MerchantDashboardPage(),
+                  ),
+                );
+              },
+              icon: Icon(
+                Icons.store_rounded,
+                size: 18,
+                color: Colors.grey.shade600,
+              ),
+              label: Text(
+                "İşletme Girişi",
+                style: GoogleFonts.inter(
+                  color: Colors.grey.shade600,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ),

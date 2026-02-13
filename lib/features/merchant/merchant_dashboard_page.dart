@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:hoppa/core/services/order_service.dart';
 import 'package:hoppa/features/merchant/merchant_order_list_page.dart';
+import 'package:hoppa/models/order_status.dart';
 
 class MerchantDashboardPage extends StatefulWidget {
   const MerchantDashboardPage({super.key});
@@ -38,7 +39,7 @@ class _MerchantDashboardPageState extends State<MerchantDashboardPage> {
     _merchantSubscription = FirebaseFirestore.instance
         .collection('orders')
         .where('market_id', isEqualTo: 'market_1')
-        .where('status', isEqualTo: 'pending')
+        .where('status', isEqualTo: OrderStatus.pending.value)
         .snapshots()
         .listen((snapshot) {
           // İlk veri akışını (sayfa açılışını) yoksay, sadece YENİ gelenleri dinle
@@ -97,8 +98,10 @@ class _MerchantDashboardPageState extends State<MerchantDashboardPage> {
                       label: "GÖRÜNTÜLE",
                       textColor: Colors.white,
                       backgroundColor: Colors.white24,
-                      onPressed: () =>
-                          _navigateToList(context, filter: 'pending'),
+                      onPressed: () => _navigateToList(
+                        context,
+                        filter: OrderStatus.pending.value,
+                      ),
                     ),
                   ),
                 );
@@ -148,10 +151,16 @@ class _MerchantDashboardPageState extends State<MerchantDashboardPage> {
 
           // --- Veri Hesaplama ---
           final pendingOrders = docs
-              .where((d) => d['status'] == 'pending')
+              .where((d) => d['status'] == OrderStatus.pending.value)
               .toList();
           final activeOrders = docs
-              .where((d) => ['preparing', 'on_way'].contains(d['status']))
+              .where(
+                (d) => [
+                  OrderStatus.preparing.value,
+                  OrderStatus.onWay.value,
+                  OrderStatus.readyForPickup.value,
+                ].contains(d['status']),
+              )
               .toList();
 
           // Basit Ciro Hesabı
@@ -181,8 +190,10 @@ class _MerchantDashboardPageState extends State<MerchantDashboardPage> {
                         count: pendingOrders.length.toString(),
                         icon: Icons.notifications_active,
                         color: Colors.red,
-                        onTap: () =>
-                            _navigateToList(context, filter: 'pending'),
+                        onTap: () => _navigateToList(
+                          context,
+                          filter: OrderStatus.pending.value,
+                        ),
                         isAlert: pendingOrders.isNotEmpty,
                       ),
                     ),

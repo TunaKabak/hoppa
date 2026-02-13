@@ -5,14 +5,39 @@ import 'package:hoppa/models/business_product.dart';
 import 'package:hoppa/features/cart/widgets/cart_price_badge.dart'; // YENİ
 import 'package:provider/provider.dart';
 
-class ProductDetailPage extends StatelessWidget {
+class ProductDetailPage extends StatefulWidget {
   final BusinessProduct businessProduct;
 
   const ProductDetailPage({super.key, required this.businessProduct});
 
   @override
+  State<ProductDetailPage> createState() => _ProductDetailPageState();
+}
+
+class _ProductDetailPageState extends State<ProductDetailPage> {
+  bool _isActionLoading = false;
+
+  Future<void> _handleCartAction(Future<void> Function() action) async {
+    if (_isActionLoading) return;
+
+    setState(() {
+      _isActionLoading = true;
+    });
+
+    try {
+      await action();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isActionLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final product = businessProduct.product;
+    final product = widget.businessProduct.product;
     final cartProvider = Provider.of<CartProvider>(context);
 
     return Scaffold(
@@ -20,10 +45,15 @@ class ProductDetailPage extends StatelessWidget {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 300,
             pinned: true,
+            floating: true,
             backgroundColor: Colors.white,
-            elevation: 0,
+            elevation: 4,
+            shadowColor: Colors.black12,
+            surfaceTintColor: Colors.transparent,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+            ),
             title: Text(
               product.name,
               style: GoogleFonts.poppins(
@@ -37,9 +67,16 @@ class ProductDetailPage extends StatelessWidget {
             leading: IconButton(
               icon: Container(
                 padding: const EdgeInsets.all(8),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(26),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: const Icon(Icons.arrow_back, color: Colors.black),
               ),
@@ -51,27 +88,6 @@ class ProductDetailPage extends StatelessWidget {
                 child: CartPriceBadge(),
               ),
             ],
-            flexibleSpace: FlexibleSpaceBar(
-              background: Hero(
-                tag: 'product_${businessProduct.id}',
-                child: Image.network(
-                  product.imageUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      color: Colors.grey.shade100,
-                      child: const Center(
-                        child: Icon(
-                          Icons.image_not_supported,
-                          color: Colors.grey,
-                          size: 50,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
           ),
           SliverToBoxAdapter(
             child: Padding(
@@ -79,6 +95,40 @@ class ProductDetailPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Ürün Resmi
+                  Center(
+                    child: Hero(
+                      tag: 'product_${widget.businessProduct.id}',
+                      child: Container(
+                        height: 250,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          color: Colors.white,
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: Image.network(
+                            product.imageUrl,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: Colors.grey.shade100,
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.image_not_supported,
+                                    color: Colors.grey,
+                                    size: 50,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
                   // Marka (Varsa)
                   if (product.brand.isNotEmpty)
                     Text(
@@ -108,7 +158,7 @@ class ProductDetailPage extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        '₺${businessProduct.price.toStringAsFixed(2)}',
+                        '₺${widget.businessProduct.price.toStringAsFixed(2)}',
                         style: GoogleFonts.inter(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
@@ -165,8 +215,18 @@ class ProductDetailPage extends StatelessWidget {
         ],
       ),
       bottomSheet: Container(
-        color: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(13),
+              blurRadius: 10,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         width: double.infinity,
         child: SafeArea(child: _buildCartAction(context, cartProvider)),
       ),
@@ -176,118 +236,156 @@ class ProductDetailPage extends StatelessWidget {
   Widget _buildCartAction(BuildContext context, CartProvider cartProvider) {
     // Sepette var mı kontrol et
     final cartItemIndex = cartProvider.items.indexWhere(
-      (item) => item.businessProduct.id == businessProduct.id,
+      (item) => item.businessProduct.id == widget.businessProduct.id,
     );
     final inCart = cartItemIndex != -1;
     final quantity = inCart ? cartProvider.items[cartItemIndex].quantity : 0.0;
+    final isWeighted = widget.businessProduct.product.isWeighted;
 
     if (inCart) {
-      // SAYAÇ MODU
-      return Container(
-        height: 56,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFF00A651)),
-        ),
-        child: Row(
-          children: [
-            // AZALT BUTONU (SOL)
-            Expanded(
-              child: InkWell(
-                onTap: () => cartProvider.removeFromCart(businessProduct.id),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(11),
-                  bottomLeft: Radius.circular(11),
-                ),
-                child: Container(
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF00A651),
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(11),
-                      bottomLeft: Radius.circular(11),
+      // SAYAÇ MODU (Separate Buttons like Home Page)
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // AZALT / SİL BUTONU
+          _buildCounterButton(
+            icon:
+                (isWeighted && quantity <= 0.51) ||
+                    (!isWeighted && quantity <= 1.01)
+                ? Icons.delete_outline
+                : Icons.remove,
+            onTap: () {
+              _handleCartAction(() async {
+                await Future.delayed(const Duration(milliseconds: 200));
+                await cartProvider.removeFromCart(widget.businessProduct.id);
+              });
+            },
+          ),
+
+          // ORTA MİKTAR ALANI
+          _isActionLoading
+              ? const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Color(0xFF00A651),
                     ),
                   ),
-                  alignment: Alignment.center,
-                  child: const Icon(Icons.remove, color: Colors.white),
-                ),
-              ),
-            ),
-
-            // ORTA MİKTAR ALANI (BEYAZ)
-            Container(
-              width: 80,
-              alignment: Alignment.center,
-              color: Colors.white,
-              child: Text(
-                quantity % 1 == 0
-                    ? quantity.toInt().toString()
-                    : quantity.toStringAsFixed(1),
-                style: GoogleFonts.poppins(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF00A651), // Green text
-                ),
-              ),
-            ),
-
-            // ARTIR BUTONU (SAĞ)
-            Expanded(
-              child: InkWell(
-                onTap: () => cartProvider.addToCart(businessProduct),
-                borderRadius: const BorderRadius.only(
-                  topRight: Radius.circular(11),
-                  bottomRight: Radius.circular(11),
-                ),
-                child: Container(
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF00A651),
-                    borderRadius: BorderRadius.only(
-                      topRight: Radius.circular(11),
-                      bottomRight: Radius.circular(11),
-                    ),
+                )
+              : Text(
+                  quantity % 1 == 0
+                      ? quantity.toInt().toString()
+                      : quantity.toStringAsFixed(1),
+                  style: GoogleFonts.poppins(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF00A651), // Green text
                   ),
-                  alignment: Alignment.center,
-                  child: const Icon(Icons.add, color: Colors.white),
                 ),
-              ),
-            ),
-          ],
-        ),
+
+          // ARTIR BUTONU
+          _buildCounterButton(
+            icon: Icons.add,
+            onTap: () {
+              _handleCartAction(() async {
+                await Future.delayed(const Duration(milliseconds: 200));
+                await cartProvider.addToCart(widget.businessProduct);
+              });
+            },
+            isAdd: true,
+          ),
+        ],
       );
     } else {
       // EKLE MODU
-      return ElevatedButton(
-        onPressed: () async {
-          final result = await cartProvider.addToCart(businessProduct);
-          if (context.mounted) {
-            _handleAddToCartResult(context, result);
-          }
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF00A651),
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.shopping_cart_outlined),
-            const SizedBox(width: 10),
-            Text(
-              "Sepete Ekle",
-              style: GoogleFonts.poppins(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+      return SizedBox(
+        height: 56,
+        child: ElevatedButton(
+          onPressed: _isActionLoading
+              ? null
+              : () {
+                  _handleCartAction(() async {
+                    final result = await cartProvider.addToCart(
+                      widget.businessProduct,
+                    );
+                    if (mounted) {
+                      _handleAddToCartResult(context, result);
+                    }
+                  });
+                },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF00A651), // Standard Green
+            foregroundColor: Colors.white,
+            elevation: 4,
+            shadowColor: const Color(0xFF00A651).withAlpha(102),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
-          ],
+          ),
+          child: _isActionLoading
+              ? const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.shopping_cart_outlined),
+                    const SizedBox(width: 10),
+                    Text(
+                      "Sepete Ekle",
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
         ),
       );
     }
+  }
+
+  Widget _buildCounterButton({
+    required IconData icon,
+    required VoidCallback onTap,
+    bool isAdd = false,
+  }) {
+    return InkWell(
+      onTap: _isActionLoading ? null : onTap,
+      borderRadius: BorderRadius.circular(30),
+      child: Container(
+        width: 60,
+        height: 60,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle, // Circle like Home Page
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(26),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+          border: Border.all(
+            color: const Color(0xFF00A651).withAlpha(77),
+            width: 1.5,
+          ),
+        ),
+        child: Icon(
+          icon,
+          color: _isActionLoading ? Colors.grey : const Color(0xFF00A651),
+          size: 28,
+        ),
+      ),
+    );
   }
 
   void _handleAddToCartResult(BuildContext context, AddToCartResult result) {
@@ -299,12 +397,17 @@ class ProductDetailPage extends StatelessWidget {
               const Icon(Icons.check_circle, color: Colors.white),
               const SizedBox(width: 10),
               Expanded(
-                child: Text("${businessProduct.product.name} sepete eklendi"),
+                child: Text(
+                  "${widget.businessProduct.product.name} sepete eklendi",
+                ),
               ),
             ],
           ),
-          backgroundColor: const Color(0xFF00A651),
+          backgroundColor: const Color(0xFF81C784), // Match soft green
           behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
           duration: const Duration(seconds: 2),
         ),
       );

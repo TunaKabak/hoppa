@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hoppa/models/order.dart' as model;
+import 'package:hoppa/models/order_status.dart';
 import 'package:hoppa/features/orders/order_detail_page.dart';
 
 class ActiveOrderBanner extends StatelessWidget {
@@ -9,6 +10,8 @@ class ActiveOrderBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final status = OrderStatus.fromString(order.status);
+
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -50,7 +53,7 @@ class ActiveOrderBanner extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                _getStatusIcon(order.status),
+                status.icon,
                 color: const Color(0xFF00A651),
                 size: 24,
               ),
@@ -63,7 +66,7 @@ class ActiveOrderBanner extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _getStatusText(order.status),
+                    "Sipariş ${status.label}",
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF1B5E20),
@@ -74,7 +77,7 @@ class ActiveOrderBanner extends StatelessWidget {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
-                      value: _getProgressValue(order.status),
+                      value: status.progressValue,
                       backgroundColor: Colors.white,
                       valueColor: const AlwaysStoppedAnimation<Color>(
                         Color(0xFF00A651),
@@ -92,44 +95,5 @@ class ActiveOrderBanner extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  IconData _getStatusIcon(String status) {
-    switch (status) {
-      case 'pending':
-        return Icons.hourglass_top;
-      case 'preparing':
-        return Icons.inventory_2;
-      case 'on_way':
-        return Icons.delivery_dining;
-      default:
-        return Icons.check_circle;
-    }
-  }
-
-  String _getStatusText(String status) {
-    switch (status) {
-      case 'pending':
-        return "Sipariş Onay Bekliyor";
-      case 'preparing':
-        return "Sipariş Hazırlanıyor";
-      case 'on_way':
-        return "Sipariş Yolda";
-      default:
-        return "Sipariş Durumu";
-    }
-  }
-
-  double _getProgressValue(String status) {
-    switch (status) {
-      case 'pending':
-        return 0.15;
-      case 'preparing': // %50 den fazla
-        return 0.50;
-      case 'on_way': // %80
-        return 0.85;
-      default:
-        return 0.0;
-    }
   }
 }

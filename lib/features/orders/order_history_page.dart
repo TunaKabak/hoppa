@@ -5,6 +5,9 @@ import 'package:provider/provider.dart';
 import 'package:hoppa/core/services/auth_service.dart';
 import 'package:hoppa/core/services/order_service.dart';
 import 'package:hoppa/core/widgets/animated_sliding_toggle.dart'; // YENİ BİLEŞEN
+import 'package:hoppa/models/order.dart' as model;
+import 'package:hoppa/models/order_status.dart'; // Added import
+import 'package:hoppa/features/orders/order_detail_page.dart';
 
 class OrderHistoryPage extends StatefulWidget {
   const OrderHistoryPage({super.key});
@@ -83,12 +86,14 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                 final allOrders = snapshot.data?.docs ?? [];
 
                 final filteredOrders = allOrders.where((doc) {
-                  final status = (doc.data() as Map<String, dynamic>)['status'];
+                  final statusStr =
+                      (doc.data() as Map<String, dynamic>)['status'];
+                  final s = OrderStatus.fromString(statusStr ?? 'pending');
 
                   if (_selectedFilterIndex == 0) {
-                    return ['pending', 'preparing', 'on_way'].contains(status);
+                    return s.isActive;
                   } else {
-                    return ['delivered', 'cancelled'].contains(status);
+                    return s.isCompleted;
                   }
                 }).toList();
 
@@ -292,6 +297,35 @@ class _OrderCard extends StatelessWidget {
                       ),
                     ),
                   ),
+
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      final orderModel = model.Order.fromMap(data, order.id);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              OrderDetailPage(order: orderModel),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF00A651),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text(
+                      "Sipariş Detayı",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -301,41 +335,10 @@ class _OrderCard extends StatelessWidget {
   }
 
   Widget _buildStatusBadge(String status) {
-    Color color;
-    String text;
-    IconData icon;
-
-    switch (status) {
-      case 'pending':
-        color = Colors.orange;
-        text = "Onay Bekliyor";
-        icon = Icons.hourglass_empty;
-        break;
-      case 'preparing':
-        color = Colors.blue;
-        text = "Hazırlanıyor";
-        icon = Icons.inventory_2;
-        break;
-      case 'on_way':
-        color = Colors.purple;
-        text = "Yolda";
-        icon = Icons.delivery_dining;
-        break;
-      case 'delivered':
-        color = Colors.green;
-        text = "Teslim Edildi";
-        icon = Icons.check_circle;
-        break;
-      case 'cancelled':
-        color = Colors.red;
-        text = "İptal Edildi";
-        icon = Icons.cancel;
-        break;
-      default:
-        color = Colors.grey;
-        text = status;
-        icon = Icons.info;
-    }
+    final s = OrderStatus.fromString(status);
+    final color = s.color;
+    final text = s.label;
+    final icon = s.icon;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
