@@ -33,6 +33,27 @@ class _ActiveOrderCardState extends State<ActiveOrderCard> {
   }
 
   @override
+  void didUpdateWidget(ActiveOrderCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.businessId != oldWidget.businessId) {
+      _initStream();
+    }
+  }
+
+  void _initStream() {
+    setState(() {
+      if (_userId != null) {
+        _orderStream = _orderService.getActiveOrderStream(
+          _userId,
+          businessId: widget.businessId,
+        );
+      } else {
+        _orderStream = const Stream.empty();
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     // Eğer kullanıcı giriş yapmamışsa kartı gösterme
     if (_userId == null) return const SizedBox.shrink();

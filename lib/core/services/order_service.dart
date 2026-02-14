@@ -118,6 +118,10 @@ class OrderService {
     }
 
     return query
+        .where(
+          'status',
+          whereIn: ['pending', 'preparing', 'on_way', 'ready_for_pickup'],
+        )
         .orderBy('created_at', descending: true)
         .limit(1)
         .snapshots()
