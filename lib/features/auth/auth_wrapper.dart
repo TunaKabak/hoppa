@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hoppa/core/services/auth_service.dart';
 import 'package:hoppa/features/auth/login_page.dart';
 import 'package:hoppa/features/main_layout/main_layout_page.dart';
+import 'package:hoppa/features/merchant/merchant_dashboard_page.dart';
 
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
@@ -61,7 +62,29 @@ class _AuthWrapperState extends State<AuthWrapper> {
         if (snapshot.hasData) {
           // ÖNEMLİ DÜZELTME: User ID değiştiğinde (Misafir -> Üye) sayfayı sıfırdan kur.
           // Bu sayede hem Profil güncellenir hem de Ana Sayfaya (Tab 0) dönülür.
-          return MainLayoutPage(key: ValueKey(snapshot.data?.uid));
+          // Rol kontrolü ve Yönlendirme (Stream ile)
+          return StreamBuilder<Map<String, dynamic>?>(
+            stream: authService.getUserDataStream(),
+            builder: (context, userSnapshot) {
+              if (userSnapshot.connectionState == ConnectionState.waiting) {
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
+              }
+
+              final userData = userSnapshot.data;
+              final role = userData?['role'];
+              final businessId = userData?['businessId'];
+
+              if (role == 'merchant' && businessId != null) {
+                // İşletme Dashboard'una yönlendir
+                return MerchantDashboardPage(businessId: businessId);
+              }
+
+              // Normal Kullanıcı -> Ana Sayfa
+              return MainLayoutPage(key: ValueKey(snapshot.data?.uid));
+            },
+          );
         }
 
         // 4. Kullanıcı yoksa (Çıkış yapıldıysa) -> Giriş Sayfası (Login)

@@ -11,7 +11,7 @@ class CartItem {
   CartItem({required this.businessProduct, this.quantity = 1.0});
 }
 
-enum AddToCartResult { success, outOfStock, marketConflict }
+enum AddToCartResult { success, outOfStock, marketConflict, notAvailable }
 
 class CartProvider extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -174,7 +174,12 @@ class CartProvider extends ChangeNotifier {
     double currentQty = index >= 0 ? _items[index].quantity : 0.0;
     double newQty = currentQty + increment;
 
-    // 2. STOK KONTROLÜ
+    // 2. MÜSAİTLİK KONTROLÜ
+    if (!product.isAvailable) {
+      return AddToCartResult.notAvailable;
+    }
+
+    // 3. STOK KONTROLÜ
     if (newQty > product.stock) {
       return AddToCartResult.outOfStock;
     }

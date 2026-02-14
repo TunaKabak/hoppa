@@ -132,48 +132,51 @@ class _AuthLayoutState extends State<AuthLayout> with WidgetsBindingObserver {
 
           // 3. Content
           SafeArea(
-            child: Center(
-              child: widget.enableGlass
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(24),
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                        child: Container(
-                          constraints: const BoxConstraints(maxWidth: 400),
-                          margin: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.4),
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.6),
-                            ),
-                          ),
-                          child: SingleChildScrollView(
-                            controller: _scrollController,
-                            padding: EdgeInsets.only(
-                              left: 24,
-                              right: 24,
-                              top: 24,
-                              bottom: 24 + bottomInset,
-                            ),
-                            child: widget.child,
-                          ),
-                        ),
-                      ),
-                    )
-                  : SingleChildScrollView(
-                      controller: _scrollController,
-                      padding: EdgeInsets.only(
-                        left: 24,
-                        right: 24,
-                        top: 24,
-                        bottom: 24 + bottomInset,
-                      ),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 400),
-                        child: widget.child,
-                      ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  controller: _scrollController,
+                  physics: const ClampingScrollPhysics(),
+                  padding: EdgeInsets.only(bottom: bottomInset),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
                     ),
+                    child: Center(
+                      child: widget.enableGlass
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(24),
+                              child: BackdropFilter(
+                                filter: ImageFilter.blur(
+                                  sigmaX: 10,
+                                  sigmaY: 10,
+                                ),
+                                child: Container(
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 400,
+                                  ),
+                                  margin: const EdgeInsets.all(24),
+                                  padding: const EdgeInsets.all(24),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.4),
+                                    borderRadius: BorderRadius.circular(24),
+                                    border: Border.all(
+                                      color: Colors.white.withOpacity(0.6),
+                                    ),
+                                  ),
+                                  child: widget.child,
+                                ),
+                              ),
+                            )
+                          : Container(
+                              constraints: const BoxConstraints(maxWidth: 400),
+                              padding: const EdgeInsets.all(24),
+                              child: widget.child,
+                            ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ],

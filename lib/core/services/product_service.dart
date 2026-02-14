@@ -12,4 +12,22 @@ class ProductService {
       }).toList();
     });
   }
+
+  // İşletme ürününü güncelle (Stok, Durum)
+  Future<void> updateBusinessProduct(
+    String businessProductId, {
+    bool? isAvailable,
+    double? stock,
+  }) async {
+    final Map<String, dynamic> data = {};
+    if (isAvailable != null) data['isAvailable'] = isAvailable;
+    if (stock != null) data['stock'] = stock;
+
+    if (data.isNotEmpty) {
+      await _db
+          .collection('business_products')
+          .doc(businessProductId)
+          .update(data);
+    }
+  }
 }

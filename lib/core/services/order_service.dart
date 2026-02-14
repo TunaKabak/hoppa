@@ -136,4 +136,41 @@ class OrderService {
           return null;
         });
   }
+
+  Stream<QuerySnapshot> getDailyOrdersStream({String? businessId}) {
+    final now = DateTime.now();
+    final startOfDay = DateTime(now.year, now.month, now.day);
+
+    Query query = _db
+        .collection('orders')
+        .where(
+          'created_at',
+          isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay),
+        );
+
+    if (businessId != null) {
+      query = query.where('business_id', isEqualTo: businessId);
+    }
+
+    return query.snapshots();
+  }
+
+  // --- HAFTALIK SİPARİŞLER (Grafik İçin) ---
+  Future<List<Map<String, dynamic>>> getWeeklyOrders(String businessId) async {
+    final now = DateTime.now();
+    final sevenDaysAgo = now.subtract(const Duration(days: 7));
+
+    // Firestore Timestamp başlangıcı
+    final startTimestamp = Timestamp.fromDate(
+      DateTime(sevenDaysAgo.year, sevenDaysAgo.month, sevenDaysAgo.day),
+    );
+
+    final snapshot = await _db
+        .collection('orders')
+        .where('business_id', isEqualTo: businessId)
+        .where('created_at', isGreaterThanOrEqualTo: startTimestamp)
+        .get();
+
+    return snapshot.docs.map((doc) => doc.data()).toList();
+  }
 }

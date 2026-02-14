@@ -45,6 +45,42 @@ class AuthService {
       'name': name,
       'surname': surname,
       'last_login': FieldValue.serverTimestamp(),
+      // Varsayılan roller (eğer yoksa)
+      'role': 'user',
+    }, SetOptions(merge: true));
+  }
+
+  // --- KULLANICI DETAYI (ROL & İŞLETME) ---
+  Future<Map<String, dynamic>?> getUserData() async {
+    if (_auth.currentUser == null) return null;
+    try {
+      final doc = await _db
+          .collection('users')
+          .doc(_auth.currentUser!.uid)
+          .get();
+      return doc.data();
+    } catch (e) {
+      print("User Data Fetch Error: $e");
+      return null;
+    }
+  }
+
+  // --- KULLANICI STREAM ---
+  Stream<Map<String, dynamic>?> getUserDataStream() {
+    if (_auth.currentUser == null) return Stream.value(null);
+    return _db
+        .collection('users')
+        .doc(_auth.currentUser!.uid)
+        .snapshots()
+        .map((doc) => doc.data());
+  }
+
+  // --- TEST İÇİN: KULLANICIYI İŞLETME YAP ---
+  Future<void> upgradeToMerchant(String businessId) async {
+    if (_auth.currentUser == null) return;
+    await _db.collection('users').doc(_auth.currentUser!.uid).set({
+      'role': 'merchant',
+      'businessId': businessId,
     }, SetOptions(merge: true));
   }
 

@@ -87,9 +87,19 @@ class MerchantOrderListPage extends StatelessWidget {
     final bool isPickUp =
         (data['is_pickup'] ?? false) || (data['delivery_method'] == 'pickup');
 
+    final delayColor = _getOrderDelayColor(
+      data['created_at'] ?? Timestamp.now(),
+      status,
+    );
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: delayColor != Colors.transparent
+            ? BorderSide(color: delayColor, width: 2)
+            : BorderSide.none,
+      ),
       child: ExpansionTile(
         initiallyExpanded: true,
         backgroundColor: Colors.white,
@@ -131,12 +141,28 @@ class MerchantOrderListPage extends StatelessWidget {
             ],
           ],
         ),
-        subtitle: Text(
-          "${items.length} Ürün • ${data['total_amount']} ₺",
-          style: const TextStyle(
-            color: Colors.green,
-            fontWeight: FontWeight.bold,
-          ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "${items.length} Ürün • ${data['total_amount']} ₺",
+              style: const TextStyle(
+                color: Colors.green,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            if (_buildDelayIndicator(
+                  data['created_at'] ?? Timestamp.now(),
+                  status,
+                ) !=
+                null) ...[
+              const SizedBox(height: 4),
+              _buildDelayIndicator(
+                data['created_at'] ?? Timestamp.now(),
+                status,
+              )!,
+            ],
+          ],
         ),
 
         children: [
@@ -259,5 +285,57 @@ class MerchantOrderListPage extends StatelessWidget {
 
   IconData _getStatusIcon(String status) {
     return OrderStatus.fromString(status).icon;
+  }
+
+  // YENİ: Gecikme Rengi
+  Color _getOrderDelayColor(Timestamp createdAt, String status) {
+    // Sadece aktif siparişlerde gecikme kontrolü yapılır
+    if (status == OrderStatus.delivered.value ||
+        status == OrderStatus.cancelled.value) {
+      return Colors.transparent;
+    }
+
+    final diff = DateTime.now().difference(createdAt.toDate());
+    if (diff.inMinutes >= 30) return Colors.red; // Kritik
+    if (diff.inMinutes >= 15) return Colors.orange; // Uyarı
+    return Colors.transparent; // Normal
+  }
+
+  // YENİ: Gecikme Metni
+  Widget? _buildDelayIndicator(Timestamp createdAt, String status) {
+    if (status == OrderStatus.delivered.value ||
+        status == OrderStatus.cancelled.value) {
+      return null;
+    }
+
+    final diff = DateTime.now().difference(createdAt.toDate());
+    if (diff.inMinutes < 15) return null;
+
+    final color = diff.inMinutes >= 30 ? Colors.red : Colors.orange;
+    final text = diff.inMinutes >= 30 ? "KRİTİK GECİKME" : "GECİKMEYE BAŞLADI";
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.access_time_filled, size: 14, color: color),
+          const SizedBox(width: 4),
+          Text(
+            "$text (${diff.inMinutes} dk)",
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

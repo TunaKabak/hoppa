@@ -6,6 +6,7 @@ import 'package:hoppa/features/auth/register_page.dart';
 import 'package:hoppa/features/auth/widgets/auth_layout.dart';
 import 'package:hoppa/features/auth/widgets/auth_text_field.dart';
 import 'package:hoppa/features/merchant/merchant_dashboard_page.dart';
+import 'package:hoppa/features/auth/merchant_login_selection_page.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class LoginPage extends StatefulWidget {
@@ -154,6 +155,7 @@ class _LoginPageState extends State<LoginPage>
       child: FadeTransition(
         opacity: _fadeAnim,
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // Logo
@@ -360,7 +362,7 @@ class _LoginPageState extends State<LoginPage>
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const MerchantDashboardPage(),
+                    builder: (context) => const MerchantLoginSelectionPage(),
                   ),
                 );
               },
@@ -380,7 +382,7 @@ class _LoginPageState extends State<LoginPage>
             ),
 
             const SizedBox(height: 20),
-            // VERİ SIFIRLAMA (Geliştirici Aracı - daha discreet)
+            // GİZLİ MENU (Reset & Merchant Upgrade)
             GestureDetector(
               onLongPress: () async {
                 final confirm = await showDialog<bool>(
@@ -417,10 +419,55 @@ class _LoginPageState extends State<LoginPage>
                   );
                 }
               },
+              onDoubleTap: () async {
+                setState(() => _isLoading = true);
+
+                // 1. Otomatik Giriş (Eğer yoksa)
+                if (_auth.currentUser == null) {
+                  await _auth.signInAnonymously();
+                }
+
+                if (_auth.currentUser == null) {
+                  if (mounted) {
+                    setState(() => _isLoading = false);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Giriş yapılamadı!")),
+                    );
+                  }
+                  return;
+                }
+
+                // 2. İşletme Hesabına Yükselt
+                await _auth.upgradeToMerchant('market_1');
+
+                if (mounted) {
+                  setState(() => _isLoading = false);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        "Test Modu: İşletme yetkisi verildi! Yönlendiriliyor...",
+                      ),
+                      backgroundColor: Colors.green,
+                      duration: Duration(seconds: 1),
+                    ),
+                  );
+
+                  // 3. Direkt Yönlendir
+                  Future.delayed(const Duration(seconds: 1), () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            const MerchantDashboardPage(businessId: 'market_1'),
+                      ),
+                    );
+                  });
+                }
+              },
               child: Container(
                 padding: const EdgeInsets.all(8),
                 child: Text(
-                  "v1.0.0",
+                  "v1.0.0 (Dev)",
                   style: GoogleFonts.inter(
                     color: Colors.grey.shade300,
                     fontSize: 10,

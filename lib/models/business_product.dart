@@ -6,6 +6,7 @@ class BusinessProduct {
   final String productBarcode;
   final double price;
   final double stock;
+  final bool isAvailable; // YENİ: Ürün satışa açık mı?
   final Product
   product; // Global ürün detaylarını içinde taşır (Performans için)
 
@@ -15,6 +16,7 @@ class BusinessProduct {
     required this.productBarcode,
     required this.price,
     required this.stock,
+    this.isAvailable = true,
     required this.product,
   });
 
@@ -25,6 +27,7 @@ class BusinessProduct {
       productBarcode: data['productBarcode'] ?? '',
       price: (data['price'] ?? 0.0).toDouble(),
       stock: (data['stock'] ?? 0.0).toDouble(),
+      isAvailable: data['isAvailable'] ?? true,
       // Ürün detayları map içinde 'details' objesi olarak saklanırsa:
       product: Product.fromMap(data['product_details'] ?? {}),
     );
@@ -37,6 +40,7 @@ class BusinessProduct {
       'productBarcode': productBarcode,
       'price': price,
       'stock': stock,
+      'isAvailable': isAvailable,
       'product_details': product.toMap(),
     };
   }

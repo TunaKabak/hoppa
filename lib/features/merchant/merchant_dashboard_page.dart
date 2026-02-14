@@ -4,42 +4,104 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:hoppa/core/services/order_service.dart';
 import 'package:hoppa/features/merchant/merchant_order_list_page.dart';
-import 'package:hoppa/models/order_status.dart';
+import 'package:hoppa/features/merchant/merchant_product_list_page.dart';
+import 'package:hoppa/features/merchant/merchant_analytics_page.dart';
+import 'package:hoppa/features/merchant/merchant_settings_page.dart';
+import 'package:hoppa/models/order_status.dart'; // Restored
+import 'package:hoppa/core/services/business_service.dart';
+import 'package:hoppa/core/services/auth_service.dart'; // Logout için
+import 'package:hoppa/features/auth/auth_wrapper.dart'; // Redirect için
 
 class MerchantDashboardPage extends StatefulWidget {
-  const MerchantDashboardPage({super.key});
+  final String businessId;
+
+  const MerchantDashboardPage({super.key, required this.businessId});
 
   @override
   State<MerchantDashboardPage> createState() => _MerchantDashboardPageState();
 }
 
-class _MerchantDashboardPageState extends State<MerchantDashboardPage> {
+class _MerchantDashboardPageState extends State<MerchantDashboardPage>
+    with SingleTickerProviderStateMixin {
+  int _currentIndex = 0; // Aktif tab index
+
   final OrderService _orderService = OrderService();
+  late StreamSubscription<QuerySnapshot> _orderSubscription;
   final AudioPlayer _audioPlayer = AudioPlayer();
-  StreamSubscription? _merchantSubscription;
+  late AnimationController _flashController;
+  late Animation<Color?> _flashAnimation;
 
   // İlk açılışta mevcut siparişleri bildirim olarak saymamak için bayrak
   bool _isFirstListen = true;
+  String? _businessName;
+  final BusinessService _businessService = BusinessService();
+
+  // ... (existing variables)
+  late Stream<QuerySnapshot> _dailyOrdersStream;
 
   @override
   void initState() {
     super.initState();
+    _fetchBusinessDetails();
     _initMerchantNotificationListener();
+    _initFlashAnimation();
+    _dailyOrdersStream = _orderService.getDailyOrdersStream(
+      businessId: widget.businessId,
+    );
+  }
+
+  // ... (existing methods: _fetchBusinessDetails, _initFlashAnimation, dispose, _initMerchantNotificationListener, _playSound)
+
+  Future<void> _fetchBusinessDetails() async {
+    final business = await _businessService.getBusinessById(widget.businessId);
+    if (mounted && business != null) {
+      setState(() {
+        _businessName = business.name;
+      });
+    }
+  }
+
+  void _initFlashAnimation() {
+    _flashController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+
+    _flashAnimation = ColorTween(
+      begin: Colors.transparent,
+      end: Colors.red.withOpacity(0.3),
+    ).animate(_flashController);
+
+    _flashController.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        _flashController.reverse();
+      }
+    });
   }
 
   @override
   void dispose() {
-    _merchantSubscription?.cancel();
+    _orderSubscription.cancel(); // Changed from _merchantSubscription
+    _flashController.dispose();
+    _audioPlayer.dispose();
     super.dispose();
   }
 
   // MARKET BİLDİRİM DİNLEYİCİSİ
   void _initMerchantNotificationListener() {
     // Sadece 'pending' (Yeni) siparişleri dinle
-    _merchantSubscription = FirebaseFirestore.instance
+    // Not: Gerçek uygulamada 'business_id' filtrelemesi yapılmalı.
+    _orderSubscription = FirebaseFirestore
+        .instance // Changed from _merchantSubscription
         .collection('orders')
-        .where('market_id', isEqualTo: 'market_1')
-        .where('status', isEqualTo: OrderStatus.pending.value)
+        .where(
+          'business_id',
+          isEqualTo: widget.businessId,
+        ) // Dynamic Business ID
+        .where(
+          'status',
+          isEqualTo: 'pending',
+        ) // Changed from OrderStatus.pending.value
         .snapshots()
         .listen((snapshot) {
           // İlk veri akışını (sayfa açılışını) yoksay, sadece YENİ gelenleri dinle
@@ -55,6 +117,16 @@ class _MerchantDashboardPageState extends State<MerchantDashboardPage> {
 
               // Ses Çal
               _playSound();
+
+              // Görsel Uyarı (Flash)
+              _flashController.forward(from: 0);
+              // Çoklu flash için
+              Future.delayed(const Duration(milliseconds: 600), () {
+                if (mounted) _flashController.forward(from: 0);
+              });
+              Future.delayed(const Duration(milliseconds: 1200), () {
+                if (mounted) _flashController.forward(from: 0);
+              });
 
               // Görsel Bildirim Göster
               if (mounted) {
@@ -122,123 +194,224 @@ class _MerchantDashboardPageState extends State<MerchantDashboardPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    // Tab Listesi
+    final List<Widget> pages = [
+      _buildDashboardContent(theme), // Ana Sayfa (Dashboard)
+      MerchantProductListPage(businessId: widget.businessId), // Ürünler
+      MerchantAnalyticsPage(businessId: widget.businessId), // Analiz
+      MerchantSettingsPage(businessId: widget.businessId), // Ayarlar
+    ];
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text("Market Paneli"),
+        title: Text(_businessName ?? "Market Paneli"),
         centerTitle: true,
         actions: [
+          // Çıkış Yap Butonu
           IconButton(
-            icon: const Icon(Icons.volume_up_outlined),
-            tooltip: "Ses Testi",
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Ses testi yapılıyor...")),
-              );
-              _playSound();
-            },
-          ),
-        ],
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: _orderService.getIncomingOrders(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final docs = snapshot.data?.docs ?? [];
-
-          // --- Veri Hesaplama ---
-          final pendingOrders = docs
-              .where((d) => d['status'] == OrderStatus.pending.value)
-              .toList();
-          final activeOrders = docs
-              .where(
-                (d) => [
-                  OrderStatus.preparing.value,
-                  OrderStatus.onWay.value,
-                  OrderStatus.readyForPickup.value,
-                ].contains(d['status']),
-              )
-              .toList();
-
-          // Basit Ciro Hesabı
-          double currentRevenue = 0;
-          for (var doc in docs) {
-            currentRevenue += (doc['total_amount'] ?? 0).toDouble();
-          }
-
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "Günlük Özet",
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
-
-                // Kartlar
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildSummaryCard(
-                        context,
-                        title: "Onay Bekleyen",
-                        count: pendingOrders.length.toString(),
-                        icon: Icons.notifications_active,
-                        color: Colors.red,
-                        onTap: () => _navigateToList(
-                          context,
-                          filter: OrderStatus.pending.value,
-                        ),
-                        isAlert: pendingOrders.isNotEmpty,
-                      ),
+            icon: const Icon(
+              Icons.logout,
+              color: Colors.blueGrey,
+            ), // Rengi yumuşattım
+            tooltip: "Çıkış Yap",
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text("Çıkış Yap"),
+                  content: const Text(
+                    "Çıkış yapmak istediğinize emin misiniz?",
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text("İptal"),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildSummaryCard(
-                        context,
-                        title: "Hazırlanan/Yolda",
-                        count: activeOrders.length.toString(),
-                        icon: Icons.delivery_dining,
-                        color: Colors.blue,
-                        onTap: () => _navigateToList(context, filter: 'active'),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text(
+                        "Çıkış Yap",
+                        style: TextStyle(color: Colors.red),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                _buildRevenueCard(currentRevenue),
+              );
 
-                const Spacer(),
+              if (confirm == true) {
+                await AuthService().signOut();
+                // AuthWrapper stream'i dinlediği için otomatik yönlendirecek.
+                // Ancak yine de stack'i temizlemek iyi olabilir.
+                if (mounted) {
+                  Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+                    MaterialPageRoute(
+                      builder: (context) => const AuthWrapper(),
+                    ),
+                    (route) => false,
+                  );
+                }
+              }
+            },
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          // Aktif Sayfa
+          pages[_currentIndex],
 
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.primaryColor,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    icon: const Icon(Icons.list_alt),
-                    label: const Text(
-                      "Tüm Sipariş Listesini Aç",
-                      style: TextStyle(fontSize: 16),
-                    ),
-                    onPressed: () => _navigateToList(context),
-                  ),
-                ),
-              ],
+          // Flash Overlay (Sadece Dashboard'da aktif olsa da global durabilir)
+          IgnorePointer(
+            child: AnimatedBuilder(
+              animation: _flashAnimation,
+              builder: (context, child) {
+                return Container(color: _flashAnimation.value);
+              },
+            ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        type: BottomNavigationBarType.fixed, // 4+ item olduğu için fixed olmalı
+        selectedItemColor: theme.primaryColor,
+        unselectedItemColor: Colors.grey,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Özet'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.inventory_2),
+            label: 'Ürünler',
+          ),
+          BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Analiz'),
+          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Ayarlar'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDashboardContent(ThemeData theme) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: _dailyOrdersStream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Hata: ${snapshot.error}'));
+        }
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return Center(
+            child: Text(
+              "Bugün henüz sipariş yok.",
+              style: theme.textTheme.titleMedium,
             ),
           );
-        },
-      ),
+        }
+
+        final orders = snapshot.data!.docs;
+        final pendingOrders = orders
+            .where((doc) => doc['status'] == OrderStatus.pending.value)
+            .length;
+        final preparingOrders = orders
+            .where((doc) => doc['status'] == OrderStatus.preparing.value)
+            .length;
+        final completedOrders = orders
+            .where((doc) => doc['status'] == OrderStatus.delivered.value)
+            .length;
+        final cancelledOrders = orders
+            .where((doc) => doc['status'] == OrderStatus.cancelled.value)
+            .length;
+
+        final totalRevenue = orders.fold<double>(0.0, (sum, doc) {
+          final status = doc['status'];
+          if (status == OrderStatus.delivered.value ||
+              status == OrderStatus.preparing.value ||
+              status == OrderStatus.pending.value) {
+            return sum + (doc['total_amount'] ?? 0);
+          }
+          return sum;
+        });
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Bugünkü Sipariş Özeti",
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              _buildRevenueCard(totalRevenue),
+              const SizedBox(height: 16),
+              GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: 2,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                childAspectRatio: 1.2,
+                children: [
+                  _buildSummaryCard(
+                    context,
+                    title: "Yeni Siparişler",
+                    count: pendingOrders.toString(),
+                    icon: Icons.fiber_new,
+                    color: Colors.red.shade700,
+                    onTap: () => _navigateToList(
+                      context,
+                      filter: OrderStatus.pending.value,
+                    ),
+                    isAlert: pendingOrders > 0,
+                  ),
+                  _buildSummaryCard(
+                    context,
+                    title: "Hazırlanan Siparişler",
+                    count: preparingOrders.toString(),
+                    icon: Icons.delivery_dining,
+                    color: Colors.orange.shade700,
+                    onTap: () => _navigateToList(
+                      context,
+                      filter: OrderStatus.preparing.value,
+                    ),
+                  ),
+                  _buildSummaryCard(
+                    context,
+                    title: "Tamamlanan Siparişler",
+                    count: completedOrders.toString(),
+                    icon: Icons.check_circle,
+                    color: Colors.green.shade700,
+                    onTap: () => _navigateToList(
+                      context,
+                      filter: OrderStatus.delivered.value,
+                    ),
+                  ),
+                  _buildSummaryCard(
+                    context,
+                    title: "İptal Edilen Siparişler",
+                    count: cancelledOrders.toString(),
+                    icon: Icons.cancel,
+                    color: Colors.grey.shade700,
+                    onTap: () => _navigateToList(
+                      context,
+                      filter: OrderStatus.cancelled.value,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -326,7 +499,7 @@ class _MerchantDashboardPageState extends State<MerchantDashboardPage> {
               Icon(Icons.wallet, color: Colors.white70),
               SizedBox(width: 8),
               Text(
-                "Anlık Ciro (Aktif)",
+                "Bugünkü Toplam Ciro",
                 style: TextStyle(
                   color: Colors.white70,
                   fontWeight: FontWeight.bold,

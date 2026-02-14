@@ -12,6 +12,8 @@ class Business {
   final bool isOpen;
   final BusinessType type; // YENİ: Tekil tür
   final List<String> categories; // Mevcut detaylı kategori listesi korunabilir
+  final String openingTime;
+  final String closingTime;
 
   Business({
     required this.id,
@@ -25,6 +27,8 @@ class Business {
     this.isOpen = true,
     this.type = BusinessType.market, // Varsayılan
     this.categories = const [],
+    this.openingTime = "08:00",
+    this.closingTime = "22:00",
   });
 
   factory Business.fromMap(Map<String, dynamic> data, String id) {
@@ -40,6 +44,8 @@ class Business {
       isOpen: data['isOpen'] ?? true,
       type: BusinessType.fromString(data['type'] ?? 'market'),
       categories: List<String>.from(data['categories'] ?? []),
+      openingTime: data['openingTime'] ?? "08:00",
+      closingTime: data['closingTime'] ?? "22:00",
     );
   }
 
@@ -55,6 +61,8 @@ class Business {
       'isOpen': isOpen,
       'type': type.name, // Enum adı string olarak
       'categories': categories,
+      'openingTime': openingTime,
+      'closingTime': closingTime,
     };
   }
 }
