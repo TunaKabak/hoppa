@@ -237,4 +237,9 @@ class BusinessService {
       rethrow;
     }
   }
+
+  // Dükkan Aç/Kapa
+  Future<void> updateBusinessStatus(String businessId, bool isOpen) async {
+    await updateBusiness(businessId, {'isOpen': isOpen});
+  }
 }

@@ -14,6 +14,10 @@ class Business {
   final List<String> categories; // Mevcut detaylı kategori listesi korunabilir
   final String openingTime;
   final String closingTime;
+  final double minBasketAmount;
+  final String averageDeliveryTime;
+  final double deliveryRadius;
+  final Map<String, dynamic> workingHours;
 
   Business({
     required this.id,
@@ -25,10 +29,14 @@ class Business {
     this.latitude = 0.0,
     this.longitude = 0.0,
     this.isOpen = true,
-    this.type = BusinessType.market, // Varsayılan
+    this.type = BusinessType.market,
     this.categories = const [],
     this.openingTime = "08:00",
     this.closingTime = "22:00",
+    this.minBasketAmount = 0.0,
+    this.averageDeliveryTime = "30-45 dk",
+    this.deliveryRadius = 5.0,
+    this.workingHours = const {},
   });
 
   factory Business.fromMap(Map<String, dynamic> data, String id) {
@@ -46,6 +54,10 @@ class Business {
       categories: List<String>.from(data['categories'] ?? []),
       openingTime: data['openingTime'] ?? "08:00",
       closingTime: data['closingTime'] ?? "22:00",
+      minBasketAmount: (data['minBasketAmount'] ?? 0.0).toDouble(),
+      averageDeliveryTime: data['averageDeliveryTime'] ?? "30-45 dk",
+      deliveryRadius: (data['deliveryRadius'] ?? 5.0).toDouble(),
+      workingHours: Map<String, dynamic>.from(data['workingHours'] ?? {}),
     );
   }
 
@@ -59,10 +71,14 @@ class Business {
       'latitude': latitude,
       'longitude': longitude,
       'isOpen': isOpen,
-      'type': type.name, // Enum adı string olarak
+      'type': type.name,
       'categories': categories,
       'openingTime': openingTime,
       'closingTime': closingTime,
+      'minBasketAmount': minBasketAmount,
+      'averageDeliveryTime': averageDeliveryTime,
+      'deliveryRadius': deliveryRadius,
+      'workingHours': workingHours,
     };
   }
 }

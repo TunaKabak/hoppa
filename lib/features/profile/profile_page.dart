@@ -125,8 +125,7 @@ class ProfilePage extends StatelessWidget {
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: () {
-                          Navigator.push(
-                            context,
+                          Navigator.of(context, rootNavigator: true).push(
                             MaterialPageRoute(
                               builder: (context) => const LoginPage(),
                             ),
@@ -261,8 +260,7 @@ class ProfilePage extends StatelessWidget {
               title: t.translate('my_orders'),
               onTap: () {
                 if (isGuest) {
-                  Navigator.push(
-                    context,
+                  Navigator.of(context, rootNavigator: true).push(
                     MaterialPageRoute(builder: (context) => const LoginPage()),
                   );
                 } else {

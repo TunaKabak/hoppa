@@ -173,4 +173,24 @@ class OrderService {
 
     return snapshot.docs.map((doc) => doc.data()).toList();
   }
+
+  // --- ANALİTİK İÇİN TARİH ARALIĞINA GÖRE SİPARİŞLER ---
+  Future<List<Map<String, dynamic>>> getOrdersInRange({
+    required String businessId,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    final startTimestamp = Timestamp.fromDate(startDate);
+    final endTimestamp = Timestamp.fromDate(endDate);
+
+    final snapshot = await _db
+        .collection('orders')
+        .where('business_id', isEqualTo: businessId)
+        .where('status', isEqualTo: 'delivered') // Sadece tamamlananlar
+        .where('created_at', isGreaterThanOrEqualTo: startTimestamp)
+        .where('created_at', isLessThanOrEqualTo: endTimestamp)
+        .get();
+
+    return snapshot.docs.map((doc) => doc.data()).toList();
+  }
 }

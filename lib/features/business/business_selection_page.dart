@@ -196,9 +196,48 @@ class BusinessSelectionPage extends StatelessWidget {
                         }
                       }
 
-                      // MESAFEYE GÖRE SIRALAMA
+                      // MESAFEYE GÖRE FILTRELEME VE SIRALAMA
                       if (address != null) {
                         final Distance distance = const Distance();
+
+                        // 1. Filtreleme: Menzil dışındakileri gizle
+                        businesses = businesses.where((b) {
+                          // İşletmenin koordinatları 0 ise (hatalı veri) filtreleme yapma veya sonda göster
+                          if (b.latitude == 0 && b.longitude == 0) return true;
+
+                          final double km =
+                              distance.as(
+                                LengthUnit.Meter,
+                                LatLng(address.latitude, address.longitude),
+                                LatLng(b.latitude, b.longitude),
+                              ) /
+                              1000.0;
+                          return km <=
+                              (b.deliveryRadius > 0 ? b.deliveryRadius : 10.0);
+                        }).toList();
+
+                        if (businesses.isEmpty) {
+                          return Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.location_off_outlined,
+                                  size: 64,
+                                  color: Colors.grey.shade300,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  "Seçilen adrese hizmet veren\niş yeri bulunamadı.",
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(color: Colors.grey.shade600),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+
+                        // 2. Sıralama: En yakından uzağa
                         businesses.sort((a, b) {
                           final distA = distance.as(
                             LengthUnit.Meter,
@@ -285,151 +324,228 @@ class BusinessSelectionPage extends StatelessWidget {
 
         productProvider.resetState();
         businessProvider.selectBusiness(business);
-        // fetchProducts artık businessId almalı (eski marketId)
         productProvider.fetchProducts(businessId: business.id);
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8,
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
               offset: const Offset(0, 2),
             ),
           ],
-          border: Border.all(color: Colors.grey.shade100),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Logo Alanı
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(10),
-                image: DecorationImage(
-                  image: NetworkImage(business.logoUrl),
-                  fit: BoxFit.cover,
-                  onError: (e, s) {},
+            // KAPAK FOTOĞRAFI & LOGO ALANI
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                // Kapak Fotoğrafı
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(16),
+                  ),
+                  child: Container(
+                    height: 120,
+                    width: double.infinity,
+                    decoration: BoxDecoration(color: Colors.grey.shade200),
+                    child: business.headerImageUrl.isNotEmpty
+                        ? Image.network(
+                            business.headerImageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Center(
+                                  child: Icon(Icons.store, color: Colors.grey),
+                                ),
+                          )
+                        : const Center(
+                            child: Icon(
+                              Icons.store,
+                              size: 40,
+                              color: Colors.grey,
+                            ),
+                          ),
+                  ),
                 ),
-                border: Border.all(color: Colors.grey.shade200),
-              ),
+
+                // Kapalı Rozeti (Overlay)
+                if (!business.isOpen)
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        "KAPALI",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Logo (Sol alt köşe, kapağın üstüne biniyor)
+                Positioned(
+                  left: 12,
+                  bottom: -20,
+                  child: Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white, width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: business.logoUrl.isNotEmpty
+                          ? Image.network(
+                              business.logoUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const Icon(Icons.store, color: Colors.grey),
+                            )
+                          : const Icon(Icons.store, color: Colors.grey),
+                    ),
+                  ),
+                ),
+              ],
             ),
 
-            const SizedBox(width: 12),
-
-            // Bilgiler
-            Expanded(
+            const SizedBox(height: 24), // Logo payı
+            // İÇERİK ALANI
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
                         child: Text(
                           business.name,
-                          style: TextStyle(
+                          style: const TextStyle(
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            color: business.isOpen
-                                ? Colors.black87
-                                : Colors.grey,
+                            color: Colors.black87,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      if (!business.isOpen)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.red.shade100,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: const Text(
-                            "KAPALI",
-                            style: TextStyle(
-                              color: Colors.red,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                      // Puan Eklenebilir
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
                         ),
+                        decoration: BoxDecoration(
+                          color: kPrimaryColor,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.star, color: Colors.white, size: 12),
+                            SizedBox(width: 4),
+                            Text(
+                              "4.8", // Mock Puan
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 4),
-
-                  // Tür ve Adres
                   Text(
                     "${business.type.label} • ${business.address}", // Türü göster
-                    style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                    style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
 
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 12),
+                  const Divider(height: 1, color: Color(0xFFEEEEEE)),
+                  const SizedBox(height: 12),
 
-                  // Alt Satır (Mesafe ve Durum)
+                  // Bilgi Alt Satırı
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      if (distanceText != null) ...[
-                        const Icon(
+                      // Min Sepet Tutar
+                      _buildInfoBadge(
+                        Icons.shopping_basket_outlined,
+                        "Min. ${business.minBasketAmount.toStringAsFixed(0)} ₺",
+                      ),
+                      // Teslimat Süresi
+                      _buildInfoBadge(
+                        Icons.access_time,
+                        business.averageDeliveryTime,
+                      ),
+                      // Mesafe
+                      if (distanceText != null)
+                        _buildInfoBadge(
                           Icons.near_me,
-                          size: 14,
-                          color: kPrimaryColor,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
                           distanceText,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                            color: kPrimaryColor,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                      ],
-
-                      // Hızlı Teslimat Rozeti
-                      if (business.isOpen)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE8F5E9),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: const Text(
-                            "Hızlı Teslimat",
-                            style: TextStyle(
-                              color: kPrimaryColor,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                          isPrimary: true,
                         ),
                     ],
                   ),
                 ],
               ),
             ),
-
-            const SizedBox(width: 8),
-            Icon(Icons.chevron_right, color: Colors.grey.shade300),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildInfoBadge(IconData icon, String text, {bool isPrimary = false}) {
+    const kPrimaryColor = Color(0xFF00A651);
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 16,
+          color: isPrimary ? kPrimaryColor : Colors.grey.shade600,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: TextStyle(
+            color: isPrimary ? kPrimaryColor : Colors.grey.shade700,
+            fontSize: 12,
+            fontWeight: isPrimary ? FontWeight.bold : FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 }
