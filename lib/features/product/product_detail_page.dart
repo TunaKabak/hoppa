@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hoppa/features/cart/cart_provider.dart';
 import 'package:hoppa/models/business_product.dart';
+import 'package:hoppa/models/campaign.dart'; // Campaigns
+import 'package:hoppa/core/services/campaign_service.dart'; // Campaign Service
+import 'package:hoppa/core/services/navigation_provider.dart'; // Navigation Provider
 import 'package:hoppa/features/cart/widgets/cart_price_badge.dart'; // YENİ
 import 'package:provider/provider.dart';
 
@@ -42,177 +45,258 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            pinned: true,
-            floating: true,
-            backgroundColor: Colors.white,
-            elevation: 4,
-            shadowColor: Colors.black12,
-            surfaceTintColor: Colors.transparent,
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
-            ),
-            title: Text(
-              product.name,
-              style: GoogleFonts.poppins(
-                color: Colors.black,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-            centerTitle: true,
-            leading: IconButton(
-              icon: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withAlpha(26),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+      body: StreamBuilder<List<Campaign>>(
+        stream: CampaignService().getActiveCampaigns(
+          widget.businessProduct.businessId,
+        ),
+        builder: (context, snapshot) {
+          final campaigns = snapshot.data ?? [];
+          Campaign? activeCampaign;
+          double price = widget.businessProduct.price;
+
+          if (campaigns.isNotEmpty) {
+            try {
+              activeCampaign = campaigns.firstWhere(
+                (c) => c.targetProducts.contains(
+                  widget.businessProduct.productBarcode,
                 ),
-                child: const Icon(Icons.arrow_back, color: Colors.black),
-              ),
-              onPressed: () => Navigator.pop(context),
-            ),
-            actions: const [
-              Padding(
-                padding: EdgeInsets.only(right: 16.0),
-                child: CartPriceBadge(),
-              ),
-            ],
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Ürün Resmi
-                  Center(
-                    child: Hero(
-                      tag: 'product_${widget.businessProduct.id}',
-                      child: Container(
-                        height: 250,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(20),
-                          color: Colors.white,
+              );
+              price = activeCampaign.calculateDiscountedPrice(price);
+            } catch (_) {}
+          }
+
+          return CustomScrollView(
+            slivers: [
+              SliverAppBar(
+                pinned: true,
+                floating: true,
+                backgroundColor: Colors.white,
+                elevation: 4,
+                shadowColor: Colors.black12,
+                surfaceTintColor: Colors.transparent,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(
+                    bottom: Radius.circular(20),
+                  ),
+                ),
+                title: Text(
+                  product.name,
+                  style: GoogleFonts.poppins(
+                    color: Colors.black,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                centerTitle: true,
+                leading: IconButton(
+                  icon: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withAlpha(26),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(20),
-                          child: Image.network(
-                            product.imageUrl,
-                            fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                color: Colors.grey.shade100,
-                                child: const Center(
-                                  child: Icon(
-                                    Icons.image_not_supported,
-                                    color: Colors.grey,
-                                    size: 50,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
+                      ],
+                    ),
+                    child: const Icon(Icons.arrow_back, color: Colors.black),
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                actions: [
+                  Padding(
+                    padding: const EdgeInsets.only(right: 16.0),
+                    child: CartPriceBadge(
+                      onTap: () {
+                        // Detail'dan çık
+                        Navigator.pop(context);
+                        // Sepet tab'ine geç
+                        Provider.of<NavigationProvider>(
+                          context,
+                          listen: false,
+                        ).setIndex(2);
+                      },
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  // Marka (Varsa)
-                  if (product.brand.isNotEmpty)
-                    Text(
-                      product.brand.toUpperCase(),
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade600,
-                        letterSpacing: 1.0,
-                      ),
-                    ),
-                  const SizedBox(height: 8),
-
-                  // Ürün Adı
-                  Text(
-                    product.name,
-                    style: GoogleFonts.poppins(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Fiyat ve Birim
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        '₺${widget.businessProduct.price.toStringAsFixed(2)}',
-                        style: GoogleFonts.inter(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF00A651), // Emerald Green
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: Text(
-                          product.isWeighted ? '/ kg' : '/ adet',
-                          style: GoogleFonts.inter(
-                            fontSize: 16,
-                            color: Colors.grey.shade600,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  const Divider(height: 1),
-                  const SizedBox(height: 24),
-
-                  // Açıklama Başlığı
-                  Text(
-                    "Ürün Açıklaması",
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Açıklama Metni
-                  Text(
-                    product.description.isNotEmpty
-                        ? product.description
-                        : "Bu ürün için henüz bir açıklama eklenmemiştir.",
-                    style: GoogleFonts.inter(
-                      fontSize: 15,
-                      height: 1.6,
-                      color: Colors.grey.shade700,
-                    ),
-                  ),
-
-                  const SizedBox(height: 100), // Alt boşluk
                 ],
               ),
-            ),
-          ),
-        ],
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Ürün Resmi
+                      Center(
+                        child: Hero(
+                          tag: 'product_${widget.businessProduct.id}',
+                          child: Stack(
+                            children: [
+                              Container(
+                                height: 250,
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(20),
+                                  color: Colors.white,
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: Image.network(
+                                    product.imageUrl,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        color: Colors.grey.shade100,
+                                        child: const Center(
+                                          child: Icon(
+                                            Icons.image_not_supported,
+                                            color: Colors.grey,
+                                            size: 50,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                              if (activeCampaign != null)
+                                Positioned(
+                                  top: 10,
+                                  left: 10,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red,
+                                      borderRadius: BorderRadius.circular(20),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.2),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Text(
+                                      activeCampaign.type ==
+                                              CampaignType.percentage
+                                          ? "%${activeCampaign.discountValue.toStringAsFixed(0)} İndirim"
+                                          : "İndirimli Ürün",
+                                      style: GoogleFonts.poppins(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      // Marka (Varsa)
+                      if (product.brand.isNotEmpty)
+                        Text(
+                          product.brand.toUpperCase(),
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade600,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                      const SizedBox(height: 8),
+                      // Ürün Adı
+                      Text(
+                        product.name,
+                        style: GoogleFonts.poppins(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // Fiyat ve Birim
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          if (activeCampaign != null)
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                right: 12,
+                                bottom: 4,
+                              ),
+                              child: Text(
+                                '₺${widget.businessProduct.price.toStringAsFixed(2)}',
+                                style: GoogleFonts.inter(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey.shade500,
+                                  decoration: TextDecoration.lineThrough,
+                                ),
+                              ),
+                            ),
+                          Text(
+                            '₺${price.toStringAsFixed(2)}',
+                            style: GoogleFonts.inter(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF00A651), // Emerald Green
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Text(
+                              product.isWeighted ? '/ kg' : '/ adet',
+                              style: GoogleFonts.inter(
+                                fontSize: 16,
+                                color: Colors.grey.shade600,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      const Divider(height: 1),
+                      const SizedBox(height: 24),
+                      // Açıklama Başlığı
+                      Text(
+                        "Ürün Açıklaması",
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      // Açıklama Metni
+                      Text(
+                        product.description.isNotEmpty
+                            ? product.description
+                            : "Bu ürün için henüz bir açıklama eklenmemiştir.",
+                        style: GoogleFonts.inter(
+                          fontSize: 15,
+                          height: 1.6,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                      const SizedBox(height: 100), // Alt boşluk
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
       bottomSheet: Container(
         decoration: BoxDecoration(

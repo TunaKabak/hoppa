@@ -310,6 +310,7 @@ class _MerchantSettingsPageState extends State<MerchantSettingsPage>
                 child: Column(
                   children: [
                     CircleAvatar(
+                      key: ValueKey(_business!.logoUrl), // Force rebuild
                       radius: 40,
                       backgroundImage: _business!.logoUrl.isNotEmpty
                           ? NetworkImage(_business!.logoUrl)
@@ -334,6 +335,9 @@ class _MerchantSettingsPageState extends State<MerchantSettingsPage>
                       child: _business!.headerImageUrl.isNotEmpty
                           ? Image.network(
                               _business!.headerImageUrl,
+                              key: ValueKey(
+                                _business!.headerImageUrl,
+                              ), // Force rebuild
                               fit: BoxFit.cover,
                               width: double.infinity,
                             )
@@ -499,14 +503,21 @@ class _MerchantSettingsPageState extends State<MerchantSettingsPage>
       );
 
       if (url != null) {
+        // 1. Update Local State Immediately
+        setState(() {
+          _business = _business!.copyWith(logoUrl: url);
+        });
+
+        // 2. Update Database
         await _businessService.updateBusiness(widget.businessId, {
           'logoUrl': url,
         });
+
         if (mounted) {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(const SnackBar(content: Text("Logo güncellendi")));
-          _fetchBusinessData();
+          // _fetchBusinessData(); // No need to fetch again immediately if we updated local state
         }
       }
     } catch (e) {
@@ -540,6 +551,12 @@ class _MerchantSettingsPageState extends State<MerchantSettingsPage>
       );
 
       if (url != null) {
+        // 1. Update Local State Immediately
+        setState(() {
+          _business = _business!.copyWith(headerImageUrl: url);
+        });
+
+        // 2. Update Database
         await _businessService.updateBusiness(widget.businessId, {
           'headerImageUrl': url,
         });
@@ -547,7 +564,7 @@ class _MerchantSettingsPageState extends State<MerchantSettingsPage>
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text("Kapak fotoğrafı güncellendi")),
           );
-          _fetchBusinessData();
+          // _fetchBusinessData(); // No need to fetch again
         }
       }
     } catch (e) {

@@ -5,7 +5,9 @@ import 'package:hoppa/core/services/navigation_provider.dart';
 import 'package:hoppa/features/cart/cart_provider.dart';
 
 class CartPriceBadge extends StatelessWidget {
-  const CartPriceBadge({super.key});
+  final VoidCallback? onTap;
+
+  const CartPriceBadge({super.key, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +22,7 @@ class CartPriceBadge extends StatelessWidget {
         );
       },
       child: totalAmount > 0
-          ? _AnimatedCounter(totalAmount: totalAmount)
+          ? _AnimatedCounter(totalAmount: totalAmount, onTap: onTap)
           : const SizedBox.shrink(),
     );
   }
@@ -28,8 +30,9 @@ class CartPriceBadge extends StatelessWidget {
 
 class _AnimatedCounter extends StatefulWidget {
   final double totalAmount;
+  final VoidCallback? onTap;
 
-  const _AnimatedCounter({required this.totalAmount});
+  const _AnimatedCounter({required this.totalAmount, this.onTap});
 
   @override
   _AnimatedCounterState createState() => _AnimatedCounterState();
@@ -77,7 +80,7 @@ class _AnimatedCounterState extends State<_AnimatedCounter>
     final navProvider = Provider.of<NavigationProvider>(context, listen: false);
 
     return GestureDetector(
-      onTap: () => navProvider.setIndex(2),
+      onTap: widget.onTap ?? () => navProvider.setIndex(2),
       child: AnimatedBuilder(
         animation: _animation,
         builder: (context, child) {

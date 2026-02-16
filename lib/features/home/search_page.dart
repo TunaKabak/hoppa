@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:hoppa/features/home/product_provider.dart';
 import 'package:hoppa/features/home/widgets/modern_product_card.dart';
 import 'package:hoppa/core/services/navigation_provider.dart';
+import 'package:hoppa/models/campaign.dart';
+import 'package:hoppa/features/product/product_detail_page.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -153,9 +155,34 @@ class _SearchPageState extends State<SearchPage> {
       separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final product = results[index];
+
+        // Find matching campaign
+        Campaign? campaign;
+        try {
+          campaign = productProvider.activeCampaigns.firstWhere(
+            (c) => c.targetProducts.contains(product.productBarcode),
+          );
+        } catch (_) {}
+
+        // (inside _buildSearchResults)
         return SizedBox(
           height: 120,
-          child: ModernProductCard(businessProduct: product, isListView: true),
+          child: GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      ProductDetailPage(businessProduct: product),
+                ),
+              );
+            },
+            child: ModernProductCard(
+              businessProduct: product,
+              isListView: true,
+              campaign: campaign,
+            ),
+          ),
         );
       },
     );

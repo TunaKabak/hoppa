@@ -57,14 +57,10 @@ class _MainLayoutPageState extends State<MainLayoutPage> {
           context,
           listen: false,
         );
-        final businessProvider = Provider.of<BusinessProvider>(
-          context,
-          listen: false,
-        );
-
+        // NOT: Business verilerini burada temizlememelisiniz.
+        // Eğer MainLayoutPage yeniden oluşturulursa (örn: Auth değişikliği),
+        // mevcut seçimlerin kaybolmasına neden olur.
         navProvider.setIndex(0);
-        businessProvider.clearCategory();
-        businessProvider.clearBusiness();
       }
     });
   }
@@ -107,14 +103,27 @@ class _MainLayoutPageState extends State<MainLayoutPage> {
           }
         }
 
-        // 2. Ana Sayfada Değilsek -> Ana Sayfaya Git
+        // 2. Ana Sayfa sekmesinde (Index 0): state-driven ekranlar arasında geri git
+        if (currentIndex == 0) {
+          if (businessProvider.selectedBusiness != null) {
+            // Ürün listesi -> İşletme seçimi
+            businessProvider.clearBusiness();
+            return;
+          }
+          if (businessProvider.selectedCategory != null) {
+            // İşletme seçimi -> Kategori seçimi
+            businessProvider.clearCategory();
+            return;
+          }
+        }
+
+        // 3. Ana Sayfada Değilsek -> Ana Sayfaya Git
         if (currentIndex != 0) {
           navProvider.setIndex(0);
           return;
         }
 
-        // 3. Ana Sayfadayız (Index 0) -> Uygulamadan Çık
-        // SystemNavigator.pop() ile düzgün çıkış yap (Android)
+        // 4. Ana Sayfadayız ve kök kategori ekranındayız -> Uygulamadan Çık
         SystemNavigator.pop();
       },
       child: Scaffold(

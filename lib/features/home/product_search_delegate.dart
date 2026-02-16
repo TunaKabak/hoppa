@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:hoppa/features/home/product_provider.dart';
 import 'package:hoppa/features/home/widgets/modern_product_card.dart';
+import 'package:hoppa/models/campaign.dart';
+import 'package:hoppa/features/product/product_detail_page.dart';
 
 class ProductSearchDelegate extends SearchDelegate {
   @override
@@ -89,12 +91,34 @@ class ProductSearchDelegate extends SearchDelegate {
         separatorBuilder: (context, index) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
           final product = results[index];
+
+          // Find matching campaign
+          Campaign? campaign;
+          try {
+            campaign = productProvider.activeCampaigns.firstWhere(
+              (c) => c.targetProducts.contains(product.productBarcode),
+            );
+          } catch (_) {}
+
+          // (inside _buildSearchResults)
           // Liste görünümünde kartları gösteriyoruz
           return SizedBox(
             height: 120, // Liste elemanı yüksekliği
-            child: ModernProductCard(
-              businessProduct: product,
-              isListView: true, // Yatay kart görünümü
+            child: GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        ProductDetailPage(businessProduct: product),
+                  ),
+                );
+              },
+              child: ModernProductCard(
+                businessProduct: product,
+                isListView: true, // Yatay kart görünümü
+                campaign: campaign,
+              ),
             ),
           );
         },

@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hoppa/models/business_product.dart';
+import 'package:hoppa/models/campaign.dart';
+import 'package:hoppa/core/services/campaign_service.dart';
 
 class ProductProvider extends ChangeNotifier {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
   List<BusinessProduct> _products = [];
   List<BusinessProduct> get products => _products;
+
+  List<Campaign> _activeCampaigns = [];
+  List<Campaign> get activeCampaigns => _activeCampaigns;
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
@@ -37,9 +42,11 @@ class ProductProvider extends ChangeNotifier {
   void setCategory(String category) {
     _selectedCategory = category;
     _selectedSubCategory = 'Tümü';
+
     // State resetlenince otomatik fetch çağrılmıyor, UI'dan çağrılmalı.
     // Ancak veri bütünlüğü için burada resetlemek yeterli.
     _products = [];
+    _activeCampaigns = []; // Reset campaigns too
     _lastDocument = null;
     _hasMore = true;
     notifyListeners();
@@ -74,6 +81,20 @@ class ProductProvider extends ChangeNotifier {
     );
 
     try {
+      // KAMPANYALARI ÇEK (Sadece ilk sayfada veya liste boşken)
+      if (_products.isEmpty) {
+        try {
+          // Stream'i tek seferlik Future'a çeviriyoruz
+          final campaigns = await CampaignService()
+              .getActiveCampaigns(businessId)
+              .first;
+          _activeCampaigns = campaigns;
+        } catch (e) {
+          debugPrint("Kampanya çekme hatası: $e");
+          // Kampanya hatası ürünleri engellememeli
+        }
+      }
+
       // SORGULAMA: business_products koleksiyonundan
       Query query = _db
           .collection('business_products')

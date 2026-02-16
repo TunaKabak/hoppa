@@ -17,279 +17,272 @@ class BusinessSelectionPage extends StatelessWidget {
   Widget build(BuildContext context) {
     const kPrimaryColor = Color(0xFF00A651);
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
-        if (didPop) return;
-        Provider.of<BusinessProvider>(context, listen: false).clearCategory();
-      },
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF4F7F6),
-        appBar: AppBar(
-          title: Text(
-            category ?? "İşletme Seçimi",
-            style: const TextStyle(
-              color: Colors.black,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          backgroundColor: Colors.white,
-          elevation: 0,
-          centerTitle: true,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.black),
-            onPressed: () {
-              // Kategoriyi temizle -> Kategori Seçimine döner
-              Provider.of<BusinessProvider>(
-                context,
-                listen: false,
-              ).clearCategory();
-            },
+    return Scaffold(
+      backgroundColor: const Color(0xFFF4F7F6),
+      appBar: AppBar(
+        title: Text(
+          category ?? "İşletme Seçimi",
+          style: const TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
           ),
         ),
-        body: Consumer<DeliveryProvider>(
-          builder: (context, deliveryProvider, child) {
-            final address = deliveryProvider.selectedAddress;
+        backgroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () {
+            // Kategoriyi temizle -> Kategori Seçimine döner
+            Provider.of<BusinessProvider>(
+              context,
+              listen: false,
+            ).clearCategory();
+          },
+        ),
+      ),
+      body: Consumer<DeliveryProvider>(
+        builder: (context, deliveryProvider, child) {
+          final address = deliveryProvider.selectedAddress;
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // --- ADRES KARTI ---
-                Container(
-                  color: Colors.white,
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  child: GestureDetector(
-                    onTap: () async {
-                      final selectedAddress = await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              const AddressListPage(isSelectionMode: true),
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // --- ADRES KARTI ---
+              Container(
+                color: Colors.white,
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: GestureDetector(
+                  onTap: () async {
+                    final selectedAddress = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            const AddressListPage(isSelectionMode: true),
+                      ),
+                    );
+                    if (selectedAddress != null) {
+                      deliveryProvider.setAddress(selectedAddress);
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFBFBFB),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.location_on,
+                          color: kPrimaryColor,
+                          size: 24,
                         ),
-                      );
-                      if (selectedAddress != null) {
-                        deliveryProvider.setAddress(selectedAddress);
-                      }
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFBFBFB),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.shade300),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.location_on,
-                            color: kPrimaryColor,
-                            size: 24,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  address != null
-                                      ? "Teslimat: ${address.title}"
-                                      : "Teslimat Adresi Seçin",
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                    color: Colors.grey.shade800,
-                                  ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                address != null
+                                    ? "Teslimat: ${address.title}"
+                                    : "Teslimat Adresi Seçin",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  color: Colors.grey.shade800,
                                 ),
-                                if (address != null)
-                                  Text(
-                                    "${address.district}, ${address.city}",
-                                    style: TextStyle(
-                                      color: Colors.grey.shade600,
-                                      fontSize: 12,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                              ),
+                              if (address != null)
+                                Text(
+                                  "${address.district}, ${address.city}",
+                                  style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                    fontSize: 12,
                                   ),
-                              ],
-                            ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                            ],
                           ),
-                          const Icon(
-                            Icons.keyboard_arrow_down,
-                            color: Colors.grey,
-                          ),
-                        ],
-                      ),
+                        ),
+                        const Icon(
+                          Icons.keyboard_arrow_down,
+                          color: Colors.grey,
+                        ),
+                      ],
                     ),
                   ),
                 ),
+              ),
 
-                const SizedBox(height: 10),
+              const SizedBox(height: 10),
 
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    category != null
-                        ? "$category Listesi"
-                        : "Yakındaki İşletmeler",
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  category != null
+                      ? "$category Listesi"
+                      : "Yakındaki İşletmeler",
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
                   ),
                 ),
+              ),
 
-                const SizedBox(height: 10),
+              const SizedBox(height: 10),
 
-                // --- İŞLETME LİSTESİ ---
-                Expanded(
-                  child: StreamBuilder<List<Business>>(
-                    stream: BusinessService().getBusinesses(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      if (snapshot.hasError) {
-                        return Center(child: Text("Hata: ${snapshot.error}"));
-                      }
+              // --- İŞLETME LİSTESİ ---
+              Expanded(
+                child: StreamBuilder<List<Business>>(
+                  stream: BusinessService().getBusinesses(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.hasError) {
+                      return Center(child: Text("Hata: ${snapshot.error}"));
+                    }
 
-                      var businesses = snapshot.data ?? [];
+                    var businesses = snapshot.data ?? [];
+
+                    if (businesses.isEmpty) {
+                      return const Center(
+                        child: Text("Aktif işletme bulunamadı."),
+                      );
+                    }
+
+                    // FİLTRELEME (İşletme Türü veya Kategori)
+                    if (category != null) {
+                      // Hem tur ismine gore hem de kategorilere gore filtreleyelim
+                      businesses = businesses
+                          .where(
+                            (b) =>
+                                b.categories.contains(category) ||
+                                b.type.label == category ||
+                                b.type.name.toLowerCase() ==
+                                    category!.toLowerCase(),
+                          )
+                          .toList();
 
                       if (businesses.isEmpty) {
-                        return const Center(
-                          child: Text("Aktif işletme bulunamadı."),
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.search_off,
+                                size: 64,
+                                color: Colors.grey.shade300,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                "Bu kategoride hizmet veren\niş yeri bulunamadı.",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: Colors.grey.shade600),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                    }
+
+                    // MESAFEYE GÖRE FILTRELEME VE SIRALAMA
+                    if (address != null) {
+                      final Distance distance = const Distance();
+
+                      // 1. Filtreleme: Menzil dışındakileri gizle
+                      businesses = businesses.where((b) {
+                        // İşletmenin koordinatları 0 ise (hatalı veri) filtreleme yapma veya sonda göster
+                        if (b.latitude == 0 && b.longitude == 0) return true;
+
+                        final double km =
+                            distance.as(
+                              LengthUnit.Meter,
+                              LatLng(address.latitude, address.longitude),
+                              LatLng(b.latitude, b.longitude),
+                            ) /
+                            1000.0;
+                        return km <=
+                            (b.deliveryRadius > 0 ? b.deliveryRadius : 10.0);
+                      }).toList();
+
+                      if (businesses.isEmpty) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.location_off_outlined,
+                                size: 64,
+                                color: Colors.grey.shade300,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                "Seçilen adrese hizmet veren\niş yeri bulunamadı.",
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: Colors.grey.shade600),
+                              ),
+                            ],
+                          ),
                         );
                       }
 
-                      // FİLTRELEME (İşletme Türü veya Kategori)
-                      if (category != null) {
-                        // Hem tur ismine gore hem de kategorilere gore filtreleyelim
-                        businesses = businesses
-                            .where(
-                              (b) =>
-                                  b.categories.contains(category) ||
-                                  b.type.label == category ||
-                                  b.type.name.toLowerCase() ==
-                                      category!.toLowerCase(),
-                            )
-                            .toList();
+                      // 2. Sıralama: En yakından uzağa
+                      businesses.sort((a, b) {
+                        final distA = distance.as(
+                          LengthUnit.Meter,
+                          LatLng(address.latitude, address.longitude),
+                          LatLng(a.latitude, a.longitude),
+                        );
+                        final distB = distance.as(
+                          LengthUnit.Meter,
+                          LatLng(address.latitude, address.longitude),
+                          LatLng(b.latitude, b.longitude),
+                        );
+                        return distA.compareTo(distB);
+                      });
+                    }
 
-                        if (businesses.isEmpty) {
-                          return Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.search_off,
-                                  size: 64,
-                                  color: Colors.grey.shade300,
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  "Bu kategoride hizmet veren\niş yeri bulunamadı.",
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(color: Colors.grey.shade600),
-                                ),
-                              ],
-                            ),
-                          );
-                        }
-                      }
+                    return ListView.builder(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      itemCount: businesses.length,
+                      itemBuilder: (context, index) {
+                        final business = businesses[index];
 
-                      // MESAFEYE GÖRE FILTRELEME VE SIRALAMA
-                      if (address != null) {
-                        final Distance distance = const Distance();
-
-                        // 1. Filtreleme: Menzil dışındakileri gizle
-                        businesses = businesses.where((b) {
-                          // İşletmenin koordinatları 0 ise (hatalı veri) filtreleme yapma veya sonda göster
-                          if (b.latitude == 0 && b.longitude == 0) return true;
-
+                        // Mesafeyi hesaplayıp karta gönderelim
+                        String? distanceText;
+                        if (address != null) {
+                          final Distance distance = const Distance();
                           final double km =
                               distance.as(
                                 LengthUnit.Meter,
                                 LatLng(address.latitude, address.longitude),
-                                LatLng(b.latitude, b.longitude),
+                                LatLng(business.latitude, business.longitude),
                               ) /
                               1000.0;
-                          return km <=
-                              (b.deliveryRadius > 0 ? b.deliveryRadius : 10.0);
-                        }).toList();
-
-                        if (businesses.isEmpty) {
-                          return Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.location_off_outlined,
-                                  size: 64,
-                                  color: Colors.grey.shade300,
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  "Seçilen adrese hizmet veren\niş yeri bulunamadı.",
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(color: Colors.grey.shade600),
-                                ),
-                              ],
-                            ),
-                          );
+                          distanceText = "${km.toStringAsFixed(1)} km";
                         }
 
-                        // 2. Sıralama: En yakından uzağa
-                        businesses.sort((a, b) {
-                          final distA = distance.as(
-                            LengthUnit.Meter,
-                            LatLng(address.latitude, address.longitude),
-                            LatLng(a.latitude, a.longitude),
-                          );
-                          final distB = distance.as(
-                            LengthUnit.Meter,
-                            LatLng(address.latitude, address.longitude),
-                            LatLng(b.latitude, b.longitude),
-                          );
-                          return distA.compareTo(distB);
-                        });
-                      }
-
-                      return ListView.builder(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        itemCount: businesses.length,
-                        itemBuilder: (context, index) {
-                          final business = businesses[index];
-
-                          // Mesafeyi hesaplayıp karta gönderelim
-                          String? distanceText;
-                          if (address != null) {
-                            final Distance distance = const Distance();
-                            final double km =
-                                distance.as(
-                                  LengthUnit.Meter,
-                                  LatLng(address.latitude, address.longitude),
-                                  LatLng(business.latitude, business.longitude),
-                                ) /
-                                1000.0;
-                            distanceText = "${km.toStringAsFixed(1)} km";
-                          }
-
-                          return _buildCompactBusinessCard(
-                            context,
-                            business,
-                            distanceText,
-                          );
-                        },
-                      );
-                    },
-                  ),
+                        return _buildCompactBusinessCard(
+                          context,
+                          business,
+                          distanceText,
+                        );
+                      },
+                    );
+                  },
                 ),
-              ],
-            );
-          },
-        ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

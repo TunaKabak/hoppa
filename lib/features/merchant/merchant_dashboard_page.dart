@@ -8,6 +8,7 @@ import 'package:hoppa/features/merchant/merchant_product_list_page.dart';
 import 'package:hoppa/core/services/product_service.dart';
 import 'package:hoppa/features/merchant/merchant_analytics_page.dart';
 import 'package:hoppa/features/merchant/merchant_settings_page.dart';
+import 'package:hoppa/features/merchant/campaign/merchant_campaigns_page.dart'; // Import
 import 'package:hoppa/models/order_status.dart'; // Restored
 import 'package:hoppa/core/services/business_service.dart';
 import 'package:hoppa/core/services/auth_service.dart'; // Logout için
@@ -168,6 +169,9 @@ class _MerchantDashboardPageState extends State<MerchantDashboardPage>
     final List<Widget> pages = [
       _buildDashboardContent(theme), // Ana Sayfa (Dashboard)
       MerchantProductListPage(businessId: widget.businessId), // Ürünler
+      MerchantCampaignsPage(
+        businessId: widget.businessId,
+      ), // Kampanyalar (YENİ)
       MerchantAnalyticsPage(businessId: widget.businessId), // Analiz
       MerchantSettingsPage(businessId: widget.businessId), // Ayarlar
     ];
@@ -243,6 +247,10 @@ class _MerchantDashboardPageState extends State<MerchantDashboardPage>
           BottomNavigationBarItem(
             icon: Icon(Icons.inventory_2),
             label: 'Ürünler',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.local_offer),
+            label: 'Kampanya',
           ),
           BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Analiz'),
           BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Ayarlar'),

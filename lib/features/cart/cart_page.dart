@@ -4,6 +4,7 @@ import 'package:hoppa/features/cart/cart_provider.dart';
 import 'package:hoppa/features/checkout/checkout_page.dart';
 import 'package:hoppa/core/services/navigation_provider.dart';
 import 'package:hoppa/features/home/widgets/modern_product_card.dart';
+import 'package:hoppa/models/campaign.dart';
 
 class CartPage extends StatefulWidget {
   const CartPage({super.key});
@@ -122,11 +123,24 @@ class _CartPageState extends State<CartPage> {
                           itemCount: cart.items.length,
                           separatorBuilder: (context, index) =>
                               const SizedBox(height: 16),
-                          itemBuilder: (context, index) => ModernProductCard(
-                            businessProduct: cart.items[index].businessProduct,
-                            isListView: true,
-                            isCompact: true,
-                          ),
+                          itemBuilder: (context, index) {
+                            final item = cart.items[index];
+                            Campaign? campaign;
+                            try {
+                              campaign = cart.activeCampaigns.firstWhere(
+                                (c) => c.targetProducts.contains(
+                                  item.businessProduct.productBarcode,
+                                ),
+                              );
+                            } catch (_) {}
+
+                            return ModernProductCard(
+                              businessProduct: item.businessProduct,
+                              isListView: true,
+                              isCompact: true,
+                              campaign: campaign,
+                            );
+                          },
                         )
                       : _buildGroupedList(cart, colorScheme),
                 ),
@@ -362,16 +376,26 @@ class _CartPageState extends State<CartPage> {
                 ],
               ),
             ),
-            ...items.map(
-              (item) => Padding(
+            ...items.map((item) {
+              Campaign? campaign;
+              try {
+                campaign = cart.activeCampaigns.firstWhere(
+                  (c) => c.targetProducts.contains(
+                    item.businessProduct.productBarcode,
+                  ),
+                );
+              } catch (_) {}
+
+              return Padding(
                 padding: const EdgeInsets.only(bottom: 16.0),
                 child: ModernProductCard(
                   businessProduct: item.businessProduct,
                   isListView: true,
                   isCompact: true,
+                  campaign: campaign,
                 ),
-              ),
-            ),
+              );
+            }),
             Divider(height: 30, color: Colors.grey.shade300),
           ],
         );

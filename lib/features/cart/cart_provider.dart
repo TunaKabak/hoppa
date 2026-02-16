@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:hoppa/models/business_product.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:hoppa/models/campaign.dart';
+import 'package:hoppa/core/services/campaign_service.dart';
 
 // Sepet Öğesi artık BusinessProduct tutuyor
 class CartItem {
@@ -19,15 +21,29 @@ class CartProvider extends ChangeNotifier {
 
   final List<CartItem> _items = [];
   String? _currentBusinessId;
+  List<Campaign> _activeCampaigns = [];
 
   List<CartItem> get items => _items;
   String? get currentBusinessId => _currentBusinessId;
+  List<Campaign> get activeCampaigns => _activeCampaigns;
 
   double get totalAmount {
     double total = 0.0;
     for (var item in _items) {
-      // Fiyat artık businessProduct içinde
-      total += item.businessProduct.price * item.quantity;
+      double price = item.businessProduct.price;
+
+      // Kampanya kontrolü
+      if (_activeCampaigns.isNotEmpty) {
+        try {
+          final campaign = _activeCampaigns.firstWhere(
+            (c) =>
+                c.targetProducts.contains(item.businessProduct.productBarcode),
+          );
+          price = campaign.calculateDiscountedPrice(price);
+        } catch (_) {}
+      }
+
+      total += price * item.quantity;
     }
     return total;
   }
@@ -88,6 +104,12 @@ class CartProvider extends ChangeNotifier {
           }
         }
       }
+
+      // Sepet yüklendikten sonra kampanyaları çek
+      if (_currentBusinessId != null) {
+        _fetchCampaigns(_currentBusinessId!);
+      }
+
       notifyListeners();
     } catch (e) {
       print("Fetch Cart Error: $e");
@@ -196,6 +218,7 @@ class CartProvider extends ChangeNotifier {
       );
       _items.add(updatedItem);
       _currentBusinessId = product.businessId;
+      _fetchCampaigns(_currentBusinessId!);
     }
 
     notifyListeners();
@@ -232,6 +255,7 @@ class CartProvider extends ChangeNotifier {
 
       if (_items.isEmpty) {
         _currentBusinessId = null;
+        _activeCampaigns = [];
       }
 
       notifyListeners();
@@ -243,6 +267,7 @@ class CartProvider extends ChangeNotifier {
   Future<void> clearCart({bool deleteFromDb = false}) async {
     _items.clear();
     _currentBusinessId = null;
+    _activeCampaigns = [];
     notifyListeners();
 
     if (deleteFromDb) {
@@ -271,6 +296,18 @@ class CartProvider extends ChangeNotifier {
       for (var item in toRemove) {
         removeFromCart(item.businessProduct.id);
       }
+    }
+  }
+
+  Future<void> _fetchCampaigns(String businessId) async {
+    try {
+      final campaigns = await CampaignService()
+          .getActiveCampaigns(businessId)
+          .first;
+      _activeCampaigns = campaigns;
+      notifyListeners();
+    } catch (e) {
+      debugPrint("Cart Campaign Fetch Error: $e");
     }
   }
 }

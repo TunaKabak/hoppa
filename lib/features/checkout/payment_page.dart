@@ -366,61 +366,65 @@ class _PaymentPageState extends State<PaymentPage> {
                               16,
                               16,
                             ),
-                            children: cart.items
-                                .map(
-                                  (item) => Padding(
-                                    padding: const EdgeInsets.only(bottom: 8.0),
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          width: 28,
-                                          height: 28,
-                                          alignment: Alignment.center,
-                                          decoration: BoxDecoration(
-                                            color: Colors.grey[100],
-                                            borderRadius: BorderRadius.circular(
-                                              6,
-                                            ),
-                                            border: Border.all(
-                                              color: Colors.grey.shade300,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            item
-                                                    .businessProduct
-                                                    .product
-                                                    .isWeighted
-                                                ? item.quantity.toStringAsFixed(
-                                                    1,
-                                                  )
-                                                : "${item.quantity.toInt()}",
-                                            style: TextStyle(
-                                              color: kPrimaryColor,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 11,
-                                            ),
-                                          ),
+                            children: cart.items.map((item) {
+                              double price = item.businessProduct.price;
+                              if (cart.activeCampaigns.isNotEmpty) {
+                                try {
+                                  final campaign = cart.activeCampaigns
+                                      .firstWhere(
+                                        (c) => c.targetProducts.contains(
+                                          item.businessProduct.productBarcode,
                                         ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Text(
-                                            item.businessProduct.product.name,
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                            ),
-                                          ),
+                                      );
+                                  price = campaign.calculateDiscountedPrice(
+                                    price,
+                                  );
+                                } catch (_) {}
+                              }
+
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 8.0),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 28,
+                                      height: 28,
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[100],
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: Colors.grey.shade300,
                                         ),
-                                        Text(
-                                          "${(item.businessProduct.price * item.quantity).toStringAsFixed(2)} ₺",
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                          ),
+                                      ),
+                                      child: Text(
+                                        item.businessProduct.product.isWeighted
+                                            ? item.quantity.toStringAsFixed(1)
+                                            : "${item.quantity.toInt()}",
+                                        style: TextStyle(
+                                          color: kPrimaryColor,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 11,
                                         ),
-                                      ],
+                                      ),
                                     ),
-                                  ),
-                                )
-                                .toList(),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        item.businessProduct.product.name,
+                                        style: const TextStyle(fontSize: 14),
+                                      ),
+                                    ),
+                                    Text(
+                                      "${(price * item.quantity).toStringAsFixed(2)} ₺",
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
                           ),
                         ),
                         const Divider(height: 1),

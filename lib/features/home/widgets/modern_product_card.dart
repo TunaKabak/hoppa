@@ -2,17 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:hoppa/models/business_product.dart';
 import 'package:hoppa/features/cart/cart_provider.dart';
+import 'package:hoppa/models/campaign.dart';
 
 class ModernProductCard extends StatelessWidget {
   final BusinessProduct businessProduct;
   final bool isListView;
   final bool isCompact;
+  final Campaign? campaign;
 
   const ModernProductCard({
     super.key,
     required this.businessProduct,
     this.isListView = false,
     this.isCompact = false,
+    this.campaign,
   });
 
   @override
@@ -30,6 +33,13 @@ class ModernProductCard extends StatelessWidget {
       quantity = cartProvider.items[cartItemIndex].quantity;
     }
 
+    double price = businessProduct.price;
+    double? discountedPrice;
+
+    if (campaign != null) {
+      discountedPrice = campaign!.calculateDiscountedPrice(price);
+    }
+
     // --- LIST VIEW LAYOUT ---
     if (isListView) {
       return Container(
@@ -44,12 +54,7 @@ class ModernProductCard extends StatelessWidget {
               offset: const Offset(0, 2),
             ),
           ],
-          border: Border.all(
-            color: quantity > 0
-                ? const Color(0xFF00A651) // Hoppa green for items in cart
-                : Colors.grey.shade200,
-            width: quantity > 0 ? 2 : 1,
-          ),
+          border: Border.all(color: Colors.grey.shade200, width: 1),
         ),
         child: Row(
           children: [
@@ -71,7 +76,7 @@ class ModernProductCard extends StatelessWidget {
                         child: product.imageUrl.isNotEmpty
                             ? Image.network(
                                 product.imageUrl,
-                                fit: BoxFit.cover, // Grid ile tutarlı olsun
+                                fit: BoxFit.cover,
                                 errorBuilder: (context, error, stackTrace) {
                                   return Icon(
                                     Icons.image_not_supported,
@@ -83,6 +88,32 @@ class ModernProductCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (discountedPrice != null)
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(8),
+                            bottomRight: Radius.circular(8),
+                          ),
+                        ),
+                        child: const Text(
+                          'İndirim',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -116,13 +147,28 @@ class ModernProductCard extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        "${businessProduct.price.toStringAsFixed(2)} ₺",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: theme.primaryColor,
-                        ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (discountedPrice != null)
+                            Text(
+                              "${price.toStringAsFixed(2)} ₺",
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey,
+                                decoration: TextDecoration.lineThrough,
+                              ),
+                            ),
+                          Text(
+                            "${(discountedPrice ?? price).toStringAsFixed(2)} ₺",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: theme.primaryColor,
+                            ),
+                          ),
+                        ],
                       ),
                       _buildQuantityControl(
                         context,
@@ -152,12 +198,7 @@ class ModernProductCard extends StatelessWidget {
             offset: const Offset(0, 4),
           ),
         ],
-        border: Border.all(
-          color: quantity > 0
-              ? const Color(0xFF00A651) // Hoppa green for items in cart
-              : Colors.grey.shade100,
-          width: quantity > 0 ? 2.5 : 1,
-        ),
+        border: Border.all(color: Colors.grey.shade100, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -217,6 +258,32 @@ class ModernProductCard extends StatelessWidget {
                           ),
                   ),
                 ),
+                if (discountedPrice != null)
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(16),
+                          bottomRight: Radius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        'İndirim',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
 
                 // --- MİKTAR KONTROLÜ (Sağa Hizalı) ---
                 Positioned(
@@ -272,13 +339,28 @@ class ModernProductCard extends StatelessWidget {
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
-                    child: Text(
-                      "${businessProduct.price.toStringAsFixed(2)} ₺",
-                      style: TextStyle(
-                        color: theme.primaryColor,
-                        fontSize: 15, // Slightly smaller
-                        fontWeight: FontWeight.w800,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (discountedPrice != null)
+                          Text(
+                            "${price.toStringAsFixed(2)} ₺",
+                            style: const TextStyle(
+                              color: Colors.grey,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              decoration: TextDecoration.lineThrough,
+                            ),
+                          ),
+                        Text(
+                          "${(discountedPrice ?? price).toStringAsFixed(2)} ₺",
+                          style: TextStyle(
+                            color: theme.primaryColor,
+                            fontSize: 15, // Slightly smaller
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],

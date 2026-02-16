@@ -81,4 +81,44 @@ class Business {
       'workingHours': workingHours,
     };
   }
+
+  Business copyWith({
+    String? id,
+    String? name,
+    String? address,
+    String? phone,
+    String? logoUrl,
+    String? headerImageUrl,
+    double? latitude,
+    double? longitude,
+    bool? isOpen,
+    BusinessType? type,
+    List<String>? categories,
+    String? openingTime,
+    String? closingTime,
+    double? minBasketAmount,
+    String? averageDeliveryTime,
+    double? deliveryRadius,
+    Map<String, dynamic>? workingHours,
+  }) {
+    return Business(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      address: address ?? this.address,
+      phone: phone ?? this.phone,
+      logoUrl: logoUrl ?? this.logoUrl,
+      headerImageUrl: headerImageUrl ?? this.headerImageUrl,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      isOpen: isOpen ?? this.isOpen,
+      type: type ?? this.type,
+      categories: categories ?? this.categories,
+      openingTime: openingTime ?? this.openingTime,
+      closingTime: closingTime ?? this.closingTime,
+      minBasketAmount: minBasketAmount ?? this.minBasketAmount,
+      averageDeliveryTime: averageDeliveryTime ?? this.averageDeliveryTime,
+      deliveryRadius: deliveryRadius ?? this.deliveryRadius,
+      workingHours: workingHours ?? this.workingHours,
+    );
+  }
 }

@@ -11,6 +11,7 @@ import 'package:hoppa/features/home/widgets/modern_product_card.dart';
 import 'package:hoppa/features/home/widgets/promo_slider.dart';
 import 'package:hoppa/features/orders/widgets/active_order_card.dart';
 import 'package:hoppa/features/product/product_detail_page.dart';
+import 'package:hoppa/models/campaign.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -759,6 +760,16 @@ class _HomePageState extends State<HomePage>
                   ),
                   delegate: SliverChildBuilderDelegate((context, index) {
                     final product = productProvider.products[index];
+
+                    // Find matching campaign
+                    Campaign? campaign;
+                    try {
+                      campaign = productProvider.activeCampaigns.firstWhere(
+                        (c) =>
+                            c.targetProducts.contains(product.productBarcode),
+                      );
+                    } catch (_) {}
+
                     return GestureDetector(
                       onTap: () {
                         Navigator.push(
@@ -773,6 +784,7 @@ class _HomePageState extends State<HomePage>
                         businessProduct: product,
                         isListView: _crossAxisCount == 1,
                         isCompact: _crossAxisCount > 2,
+                        campaign: campaign,
                       ),
                     );
                   }, childCount: productProvider.products.length),
