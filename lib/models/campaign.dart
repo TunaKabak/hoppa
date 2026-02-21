@@ -12,6 +12,7 @@ class Campaign {
   discountValue; // Percentage (e.g., 20.0) or Fixed Price (e.g. 50.0)
   final DateTime startDate;
   final DateTime endDate;
+  final String imageUrl;
   final bool isActive;
 
   Campaign({
@@ -23,6 +24,7 @@ class Campaign {
     required this.discountValue,
     required this.startDate,
     required this.endDate,
+    required this.imageUrl,
     this.isActive = true,
   });
 
@@ -38,6 +40,7 @@ class Campaign {
       discountValue: (data['discountValue'] ?? 0.0).toDouble(),
       startDate: (data['startDate'] as Timestamp).toDate(),
       endDate: (data['endDate'] as Timestamp).toDate(),
+      imageUrl: data['imageUrl'] ?? '',
       isActive: data['isActive'] ?? true,
     );
   }
@@ -51,6 +54,7 @@ class Campaign {
       'discountValue': discountValue,
       'startDate': Timestamp.fromDate(startDate),
       'endDate': Timestamp.fromDate(endDate),
+      'imageUrl': imageUrl,
       'isActive': isActive,
     };
   }
@@ -65,5 +69,31 @@ class Campaign {
       // İster: "Sabit Fiyat" genelde "Bu ürün 50 TL" demek olur.
       return discountValue;
     }
+  }
+
+  Campaign copyWith({
+    String? id,
+    String? vendorId,
+    String? name,
+    CampaignType? type,
+    List<String>? targetProducts,
+    double? discountValue,
+    DateTime? startDate,
+    DateTime? endDate,
+    String? imageUrl,
+    bool? isActive,
+  }) {
+    return Campaign(
+      id: id ?? this.id,
+      vendorId: vendorId ?? this.vendorId,
+      name: name ?? this.name,
+      type: type ?? this.type,
+      targetProducts: targetProducts ?? this.targetProducts,
+      discountValue: discountValue ?? this.discountValue,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      imageUrl: imageUrl ?? this.imageUrl,
+      isActive: isActive ?? this.isActive,
+    );
   }
 }

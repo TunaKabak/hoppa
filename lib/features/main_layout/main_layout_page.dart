@@ -88,8 +88,12 @@ class _MainLayoutPageState extends State<MainLayoutPage> {
       navProvider.setIndex(0);
     }
 
+    // Eğer üstümüzde başka bir sayfa varsa (ör: ProductDetailPage),
+    // normal pop davranışına izin ver
+    final isCurrentRoute = ModalRoute.of(context)?.isCurrent ?? true;
+
     return PopScope(
-      canPop: false,
+      canPop: !isCurrentRoute,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
 

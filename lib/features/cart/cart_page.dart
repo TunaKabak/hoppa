@@ -5,6 +5,9 @@ import 'package:hoppa/features/checkout/checkout_page.dart';
 import 'package:hoppa/core/services/navigation_provider.dart';
 import 'package:hoppa/features/home/widgets/modern_product_card.dart';
 import 'package:hoppa/models/campaign.dart';
+import 'package:hoppa/features/address/delivery_provider.dart';
+import 'package:hoppa/features/business/business_provider.dart';
+import 'package:hoppa/features/cart/widgets/min_cart_amount_progress.dart';
 
 class CartPage extends StatefulWidget {
   const CartPage({super.key});
@@ -28,6 +31,9 @@ class _CartPageState extends State<CartPage> {
   @override
   Widget build(BuildContext context) {
     final cart = Provider.of<CartProvider>(context);
+    final businessProvider = Provider.of<BusinessProvider>(context);
+    final deliveryProvider = Provider.of<DeliveryProvider>(context);
+
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -35,6 +41,13 @@ class _CartPageState extends State<CartPage> {
     final double finalTotal = cart.totalAmount > 0
         ? cart.totalAmount + deliveryFee
         : 0;
+
+    final requiredMinAmount = cart.getRequiredMinAmount(
+      businessProvider.selectedBusiness,
+      deliveryProvider.selectedAddress,
+    );
+
+    final bool canCheckout = cart.totalAmount >= requiredMinAmount;
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -63,6 +76,11 @@ class _CartPageState extends State<CartPage> {
           ? _buildEmptyCart(context, colorScheme)
           : Column(
               children: [
+                if (requiredMinAmount > 0)
+                  MinCartAmountProgress(
+                    currentAmount: cart.totalAmount,
+                    minAmount: requiredMinAmount,
+                  ),
                 if (cart.items.isNotEmpty)
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -251,7 +269,9 @@ class _CartPageState extends State<CartPage> {
                           height: 48, // Buton yüksekliği azaltıldı (56 -> 48)
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: colorScheme.primary,
+                              backgroundColor: canCheckout
+                                  ? colorScheme.primary
+                                  : Colors.grey,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(
@@ -260,17 +280,22 @@ class _CartPageState extends State<CartPage> {
                               ),
                               elevation: 2, // Elevation azaltıldı
                             ),
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const CheckoutPage(),
-                                ),
-                              );
-                            },
-                            child: const Text(
-                              "Sepeti Onayla",
-                              style: TextStyle(
+                            onPressed: canCheckout
+                                ? () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const CheckoutPage(),
+                                      ),
+                                    );
+                                  }
+                                : null,
+                            child: Text(
+                              canCheckout
+                                  ? "Sepeti Onayla"
+                                  : "Minimum Tutar Sağlanamadı",
+                              style: const TextStyle(
                                 fontSize: 16, // Font size (18 -> 16)
                                 fontWeight: FontWeight.bold,
                               ),

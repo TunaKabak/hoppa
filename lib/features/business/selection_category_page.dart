@@ -92,8 +92,10 @@ class SelectionCategoryPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Promo Slider (scrolls away)
-                    const PromoSlider(),
+                    // Promo Slider
+                    // In a real scenario, these could be global platform-wide campaigns.
+                    // For now, it stays empty on the category selection page.
+                    const PromoSlider(campaigns: []),
                     const SizedBox(height: 24),
 
                     // Category Title (scrolls with content)

@@ -19,6 +19,9 @@ class ProductProvider extends ChangeNotifier {
   bool _hasMore = true;
   bool get hasMore => _hasMore;
 
+  Campaign? _selectedCampaignFilter;
+  Campaign? get selectedCampaignFilter => _selectedCampaignFilter;
+
   DocumentSnapshot? _lastDocument;
 
   void resetState() {
@@ -26,6 +29,7 @@ class ProductProvider extends ChangeNotifier {
     _lastDocument = null;
     _hasMore = true;
     _isLoading = false;
+    _selectedCampaignFilter = null;
     notifyListeners();
   }
 
@@ -42,6 +46,7 @@ class ProductProvider extends ChangeNotifier {
   void setCategory(String category) {
     _selectedCategory = category;
     _selectedSubCategory = 'Tümü';
+    _selectedCampaignFilter = null;
 
     // State resetlenince otomatik fetch çağrılmıyor, UI'dan çağrılmalı.
     // Ancak veri bütünlüğü için burada resetlemek yeterli.
@@ -64,6 +69,14 @@ class ProductProvider extends ChangeNotifier {
   void setSortOption(String sortOption) {
     if (_selectedSortOption == sortOption) return;
     _selectedSortOption = sortOption;
+    _products = [];
+    _lastDocument = null;
+    _hasMore = true;
+    notifyListeners();
+  }
+
+  void setCampaignFilter(Campaign? campaign) {
+    _selectedCampaignFilter = campaign;
     _products = [];
     _lastDocument = null;
     _hasMore = true;
@@ -101,18 +114,25 @@ class ProductProvider extends ChangeNotifier {
           .where('businessId', isEqualTo: businessId);
 
       // FİLTRELER (Embed edilmiş product_details üzerinden)
-      if (_selectedCategory != 'Tümü') {
-        query = query.where(
-          'product_details.category',
-          isEqualTo: _selectedCategory,
-        );
-      }
+      if (_selectedCampaignFilter != null) {
+        // KAMPANYAYA GÖRE FİLTRELEME
+        // Eğer targetProducts listesi çok büyük değilse 'whereIn' mantıklı olabilir ama Firebase In sipesifasyonlarında limitli (max 30 id vb.)
+        // Client side da listeyi çekip ardından local memory filters ile de yapılabilir.
+        // Şimdilik category filtrelerini kaldırıp, veriyi client'da filter edeceğiz.
+      } else {
+        if (_selectedCategory != 'Tümü') {
+          query = query.where(
+            'product_details.category',
+            isEqualTo: _selectedCategory,
+          );
+        }
 
-      if (_selectedSubCategory != 'Tümü') {
-        query = query.where(
-          'product_details.subCategory',
-          isEqualTo: _selectedSubCategory,
-        );
+        if (_selectedSubCategory != 'Tümü') {
+          query = query.where(
+            'product_details.subCategory',
+            isEqualTo: _selectedSubCategory,
+          );
+        }
       }
 
       // SIRALAMA VE SAYFALAMA
@@ -143,6 +163,15 @@ class ProductProvider extends ChangeNotifier {
             doc.id,
           );
         }).toList();
+
+        // KAMPANYA FİLTRESİ
+        if (_selectedCampaignFilter != null) {
+          newProducts = newProducts.where((p) {
+            return _selectedCampaignFilter!.targetProducts.contains(
+              p.productBarcode,
+            );
+          }).toList();
+        }
 
         // CLIENT SIDE SORTING
         if (_selectedSortOption != 'Önerilen') {

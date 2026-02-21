@@ -47,47 +47,57 @@ class _MerchantLoginSelectionPageState
   Future<void> _loginAsMerchant(Business business) async {
     setState(() => _isLoading = true);
 
-    // 1. Önce Anonim/Google Giriş yapılmış mı kontrol et (yoksa anonim giriş yap)
-    if (_authService.currentUser == null) {
-      await _authService.signInAnonymously();
-    }
+    try {
+      // 1. Önce Anonim/Google Giriş yapılmış mı kontrol et (yoksa anonim giriş yap)
+      if (_authService.currentUser == null) {
+        await _authService.signInAnonymously();
+      }
 
-    if (_authService.currentUser == null) {
+      if (_authService.currentUser == null) {
+        if (mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text("Giriş yapılamadı!")));
+        }
+        return;
+      }
+
+      // 2. Kullanıcı rolünü ve businessId'yi güncelle
+      await _authService.upgradeToMerchant(business.id);
+
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("Giriş yapılamadı!")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("${business.name} olarak giriş yapılıyor..."),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 1),
+          ),
+        );
+
+        // 3. Yönlendir
+        Future.delayed(const Duration(seconds: 1), () {
+          if (mounted) {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    MerchantDashboardPage(businessId: business.id),
+              ),
+              (route) => false,
+            );
+          }
+        });
       }
-      return;
-    }
-
-    // 2. Kullanıcı rolünü ve businessId'yi güncelle
-    await _authService.upgradeToMerchant(business.id);
-
-    if (mounted) {
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("${business.name} olarak giriş yapılıyor..."),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 1),
-        ),
-      );
-
-      // 3. Yönlendir
-      Future.delayed(const Duration(seconds: 1), () {
-        if (mounted) {
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(
-              builder: (context) =>
-                  MerchantDashboardPage(businessId: business.id),
-            ),
-            (route) => false,
-          );
-        }
-      });
+    } catch (e) {
+      debugPrint("Giriş Hatası: $e");
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Giriş yapılırken hata oluştu: $e")),
+        );
+      }
     }
   }
 

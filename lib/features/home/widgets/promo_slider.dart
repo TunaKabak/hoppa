@@ -1,8 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 
+import 'package:hoppa/models/campaign.dart';
+import 'package:provider/provider.dart';
+import 'package:hoppa/features/home/product_provider.dart';
+
 class PromoSlider extends StatefulWidget {
-  const PromoSlider({super.key});
+  final List<Campaign> campaigns;
+  const PromoSlider({super.key, required this.campaigns});
 
   @override
   State<PromoSlider> createState() => _PromoSliderState();
@@ -13,36 +18,11 @@ class _PromoSliderState extends State<PromoSlider> {
   int _currentPage = 0;
   Timer? _timer;
 
-  final List<Map<String, dynamic>> _promos = [
-    {
-      'color': const Color(0xFF00A651),
-      'title': "Taze Teslimat",
-      'subtitle': "30 Dakikada Kapında!",
-      'icon': Icons.local_shipping,
-      'image': "https://placehold.co/600x300/00A651/ffffff?text=Hizli+Teslimat",
-    },
-    {
-      'color': const Color(0xFFFF6B00),
-      'title': "Öğrenci Fırsatı",
-      'subtitle': "%10 İndirim Kampanyası",
-      'icon': Icons.school,
-      'image':
-          "https://placehold.co/600x300/FF6B00/ffffff?text=Ogrenci+Indirimi",
-    },
-    {
-      'color': const Color(0xFF5D3FD3),
-      'title': "Haftanın Yıldızı",
-      'subtitle': "Seçili ürünlerde %20",
-      'icon': Icons.star,
-      'image': "https://placehold.co/600x300/5D3FD3/ffffff?text=Yildiz+Urunler",
-    },
-    {
-      'color': const Color(0xFFD32F2F),
-      'title': "Büyük İndirim",
-      'subtitle': "Sepette %50'ye varan!",
-      'icon': Icons.percent,
-      'image': "https://placehold.co/600x300/D32F2F/ffffff?text=Buyuk+Indirim",
-    },
+  final List<Color> _fallbackColors = [
+    const Color(0xFF00A651),
+    const Color(0xFFFF6B00),
+    const Color(0xFF5D3FD3),
+    const Color(0xFFD32F2F),
   ];
 
   @override
@@ -59,8 +39,10 @@ class _PromoSliderState extends State<PromoSlider> {
   }
 
   void _startAutoPlay() {
-    _timer = Timer.periodic(const Duration(seconds: 3), (Timer timer) {
-      if (_currentPage < _promos.length - 1) {
+    if (widget.campaigns.isEmpty) return;
+    _timer = Timer.periodic(const Duration(seconds: 4), (Timer timer) {
+      if (!mounted) return;
+      if (_currentPage < widget.campaigns.length - 1) {
         _currentPage++;
       } else {
         _currentPage = 0;
@@ -78,6 +60,10 @@ class _PromoSliderState extends State<PromoSlider> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.campaigns.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return Column(
       children: [
         SizedBox(
@@ -89,10 +75,10 @@ class _PromoSliderState extends State<PromoSlider> {
                 _currentPage = index;
               });
             },
-            itemCount: _promos.length,
+            itemCount: widget.campaigns.length,
             itemBuilder: (context, index) {
-              final promo = _promos[index];
-              return _buildPromoCard(promo);
+              final campaign = widget.campaigns[index];
+              return _buildPromoCard(campaign, index);
             },
           ),
         ),
@@ -100,7 +86,7 @@ class _PromoSliderState extends State<PromoSlider> {
         // Pagination Dots
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(_promos.length, (index) {
+          children: List.generate(widget.campaigns.length, (index) {
             return AnimatedContainer(
               duration: const Duration(milliseconds: 300),
               margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -108,7 +94,7 @@ class _PromoSliderState extends State<PromoSlider> {
               width: _currentPage == index ? 24 : 8,
               decoration: BoxDecoration(
                 color: _currentPage == index
-                    ? (promoColor(index))
+                    ? _fallbackColors[index % _fallbackColors.length]
                     : Colors.grey.shade300,
                 borderRadius: BorderRadius.circular(4),
               ),
@@ -119,95 +105,121 @@ class _PromoSliderState extends State<PromoSlider> {
     );
   }
 
-  Color promoColor(int index) {
-    if (index < _promos.length) {
-      return _promos[index]['color'] as Color;
-    }
-    return Colors.green;
+  Color _getFallbackColor(int index) {
+    if (widget.campaigns.isEmpty) return Colors.green;
+    return _fallbackColors[index % _fallbackColors.length];
   }
 
-  Widget _buildPromoCard(Map<String, dynamic> promo) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: promo['color'],
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: (promo['color'] as Color).withOpacity(0.4),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Stack(
-          children: [
-            // Background Image (Mock)
-            Positioned.fill(
-              child: Image.network(
-                promo['image'],
-                fit: BoxFit.cover,
-                color: Colors.black.withOpacity(0.3), // Darken for readability
-                colorBlendMode: BlendMode.darken,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(color: promo['color']);
-                },
-              ),
-            ),
+  Widget _buildPromoCard(Campaign campaign, int index) {
+    final fallbackColor = _fallbackColors[index % _fallbackColors.length];
 
-            // Content
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(promo['icon'], color: Colors.white, size: 24),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    promo['title'],
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      shadows: [
-                        Shadow(
-                          color: Colors.black26,
-                          blurRadius: 4,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    promo['subtitle'],
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      shadows: [
-                        Shadow(
-                          color: Colors.black26,
-                          blurRadius: 4,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+    return GestureDetector(
+      onTap: () {
+        // Find the provider and trigger filter
+        Provider.of<ProductProvider>(
+          context,
+          listen: false,
+        ).setCampaignFilter(campaign);
+        // Refresh products
+        // (Fetch needs businessId, but setCampaignFilter zeroes out the list
+        //  and the Home page scroll handles infinite logic, but we must force load)
+        final businessId = campaign.vendorId; // or get from prov..
+        Provider.of<ProductProvider>(
+          context,
+          listen: false,
+        ).fetchProducts(businessId: businessId);
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: fallbackColor,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: fallbackColor.withOpacity(0.4),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
           ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Stack(
+            children: [
+              // Background Image
+              if (campaign.imageUrl.isNotEmpty)
+                Positioned.fill(
+                  child: Image.network(
+                    campaign.imageUrl,
+                    fit: BoxFit.cover,
+                    color: Colors.black.withOpacity(
+                      0.3,
+                    ), // Darken for readability
+                    colorBlendMode: BlendMode.darken,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(color: fallbackColor);
+                    },
+                  ),
+                ),
+
+              // Content
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.star,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      campaign.name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        shadows: [
+                          Shadow(
+                            color: Colors.black26,
+                            blurRadius: 4,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      campaign.type == CampaignType.percentage
+                          ? "%${campaign.discountValue.toStringAsFixed(0)} İndirim Kampanyası!"
+                          : "${campaign.discountValue.toStringAsFixed(2)} ₺ Özel Fiyat!",
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        shadows: [
+                          Shadow(
+                            color: Colors.black26,
+                            blurRadius: 4,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

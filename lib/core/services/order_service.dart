@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hoppa/features/cart/cart_provider.dart';
 import 'package:hoppa/models/order.dart' as model; // Alias added
+import 'package:hoppa/models/business.dart';
+import 'package:hoppa/core/utils/location_utils.dart';
 
 class OrderService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -27,6 +29,52 @@ class OrderService {
     String businessId = items.first.businessProduct.businessId;
 
     try {
+      // --- SERVER-SIDE DOĞRULAMA (Mesafe & Minimum Tutar) ---
+      final businessDoc = await _db
+          .collection('businesses')
+          .doc(businessId)
+          .get();
+      if (businessDoc.exists) {
+        final business = Business.fromMap(businessDoc.data()!, businessDoc.id);
+
+        double requiredMinAmount = business.minBasketAmount;
+
+        if (business.deliveryTiers.isNotEmpty &&
+            addressLatitude != 0.0 &&
+            addressLongitude != 0.0) {
+          final distanceKm = LocationUtils.calculateDistanceInKm(
+            lat1: addressLatitude,
+            lon1: addressLongitude,
+            lat2: business.latitude,
+            lon2: business.longitude,
+          );
+
+          final sortedTiers = List.of(business.deliveryTiers)
+            ..sort((a, b) => a.maxDistance.compareTo(b.maxDistance));
+
+          bool tierFound = false;
+          for (var tier in sortedTiers) {
+            if (distanceKm <= tier.maxDistance) {
+              requiredMinAmount = tier.minAmount;
+              tierFound = true;
+              break;
+            }
+          }
+
+          if (!tierFound && sortedTiers.isNotEmpty) {
+            requiredMinAmount = sortedTiers.last.minAmount;
+          }
+        }
+
+        // Ana ürün toplamı (teslimat ücreti vs. hariç)
+        // Burada totalAmount sepetteki ürünlerin toplamı olarak varsayılıyor
+        if (totalAmount < requiredMinAmount) {
+          throw Exception(
+            "Minimum sipariş tutarı sağlanamadı. Gerekli tutar: ${requiredMinAmount.toStringAsFixed(2)} ₺",
+          );
+        }
+      }
+      // --- SON ---
       final orderData = {
         'business_id': businessId, // Dinamik Business ID
         'user_id': userId,

@@ -513,10 +513,13 @@ class _HomePageState extends State<HomePage>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (productProvider.selectedCategory == 'Tümü')
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16.0),
-                      child: PromoSlider(),
+                  if (productProvider.selectedCategory == 'Tümü' &&
+                      productProvider.activeCampaigns.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16.0),
+                      child: PromoSlider(
+                        campaigns: productProvider.activeCampaigns,
+                      ),
                     ),
 
                   // Active Order Banner (Moved here)

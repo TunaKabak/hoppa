@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:hoppa/core/services/campaign_service.dart';
 import 'package:hoppa/core/services/product_service.dart';
+import 'package:hoppa/core/services/media_service.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:hoppa/models/campaign.dart';
 import 'package:hoppa/models/business_product.dart';
 
@@ -22,6 +24,8 @@ class _CreateCampaignWizardState extends State<CreateCampaignWizard> {
   // _formKey removed
   final _nameController = TextEditingController();
   DateTimeRange? _selectedDateRange;
+  String? _imageUrl;
+  bool _isUploadingImage = false;
 
   // STEP 2: PRODUCTS
   final ProductService _productService = ProductService();
@@ -44,7 +48,8 @@ class _CreateCampaignWizardState extends State<CreateCampaignWizard> {
     if (_nameController.text.isEmpty ||
         _selectedDateRange == null ||
         _selectedProductIds.isEmpty ||
-        _discountController.text.isEmpty) {
+        _discountController.text.isEmpty ||
+        _imageUrl == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Lütfen tüm alanları doldurunuz.")),
       );
@@ -63,6 +68,7 @@ class _CreateCampaignWizardState extends State<CreateCampaignWizard> {
         discountValue: double.parse(_discountController.text),
         startDate: _selectedDateRange!.start,
         endDate: _selectedDateRange!.end,
+        imageUrl: _imageUrl!,
         isActive: true,
       );
 
@@ -88,6 +94,39 @@ class _CreateCampaignWizardState extends State<CreateCampaignWizard> {
     }
   }
 
+  Future<void> _pickAndUploadImage() async {
+    final MediaService mediaService = MediaService();
+    final file = await mediaService.pickImage(source: ImageSource.gallery);
+    if (file == null) return;
+
+    setState(() => _isUploadingImage = true);
+
+    try {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final url = await mediaService.uploadImage(
+        file: file,
+        path: 'campaigns/${widget.businessId}/banner_$timestamp.jpg',
+      );
+
+      if (url != null) {
+        setState(() => _imageUrl = url);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Kampanya görseli yüklendi!")),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Görsel yüklenemedi: $e")));
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingImage = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -106,6 +145,14 @@ class _CreateCampaignWizardState extends State<CreateCampaignWizard> {
             if (_selectedDateRange == null) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text("Tarih aralığı seçiniz")),
+              );
+              return;
+            }
+            if (_imageUrl == null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Lütfen bir kampanya görseli yükleyin"),
+                ),
               );
               return;
             }
@@ -197,6 +244,61 @@ class _CreateCampaignWizardState extends State<CreateCampaignWizard> {
                       setState(() => _selectedDateRange = picked);
                     }
                   },
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: _isUploadingImage
+                      ? const Center(child: CircularProgressIndicator())
+                      : _imageUrl != null
+                      ? Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                _imageUrl!,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            Positioned(
+                              top: 4,
+                              right: 4,
+                              child: IconButton(
+                                icon: const Icon(
+                                  Icons.close,
+                                  color: Colors.white,
+                                ),
+                                onPressed: () =>
+                                    setState(() => _imageUrl = null),
+                              ),
+                            ),
+                          ],
+                        )
+                      : InkWell(
+                          onTap: _pickAndUploadImage,
+                          child: const Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.add_photo_alternate,
+                                size: 40,
+                                color: Colors.grey,
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                "Kampanya Görseli Yükle",
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        ),
                 ),
               ],
             ),

@@ -61,19 +61,10 @@ class BusinessService {
           }
         }
 
-        return Business(
-          id: doc.id,
-          name: doc['name'],
-          address: doc['address'],
-          phone: doc['phone'],
-          logoUrl: doc['logoUrl'],
-          headerImageUrl: doc['headerImageUrl'],
-          latitude: (doc['latitude'] ?? 0.0).toDouble(),
-          longitude: (doc['longitude'] ?? 0.0).toDouble(),
-          isOpen: doc['isOpen'] ?? true,
-          type: type, // YENİ
-          categories: categories,
-        );
+        return Business.fromMap(
+          doc.data(),
+          doc.id,
+        ).copyWith(type: type, categories: categories);
       }).toList();
     });
   }
@@ -134,19 +125,10 @@ class BusinessService {
         }
       }
 
-      return Business(
-        id: doc.id,
-        name: doc['name'],
-        address: doc['address'],
-        phone: doc['phone'],
-        logoUrl: doc['logoUrl'],
-        headerImageUrl: doc['headerImageUrl'],
-        latitude: (doc['latitude'] ?? 0.0).toDouble(),
-        longitude: (doc['longitude'] ?? 0.0).toDouble(),
-        isOpen: doc['isOpen'] ?? true,
-        type: type,
-        categories: categories,
-      );
+      return Business.fromMap(
+        doc.data(),
+        doc.id,
+      ).copyWith(type: type, categories: categories);
     }).toList();
   }
 
@@ -207,19 +189,10 @@ class BusinessService {
         }
       }
 
-      return Business(
-        id: doc.id,
-        name: doc['name'],
-        address: doc['address'],
-        phone: doc['phone'],
-        logoUrl: doc['logoUrl'],
-        headerImageUrl: doc['headerImageUrl'],
-        latitude: (doc['latitude'] ?? 0.0).toDouble(),
-        longitude: (doc['longitude'] ?? 0.0).toDouble(),
-        isOpen: doc['isOpen'] ?? true,
-        type: type,
-        categories: categories,
-      );
+      return Business.fromMap(
+        doc.data()!,
+        doc.id,
+      ).copyWith(type: type, categories: categories);
     } catch (e) {
       print('Error fetching business: $e');
       return null;

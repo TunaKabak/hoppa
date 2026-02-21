@@ -1,4 +1,5 @@
 import 'package:hoppa/models/business_type.dart';
+import 'package:hoppa/models/delivery_tier.dart';
 
 class Business {
   final String id;
@@ -18,6 +19,8 @@ class Business {
   final String averageDeliveryTime;
   final double deliveryRadius;
   final Map<String, dynamic> workingHours;
+  final List<DeliveryTier>
+  deliveryTiers; // YENİ: Mesafe bazlı min tutar kuralları
 
   Business({
     required this.id,
@@ -37,6 +40,7 @@ class Business {
     this.averageDeliveryTime = "30-45 dk",
     this.deliveryRadius = 5.0,
     this.workingHours = const {},
+    this.deliveryTiers = const [],
   });
 
   factory Business.fromMap(Map<String, dynamic> data, String id) {
@@ -58,6 +62,11 @@ class Business {
       averageDeliveryTime: data['averageDeliveryTime'] ?? "30-45 dk",
       deliveryRadius: (data['deliveryRadius'] ?? 5.0).toDouble(),
       workingHours: Map<String, dynamic>.from(data['workingHours'] ?? {}),
+      deliveryTiers:
+          (data['deliveryTiers'] as List<dynamic>?)
+              ?.map((t) => DeliveryTier.fromMap(Map<String, dynamic>.from(t)))
+              .toList() ??
+          [],
     );
   }
 
@@ -79,6 +88,7 @@ class Business {
       'averageDeliveryTime': averageDeliveryTime,
       'deliveryRadius': deliveryRadius,
       'workingHours': workingHours,
+      'deliveryTiers': deliveryTiers.map((t) => t.toMap()).toList(),
     };
   }
 
@@ -100,6 +110,7 @@ class Business {
     String? averageDeliveryTime,
     double? deliveryRadius,
     Map<String, dynamic>? workingHours,
+    List<DeliveryTier>? deliveryTiers,
   }) {
     return Business(
       id: id ?? this.id,
@@ -119,6 +130,7 @@ class Business {
       averageDeliveryTime: averageDeliveryTime ?? this.averageDeliveryTime,
       deliveryRadius: deliveryRadius ?? this.deliveryRadius,
       workingHours: workingHours ?? this.workingHours,
+      deliveryTiers: deliveryTiers ?? this.deliveryTiers,
     );
   }
 }

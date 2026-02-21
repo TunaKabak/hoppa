@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:hoppa/models/business_product.dart';
+import 'package:hoppa/models/business_product.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hoppa/models/campaign.dart';
+import 'package:hoppa/models/business.dart';
+import 'package:hoppa/models/address.dart';
 import 'package:hoppa/core/services/campaign_service.dart';
+import 'package:hoppa/core/utils/location_utils.dart';
 
 // Sepet Öğesi artık BusinessProduct tutuyor
 class CartItem {
@@ -46,6 +50,54 @@ class CartProvider extends ChangeNotifier {
       total += price * item.quantity;
     }
     return total;
+  }
+
+  /// Calculates the required minimum basket amount based on the distance between the user and the business.
+  double getRequiredMinAmount(Business? business, Address? userAddress) {
+    if (business == null) return 0.0;
+
+    // Fallback to default minimum amount
+    double requiredAmount = business.minBasketAmount;
+
+    // If tiers exist and we have user coordinates
+    if (business.deliveryTiers.isNotEmpty && userAddress != null) {
+      if (userAddress.latitude != 0.0 &&
+          userAddress.longitude != 0.0 &&
+          business.latitude != 0.0 &&
+          business.longitude != 0.0) {
+        final distanceKm = LocationUtils.calculateDistanceInKm(
+          lat1: userAddress.latitude,
+          lon1: userAddress.longitude,
+          lat2: business.latitude,
+          lon2: business.longitude,
+        );
+
+        // Sort tiers by maxDistance ascending
+        final sortedTiers = List.of(business.deliveryTiers)
+          ..sort((a, b) => a.maxDistance.compareTo(b.maxDistance));
+
+        bool tierFound = false;
+        for (var tier in sortedTiers) {
+          if (distanceKm <= tier.maxDistance) {
+            requiredAmount = tier.minAmount;
+            tierFound = true;
+            break;
+          }
+        }
+
+        // If distance is greater than the largest maxDistance,
+        // fallback handles it or we could return double.infinity.
+        // For standard progression, taking the largest tier's min amount
+        // if out of bounds can be an option, but typically they just can't order.
+        // For UI purposes, we'll assign the highest tier's minimum amount if out of range,
+        // or just the generic fallback so we don't block display.
+        if (!tierFound && sortedTiers.isNotEmpty) {
+          requiredAmount = sortedTiers.last.minAmount;
+        }
+      }
+    }
+
+    return requiredAmount;
   }
 
   // Firestore'dan sepeti getir

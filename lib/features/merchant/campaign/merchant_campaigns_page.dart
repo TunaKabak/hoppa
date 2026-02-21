@@ -101,14 +101,39 @@ class MerchantCampaignsPage extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: statusColor.withOpacity(0.1),
+                          if (campaign.imageUrl.isNotEmpty)
+                            ClipRRect(
                               borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                campaign.imageUrl,
+                                width: 40,
+                                height: 40,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: statusColor.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(
+                                    Icons.local_offer,
+                                    color: statusColor,
+                                  ),
+                                ),
+                              ),
+                            )
+                          else
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: statusColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                Icons.local_offer,
+                                color: statusColor,
+                              ),
                             ),
-                            child: Icon(Icons.local_offer, color: statusColor),
-                          ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(
