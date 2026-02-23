@@ -28,6 +28,21 @@ android {
         versionName = flutter.versionName
     }
 
+    flavorDimensions += "app"
+
+    productFlavors {
+        create("consumer") {
+            dimension = "app"
+            applicationId = "com.hoppa.app"
+            resValue("string", "app_name", "Hoppa")
+        }
+        create("merchant") {
+            dimension = "app"
+            applicationId = "com.hoppa.merchant"
+            resValue("string", "app_name", "Hoppa İşletme")
+        }
+    }
+
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("debug")
