@@ -134,45 +134,49 @@ class _AuthLayoutState extends State<AuthLayout> with WidgetsBindingObserver {
           SafeArea(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                return SingleChildScrollView(
-                  controller: _scrollController,
-                  physics: const ClampingScrollPhysics(),
+                return Padding(
                   padding: EdgeInsets.only(bottom: bottomInset),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: constraints.maxHeight,
-                    ),
-                    child: Center(
-                      child: widget.enableGlass
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(24),
-                              child: BackdropFilter(
-                                filter: ImageFilter.blur(
-                                  sigmaX: 10,
-                                  sigmaY: 10,
-                                ),
-                                child: Container(
-                                  constraints: const BoxConstraints(
-                                    maxWidth: 400,
+                  child: SingleChildScrollView(
+                    controller: _scrollController,
+                    physics: const ClampingScrollPhysics(),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight,
+                      ),
+                      child: Center(
+                        child: widget.enableGlass
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(24),
+                                child: BackdropFilter(
+                                  filter: ImageFilter.blur(
+                                    sigmaX: 10,
+                                    sigmaY: 10,
                                   ),
-                                  margin: const EdgeInsets.all(24),
-                                  padding: const EdgeInsets.all(24),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.4),
-                                    borderRadius: BorderRadius.circular(24),
-                                    border: Border.all(
-                                      color: Colors.white.withOpacity(0.6),
+                                  child: Container(
+                                    constraints: const BoxConstraints(
+                                      maxWidth: 400,
                                     ),
+                                    margin: const EdgeInsets.all(24),
+                                    padding: const EdgeInsets.all(24),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.4),
+                                      borderRadius: BorderRadius.circular(24),
+                                      border: Border.all(
+                                        color: Colors.white.withOpacity(0.6),
+                                      ),
+                                    ),
+                                    child: widget.child,
                                   ),
-                                  child: widget.child,
                                 ),
+                              )
+                            : Container(
+                                constraints: const BoxConstraints(
+                                  maxWidth: 400,
+                                ),
+                                padding: const EdgeInsets.all(24),
+                                child: widget.child,
                               ),
-                            )
-                          : Container(
-                              constraints: const BoxConstraints(maxWidth: 400),
-                              padding: const EdgeInsets.all(24),
-                              child: widget.child,
-                            ),
+                      ),
                     ),
                   ),
                 );

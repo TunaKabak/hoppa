@@ -170,12 +170,21 @@ class OrderService {
           'status',
           whereIn: ['pending', 'preparing', 'on_way', 'ready_for_pickup'],
         )
-        .orderBy('created_at', descending: true)
-        .limit(1)
         .snapshots()
         .map((snapshot) {
           if (snapshot.docs.isNotEmpty) {
-            final doc = snapshot.docs.first;
+            // Firestore Index hatasını önlemek için sıralamayı istemcide (client-side) yapıyoruz.
+            final docs = snapshot.docs.toList();
+            docs.sort((a, b) {
+              final aData = a.data() as Map<String, dynamic>;
+              final bData = b.data() as Map<String, dynamic>;
+              final aTime = aData['created_at'] as Timestamp?;
+              final bTime = bData['created_at'] as Timestamp?;
+              if (aTime == null || bTime == null) return 0;
+              return bTime.compareTo(aTime); // descending
+            });
+
+            final doc = docs.first;
             return model.Order.fromMap(
               doc.data() as Map<String, dynamic>,
               doc.id,

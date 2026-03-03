@@ -21,8 +21,8 @@ class _CreateCampaignWizardState extends State<CreateCampaignWizard> {
   bool _isLoading = false;
 
   // STEP 1: INFO
-  // _formKey removed
   final _nameController = TextEditingController();
+  final _descriptionController = TextEditingController();
   DateTimeRange? _selectedDateRange;
   String? _imageUrl;
   bool _isUploadingImage = false;
@@ -40,6 +40,7 @@ class _CreateCampaignWizardState extends State<CreateCampaignWizard> {
   @override
   void dispose() {
     _nameController.dispose();
+    _descriptionController.dispose();
     _discountController.dispose();
     super.dispose();
   }
@@ -63,6 +64,7 @@ class _CreateCampaignWizardState extends State<CreateCampaignWizard> {
         id: '', // Firestore will assign
         vendorId: widget.businessId,
         name: _nameController.text,
+        description: _descriptionController.text,
         type: _campaignType,
         targetProducts: _selectedProductIds.toList(),
         discountValue: double.parse(_discountController.text),
@@ -219,6 +221,16 @@ class _CreateCampaignWizardState extends State<CreateCampaignWizard> {
                   decoration: const InputDecoration(
                     labelText: "Kampanya Adı",
                     hintText: "Örn: Yaz İndirimi",
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _descriptionController,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: "Açıklama",
+                    hintText: "Kampanya hakkında kısa bilgi (opsiyonel)",
                     border: OutlineInputBorder(),
                   ),
                 ),

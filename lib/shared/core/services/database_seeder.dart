@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hoppa/shared/core/data/dummy_products.dart';
 import 'package:hoppa/shared/models/business.dart';
 import 'package:hoppa/shared/models/business_type.dart';
+import 'package:bcrypt/bcrypt.dart';
 
 class DatabaseSeeder {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -20,6 +21,13 @@ class DatabaseSeeder {
     await _deleteCollection('business_products');
     await _deleteCollection('businesses');
     await _deleteCollection('global_products');
+    await _deleteCollection('business_users');
+
+    // Default password hash for all seeded businesses
+    final String defaultPasswordHash = BCrypt.hashpw(
+      'hoppa123',
+      BCrypt.gensalt(),
+    );
 
     // 2. KATEGORİ YAPILANDIRMASI
     // Her kategori için hangi ürün tiplerinin satılacağını belirliyoruz
@@ -121,6 +129,26 @@ class DatabaseSeeder {
         );
 
         batch.set(_db.collection('businesses').doc(bId), business.toMap());
+
+        // Kullanıcı Adı Üretimi (boşlukları sil, küçük harfe çevir, Türkçe karakterleri düzelt)
+        String username = bName
+            .toLowerCase()
+            .replaceAll(' ', '')
+            .replaceAll('ı', 'i')
+            .replaceAll('ğ', 'g')
+            .replaceAll('ü', 'u')
+            .replaceAll('ş', 's')
+            .replaceAll('ö', 'o')
+            .replaceAll('ç', 'c');
+
+        // business_users tablosuna kayıt
+        batch.set(_db.collection('business_users').doc(bId), {
+          'businessId': bId,
+          'username': username,
+          'passwordHash': defaultPasswordHash,
+          'role': 'merchant',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
 
         // 5. ENVANTER OLUŞTUR (Her işletme için)
         // Global katalogdan uygun ürünleri seç ve ekle

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hoppa/apps/merchant/services/merchant_auth_service.dart';
 import 'package:hoppa/shared/core/services/database_seeder.dart';
-import 'merchant_otp_verify_page.dart';
 import 'widgets/auth_layout.dart';
 import 'widgets/auth_text_field.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -16,9 +15,9 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage>
     with SingleTickerProviderStateMixin {
   final MerchantAuthService _auth = MerchantAuthService();
-  final _phoneController = TextEditingController();
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _isLoading = false;
-  String _selectedCountryCode = "+90";
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
 
@@ -35,84 +34,45 @@ class _LoginPageState extends State<LoginPage>
 
   @override
   void dispose() {
-    _phoneController.dispose();
+    _usernameController.dispose();
+    _passwordController.dispose();
     _animController.dispose();
     super.dispose();
   }
 
-  // --- YENİ: Telefon ile Giriş Akışı ---
-  void _loginWithPhone() async {
+  // --- YENİ: API ile B2B Giriş Akışı ---
+  void _loginWithCredentials() async {
     FocusScope.of(context).unfocus();
 
-    if (_phoneController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Telefon numarası giriniz")));
+    final username = _usernameController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (username.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Lütfen kullanıcı adı ve şifrenizi giriniz"),
+        ),
+      );
       return;
     }
 
     setState(() => _isLoading = true);
 
-    // Numara formatlama (+90 ekle)
-    String phoneInput = _phoneController.text.trim();
-
-    // Format Kontrolü (Sadece +90 için 10 hane kontrolü yapalım, diğerleri esnek olabilir)
-    if (_selectedCountryCode == "+90") {
-      if (phoneInput.length != 10 || !phoneInput.startsWith('5')) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              "Lütfen geçerli bir telefon numarası giriniz (5xxxxxxxxx)",
-            ),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-    }
-
-    String phone = "$_selectedCountryCode$phoneInput";
-
-    // CHECK IF USER EXISTS
-    bool exists = await _auth.checkUserExists(phone);
-    if (!exists) {
+    try {
+      await _auth.loginWithCredentials(username, password);
+      // Başarılı girişte wrapper otomatik yönlendirecek
+    } catch (e) {
       if (mounted) {
-        setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              "Bu numara ile kayıtlı kullanıcı bulunamadı. Lütfen önce kayıt olun.",
-            ),
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
             backgroundColor: Colors.red,
           ),
         );
       }
-      return;
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
-
-    await _auth.verifyPhoneNumber(
-      phoneNumber: phone,
-      codeSent: (verificationId, resendToken) {
-        setState(() => _isLoading = false);
-        // OTP Sayfasına Git
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => OtpVerifyPage(
-              verificationId: verificationId,
-              phoneNumber: phone,
-            ),
-          ),
-        );
-      },
-      verificationFailed: (e) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Doğrulama Hatası: ${e.message}")),
-        );
-      },
-    );
   }
 
   @override
@@ -172,7 +132,7 @@ class _LoginPageState extends State<LoginPage>
             Container(
               alignment: Alignment.centerLeft,
               child: Text(
-                "Devam etmek için telefon numaranızı giriniz.",
+                "İşletme paneline erişmek için bilgilerinizi giriniz.",
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   color: Colors.grey.shade600,
@@ -183,14 +143,18 @@ class _LoginPageState extends State<LoginPage>
             const SizedBox(height: 24),
 
             AuthTextField(
-              controller: _phoneController,
-              hint: "5xxxxxxxxx",
-              icon: Icons.phone_android_rounded,
-              isPhone: true,
+              controller: _usernameController,
+              hint: "Kullanıcı Adı",
+              icon: Icons.store_mall_directory_rounded,
               primaryColor: kPrimaryColor,
-              selectedCode: _selectedCountryCode,
-              onCodeChanged: (val) =>
-                  setState(() => _selectedCountryCode = val),
+            ),
+            const SizedBox(height: 16),
+            AuthTextField(
+              controller: _passwordController,
+              hint: "Şifre",
+              icon: Icons.lock_outline_rounded,
+              isPassword: true,
+              primaryColor: kPrimaryColor,
             ),
             const SizedBox(height: 24),
 
@@ -198,7 +162,7 @@ class _LoginPageState extends State<LoginPage>
               height: 56,
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _isLoading ? null : _loginWithPhone,
+                onPressed: _isLoading ? null : _loginWithCredentials,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: kPrimaryColor,
                   foregroundColor: Colors.white,
@@ -227,26 +191,7 @@ class _LoginPageState extends State<LoginPage>
               ),
             ),
 
-            const SizedBox(height: 32),
-
-            Row(
-              children: [
-                const Expanded(child: Divider(color: Colors.black12)),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    "veya",
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: Colors.black45,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-                const Expanded(child: Divider(color: Colors.black12)),
-              ],
-            ),
-
+            // Veya kaldırıldı, sadece tek giriş metodu
             const SizedBox(height: 16),
 
             const SizedBox(height: 20),

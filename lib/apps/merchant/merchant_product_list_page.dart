@@ -20,6 +20,10 @@ class _MerchantProductListPageState extends State<MerchantProductListPage>
   final ProductService _productService = ProductService();
   late TabController _tabController;
 
+  // --- INVENTORY TAB VARIABLES ---
+  final Set<String> _selectedInventoryIds = {};
+  bool _isInventoryActionLoading = false;
+
   // --- CATALOG TAB VARIABLIES ---
   final TextEditingController _catalogSearchController =
       TextEditingController();
@@ -94,7 +98,191 @@ class _MerchantProductListPageState extends State<MerchantProductListPage>
           _buildCustomProductTab(),
         ],
       ),
+      bottomNavigationBar:
+          _selectedInventoryIds.isNotEmpty && _tabController.index == 0
+          ? _buildBulkActionBar()
+          : null,
     );
+  }
+
+  Widget _buildBulkActionBar() {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            offset: const Offset(0, -4),
+            blurRadius: 10,
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: _isInventoryActionLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Row(
+                children: [
+                  Text(
+                    "${_selectedInventoryIds.length} seçildi",
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const Spacer(),
+                  // Active/Passive toggle
+                  PopupMenuButton<String>(
+                    onSelected: (val) {
+                      _performBulkStatusUpdate(val == 'active');
+                    },
+                    itemBuilder: (ctx) => [
+                      const PopupMenuItem(
+                        value: 'active',
+                        child: Text("Seçili olanları Aktif Yap"),
+                      ),
+                      const PopupMenuItem(
+                        value: 'passive',
+                        child: Text("Seçili olanları Pasif Yap"),
+                      ),
+                    ],
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.toggle_on, color: Colors.blue, size: 20),
+                          SizedBox(width: 4),
+                          Text(
+                            "Durum",
+                            style: TextStyle(
+                              color: Colors.blue,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Delete
+                  InkWell(
+                    onTap: () {
+                      _confirmBulkDelete();
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.delete, color: Colors.red, size: 20),
+                          SizedBox(width: 4),
+                          Text(
+                            "Sil",
+                            style: TextStyle(
+                              color: Colors.red,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
+  Future<void> _performBulkStatusUpdate(bool isAvailable) async {
+    setState(() => _isInventoryActionLoading = true);
+    try {
+      await _productService.bulkUpdateBusinessProductsStatus(
+        _selectedInventoryIds.toList(),
+        isAvailable,
+      );
+      if (mounted) {
+        setState(() {
+          _selectedInventoryIds.clear();
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              "Seçili ürünler ${isAvailable ? 'Aktif' : 'Pasif'} yapıldı!",
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Hata: $e")));
+      }
+    } finally {
+      if (mounted) setState(() => _isInventoryActionLoading = false);
+    }
+  }
+
+  Future<void> _confirmBulkDelete() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Toplu Silme"),
+        content: Text(
+          "Seçili ${_selectedInventoryIds.length} ürünü envanterden silmek istediğinize emin misiniz?",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("İptal"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("Sil", style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      setState(() => _isInventoryActionLoading = true);
+      try {
+        await _productService.bulkDeleteBusinessProducts(
+          _selectedInventoryIds.toList(),
+        );
+        if (mounted) {
+          setState(() {
+            _selectedInventoryIds.clear();
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Seçili ürünler başarıyla silindi!"),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text("Hata: $e")));
+        }
+      } finally {
+        if (mounted) setState(() => _isInventoryActionLoading = false);
+      }
+    }
   }
 
   // ===========================================================================
@@ -140,192 +328,250 @@ class _MerchantProductListPageState extends State<MerchantProductListPage>
           );
         }).toList();
 
-        return ListView.separated(
-          padding: const EdgeInsets.all(12),
-          itemCount: products.length,
-          separatorBuilder: (_, _) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            final bp = products[index];
-            return Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+        return Column(
+          children: [
+            // Select All Bar
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: Colors.grey.shade50,
+              child: Row(
+                children: [
+                  Checkbox(
+                    value: _selectedInventoryIds.length == products.length,
+                    onChanged: (val) {
+                      setState(() {
+                        if (val == true) {
+                          _selectedInventoryIds.addAll(
+                            products.map((p) => p.id),
+                          );
+                        } else {
+                          _selectedInventoryIds.clear();
+                        }
+                      });
+                    },
+                  ),
+                  const Text(
+                    "Tümünü Seç",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ],
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Row(
-                  children: [
-                    // Product Image
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        bp.product.imageUrl,
-                        width: 70,
-                        height: 70,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Container(
-                          width: 70,
-                          height: 70,
-                          color: Colors.grey[200],
-                          child: const Icon(
-                            Icons.broken_image,
-                            color: Colors.grey,
-                          ),
-                        ),
+            ),
+            Expanded(
+              child: ListView.separated(
+                padding: const EdgeInsets.all(12),
+                itemCount: products.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final bp = products[index];
+                  final isSelected = _selectedInventoryIds.contains(bp.id);
+
+                  return Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(
+                        color: isSelected
+                            ? Theme.of(context).primaryColor
+                            : Colors.transparent,
+                        width: 2,
                       ),
                     ),
-                    const SizedBox(width: 12),
-
-                    // Info & Stock Switch
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Row(
                         children: [
-                          Text(
-                            bp.product.name,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
+                          Checkbox(
+                            value: isSelected,
+                            onChanged: (val) {
+                              setState(() {
+                                if (val == true) {
+                                  _selectedInventoryIds.add(bp.id);
+                                } else {
+                                  _selectedInventoryIds.remove(bp.id);
+                                }
+                              });
+                            },
+                          ),
+                          // Product Image
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              bp.product.imageUrl,
+                              width: 70,
+                              height: 70,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Container(
+                                    width: 70,
+                                    height: 70,
+                                    color: Colors.grey[200],
+                                    child: const Icon(
+                                      Icons.broken_image,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          // INLINE EDIT: PRICE & STOCK
-                          Wrap(
-                            spacing: 12,
-                            runSpacing: 8,
-                            crossAxisAlignment: WrapCrossAlignment.center,
+                          const SizedBox(width: 12),
+
+                          // Info & Stock Switch
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  bp.product.name,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                // INLINE EDIT: PRICE & STOCK
+                                Wrap(
+                                  spacing: 12,
+                                  runSpacing: 8,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    // Price Edit Chip
+                                    InkWell(
+                                      onTap: () => _showInlineEditDialog(
+                                        bp,
+                                        type: 'price',
+                                        currentValue: bp.price,
+                                        title: "Fiyatı Güncelle",
+                                        suffix: "₺",
+                                      ),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.blue[50],
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
+                                          border: Border.all(
+                                            color: Colors.blue[200]!,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          "${bp.price.toStringAsFixed(2)} ₺",
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.blue[800],
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    // Stock Edit Chip
+                                    InkWell(
+                                      onTap: () => _showInlineEditDialog(
+                                        bp,
+                                        type: 'stock',
+                                        currentValue: bp.stock,
+                                        title: "Stoğu Güncelle",
+                                        suffix: "Adet",
+                                      ),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.orange[50],
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
+                                          border: Border.all(
+                                            color: Colors.orange[200]!,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          "Stok: ${bp.stock.toStringAsFixed(0)}",
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.orange[800],
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Right Side Switches (Availability & Weighed)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              // Price Edit Chip
-                              InkWell(
-                                onTap: () => _showInlineEditDialog(
-                                  bp,
-                                  type: 'price',
-                                  currentValue: bp.price,
-                                  title: "Fiyatı Güncelle",
-                                  suffix: "₺",
-                                ),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
+                              // Availability Switch
+                              Column(
+                                children: [
+                                  Switch(
+                                    value: bp.isAvailable,
+                                    activeTrackColor: Colors.green,
+                                    onChanged: (val) {
+                                      _productService.updateBusinessProduct(
+                                        bp.id,
+                                        isAvailable: val,
+                                      );
+                                    },
                                   ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.blue[50],
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(
-                                      color: Colors.blue[200]!,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    "${bp.price.toStringAsFixed(2)} ₺",
+                                  Text(
+                                    bp.isAvailable ? "Aktif" : "Pasif",
                                     style: TextStyle(
+                                      fontSize: 10,
+                                      color: bp.isAvailable
+                                          ? Colors.green
+                                          : Colors.grey,
                                       fontWeight: FontWeight.bold,
-                                      color: Colors.blue[800],
-                                      fontSize: 13,
                                     ),
                                   ),
-                                ),
+                                ],
                               ),
-                              // Stock Edit Chip
-                              InkWell(
-                                onTap: () => _showInlineEditDialog(
-                                  bp,
-                                  type: 'stock',
-                                  currentValue: bp.stock,
-                                  title: "Stoğu Güncelle",
-                                  suffix: "Adet",
-                                ),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
+                              // Tartılı Switch
+                              Column(
+                                children: [
+                                  Switch(
+                                    value: bp.product.isWeighted,
+                                    activeTrackColor: Colors.blue,
+                                    onChanged: (val) {
+                                      _productService.updateBusinessProduct(
+                                        bp.id,
+                                        isWeighted: val,
+                                      );
+                                    },
                                   ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.orange[50],
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(
-                                      color: Colors.orange[200]!,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    "Stok: ${bp.stock.toStringAsFixed(0)}",
+                                  Text(
+                                    "Tartılı",
                                     style: TextStyle(
+                                      fontSize: 10,
+                                      color: bp.product.isWeighted
+                                          ? Colors.blue
+                                          : Colors.grey,
                                       fontWeight: FontWeight.bold,
-                                      color: Colors.orange[800],
-                                      fontSize: 13,
                                     ),
                                   ),
-                                ),
+                                ],
                               ),
                             ],
                           ),
                         ],
                       ),
                     ),
-
-                    // Right Side Switches (Availability & Weighed)
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Availability Switch
-                        Column(
-                          children: [
-                            Switch(
-                              value: bp.isAvailable,
-                              activeTrackColor: Colors.green,
-                              onChanged: (val) {
-                                _productService.updateBusinessProduct(
-                                  bp.id,
-                                  isAvailable: val,
-                                );
-                              },
-                            ),
-                            Text(
-                              bp.isAvailable ? "Aktif" : "Pasif",
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: bp.isAvailable
-                                    ? Colors.green
-                                    : Colors.grey,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                        // Tartılı Switch
-                        Column(
-                          children: [
-                            Switch(
-                              value: bp.product.isWeighted,
-                              activeTrackColor: Colors.blue,
-                              onChanged: (val) {
-                                _productService.updateBusinessProduct(
-                                  bp.id,
-                                  isWeighted: val,
-                                );
-                              },
-                            ),
-                            Text(
-                              "Tartılı",
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: bp.product.isWeighted
-                                    ? Colors.blue
-                                    : Colors.grey,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                  );
+                },
               ),
-            );
-          },
+            ),
+          ],
         );
       },
     );

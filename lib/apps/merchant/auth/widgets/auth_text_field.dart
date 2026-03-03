@@ -6,6 +6,7 @@ class AuthTextField extends StatelessWidget {
   final String hint;
   final IconData icon;
   final bool isPhone;
+  final bool isPassword;
   final Color primaryColor;
   final String selectedCode;
   final ValueChanged<String>? onCodeChanged;
@@ -16,6 +17,7 @@ class AuthTextField extends StatelessWidget {
     required this.hint,
     required this.icon,
     this.isPhone = false,
+    this.isPassword = false,
     this.primaryColor = const Color(0xFF00A651),
     this.selectedCode = "+90",
     this.onCodeChanged,
@@ -25,6 +27,7 @@ class AuthTextField extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
+      obscureText: isPassword,
       keyboardType: isPhone ? TextInputType.phone : TextInputType.text,
       style: GoogleFonts.inter(
         fontSize: 16,

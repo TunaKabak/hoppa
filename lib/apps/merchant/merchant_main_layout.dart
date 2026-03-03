@@ -8,6 +8,7 @@ import 'package:hoppa/apps/merchant/merchant_order_list_page.dart';
 import 'package:hoppa/apps/merchant/merchant_product_list_page.dart';
 import 'package:hoppa/apps/merchant/merchant_settings_page.dart';
 import 'package:hoppa/apps/merchant/merchant_analytics_page.dart';
+import 'package:hoppa/apps/merchant/campaign/merchant_campaigns_page.dart';
 
 final GlobalKey<ScaffoldState> merchantDrawerKey = GlobalKey<ScaffoldState>();
 
@@ -23,10 +24,13 @@ class _MerchantMainLayoutState extends State<MerchantMainLayout> {
   int _selectedIndex = 0;
   String _businessName = 'İşletme Paneli';
 
+  String _storeRole = 'employee'; // default
+
   @override
   void initState() {
     super.initState();
     _loadBusinessName();
+    _loadStoreRole();
   }
 
   Future<void> _loadBusinessName() async {
@@ -40,21 +44,52 @@ class _MerchantMainLayoutState extends State<MerchantMainLayout> {
     } catch (_) {}
   }
 
-  List<Widget> get _pages => [
-    MerchantDashboardPage(businessId: widget.businessId),
-    MerchantOrderListPage(businessId: widget.businessId),
-    MerchantProductListPage(businessId: widget.businessId),
-    MerchantAnalyticsPage(businessId: widget.businessId),
-    MerchantSettingsPage(businessId: widget.businessId),
-  ];
+  Future<void> _loadStoreRole() async {
+    final authService = Provider.of<MerchantAuthService>(
+      context,
+      listen: false,
+    );
+    final userData = await authService.getUserData();
+    if (userData != null && mounted) {
+      setState(() {
+        _storeRole =
+            userData['storeRole'] ?? 'employee'; // admin, manager, employee vs
+      });
+    }
+  }
 
-  static const _navItems = [
-    _NavItem(Icons.dashboard_rounded, 'Dashboard'),
-    _NavItem(Icons.receipt_long_rounded, 'Siparişler'),
-    _NavItem(Icons.inventory_2_rounded, 'Ürünler'),
-    _NavItem(Icons.analytics_rounded, 'Raporlar'),
-    _NavItem(Icons.settings_rounded, 'Ayarlar'),
-  ];
+  bool get _canSeeCampaigns =>
+      _storeRole == 'admin' ||
+      _storeRole == 'manager' ||
+      _storeRole == 'store_manager';
+
+  List<Widget> get _pages {
+    final pages = [
+      MerchantDashboardPage(businessId: widget.businessId),
+      MerchantOrderListPage(businessId: widget.businessId),
+      MerchantProductListPage(businessId: widget.businessId),
+      MerchantAnalyticsPage(businessId: widget.businessId),
+    ];
+    if (_canSeeCampaigns) {
+      pages.add(MerchantCampaignsPage(businessId: widget.businessId));
+    }
+    pages.add(MerchantSettingsPage(businessId: widget.businessId));
+    return pages;
+  }
+
+  List<_NavItem> get _navItems {
+    final items = [
+      const _NavItem(Icons.dashboard_rounded, 'Dashboard'),
+      const _NavItem(Icons.receipt_long_rounded, 'Siparişler'),
+      const _NavItem(Icons.inventory_2_rounded, 'Ürünler'),
+      const _NavItem(Icons.analytics_rounded, 'Raporlar'),
+    ];
+    if (_canSeeCampaigns) {
+      items.add(const _NavItem(Icons.campaign_rounded, 'Kampanyalar'));
+    }
+    items.add(const _NavItem(Icons.settings_rounded, 'Ayarlar'));
+    return items;
+  }
 
   @override
   Widget build(BuildContext context) {

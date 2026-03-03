@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hoppa/apps/consumer/services/customer_auth_service.dart';
 import 'widgets/auth_layout.dart';
 
@@ -30,17 +32,58 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
   final TextEditingController _otpController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
 
+  Timer? _timer;
+  int _secondsRemaining = 180;
+
+  final GlobalKey _otpInputKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
+
+    _focusNode.addListener(() {
+      if (_focusNode.hasFocus) {
+        Future.delayed(const Duration(milliseconds: 400), () {
+          if (mounted && _otpInputKey.currentContext != null) {
+            Scrollable.ensureVisible(
+              _otpInputKey.currentContext!,
+              alignment: 0.5,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
+        });
+      }
+    });
+
     // Otomatik odaklan
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();
     });
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _secondsRemaining = 180;
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_secondsRemaining > 0) {
+        setState(() => _secondsRemaining--);
+      } else {
+        timer.cancel();
+      }
+    });
+  }
+
+  String get _timerText {
+    int minutes = _secondsRemaining ~/ 60;
+    int seconds = _secondsRemaining % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 
   @override
   void dispose() {
+    _timer?.cancel();
     _otpController.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -59,28 +102,25 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
       );
 
       if (user != null) {
-        if (widget.firstName != null && widget.lastName != null) {
-          await _auth.saveUserToFirestore(
-            user,
-            name: widget.firstName,
-            surname: widget.lastName,
-          );
-        } else {
-          await _auth.saveUserToFirestore(user);
-        }
+        // Yeni Sistem: Backend yerine doğrudan Firebase SDK ile Firestore'a Upsert yap.
+        // Bu sayede IP adresi hatalarından kurtulunur ve 404 hatası alınmaz.
+        await _auth.saveUserToFirestore(user);
 
         if (mounted) {
           Navigator.popUntil(context, (route) => route.isFirst);
         }
       }
     } catch (e) {
+      print("Verification err: $e");
       if (mounted) {
         setState(() => _isLoading = false);
         _otpController.clear();
         _focusNode.requestFocus();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("Hatalı kod! Lütfen tekrar deneyiniz."),
+            content: Text(
+              "Hatalı kod veya sunucu hatası! Lütfen tekrar deneyiniz.",
+            ),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),
@@ -154,6 +194,7 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
 
           // --- GİZLİ INPUT VE GÖRSEL KUTULAR ---
           Stack(
+            key: _otpInputKey,
             alignment: Alignment.center,
             children: [
               // 1. Gizli TextField (Arkada çalışır)
@@ -163,6 +204,7 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
                   controller: _otpController,
                   focusNode: _focusNode,
                   keyboardType: TextInputType.number,
+                  autofillHints: const [AutofillHints.oneTimeCode],
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   maxLength: 6,
                   onChanged: (value) {
@@ -259,23 +301,45 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
                 "Kod gelmedi mi? ",
                 style: GoogleFonts.inter(color: Colors.grey.shade600),
               ),
-              GestureDetector(
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Tekrar gönderme talebi alındı."),
-                    ),
-                  );
-                  // TODO: Resend logic here
-                },
-                child: Text(
-                  "Tekrar Gönder",
+              if (_secondsRemaining > 0)
+                Text(
+                  _timerText,
                   style: GoogleFonts.inter(
-                    color: kSecondaryColor,
+                    color: Colors.grey.shade500,
                     fontWeight: FontWeight.bold,
                   ),
+                )
+              else
+                GestureDetector(
+                  onTap: () async {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Yeni kod gönderiliyor...")),
+                    );
+                    _startTimer();
+
+                    // Firebase Auth ile yeni SMS isteğinde bulun
+                    await _auth.verifyPhoneNumber(
+                      phoneNumber: widget.phoneNumber,
+                      codeSent: (verificationId, resendToken) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Yeni kod gönderildi.")),
+                        );
+                      },
+                      verificationFailed: (FirebaseAuthException e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("Hata: ${e.message}")),
+                        );
+                      },
+                    );
+                  },
+                  child: Text(
+                    "Tekrar Gönder",
+                    style: GoogleFonts.inter(
+                      color: kSecondaryColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
-              ),
             ],
           ),
         ],

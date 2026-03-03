@@ -123,6 +123,51 @@ class ProductService {
           return snapshot.docs.map((doc) {
             return BusinessProduct.fromMap(doc.data(), doc.id);
           }).toList();
+          // Create batch and iterate through chunks
+          // This is a simple implementation, if there are many docs we might
+          // need multiple batches (1 batch = max 500 ops)
         });
+  }
+
+  // BUSINESS: Toplu Ürün Silme
+  Future<void> bulkDeleteBusinessProducts(List<String> docIds) async {
+    if (docIds.isEmpty) return;
+
+    // Firestore batch has a limit of 500 operations. We'll chunk the list.
+    final int chunkSize = 500;
+    for (int i = 0; i < docIds.length; i += chunkSize) {
+      final chunk = docIds.sublist(
+        i,
+        i + chunkSize > docIds.length ? docIds.length : i + chunkSize,
+      );
+      final WriteBatch batch = _db.batch();
+      for (final id in chunk) {
+        final docRef = _db.collection('business_products').doc(id);
+        batch.delete(docRef);
+      }
+      await batch.commit();
+    }
+  }
+
+  // BUSINESS: Toplu Durum Güncelleme
+  Future<void> bulkUpdateBusinessProductsStatus(
+    List<String> docIds,
+    bool isAvailable,
+  ) async {
+    if (docIds.isEmpty) return;
+
+    final int chunkSize = 500;
+    for (int i = 0; i < docIds.length; i += chunkSize) {
+      final chunk = docIds.sublist(
+        i,
+        i + chunkSize > docIds.length ? docIds.length : i + chunkSize,
+      );
+      final WriteBatch batch = _db.batch();
+      for (final id in chunk) {
+        final docRef = _db.collection('business_products').doc(id);
+        batch.update(docRef, {'isAvailable': isAvailable});
+      }
+      await batch.commit();
+    }
   }
 }

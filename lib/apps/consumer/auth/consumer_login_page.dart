@@ -75,22 +75,7 @@ class _LoginPageState extends State<LoginPage>
 
     String phone = "$_selectedCountryCode$phoneInput";
 
-    // CHECK IF USER EXISTS
-    bool exists = await _auth.checkUserExists(phone);
-    if (!exists) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              "Bu numara ile kayıtlı kullanıcı bulunamadı. Lütfen önce kayıt olun.",
-            ),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-      return;
-    }
+    // REMOVED USER EXIST CHECK - Allows automatic registration in background
 
     await _auth.verifyPhoneNumber(
       phoneNumber: phone,

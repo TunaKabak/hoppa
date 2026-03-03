@@ -13,6 +13,7 @@ class Campaign {
   final DateTime startDate;
   final DateTime endDate;
   final String imageUrl;
+  final String description;
   final bool isActive;
 
   Campaign({
@@ -25,6 +26,7 @@ class Campaign {
     required this.startDate,
     required this.endDate,
     required this.imageUrl,
+    this.description = '',
     this.isActive = true,
   });
 
@@ -41,6 +43,7 @@ class Campaign {
       startDate: (data['startDate'] as Timestamp).toDate(),
       endDate: (data['endDate'] as Timestamp).toDate(),
       imageUrl: data['imageUrl'] ?? '',
+      description: data['description'] ?? '',
       isActive: data['isActive'] ?? true,
     );
   }
@@ -55,6 +58,7 @@ class Campaign {
       'startDate': Timestamp.fromDate(startDate),
       'endDate': Timestamp.fromDate(endDate),
       'imageUrl': imageUrl,
+      'description': description,
       'isActive': isActive,
     };
   }
@@ -81,6 +85,7 @@ class Campaign {
     DateTime? startDate,
     DateTime? endDate,
     String? imageUrl,
+    String? description,
     bool? isActive,
   }) {
     return Campaign(
@@ -93,6 +98,7 @@ class Campaign {
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
       imageUrl: imageUrl ?? this.imageUrl,
+      description: description ?? this.description,
       isActive: isActive ?? this.isActive,
     );
   }

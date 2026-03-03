@@ -2,8 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'package:hoppa/shared/models/campaign.dart';
-import 'package:provider/provider.dart';
-import 'package:hoppa/apps/consumer/home/product_provider.dart';
+import 'package:hoppa/apps/consumer/campaigns/campaign_detail_page.dart';
 
 class PromoSlider extends StatefulWidget {
   final List<Campaign> campaigns;
@@ -115,19 +114,12 @@ class _PromoSliderState extends State<PromoSlider> {
 
     return GestureDetector(
       onTap: () {
-        // Find the provider and trigger filter
-        Provider.of<ProductProvider>(
+        Navigator.push(
           context,
-          listen: false,
-        ).setCampaignFilter(campaign);
-        // Refresh products
-        // (Fetch needs businessId, but setCampaignFilter zeroes out the list
-        //  and the Home page scroll handles infinite logic, but we must force load)
-        final businessId = campaign.vendorId; // or get from prov..
-        Provider.of<ProductProvider>(
-          context,
-          listen: false,
-        ).fetchProducts(businessId: businessId);
+          MaterialPageRoute(
+            builder: (context) => CampaignDetailPage(campaign: campaign),
+          ),
+        );
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16),

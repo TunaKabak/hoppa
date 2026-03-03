@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:hoppa/shared/models/business_product.dart';
 import 'package:hoppa/apps/consumer/cart/cart_provider.dart';
 import 'package:hoppa/shared/models/campaign.dart';
+import 'package:hoppa/apps/consumer/favorites/favorite_provider.dart';
+import 'package:hoppa/apps/consumer/services/customer_auth_service.dart';
+import 'package:hoppa/apps/consumer/auth/consumer_login_page.dart';
 
 class ModernProductCard extends StatelessWidget {
   final BusinessProduct businessProduct;
@@ -114,6 +117,11 @@ class ModernProductCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: _buildFavoriteButton(context),
+                  ),
                 ],
               ),
             ),
@@ -285,6 +293,13 @@ class ModernProductCard extends StatelessWidget {
                     ),
                   ),
 
+                // FAVORITE BUTTON
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: _buildFavoriteButton(context),
+                ),
+
                 // --- MİKTAR KONTROLÜ (Sağa Hizalı) ---
                 Positioned(
                   bottom: 8,
@@ -383,29 +398,33 @@ class ModernProductCard extends StatelessWidget {
 
     // 1. Durum: Sepette yok veya miktar 0 -> "Ekle" butonu (+)
     if (quantity <= 0) {
-      return GestureDetector(
-        onTap: () {
-          _handleAdd(context, cartProvider);
-        },
-        child: Container(
-          width: isSmall ? 28 : 32, // More compact
-          height: isSmall ? 28 : 32,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-            border: Border.all(color: theme.primaryColor.withOpacity(0.2)),
-          ),
-          child: Icon(
-            Icons.add,
-            color: theme.primaryColor,
-            size: isSmall ? 18 : 20,
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () {
+            _handleAdd(context, cartProvider);
+          },
+          child: Container(
+            width: isSmall ? 28 : 32, // More compact
+            height: isSmall ? 28 : 32,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+              border: Border.all(color: theme.primaryColor.withOpacity(0.2)),
+            ),
+            child: Icon(
+              Icons.add,
+              color: theme.primaryColor,
+              size: isSmall ? 18 : 20,
+            ),
           ),
         ),
       );
@@ -431,20 +450,24 @@ class ModernProductCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           // AZALT BUTONU veya SİLME İKONU
-          GestureDetector(
-            onTap: () {
-              cartProvider.removeFromCart(businessProduct.id);
-            },
-            child: Container(
-              width: isSmall ? 28 : 30,
-              alignment: Alignment.center,
-              child: Icon(
-                (isWeighted && quantity <= 0.51) ||
-                        (!isWeighted && quantity <= 1.01)
-                    ? Icons.delete_outline
-                    : Icons.remove,
-                color: theme.primaryColor,
-                size: isSmall ? 16 : 18,
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(20),
+              onTap: () {
+                cartProvider.removeFromCart(businessProduct.id);
+              },
+              child: Container(
+                width: isSmall ? 28 : 30,
+                alignment: Alignment.center,
+                child: Icon(
+                  (isWeighted && quantity <= 0.51) ||
+                          (!isWeighted && quantity <= 1.01)
+                      ? Icons.delete_outline
+                      : Icons.remove,
+                  color: theme.primaryColor,
+                  size: isSmall ? 16 : 18,
+                ),
               ),
             ),
           ),
@@ -469,17 +492,21 @@ class ModernProductCard extends StatelessWidget {
           ),
 
           // ARTIR BUTONU
-          GestureDetector(
-            onTap: () {
-              _handleAdd(context, cartProvider);
-            },
-            child: Container(
-              width: isSmall ? 28 : 30,
-              alignment: Alignment.center,
-              child: Icon(
-                Icons.add,
-                color: theme.primaryColor,
-                size: isSmall ? 16 : 18,
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(20),
+              onTap: () {
+                _handleAdd(context, cartProvider);
+              },
+              child: Container(
+                width: isSmall ? 28 : 30,
+                alignment: Alignment.center,
+                child: Icon(
+                  Icons.add,
+                  color: theme.primaryColor,
+                  size: isSmall ? 16 : 18,
+                ),
               ),
             ),
           ),
@@ -526,6 +553,57 @@ class ModernProductCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildFavoriteButton(BuildContext context) {
+    return Consumer<FavoriteProvider>(
+      builder: (context, favoriteProvider, child) {
+        final isFavorite = favoriteProvider.isFavorite(businessProduct.id);
+
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: () {
+              final authService = Provider.of<CustomerAuthService>(
+                context,
+                listen: false,
+              );
+
+              if (authService.currentUser == null ||
+                  authService.currentUser!.isAnonymous) {
+                // Yönlendirme
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginPage()),
+                );
+              } else {
+                favoriteProvider.toggleFavorite(businessProduct.id);
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.9),
+                shape: BoxShape.circle,
+                boxShadow: const [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Icon(
+                isFavorite ? Icons.favorite : Icons.favorite_border,
+                color: isFavorite ? Colors.red : Colors.grey[400],
+                size: 18,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

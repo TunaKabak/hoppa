@@ -61,11 +61,26 @@ class _ActiveOrderCardState extends State<ActiveOrderCard> {
     return StreamBuilder<model.Order?>(
       stream: _orderStream,
       builder: (context, snapshot) {
-        // Fail-Safe: Herhangi bir yüklenme, hata veya veri yok durumunda GİZLE
-        if (snapshot.connectionState == ConnectionState.waiting ||
-            snapshot.hasError ||
-            !snapshot.hasData ||
-            snapshot.data == null) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _buildSkeleton(context);
+        }
+
+        if (snapshot.hasError) {
+          print("ActiveOrderCard Stream Error: ${snapshot.error}");
+          // Firebase index eksikliği veya yetki hatalarında boş dön (Arayüzde çirkin hata gösterme)
+          final errorStr = snapshot.error.toString().toLowerCase();
+          if (errorStr.contains('failed-precondition') ||
+              errorStr.contains('permission-denied')) {
+            return const SizedBox.shrink();
+          }
+
+          return _buildErrorFallback(
+            context,
+            "Sipariş yüklenirken hata oluştu.",
+          );
+        }
+
+        if (!snapshot.hasData || snapshot.data == null) {
           return const SizedBox.shrink();
         }
 
@@ -257,6 +272,140 @@ class _ActiveOrderCardState extends State<ActiveOrderCard> {
         child: Container(
           height: 2,
           color: isActive ? Colors.orange : Colors.grey[300],
+          margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorFallback(BuildContext context, String message) {
+    return Card(
+      color: Colors.red[50],
+      elevation: 0,
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.red.shade200),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: TextStyle(color: Colors.red.shade700, fontSize: 13),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSkeleton(BuildContext context) {
+    return Card(
+      color: Colors.white,
+      elevation: 4,
+      shadowColor: Colors.black12,
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        height: 16,
+                        width: 140,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        height: 12,
+                        width: 90,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: Colors.grey[300],
+                  size: 16,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSkeletonStep(),
+                _buildSkeletonConnector(),
+                _buildSkeletonStep(),
+                _buildSkeletonConnector(),
+                _buildSkeletonStep(),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSkeletonStep() {
+    return Column(
+      children: [
+        Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            color: Colors.grey[200],
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          height: 8,
+          width: 36,
+          decoration: BoxDecoration(
+            color: Colors.grey[200],
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSkeletonConnector() {
+    return Expanded(
+      child: Transform(
+        transform: Matrix4.translationValues(0, -8, 0),
+        child: Container(
+          height: 2,
+          color: Colors.grey[200],
           margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
         ),
       ),
