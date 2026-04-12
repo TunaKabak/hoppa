@@ -6,6 +6,7 @@ import 'package:hoppa/shared/core/l10n/app_localizations.dart';
 import 'package:hoppa/apps/consumer/address/address_list_page.dart';
 import 'package:hoppa/apps/consumer/orders/order_history_page.dart';
 import 'package:hoppa/apps/consumer/auth/consumer_login_page.dart'; // Login importu
+import 'package:hoppa/apps/consumer/favorites/favorites_page.dart'; // YENİ
 
 import 'package:hoppa/apps/consumer/cart/cart_provider.dart';
 import 'package:hoppa/shared/core/services/database_seeder.dart'; // YENİ
@@ -254,6 +255,26 @@ class ProfilePage extends StatelessWidget {
             const SizedBox(height: 12),
 
             // MENÜ LİSTESİ (Sadece giriş yapmışlara özel menüler gizlenebilir veya login'e yönlendirilebilir)
+            _buildMenuItem(
+              context,
+              icon: Icons.favorite_border,
+              title: "Favorilerim",
+              onTap: () {
+                if (isGuest) {
+                  Navigator.of(context, rootNavigator: true).push(
+                    MaterialPageRoute(builder: (context) => const LoginPage()),
+                  );
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const FavoritesPage(),
+                    ),
+                  );
+                }
+              },
+            ),
+            const SizedBox(height: 12),
             _buildMenuItem(
               context,
               icon: Icons.shopping_bag_outlined,

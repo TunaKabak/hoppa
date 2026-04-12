@@ -31,6 +31,7 @@ const functions = __importStar(require("firebase-functions"));
 const express_1 = __importDefault(require("express"));
 const cors = require("cors");
 const auth_1 = __importDefault(require("./api/business/auth"));
+const admin_1 = __importDefault(require("./api/business/admin"));
 const auth_2 = __importDefault(require("./api/consumer/auth"));
 const app = (0, express_1.default)();
 // Automatically allow cross-origin requests
@@ -39,6 +40,7 @@ app.use(cors({ origin: true }));
 app.use(express_1.default.json());
 // API Routes
 app.use("/api/business/auth", auth_1.default);
+app.use("/api/business/admin", admin_1.default);
 app.use("/api/consumer/auth", auth_2.default);
 // Export the express app as a single Firebase Cloud Function named 'api'
 exports.api = functions.https.onRequest(app);

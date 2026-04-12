@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hoppa/apps/merchant/services/merchant_auth_service.dart';
 import 'package:hoppa/apps/merchant/auth/merchant_login_page.dart';
+import 'package:hoppa/apps/merchant/auth/merchant_revision_page.dart';
 import 'package:hoppa/apps/merchant/merchant_main_layout.dart';
 
 class MerchantAuthWrapper extends StatelessWidget {
@@ -32,8 +33,9 @@ class MerchantAuthWrapper extends StatelessWidget {
 
               final userData = userSnapshot.data;
               final role = userData?['role'];
+              final status = userData?['status'];
               final businessId = userData?['businessId'];
-              final isMerchant = (role == 'merchant');
+              final isMerchant = (role == 'merchant' || role == 'super_admin');
 
               // GUARD: Merchant flavor'a normal kullanıcı girişi yasak
               if (!isMerchant) {
@@ -51,10 +53,47 @@ class MerchantAuthWrapper extends StatelessWidget {
                 return const LoginPage();
               }
 
-              if (businessId != null) {
+              // GUARD: İşletme durum kontrolleri
+              if (role != 'super_admin' && (businessId == null || status != 'active')) {
+                // Eğer statü revision_requested ise, Revizyon Sayfasına yönlendir
+                if (status == 'revision_requested') {
+                  return MerchantRevisionPage(userData: userData ?? {});
+                }
+
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  String message = "Yetkisiz giriş denemesi.";
+                  Color bgColor = Colors.red;
+
+                  if (status == 'pending') {
+                    message = "Başvurunuz inceleme aşamasındadır. Onaylandıktan sonra giriş yapabilirsiniz.";
+                    bgColor = Colors.orange.shade800;
+                  } else if (status == 'on_hold') {
+                    message = "Başvurunuz şu anda detaylı inceleme için beklemeye alınmıştır.";
+                    bgColor = Colors.blue.shade800;
+                  } else if (status == 'rejected') {
+                    final reason = userData?['rejectionReason'] ?? 'Belirtilmedi';
+                    message = "Başvurunuz reddedilmiştir. Sebep: $reason";
+                    bgColor = Colors.red.shade900;
+                  }
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(message),
+                      backgroundColor: bgColor,
+                      duration: const Duration(seconds: 5),
+                    ),
+                  );
+                  authService.signOut();
+                });
+                return const LoginPage();
+              }
+
+              if (businessId != null || role == 'super_admin') {
                 return MerchantMainLayout(
-                  key: ValueKey(snapshot.data?.uid),
-                  businessId: businessId,
+                  key: ValueKey(
+                    '${snapshot.data?.uid}_${businessId ?? "admin"}',
+                  ),
+                  businessId: businessId ?? '',
                 );
               }
 

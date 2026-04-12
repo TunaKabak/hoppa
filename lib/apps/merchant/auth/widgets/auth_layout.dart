@@ -132,17 +132,18 @@ class _AuthLayoutState extends State<AuthLayout> with WidgetsBindingObserver {
 
           // 3. Content
           SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return SingleChildScrollView(
-                  controller: _scrollController,
-                  physics: const ClampingScrollPhysics(),
-                  padding: EdgeInsets.only(bottom: bottomInset),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: constraints.maxHeight,
-                    ),
-                    child: Center(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: bottomInset),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    controller: _scrollController,
+                    physics: const ClampingScrollPhysics(),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight,
+                      ),
+                      child: Center(
                       child: widget.enableGlass
                           ? ClipRRect(
                               borderRadius: BorderRadius.circular(24),
@@ -179,7 +180,8 @@ class _AuthLayoutState extends State<AuthLayout> with WidgetsBindingObserver {
               },
             ),
           ),
-        ],
+        ),
+      ],
       ),
       bottomSheet: widget.bottomSheet != null
           ? Container(color: Colors.transparent, child: widget.bottomSheet)

@@ -25,6 +25,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const admin = __importStar(require("firebase-admin"));
+const firestore_1 = require("firebase-admin/firestore");
 if (!admin.apps.length) {
     admin.initializeApp();
 }
@@ -98,14 +99,14 @@ router.post("/firebase-login", async (req, res) => {
                 name: "Misafir",
                 surname: "Kullanıcı",
                 role: "user",
-                createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                lastLogin: admin.firestore.FieldValue.serverTimestamp(),
+                createdAt: firestore_1.FieldValue.serverTimestamp(),
+                lastLogin: firestore_1.FieldValue.serverTimestamp(),
             });
         }
         else {
             // Update last login
             await userRef.update({
-                lastLogin: admin.firestore.FieldValue.serverTimestamp()
+                lastLogin: firestore_1.FieldValue.serverTimestamp()
             });
         }
         return res.status(200).json({

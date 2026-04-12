@@ -19,7 +19,7 @@ class _CampaignDetailPageState extends State<CampaignDetailPage> {
   final ScrollController _scrollController = ScrollController();
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  List<BusinessProduct> _products = [];
+  final List<BusinessProduct> _products = [];
   bool _isLoading = true;
   bool _hasMore = true;
   final int _limit = 20;

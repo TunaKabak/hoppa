@@ -6,10 +6,14 @@ import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'apps/merchant/services/merchant_auth_service.dart';
 import 'shared/core/services/language_provider.dart';
 import 'shared/core/l10n/app_localizations.dart';
 import 'shared/core/theme/app_theme.dart';
+import 'shared/core/config/app_config.dart';
 import 'apps/merchant/auth/merchant_auth_wrapper.dart';
 
 void main() async {
@@ -21,6 +25,12 @@ void main() async {
   FlavorConfig(name: "merchant", variables: {"flavor": "merchant"});
 
   await Firebase.initializeApp();
+
+  if (!AppConfig.isProduction) {
+    FirebaseAuth.instance.useAuthEmulator(AppConfig.localHostIp, 9300);
+    FirebaseFirestore.instance.useFirestoreEmulator(AppConfig.localHostIp, 8080);
+  }
+
   await initializeDateFormatting('tr_TR', null);
   runApp(const MerchantApp());
 }

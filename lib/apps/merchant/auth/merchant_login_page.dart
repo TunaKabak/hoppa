@@ -4,6 +4,7 @@ import 'package:hoppa/shared/core/services/database_seeder.dart';
 import 'widgets/auth_layout.dart';
 import 'widgets/auth_text_field.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'merchant_register_screen.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -50,7 +51,7 @@ class _LoginPageState extends State<LoginPage>
     if (username.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Lütfen kullanıcı adı ve şifrenizi giriniz"),
+          content: Text("Lütfen kullanıcı adı/e-posta ve şifrenizi giriniz"),
         ),
       );
       return;
@@ -144,7 +145,7 @@ class _LoginPageState extends State<LoginPage>
 
             AuthTextField(
               controller: _usernameController,
-              hint: "Kullanıcı Adı",
+              hint: "Kullanıcı Adı veya E-posta",
               icon: Icons.store_mall_directory_rounded,
               primaryColor: kPrimaryColor,
             ),
@@ -193,6 +194,23 @@ class _LoginPageState extends State<LoginPage>
 
             // Veya kaldırıldı, sadece tek giriş metodu
             const SizedBox(height: 16),
+
+            TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MerchantRegisterScreen()),
+                );
+              },
+              child: Text(
+                "Hesabınız yok mu? İşletme Başvurusu Yap",
+                style: GoogleFonts.inter(
+                  color: kPrimaryColor,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ),
 
             const SizedBox(height: 20),
             // GİZLİ MENU (Reset & Merchant Upgrade)

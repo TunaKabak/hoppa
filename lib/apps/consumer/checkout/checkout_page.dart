@@ -8,6 +8,7 @@ import 'package:hoppa/apps/consumer/business/business_provider.dart';
 import 'package:hoppa/apps/consumer/checkout/payment_page.dart';
 import 'package:hoppa/shared/core/widgets/animated_sliding_toggle.dart';
 import 'package:hoppa/apps/consumer/address/address_list_page.dart';
+import 'package:hoppa/shared/core/services/business_service.dart';
 
 class CheckoutPage extends StatefulWidget {
   const CheckoutPage({super.key});
@@ -134,7 +135,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     return "$typeText $dayName, saat $_selectedTimeSlot aralığı.";
   }
 
-  void _proceedToPayment() {
+  Future<void> _proceedToPayment() async {
     // Validasyonlar
     if (!_isPickUp && _selectedAddress == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -185,13 +186,44 @@ class _CheckoutPageState extends State<CheckoutPage> {
       deliveryTimeText = "$dateStr, $_selectedTimeSlot (Randevulu)";
     }
 
+    // Gerçek zamanlı olarak mağazanın hala açık olup olmadığını kontrol et
+    final selectedBusiness = Provider.of<BusinessProvider>(
+      context,
+      listen: false,
+    ).selectedBusiness!;
+    
+    // Yükleniyor göstergesi (Opsiyonel ama iyi olabilir)
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return const Center(child: CircularProgressIndicator());
+      },
+    );
+
+    final businessDoc = await BusinessService().getBusinessById(selectedBusiness.id);
+    
+    // Yükleniyor gizle
+    if (context.mounted) {
+      Navigator.pop(context);
+    }
+
+    if (businessDoc == null || !businessDoc.isOpen) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Maalesef işletme şu anda hizmet vermiyor (Kapalı)."),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
+      return;
+    }
+
     // Adres Belirleme (Gel Al ise İşletme Adresi)
     Address finalAddress;
     if (_isPickUp) {
-      final selectedBusiness = Provider.of<BusinessProvider>(
-        context,
-        listen: false,
-      ).selectedBusiness!;
       finalAddress = Address(
         id: 'business',
         title: selectedBusiness.name, // İşletme Adı Başlık Olsun

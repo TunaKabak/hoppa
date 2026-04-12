@@ -537,12 +537,19 @@ class _HomePageState extends State<HomePage>
                   // Dinamik Kategori Listesi
                   Builder(
                     builder: (context) {
-                      final isFlorist =
-                          businessProvider.selectedBusiness?.type.label ==
-                          'Çiçek';
-                      final categories = isFlorist
-                          ? _floristCategories
-                          : _marketCategories;
+                      final String typeLabel = businessProvider.selectedBusiness?.type.label ?? 'Market';
+                      
+                      final List<Map<String, dynamic>> categories;
+                      if (typeLabel == 'Çiçek') {
+                        categories = _floristCategories;
+                      } else if (typeLabel == 'Market') {
+                        categories = _marketCategories;
+                      } else {
+                        // Fallback logic for other types (Kasap, Su vb.)
+                        categories = [
+                          {'name': 'Tümü', 'icon': Icons.grid_view}
+                        ];
+                      }
 
                       return SizedBox(
                         height: 100,
@@ -556,7 +563,7 @@ class _HomePageState extends State<HomePage>
                             final catName = cat['name'] as String;
 
                             bool isSelected;
-                            if (isFlorist) {
+                            if (typeLabel == 'Çiçek') {
                               // Çiçekçide: Tümü ise subCategory'nin Tümü olması,
                               // Diğerlerinde subCategory'nin eşleşmesi
                               if (catName == 'Tümü') {

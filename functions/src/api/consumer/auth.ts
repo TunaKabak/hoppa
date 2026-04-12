@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import * as admin from "firebase-admin";
+import { FieldValue } from "firebase-admin/firestore";
 
 if (!admin.apps.length) {
     admin.initializeApp();
@@ -83,13 +84,13 @@ router.post("/firebase-login", async (req: Request, res: Response) => {
                 name: "Misafir", // Default values
                 surname: "Kullanıcı",
                 role: "user",
-                createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                lastLogin: admin.firestore.FieldValue.serverTimestamp(),
+                createdAt: FieldValue.serverTimestamp(),
+                lastLogin: FieldValue.serverTimestamp(),
             });
         } else {
             // Update last login
             await userRef.update({
-                lastLogin: admin.firestore.FieldValue.serverTimestamp()
+                lastLogin: FieldValue.serverTimestamp()
             });
         }
 

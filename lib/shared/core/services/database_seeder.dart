@@ -223,8 +223,20 @@ class DatabaseSeeder {
       }
     }
 
+    // 6. SÜPER ADMİN OLUŞTUR
+    print("👑 Super Admin (Global Test Kullanıcısı) oluşturuluyor...");
+    batch.set(_db.collection('business_users').doc('super_admin_test_user'), {
+      'businessId': null,
+      'username': 'admin_test',
+      'passwordHash': defaultPasswordHash,
+      'role': 'super_admin',
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
     await batch.commit();
-    print("✅ SİSTEM HAZIR! 30+ İşletme ve Yüzlerce Ürün Eklendi.");
+    print(
+      "✅ SİSTEM HAZIR! 30+ İşletme ve Yüzlerce Ürün Eklendi. (Super Admin: admin_test)",
+    );
   }
 
   Future<void> _deleteCollection(String path) async {

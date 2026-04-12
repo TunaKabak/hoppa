@@ -5,19 +5,24 @@ import 'package:hoppa/shared/models/business_type.dart';
 class BusinessService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  Stream<List<Business>> getBusinesses() {
-    return _db.collection('businesses').snapshots().map((snapshot) {
+  Stream<List<Business>> getBusinesses({String? district}) {
+    Query query = _db.collection('businesses');
+    if (district != null && district.trim().isNotEmpty) {
+      query = query.where('district', isEqualTo: district);
+    }
+
+    return query.snapshots().map((snapshot) {
       return snapshot.docs.map((doc) {
         // Mock Kategori Mantığı (Eğer veritabanında yoksa)
         List<String> categories = List<String>.from(
-          doc.data().toString().contains('categories') ? doc['categories'] : [],
+          doc.data().toString().contains('categories') ? doc.get('categories') : [],
         );
 
-        String lowerName = doc['name'].toString().toLowerCase();
+        String lowerName = doc.get('name').toString().toLowerCase();
         BusinessType type = BusinessType.market; // Varsayılan
 
-        if (doc.data().containsKey('type')) {
-          type = BusinessType.fromString(doc['type']);
+        if (doc.data().toString().contains('type') && doc.get('type') != null) {
+          type = BusinessType.fromString(doc.get('type'));
         } else {
           // İsimden tür tahmini
           if (lowerName.contains('kuruyemiş') || lowerName.contains('nuts')) {
@@ -62,26 +67,31 @@ class BusinessService {
         }
 
         return Business.fromMap(
-          doc.data(),
+          doc.data() as Map<String, dynamic>,
           doc.id,
         ).copyWith(type: type, categories: categories);
       }).toList();
     });
   }
 
-  Future<List<Business>> getBusinessesFuture() async {
-    final snapshot = await _db.collection('businesses').get();
+  Future<List<Business>> getBusinessesFuture({String? district}) async {
+    Query query = _db.collection('businesses');
+    if (district != null && district.trim().isNotEmpty) {
+      query = query.where('district', isEqualTo: district);
+    }
+    
+    final snapshot = await query.get();
     return snapshot.docs.map((doc) {
       // Mock Kategori Mantığı (Eğer veritabanında yoksa)
       List<String> categories = List<String>.from(
-        doc.data().toString().contains('categories') ? doc['categories'] : [],
+        doc.data().toString().contains('categories') ? doc.get('categories') : [],
       );
 
-      String lowerName = doc['name'].toString().toLowerCase();
+      String lowerName = doc.get('name').toString().toLowerCase();
       BusinessType type = BusinessType.market; // Varsayılan
 
-      if (doc.data().containsKey('type')) {
-        type = BusinessType.fromString(doc['type']);
+      if (doc.data().toString().contains('type') && doc.get('type') != null) {
+        type = BusinessType.fromString(doc.get('type'));
       } else {
         // İsimden tür tahmini (Yukarıdaki mantığın aynısı)
         if (lowerName.contains('kuruyemiş') || lowerName.contains('nuts')) {
@@ -126,7 +136,7 @@ class BusinessService {
       }
 
       return Business.fromMap(
-        doc.data(),
+        doc.data() as Map<String, dynamic>,
         doc.id,
       ).copyWith(type: type, categories: categories);
     }).toList();

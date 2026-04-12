@@ -61,6 +61,7 @@ dependencies:
   flutter_flavor: ^3.1.4
   bcrypt: ^1.2.0
   http: ^1.6.0
+  firebase_data_connect: ^0.2.3
 
 dev_dependencies:
   flutter_test:

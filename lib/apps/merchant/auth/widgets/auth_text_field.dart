@@ -8,8 +8,11 @@ class AuthTextField extends StatelessWidget {
   final bool isPhone;
   final bool isPassword;
   final Color primaryColor;
-  final String selectedCode;
-  final ValueChanged<String>? onCodeChanged;
+  final String? prefixText;
+  final FocusNode? focusNode;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onSubmitted;
+  final FormFieldValidator<String>? validator;
 
   const AuthTextField({
     super.key,
@@ -19,14 +22,22 @@ class AuthTextField extends StatelessWidget {
     this.isPhone = false,
     this.isPassword = false,
     this.primaryColor = const Color(0xFF00A651),
-    this.selectedCode = "+90",
-    this.onCodeChanged,
+    this.prefixText,
+    this.focusNode,
+    this.textInputAction,
+    this.onSubmitted,
+    this.validator,
   });
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    return TextFormField(
       controller: controller,
+      focusNode: focusNode,
+      textInputAction: textInputAction ?? TextInputAction.next,
+      onFieldSubmitted: onSubmitted,
+      validator: validator,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
       obscureText: isPassword,
       keyboardType: isPhone ? TextInputType.phone : TextInputType.text,
       style: GoogleFonts.inter(
@@ -37,6 +48,12 @@ class AuthTextField extends StatelessWidget {
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: TextStyle(color: Colors.grey.shade400),
+        prefixText: prefixText,
+        prefixStyle: GoogleFonts.inter(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: Colors.black87,
+        ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 20,
           vertical: 16,
@@ -57,50 +74,24 @@ class AuthTextField extends StatelessWidget {
         ),
         prefixIcon: isPhone
             ? Padding(
-                padding: const EdgeInsets.only(left: 12, right: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(icon, color: primaryColor),
-                    const SizedBox(width: 4),
-                    PopupMenuButton<String>(
-                      initialValue: selectedCode,
-                      onSelected: onCodeChanged,
-                      child: Row(
-                        children: [
-                          Text(
-                            selectedCode,
-                            style: GoogleFonts.inter(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
-                              fontSize: 16,
-                            ),
-                          ),
-                          const Icon(
-                            Icons.arrow_drop_down,
-                            color: Colors.black54,
-                          ),
-                        ],
-                      ),
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: "+90",
-                          child: Text("🇹🇷 +90"),
-                        ),
-                        const PopupMenuItem(
-                          value: "+357",
-                          child: Text("🇨🇾 +357"),
-                        ),
-                        const PopupMenuItem(
-                          value: "+44",
-                          child: Text("🇬🇧 +44"),
-                        ),
-                      ],
+                    const SizedBox(width: 8),
+                    Container(
+                      height: 24,
+                      width: 1.5,
+                      color: Colors.grey.shade300,
                     ),
                   ],
                 ),
               )
-            : Icon(icon, color: primaryColor),
+            : Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Icon(icon, color: primaryColor),
+              ),
         prefixIconConstraints: isPhone
             ? const BoxConstraints(minWidth: 0, minHeight: 0)
             : null,

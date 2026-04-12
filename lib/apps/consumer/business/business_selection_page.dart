@@ -138,7 +138,7 @@ class BusinessSelectionPage extends StatelessWidget {
               // --- İŞLETME LİSTESİ ---
               Expanded(
                 child: StreamBuilder<List<Business>>(
-                  stream: BusinessService().getBusinesses(),
+                  stream: BusinessService().getBusinesses(district: address?.district),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
@@ -233,6 +233,16 @@ class BusinessSelectionPage extends StatelessWidget {
 
                       // 2. Sıralama: En yakından uzağa
                       businesses.sort((a, b) {
+                        final isAZero = a.latitude == 0 && a.longitude == 0;
+                        final isBZero = b.latitude == 0 && b.longitude == 0;
+                        
+                        // İkisi de 0 ise eşittir
+                        if (isAZero && isBZero) return 0;
+                        // Sadece a 0 ise b'den sonra gelsin
+                        if (isAZero) return 1;
+                        // Sadece b 0 ise a'dan sonra gelsin
+                        if (isBZero) return -1;
+
                         final distA = distance.as(
                           LengthUnit.Meter,
                           LatLng(address.latitude, address.longitude),
@@ -259,15 +269,19 @@ class BusinessSelectionPage extends StatelessWidget {
                         // Mesafeyi hesaplayıp karta gönderelim
                         String? distanceText;
                         if (address != null) {
-                          final Distance distance = const Distance();
-                          final double km =
-                              distance.as(
-                                LengthUnit.Meter,
-                                LatLng(address.latitude, address.longitude),
-                                LatLng(business.latitude, business.longitude),
-                              ) /
-                              1000.0;
-                          distanceText = "${km.toStringAsFixed(1)} km";
+                          if (business.latitude == 0 && business.longitude == 0) {
+                            distanceText = "Mesafe\nBilinmiyor";
+                          } else {
+                            final Distance distance = const Distance();
+                            final double km =
+                                distance.as(
+                                  LengthUnit.Meter,
+                                  LatLng(address.latitude, address.longitude),
+                                  LatLng(business.latitude, business.longitude),
+                                ) /
+                                1000.0;
+                            distanceText = "${km.toStringAsFixed(1)} km";
+                          }
                         }
 
                         return _buildCompactBusinessCard(
