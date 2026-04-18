@@ -2,12 +2,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:hoppa/apps/consumer/services/customer_auth_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:core_auth/core_auth.dart';
 import 'widgets/auth_layout.dart';
 
-class OtpVerifyPage extends StatefulWidget {
-  final String verificationId;
+class OtpVerifyPage extends ConsumerStatefulWidget {
+  final String verificationId; // Eskiden kalma, doğrudan param olarak durabilir
   final String phoneNumber;
   final String? firstName;
   final String? lastName;
@@ -21,12 +21,11 @@ class OtpVerifyPage extends StatefulWidget {
   });
 
   @override
-  State<OtpVerifyPage> createState() => _OtpVerifyPageState();
+  ConsumerState<OtpVerifyPage> createState() => _OtpVerifyPageState();
 }
 
-class _OtpVerifyPageState extends State<OtpVerifyPage> {
-  final CustomerAuthService _auth = CustomerAuthService();
-  bool _isLoading = false;
+class _OtpVerifyPageState extends ConsumerState<OtpVerifyPage> {
+  // _isLoading Riverpod yardımıyla dinlenecek
 
   // Tek bir controller ve focus node kullanıyoruz
   final TextEditingController _otpController = TextEditingController();
@@ -89,48 +88,37 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
     super.dispose();
   }
 
-  void _verifyCode(String smsCode) async {
+  void _verifyCode(String smsCode) {
     if (smsCode.length < 6) return;
 
     _focusNode.unfocus();
-    setState(() => _isLoading = true);
-
-    try {
-      final user = await _auth.signInWithSmsCode(
-        widget.verificationId,
-        smsCode,
-      );
-
-      if (user != null) {
-        // Yeni Sistem: Backend yerine doğrudan Firebase SDK ile Firestore'a Upsert yap.
-        // Bu sayede IP adresi hatalarından kurtulunur ve 404 hatası alınmaz.
-        await _auth.saveUserToFirestore(user);
-
-        if (mounted) {
-          Navigator.popUntil(context, (route) => route.isFirst);
-        }
-      }
-    } catch (e) {
-      print("Verification err: $e");
-      if (mounted) {
-        setState(() => _isLoading = false);
-        _otpController.clear();
-        _focusNode.requestFocus();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              "Hatalı kod veya sunucu hatası! Lütfen tekrar deneyiniz.",
-            ),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
+    
+    // Core Auth: OTP Doğrulama İsteği
+    ref.read(authControllerProvider.notifier).verifyOtp(widget.phoneNumber, smsCode);
   }
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authControllerProvider);
+    final _isLoading = authState is AuthLoading;
+
+    ref.listen<AuthState>(authControllerProvider, (previous, next) {
+      if (next is AuthError) {
+        _otpController.clear();
+        _focusNode.requestFocus();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(next.errorMessage),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } else if (next is AuthAuthenticated) {
+        // Giriş yapıldı, anasayfaya dön veya yönlendir.
+        Navigator.popUntil(context, (route) => route.isFirst);
+      }
+    });
+
     const kPrimaryColor = Color(0xFF00A651);
     const kSecondaryColor = Color(0xFFE95D22);
 
@@ -311,26 +299,14 @@ class _OtpVerifyPageState extends State<OtpVerifyPage> {
                 )
               else
                 GestureDetector(
-                  onTap: () async {
+                  onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text("Yeni kod gönderiliyor...")),
                     );
                     _startTimer();
 
-                    // Firebase Auth ile yeni SMS isteğinde bulun
-                    await _auth.verifyPhoneNumber(
-                      phoneNumber: widget.phoneNumber,
-                      codeSent: (verificationId, resendToken) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Yeni kod gönderildi.")),
-                        );
-                      },
-                      verificationFailed: (FirebaseAuthException e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text("Hata: ${e.message}")),
-                        );
-                      },
-                    );
+                    // Core Auth ile yeni SMS isteğinde bulun
+                    ref.read(authControllerProvider.notifier).sendOtp(widget.phoneNumber);
                   },
                   child: Text(
                     "Tekrar Gönder",

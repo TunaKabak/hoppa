@@ -1,0 +1,30 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model OtpCode {
+  id          String   @id @default(uuid())
+  phoneNumber String   @unique // Aynı numaraya aynı anda tek geçerli kod gidebilir
+  code        String
+  expiresAt   DateTime // Geçerlilik süresi (Örn: +3 dakika)
+  createdAt   DateTime @default(now())
+
+  @@index([phoneNumber])
+}
+
+// User modeli OTP loglarından arındırılmış temiz hali
+model User {
+  id        String   @id @default(uuid())
+  phone     String   @unique
+  email     String?  @unique
+  name      String?
+  surname   String?
+  role      String   @default("user")
+  createdAt DateTime @default(now())
+  lastLogin DateTime @default(now())
+}

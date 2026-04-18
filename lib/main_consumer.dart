@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
 import 'package:flutter_flavor/flutter_flavor.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -40,7 +41,7 @@ void main() async {
   }
 
   await initializeDateFormatting('tr_TR', null);
-  runApp(const ConsumerApp());
+  runApp(const riverpod.ProviderScope(child: ConsumerApp()));
 }
 
 class ConsumerApp extends StatelessWidget {

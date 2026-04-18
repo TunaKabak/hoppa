@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:hoppa/apps/consumer/services/customer_auth_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:core_auth/core_auth.dart';
 import 'package:hoppa/shared/core/services/database_seeder.dart';
 import 'consumer_otp_verify_page.dart';
 import 'consumer_register_page.dart';
@@ -7,21 +8,21 @@ import 'widgets/auth_layout.dart';
 import 'widgets/auth_text_field.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class LoginPage extends StatefulWidget {
+class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  ConsumerState<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage>
+class _LoginPageState extends ConsumerState<LoginPage>
     with SingleTickerProviderStateMixin {
-  final CustomerAuthService _auth = CustomerAuthService();
   final _phoneController = TextEditingController();
-  bool _isLoading = false;
+  // _isLoading Riverpod yardımıyla dinlenecek
   String _selectedCountryCode = "+90";
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
+  bool _isSeeding = false;
 
   @override
   void initState() {
@@ -41,26 +42,20 @@ class _LoginPageState extends State<LoginPage>
     super.dispose();
   }
 
-  // --- YENİ: Telefon ile Giriş Akışı ---
-  void _loginWithPhone() async {
+  // --- YENİ: Telefon ile Giriş Akışı (Riverpod Bağlantılı) ---
+  void _loginWithPhone() {
     FocusScope.of(context).unfocus();
 
     if (_phoneController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Telefon numarası giriniz")));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Telefon numarası giriniz")));
       return;
     }
 
-    setState(() => _isLoading = true);
-
-    // Numara formatlama (+90 ekle)
     String phoneInput = _phoneController.text.trim();
 
-    // Format Kontrolü (Sadece +90 için 10 hane kontrolü yapalım, diğerleri esnek olabilir)
     if (_selectedCountryCode == "+90") {
       if (phoneInput.length != 10 || !phoneInput.startsWith('5')) {
-        setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
@@ -75,62 +70,48 @@ class _LoginPageState extends State<LoginPage>
 
     String phone = "$_selectedCountryCode$phoneInput";
 
-    // REMOVED USER EXIST CHECK - Allows automatic registration in background
-
-    await _auth.verifyPhoneNumber(
-      phoneNumber: phone,
-      codeSent: (verificationId, resendToken) {
-        setState(() => _isLoading = false);
-        // OTP Sayfasına Git
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => OtpVerifyPage(
-              verificationId: verificationId,
-              phoneNumber: phone,
-              firstName: '', // Eklenecek ekstra state gerekirse
-              lastName: '',
-            ),
-          ),
-        );
-      },
-      verificationFailed: (e) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Doğrulama Hatası: ${e.message}")),
-        );
-      },
-    );
+    // Core Auth: OTP İsteği
+    ref.read(authControllerProvider.notifier).sendOtp(phone);
   }
 
-  void _guestLogin() async {
-    setState(() => _isLoading = true);
-    await _auth.signInAnonymously();
-    if (mounted) setState(() => _isLoading = false);
+  void _guestLogin() {
+    ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Bu özellik henüz aktif değil.")));
   }
 
-  void _loginWithGoogle() async {
-    setState(() => _isLoading = true);
-    try {
-      final user = await _auth.signInWithGoogle();
-      if (mounted) {
-        if (user != null) {
-          Navigator.popUntil(context, (route) => route.isFirst);
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Hata: $e")));
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
+  void _loginWithGoogle() {
+    ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Bu özellik henüz aktif değil.")));
   }
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authControllerProvider);
+    final _isLoading = authState is AuthLoading || _isSeeding;
+
+    ref.listen<AuthState>(authControllerProvider, (previous, next) {
+      if (next is AuthError) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(next.errorMessage),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } else if (next is OtpSentState) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => OtpVerifyPage(
+              verificationId: "", // Eskiden kalma, kullanılmayacak
+              phoneNumber: next.phoneNumber,
+              firstName: '',
+              lastName: '',
+            ),
+          ),
+        );
+      }
+    });
+
     const kPrimaryColor = Color(0xFF00A651);
     const kSecondaryColor = Color(0xFFE95D22);
 
@@ -372,9 +353,9 @@ class _LoginPageState extends State<LoginPage>
                 );
 
                 if (confirm == true) {
-                  setState(() => _isLoading = true);
+                  setState(() => _isSeeding = true);
                   await DatabaseSeeder().seedSystem();
-                  setState(() => _isLoading = false);
+                  setState(() => _isSeeding = false);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text("Veriler başarıyla sıfırlandı!"),
@@ -383,11 +364,11 @@ class _LoginPageState extends State<LoginPage>
                 }
               },
               onDoubleTap: () async {
-                setState(() => _isLoading = true);
+                setState(() => _isSeeding = true);
 
                 // Sadece veritabanı loglarını incelemek/tekrar seeder denemek için basit hook
                 if (mounted) {
-                  setState(() => _isLoading = false);
+                  setState(() => _isSeeding = false);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text(
