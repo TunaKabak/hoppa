@@ -138,13 +138,12 @@ class AuthController extends Notifier<AuthState> {
 
 // --- Dependency Injection / Providers ---
 
-String getLocalBaseUrl() {
-  // ADB Reverse kullanıldığı için doğrudan localhost verebiliriz.
-  return 'http://127.0.0.1:3000';
+String getBaseUrl() {
+  return 'https://hoppa-backend.onrender.com';
 }
 
 final apiClientProvider = Provider<ApiClient>((ref) {
-  return ApiClient(baseUrl: getLocalBaseUrl());
+  return ApiClient(baseUrl: getBaseUrl());
 });
 
 final authRepositoryProvider = Provider<IAuthRepository>((ref) {
