@@ -15,12 +15,15 @@ class FavoriteProvider extends ChangeNotifier {
   }
 
   void _init() {
-    _auth.authStateChanges().listen((user) {
-      if (user != null && !user.isAnonymous) {
+    _auth.authStateChanges().listen((user) async {
+      if (user != null) {
         _listenToFavorites(user.uid);
       } else {
-        _favoriteProductIds = [];
-        notifyListeners();
+        try {
+          await _auth.signInAnonymously();
+        } catch (e) {
+          print("FavoriteProvider anonymous sign in error: $e");
+        }
       }
     });
   }
@@ -43,7 +46,7 @@ class FavoriteProvider extends ChangeNotifier {
 
   Future<void> toggleFavorite(String productId) async {
     final user = _auth.currentUser;
-    if (user == null || user.isAnonymous) return;
+    if (user == null) return;
 
     final docRef = _db
         .collection('users')

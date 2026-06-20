@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart' as p;
 import 'package:hoppa/shared/models/business_product.dart';
 import 'package:hoppa/apps/consumer/cart/cart_provider.dart';
 import 'package:hoppa/shared/models/campaign.dart';
 import 'package:hoppa/apps/consumer/favorites/favorite_provider.dart';
 import 'package:hoppa/apps/consumer/services/customer_auth_service.dart';
 import 'package:hoppa/apps/consumer/auth/consumer_login_page.dart';
+import 'package:core_auth/core_auth.dart';
 
-class ModernProductCard extends StatelessWidget {
+class ModernProductCard extends ConsumerWidget {
   final BusinessProduct businessProduct;
   final bool isListView;
   final bool isCompact;
@@ -22,18 +24,18 @@ class ModernProductCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final product = businessProduct.product;
-    final cartProvider = Provider.of<CartProvider>(context);
+    final cart = ref.watch(cartProvider);
 
     // Sepetteki miktar kontrolü
     double quantity = 0;
-    final cartItemIndex = cartProvider.items.indexWhere(
+    final cartItemIndex = cart.items.indexWhere(
       (item) => item.businessProduct.id == businessProduct.id,
     );
     if (cartItemIndex >= 0) {
-      quantity = cartProvider.items[cartItemIndex].quantity;
+      quantity = cart.items[cartItemIndex].quantity;
     }
 
     double price = businessProduct.price;
@@ -120,7 +122,7 @@ class ModernProductCard extends StatelessWidget {
                   Positioned(
                     top: 4,
                     right: 4,
-                    child: _buildFavoriteButton(context),
+                    child: _buildFavoriteButton(context, ref),
                   ),
                 ],
               ),
@@ -180,6 +182,7 @@ class ModernProductCard extends StatelessWidget {
                       ),
                       _buildQuantityControl(
                         context,
+                        ref,
                         quantity,
                         theme,
                         isSmall: true,
@@ -297,14 +300,14 @@ class ModernProductCard extends StatelessWidget {
                 Positioned(
                   top: 8,
                   right: 8,
-                  child: _buildFavoriteButton(context),
+                  child: _buildFavoriteButton(context, ref),
                 ),
 
                 // --- MİKTAR KONTROLÜ (Sağa Hizalı) ---
                 Positioned(
                   bottom: 8,
                   right: 8,
-                  child: _buildQuantityControl(context, quantity, theme),
+                  child: _buildQuantityControl(context, ref, quantity, theme),
                 ),
               ],
             ),
@@ -389,11 +392,11 @@ class ModernProductCard extends StatelessWidget {
 
   Widget _buildQuantityControl(
     BuildContext context,
+    WidgetRef ref,
     double quantity,
     ThemeData theme, {
     bool isSmall = false,
   }) {
-    final cartProvider = Provider.of<CartProvider>(context, listen: false);
     final isWeighted = businessProduct.product.isWeighted;
 
     // 1. Durum: Sepette yok veya miktar 0 -> "Ekle" butonu (+)
@@ -403,7 +406,7 @@ class ModernProductCard extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(20),
           onTap: () {
-            _handleAdd(context, cartProvider);
+            _handleAdd(context, ref);
           },
           child: Container(
             width: isSmall ? 28 : 32, // More compact
@@ -455,7 +458,7 @@ class ModernProductCard extends StatelessWidget {
             child: InkWell(
               borderRadius: BorderRadius.circular(20),
               onTap: () {
-                cartProvider.removeFromCart(businessProduct.id);
+                ref.read(cartProvider.notifier).removeFromCart(businessProduct.id);
               },
               child: Container(
                 width: isSmall ? 28 : 30,
@@ -497,7 +500,7 @@ class ModernProductCard extends StatelessWidget {
             child: InkWell(
               borderRadius: BorderRadius.circular(20),
               onTap: () {
-                _handleAdd(context, cartProvider);
+                _handleAdd(context, ref);
               },
               child: Container(
                 width: isSmall ? 28 : 30,
@@ -515,25 +518,28 @@ class ModernProductCard extends StatelessWidget {
     );
   }
 
-  void _handleAdd(BuildContext context, CartProvider cartProvider) async {
-    final result = await cartProvider.addToCart(businessProduct);
-    if (!context.mounted) return;
-    if (result == AddToCartResult.marketConflict) {
-      _showErrorDialog(context, cartProvider);
-    } else if (result == AddToCartResult.outOfStock) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Stok yetersiz!")));
+  void _handleAdd(BuildContext context, WidgetRef ref) {
+    try {
+      ref.read(cartProvider.notifier).addToCart(businessProduct);
+    } catch (e) {
+      final msg = e.toString();
+      if (msg.contains("Farklı bir dükkandan") || msg.contains("sepeti temizlemelisiniz")) {
+        _showErrorDialog(context, ref);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg.replaceAll("Exception: ", ""))),
+        );
+      }
     }
   }
 
-  void _showErrorDialog(BuildContext context, CartProvider cartProvider) {
+  void _showErrorDialog(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text("Farklı İşletme"),
+        title: const Text("Farklı Dükkan"),
         content: const Text(
-          "Sepetinizde başka bir işletmeye ait ürünler var. Sepeti temizleyip bu ürünü eklemek ister misiniz?",
+          "Sepetinizde başka bir dükkana ait ürünler var. Sepeti temizleyip bu dükkandan devam etmek ister misiniz?",
         ),
         actions: [
           TextButton(
@@ -543,12 +549,12 @@ class ModernProductCard extends StatelessWidget {
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
-              cartProvider.clearCart(deleteFromDb: true);
-              cartProvider.addToCart(businessProduct);
+              ref.read(cartProvider.notifier).clearCart();
+              ref.read(cartProvider.notifier).addToCart(businessProduct);
             },
             child: const Text(
               "Sepeti Temizle ve Ekle",
-              style: TextStyle(color: Colors.red),
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -556,8 +562,8 @@ class ModernProductCard extends StatelessWidget {
     );
   }
 
-  Widget _buildFavoriteButton(BuildContext context) {
-    return Consumer<FavoriteProvider>(
+  Widget _buildFavoriteButton(BuildContext context, WidgetRef ref) {
+    return p.Consumer<FavoriteProvider>(
       builder: (context, favoriteProvider, child) {
         final isFavorite = favoriteProvider.isFavorite(businessProduct.id);
 
@@ -566,13 +572,9 @@ class ModernProductCard extends StatelessWidget {
           child: InkWell(
             borderRadius: BorderRadius.circular(20),
             onTap: () {
-              final authService = Provider.of<CustomerAuthService>(
-                context,
-                listen: false,
-              );
+              final authState = ref.read(authControllerProvider);
 
-              if (authService.currentUser == null ||
-                  authService.currentUser!.isAnonymous) {
+              if (authState is! AuthAuthenticated) {
                 // Yönlendirme
                 Navigator.push(
                   context,
@@ -599,7 +601,7 @@ class ModernProductCard extends StatelessWidget {
                 isFavorite ? Icons.favorite : Icons.favorite_border,
                 color: isFavorite ? Colors.red : Colors.grey[400],
                 size: 18,
-              ),
+               ),
             ),
           ),
         );

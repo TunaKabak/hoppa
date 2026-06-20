@@ -1,20 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:hoppa/shared/core/services/business_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart' as p;
 import 'package:hoppa/apps/consumer/business/business_provider.dart';
-import 'package:hoppa/apps/consumer/home/product_provider.dart';
 import 'package:hoppa/shared/models/business.dart';
 import 'package:hoppa/apps/consumer/address/delivery_provider.dart';
 import 'package:hoppa/apps/consumer/address/address_list_page.dart';
+import 'package:hoppa/apps/consumer/repositories/consumer_shop_repository.dart';
 import 'package:latlong2/latlong.dart'; // Mesafe hesaplama için
 
-class BusinessSelectionPage extends StatelessWidget {
+class BusinessSelectionPage extends ConsumerWidget {
   final String? category; // Artık İşletme Türü veya Kategori filtresi olabilir
 
   const BusinessSelectionPage({super.key, this.category});
 
+  bool _isValidImageUrl(String? url) {
+    if (url == null || url.trim().isEmpty) return false;
+    return url.startsWith('http://') || url.startsWith('https://');
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     const kPrimaryColor = Color(0xFF00A651);
 
     return Scaffold(
@@ -34,14 +39,14 @@ class BusinessSelectionPage extends StatelessWidget {
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () {
             // Kategoriyi temizle -> Kategori Seçimine döner
-            Provider.of<BusinessProvider>(
+            p.Provider.of<BusinessProvider>(
               context,
               listen: false,
             ).clearCategory();
           },
         ),
       ),
-      body: Consumer<DeliveryProvider>(
+      body: p.Consumer<DeliveryProvider>(
         builder: (context, deliveryProvider, child) {
           final address = deliveryProvider.selectedAddress;
 
@@ -137,17 +142,11 @@ class BusinessSelectionPage extends StatelessWidget {
 
               // --- İŞLETME LİSTESİ ---
               Expanded(
-                child: StreamBuilder<List<Business>>(
-                  stream: BusinessService().getBusinesses(district: address?.district),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (snapshot.hasError) {
-                      return Center(child: Text("Hata: ${snapshot.error}"));
-                    }
-
-                    var businesses = snapshot.data ?? [];
+                child: ref.watch(consumerShopsProvider).when(
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (err, stack) => const Center(child: Text("Dükkanlar yüklenirken bir hata oluştu. Lütfen tekrar deneyin.")),
+                  data: (allBusinesses) {
+                    var businesses = List<Business>.from(allBusinesses);
 
                     if (businesses.isEmpty) {
                       return const Center(
@@ -286,6 +285,7 @@ class BusinessSelectionPage extends StatelessWidget {
 
                         return _buildCompactBusinessCard(
                           context,
+                          ref,
                           business,
                           distanceText,
                         );
@@ -303,6 +303,7 @@ class BusinessSelectionPage extends StatelessWidget {
 
   Widget _buildCompactBusinessCard(
     BuildContext context,
+    WidgetRef ref,
     Business business,
     String? distanceText,
   ) {
@@ -320,18 +321,19 @@ class BusinessSelectionPage extends StatelessWidget {
           return;
         }
 
-        final productProvider = Provider.of<ProductProvider>(
-          context,
-          listen: false,
-        );
-        final businessProvider = Provider.of<BusinessProvider>(
+        final businessProvider = p.Provider.of<BusinessProvider>(
           context,
           listen: false,
         );
 
-        productProvider.resetState();
+        // Reset and initialize Riverpod catalog providers
+        ref.read(selectedCatalogCategoryProvider.notifier).state =
+            business.type.label == 'Çiçek' ? 'Çiçek' : 'Tümü';
+        ref.read(selectedCatalogSubCategoryProvider.notifier).state = 'Tümü';
+        ref.read(selectedCatalogSortOptionProvider.notifier).state = 'Önerilen';
+        ref.read(catalogSearchQueryProvider.notifier).state = '';
+
         businessProvider.selectBusiness(business);
-        productProvider.fetchProducts(businessId: business.id);
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
@@ -362,22 +364,14 @@ class BusinessSelectionPage extends StatelessWidget {
                     height: 120,
                     width: double.infinity,
                     decoration: BoxDecoration(color: Colors.grey.shade200),
-                    child: business.headerImageUrl.isNotEmpty
+                    child: _isValidImageUrl(business.headerImageUrl)
                         ? Image.network(
                             business.headerImageUrl,
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) =>
-                                const Center(
-                                  child: Icon(Icons.store, color: Colors.grey),
-                                ),
+                                Image.network('https://via.placeholder.com/150', fit: BoxFit.cover),
                           )
-                        : const Center(
-                            child: Icon(
-                              Icons.store,
-                              size: 40,
-                              color: Colors.grey,
-                            ),
-                          ),
+                        : Image.network('https://via.placeholder.com/150', fit: BoxFit.cover),
                   ),
                 ),
 
@@ -427,14 +421,14 @@ class BusinessSelectionPage extends StatelessWidget {
                     ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(10),
-                      child: business.logoUrl.isNotEmpty
+                      child: _isValidImageUrl(business.logoUrl)
                           ? Image.network(
                               business.logoUrl,
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) =>
-                                  const Icon(Icons.store, color: Colors.grey),
+                                  Image.network('https://via.placeholder.com/150', fit: BoxFit.cover),
                             )
-                          : const Icon(Icons.store, color: Colors.grey),
+                          : Image.network('https://via.placeholder.com/150', fit: BoxFit.cover),
                     ),
                   ),
                 ),

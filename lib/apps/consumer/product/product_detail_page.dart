@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hoppa/apps/consumer/cart/cart_provider.dart';
 import 'package:hoppa/shared/models/business_product.dart';
@@ -6,18 +7,18 @@ import 'package:hoppa/shared/models/campaign.dart'; // Campaigns
 import 'package:hoppa/shared/core/services/campaign_service.dart'; // Campaign Service
 import 'package:hoppa/shared/core/services/navigation_provider.dart'; // Navigation Provider
 import 'package:hoppa/apps/consumer/cart/widgets/cart_price_badge.dart'; // YENİ
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart' as p;
 
-class ProductDetailPage extends StatefulWidget {
+class ProductDetailPage extends ConsumerStatefulWidget {
   final BusinessProduct businessProduct;
 
   const ProductDetailPage({super.key, required this.businessProduct});
 
   @override
-  State<ProductDetailPage> createState() => _ProductDetailPageState();
+  ConsumerState<ProductDetailPage> createState() => _ProductDetailPageState();
 }
 
-class _ProductDetailPageState extends State<ProductDetailPage> {
+class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
   bool _isActionLoading = false;
 
   Future<void> _handleCartAction(Future<void> Function() action) async {
@@ -41,7 +42,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
   @override
   Widget build(BuildContext context) {
     final product = widget.businessProduct.product;
-    final cartProvider = Provider.of<CartProvider>(context);
+    final cart = ref.watch(cartProvider);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -115,7 +116,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                         // Detail'dan çık
                         Navigator.pop(context);
                         // Sepet tab'ine geç
-                        Provider.of<NavigationProvider>(
+                        p.Provider.of<NavigationProvider>(
                           context,
                           listen: false,
                         ).setIndex(2);
@@ -312,18 +313,18 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         ),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         width: double.infinity,
-        child: SafeArea(child: _buildCartAction(context, cartProvider)),
+        child: SafeArea(child: _buildCartAction(context, cart)),
       ),
     );
   }
 
-  Widget _buildCartAction(BuildContext context, CartProvider cartProvider) {
+  Widget _buildCartAction(BuildContext context, CartState cart) {
     // Sepette var mı kontrol et
-    final cartItemIndex = cartProvider.items.indexWhere(
+    final cartItemIndex = cart.items.indexWhere(
       (item) => item.businessProduct.id == widget.businessProduct.id,
     );
     final inCart = cartItemIndex != -1;
-    final quantity = inCart ? cartProvider.items[cartItemIndex].quantity : 0.0;
+    final quantity = inCart ? cart.items[cartItemIndex].quantity : 0.0;
     final isWeighted = widget.businessProduct.product.isWeighted;
 
     if (inCart) {
@@ -341,7 +342,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
             onTap: () {
               _handleCartAction(() async {
                 await Future.delayed(const Duration(milliseconds: 200));
-                await cartProvider.removeFromCart(widget.businessProduct.id);
+                ref.read(cartProvider.notifier).removeFromCart(widget.businessProduct.id);
               });
             },
           ),
@@ -375,7 +376,18 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
             onTap: () {
               _handleCartAction(() async {
                 await Future.delayed(const Duration(milliseconds: 200));
-                await cartProvider.addToCart(widget.businessProduct);
+                try {
+                  ref.read(cartProvider.notifier).addToCart(widget.businessProduct);
+                } catch (e) {
+                  final msg = e.toString();
+                  if (msg.contains("Farklı bir dükkandan") || msg.contains("sepeti temizlemelisiniz")) {
+                    _showErrorDialog(context);
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(msg.replaceAll("Exception: ", ""))),
+                    );
+                  }
+                }
               });
             },
             isAdd: true,
@@ -391,11 +403,38 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               ? null
               : () {
                   _handleCartAction(() async {
-                    final result = await cartProvider.addToCart(
-                      widget.businessProduct,
-                    );
-                    if (mounted) {
-                      _handleAddToCartResult(context, result);
+                    try {
+                      ref.read(cartProvider.notifier).addToCart(widget.businessProduct);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              const Icon(Icons.check_circle, color: Colors.white),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  "${widget.businessProduct.product.name} sepete eklendi",
+                                ),
+                              ),
+                            ],
+                          ),
+                          backgroundColor: const Color(0xFF81C784),
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    } catch (e) {
+                      final msg = e.toString();
+                      if (msg.contains("Farklı bir dükkandan") || msg.contains("sepeti temizlemelisiniz")) {
+                        _showErrorDialog(context);
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(msg.replaceAll("Exception: ", ""))),
+                        );
+                      }
                     }
                   });
                 },
@@ -450,7 +489,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: Colors.white,
-          shape: BoxShape.circle, // Circle like Home Page
+          shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
               color: Colors.black.withAlpha(26),
@@ -472,45 +511,32 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
     );
   }
 
-  void _handleAddToCartResult(BuildContext context, AddToCartResult result) {
-    if (result == AddToCartResult.success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.check_circle, color: Colors.white),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  "${widget.businessProduct.product.name} sepete eklendi",
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: const Color(0xFF81C784), // Match soft green
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-          duration: const Duration(seconds: 2),
+  void _showErrorDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Farklı Dükkan"),
+        content: const Text(
+          "Sepetinizde başka bir dükkana ait ürünler var. Sepeti temizleyip bu dükkandan devam etmek ister misiniz?",
         ),
-      );
-    } else if (result == AddToCartResult.marketConflict) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            "Farklı bir marketten ürün ekleyemezsiniz. Önce sepeti temizleyin.",
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("İptal", style: TextStyle(color: Colors.grey)),
           ),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } else if (result == AddToCartResult.outOfStock) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Üzgünüz, stok yetersiz."),
-          backgroundColor: Colors.orange,
-        ),
-      );
-    }
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              ref.read(cartProvider.notifier).clearCart();
+              ref.read(cartProvider.notifier).addToCart(widget.businessProduct);
+            },
+            child: const Text(
+              "Sepeti Temizle ve Ekle",
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

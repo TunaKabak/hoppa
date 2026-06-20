@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import '../services/merchant_auth_service.dart';
+import 'package:core_auth/core_auth.dart';
 import 'widgets/auth_text_field.dart';
 
-class MerchantRevisionPage extends StatefulWidget {
-  final Map<String, dynamic> userData;
+class MerchantRevisionPage extends ConsumerStatefulWidget {
+  final AuthUser user;
 
-  const MerchantRevisionPage({super.key, required this.userData});
+  const MerchantRevisionPage({super.key, required this.user});
 
   @override
-  State<MerchantRevisionPage> createState() => _MerchantRevisionPageState();
+  ConsumerState<MerchantRevisionPage> createState() => _MerchantRevisionPageState();
 }
 
-class _MerchantRevisionPageState extends State<MerchantRevisionPage> {
-  final MerchantAuthService _authService = MerchantAuthService();
+class _MerchantRevisionPageState extends ConsumerState<MerchantRevisionPage> {
   final _formKey = GlobalKey<FormState>();
 
   late TextEditingController _businessNameController;
@@ -34,26 +33,17 @@ class _MerchantRevisionPageState extends State<MerchantRevisionPage> {
     'Lefke',
   ];
   String? _selectedDistrict;
-  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _businessNameController = TextEditingController(text: widget.userData['businessName']);
-    _msNumberController = TextEditingController(text: widget.userData['msNumber']);
-    _taxNumberController = TextEditingController(text: widget.userData['taxNumber']);
+    _businessNameController = TextEditingController(text: widget.user.businessName);
+    _msNumberController = TextEditingController(text: ""); 
+    _taxNumberController = TextEditingController(text: "");
+    _phoneController = TextEditingController(text: widget.user.phone);
+    _fullAddressController = TextEditingController(text: "");
     
-    // Split prefix if needed, for simplicity we just remove spaces and format
-    String phone = widget.userData['phone'] ?? '';
-    _phoneController = TextEditingController(text: phone);
-    
-    _fullAddressController = TextEditingController(text: widget.userData['fullAddress']);
-    
-    _selectedDistrict = widget.userData['district'];
-    // Fallback in case old district is invalid
-    if (_selectedDistrict != null && !_districts.contains(_selectedDistrict)) {
-      _selectedDistrict = null;
-    }
+    _selectedDistrict = null; 
   }
 
   @override
@@ -75,11 +65,8 @@ class _MerchantRevisionPageState extends State<MerchantRevisionPage> {
       return;
     }
 
-    setState(() => _isLoading = true);
-
     try {
-      await _authService.submitRevision(
-        uid: FirebaseAuth.instance.currentUser!.uid,
+      await ref.read(authControllerProvider.notifier).submitMerchantRevision(
         businessName: _businessNameController.text.trim(),
         msNumber: _msNumberController.text.trim(),
         taxNumber: _taxNumberController.text.trim(),
@@ -88,28 +75,26 @@ class _MerchantRevisionPageState extends State<MerchantRevisionPage> {
         fullAddress: _fullAddressController.text.trim(),
       );
 
-      // Successfully updated, it will just automatically update the auth stream and rebuild AuthWrapper 
-      // which will see status == 'pending' and show the pending message.
+      // Başarılı güncelleme sonrası AuthController state'i PENDING yapacak
+      // AuthWrapper bunu yakalayıp bekleme mesajı gösterecek
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
         );
       }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
     }
   }
 
   Future<void> _handleLogout() async {
-    await _authService.signOut();
+    await ref.read(authControllerProvider.notifier).logout();
   }
 
   @override
   Widget build(BuildContext context) {
-    final revisionMessage = widget.userData['revisionMessage'] ?? 'Bilgilerinizde eksiklikler bulundu. Lütfen gerekli alanları güncelleyiniz.';
+    final authState = ref.watch(authControllerProvider);
+    final isLoading = authState is AuthLoading;
+    final revisionMessage = widget.user.revisionMessage ?? 'Bilgilerinizde eksiklikler bulundu. Lütfen gerekli alanları güncelleyiniz.';
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -126,7 +111,7 @@ class _MerchantRevisionPageState extends State<MerchantRevisionPage> {
           )
         ],
       ),
-      body: _isLoading
+      body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
               padding: const EdgeInsets.all(24),
@@ -250,7 +235,7 @@ class _MerchantRevisionPageState extends State<MerchantRevisionPage> {
                           backgroundColor: kPrimaryColor,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         ),
-                        onPressed: _submitRevision,
+                        onPressed: isLoading ? null : _submitRevision,
                         child: Text("Tekrar Gönder", style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                       ),
                     ),

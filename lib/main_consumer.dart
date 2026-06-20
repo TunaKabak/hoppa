@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
 import 'package:flutter_flavor/flutter_flavor.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -9,17 +11,24 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import 'apps/consumer/services/customer_auth_service.dart';
 import 'shared/core/services/language_provider.dart';
-import 'shared/core/l10n/app_localizations.dart';
 import 'shared/core/theme/app_theme.dart';
-import 'apps/consumer/cart/cart_provider.dart';
-import 'apps/consumer/home/product_provider.dart';
+import 'shared/core/l10n/app_localizations.dart';
 import 'apps/consumer/address/delivery_provider.dart';
 import 'shared/core/services/navigation_provider.dart';
 import 'apps/consumer/business/business_provider.dart';
 import 'apps/consumer/favorites/favorite_provider.dart';
 import 'apps/consumer/splash/splash_page.dart';
 
+class MyHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+  }
+}
+
 void main() async {
+  HttpOverrides.global = MyHttpOverrides();
   WidgetsFlutterBinding.ensureInitialized();
 
   // Load environment variables
@@ -40,7 +49,7 @@ void main() async {
   }
 
   await initializeDateFormatting('tr_TR', null);
-  runApp(const ConsumerApp());
+  runApp(const riverpod.ProviderScope(child: ConsumerApp()));
 }
 
 class ConsumerApp extends StatelessWidget {
@@ -51,10 +60,6 @@ class ConsumerApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         Provider<CustomerAuthService>(create: (_) => CustomerAuthService()),
-        ChangeNotifierProvider<CartProvider>(create: (_) => CartProvider()),
-        ChangeNotifierProvider<ProductProvider>(
-          create: (_) => ProductProvider(),
-        ),
         ChangeNotifierProvider<DeliveryProvider>(
           create: (_) => DeliveryProvider(),
         ),

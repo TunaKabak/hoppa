@@ -24,7 +24,7 @@ class Address {
       title: data['title'] ?? 'Adresim',
       city: data['city'] ?? '',
       district: data['district'] ?? '',
-      fullDetails: data['fullDetails'] ?? '',
+      fullDetails: data['fullDetails'] ?? data['fullAddress'] ?? '',
       latitude: (data['latitude'] ?? 0.0).toDouble(),
       longitude: (data['longitude'] ?? 0.0).toDouble(),
     );

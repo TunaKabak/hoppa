@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:hoppa/shared/core/services/address_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hoppa/apps/consumer/repositories/address_repository.dart';
 import 'package:hoppa/shared/models/address.dart';
 import 'package:hoppa/apps/consumer/address/add_address_page.dart';
 
-class AddressListPage extends StatelessWidget {
+class AddressListPage extends ConsumerWidget {
   final bool isSelectionMode;
   // YENİ: Seçim yapıldığında çalışacak fonksiyon (Opsiyonel)
   final Function(Address)? onAddressSelected;
@@ -15,8 +16,7 @@ class AddressListPage extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final addressService = AddressService();
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -36,15 +36,15 @@ class AddressListPage extends StatelessWidget {
       body: Column(
         children: [
           Expanded(
-            child: StreamBuilder<List<Address>>(
-              stream: addressService.getUserAddresses(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                final addresses = snapshot.data ?? [];
-
+            child: ref.watch(addressesProvider).when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, stack) => Center(
+                child: Text(
+                  "Hatalar yüklenemedi: $err",
+                  style: const TextStyle(color: Colors.red),
+                ),
+              ),
+              data: (addresses) {
                 if (addresses.isEmpty) {
                   return Center(
                     child: Column(
@@ -113,8 +113,8 @@ class AddressListPage extends StatelessWidget {
                                       Icons.edit,
                                       color: Colors.blue,
                                     ),
-                                    onPressed: () {
-                                      Navigator.push(
+                                    onPressed: () async {
+                                      final updated = await Navigator.push(
                                         context,
                                         MaterialPageRoute(
                                           builder: (context) => AddAddressPage(
@@ -122,6 +122,9 @@ class AddressListPage extends StatelessWidget {
                                           ),
                                         ),
                                       );
+                                      if (updated != null) {
+                                        ref.invalidate(addressesProvider);
+                                      }
                                     },
                                   ),
                                   IconButton(
@@ -131,7 +134,7 @@ class AddressListPage extends StatelessWidget {
                                     ),
                                     onPressed: () => _showDeleteConfirmation(
                                       context,
-                                      addressService,
+                                      ref,
                                       address.id,
                                     ),
                                   ),
@@ -172,13 +175,16 @@ class AddressListPage extends StatelessWidget {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
+                  onPressed: () async {
+                    final newAddress = await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => const AddAddressPage(),
                       ),
                     );
+                    if (newAddress != null) {
+                      ref.invalidate(addressesProvider);
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: theme.primaryColor,
@@ -204,7 +210,7 @@ class AddressListPage extends StatelessWidget {
 
   void _showDeleteConfirmation(
     BuildContext context,
-    AddressService service,
+    WidgetRef ref,
     String id,
   ) {
     showDialog(
@@ -218,9 +224,26 @@ class AddressListPage extends StatelessWidget {
             child: const Text("İptal", style: TextStyle(color: Colors.grey)),
           ),
           TextButton(
-            onPressed: () {
-              service.deleteAddress(id);
+            onPressed: () async {
               Navigator.pop(ctx);
+              try {
+                await ref.read(addressRepositoryProvider).deleteAddress(id);
+                ref.invalidate(addressesProvider);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Adres başarıyla silindi.")),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text("Hata: $e"),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
             },
             child: const Text(
               "Sil",
@@ -239,3 +262,4 @@ class AddressListPage extends StatelessWidget {
     return Icons.location_on;
   }
 }
+

@@ -1,0 +1,246 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model OtpCode {
+  id          String   @id @default(uuid())
+  phoneNumber String   @unique 
+  code        String
+  expiresAt   DateTime 
+  createdAt   DateTime @default(now())
+
+  @@index([phoneNumber])
+}
+
+// Tüketici (Consumer) modeli (OTP ile kimlik doğrulama)
+model User {
+  id        String    @id @default(uuid())
+  phone     String    @unique
+  email     String?   @unique
+  name      String?
+  surname   String?
+  role      String    @default("user")
+  createdAt DateTime  @default(now())
+  lastLogin DateTime  @default(now())
+  
+  // Tüketici İlişkileri
+  addresses Address[]
+  orders    Order[]
+}
+
+// Merchant (satıcı) hesap durumu
+enum MerchantStatus {
+  PENDING   
+  ACTIVE    
+  REVISION  
+  REJECTED  
+  ON_HOLD   
+}
+
+enum ShopType {
+  RESTAURANT
+  MARKET
+  WATER
+  FLOWER
+  OTHER
+}
+
+// İşletme Başvurusu / Satıcı Yöneticisi modeli
+model Merchant {
+  id               String         @id @default(uuid())
+  email            String         @unique
+  passwordHash     String
+  businessName     String
+  msNumber         String?        // Şirket Kayıt Numarası
+  taxNumber        String?        // Vergi Numarası
+  phone            String?
+  district         String?
+  fullAddress      String?
+  status           MerchantStatus @default(PENDING)
+  revisionMessage  String?        // Yönetici tarafından revizyon notu
+  businessId       String?        // Geriye dönük destek: Eski işleyişteki auth linki
+  role             String         @default("merchant")
+  
+  ownerFirstName   String         @default("")
+  ownerLastName    String         @default("")
+  ownerPhone       String         @default("")
+  businessPhone    String         @default("")
+  merchantType     ShopType       @default(OTHER)
+  subType          String?
+  hasHardware      Boolean        @default(false)
+  agreedToTerms    Boolean        @default(false)
+  identityNumber   String?
+  countryCode      String         @default("TR")
+
+  createdAt        DateTime       @default(now())
+  lastLogin        DateTime       @default(now())
+  
+  // Merchant İlişkileri (Bir satıcının onaylandığında 1 dükkanı olur)
+  shop             Shop?
+
+  @@index([email])
+  @@index([status])
+}
+
+// ------------------------------------------------------------------
+// PAZAR YERİ KÜMELERİ (DOMAIN DATA MODELS)
+// ------------------------------------------------------------------
+
+// Dükkan (Shop)
+model Shop {
+  id               String    @id @default(uuid())
+  merchantId       String    @unique // 1-1 İlişki (Bir merchant'ın bir mağazası var)
+  merchant         Merchant  @relation(fields: [merchantId], references: [id])
+  name             String
+  description      String?
+  address          String?
+  taxNumber        String?
+  isActive         Boolean   @default(false) // Dükkan açık/kapalı veya aktif/pasif mi
+  imageUrl         String?   // Dükkan logosu
+  headerImageUrl   String?   // Dükkan kapak resmi
+  type             ShopType  @default(OTHER)
+  
+  // Lokasyon ve Mesafe
+  latitude         Float?
+  longitude        Float?
+  deliveryRadiusKm Float     @default(5.0)
+
+  // Çalışma Saatleri ve Finansal
+  workingHours     Json?
+  minOrderAmount   Decimal   @db.Decimal(10, 2) @default(0)
+  
+  products         Product[]
+  orders           Order[]
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+// Global Ürün Kataloğu (GlobalProduct)
+model GlobalProduct {
+  id          String    @id @default(uuid())
+  barcode     String    @unique
+  name        String
+  brand       String
+  category    String
+  subCategory String?
+  imageUrl    String
+  isWeighted  Boolean   @default(false)
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([name])
+}
+
+// Ürün Kategorisi (Hiyerarşik Alt/Üst Kategori Desteğiyle)
+model Category {
+  id          String     @id @default(uuid())
+  name        String
+  parentId    String?
+  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryHierarchy")
+  
+  products    Product[]
+  
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+// Dükkana Ait Ürünler (Product)
+model Product {
+  id              String      @id @default(uuid())
+  shopId          String
+  shop            Shop        @relation(fields: [shopId], references: [id])
+  categoryId      String?
+  category        Category?   @relation(fields: [categoryId], references: [id])
+  
+  name            String
+  description     String?
+  price           Decimal     @db.Decimal(10, 2)
+  discountPrice   Decimal?    @db.Decimal(10, 2) // İndirimli fiyat - üstü çizili fiyat mantığı
+  stock           Int?        @default(0)
+  imageUrl        String?
+  isActive        Boolean     @default(true)
+  
+  // Polymorphic / Dynamic Fields
+  barcode         String?
+  brand           String?
+  stockQuantity   Int?        @default(0)
+  weightOrVolume  String?
+  preparationTime Int?
+  hasDeposit      Boolean?    @default(false)
+  depositPrice    Float?
+
+  orderItems      OrderItem[]
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+// Tüketici Adresi
+model Address {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  title       String   // Örn: Ev, İş
+  fullAddress String
+  city        String?
+  district    String?
+  latitude    Float?
+  longitude   Float?
+  
+  orders      Order[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Sipariş Durumları
+enum OrderStatus {
+  PENDING
+  PREPARING
+  ON_THE_WAY
+  DELIVERED
+  CANCELLED
+}
+
+// Tüketicinin Shop'tan Verdiği Sipariş
+model Order {
+  id              String      @id @default(uuid())
+  consumerId      String
+  consumer        User        @relation(fields: [consumerId], references: [id])
+  shopId          String
+  shop            Shop        @relation(fields: [shopId], references: [id])
+  addressId       String
+  address         Address     @relation(fields: [addressId], references: [id])
+  
+  deliveryAddress String      @default("")
+  totalAmount     Decimal     @db.Decimal(10, 2)
+  deliveryFee     Decimal     @db.Decimal(10, 2) @default(0)
+  status          OrderStatus @default(PENDING)
+  customerNote    String?     // Müşterinin sipariş veya kurye için ekleyeceği not
+  
+  items           OrderItem[]
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+// Sipariş Kalemleri
+model OrderItem {
+  id          String   @id @default(uuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  
+  quantity    Int
+  unitPrice   Decimal  @db.Decimal(10, 2)
+}

@@ -1,27 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:hoppa/apps/consumer/services/customer_auth_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart' as legacy_provider;
+import 'package:core_auth/core_auth.dart';
 import 'package:hoppa/shared/core/services/language_provider.dart';
 import 'package:hoppa/shared/core/l10n/app_localizations.dart';
 import 'package:hoppa/apps/consumer/address/address_list_page.dart';
 import 'package:hoppa/apps/consumer/orders/order_history_page.dart';
-import 'package:hoppa/apps/consumer/auth/consumer_login_page.dart'; // Login importu
-import 'package:hoppa/apps/consumer/favorites/favorites_page.dart'; // YENİ
-
+import 'package:hoppa/apps/consumer/auth/consumer_login_page.dart';
+import 'package:hoppa/apps/consumer/favorites/favorites_page.dart';
 import 'package:hoppa/apps/consumer/cart/cart_provider.dart';
-import 'package:hoppa/shared/core/services/database_seeder.dart'; // YENİ
+import 'package:hoppa/shared/core/services/database_seeder.dart';
 
-import 'package:cloud_firestore/cloud_firestore.dart'; // YENİ
-import 'package:hoppa/shared/models/order.dart' as kktc_market; // Aliased
-import 'package:hoppa/shared/models/order_status.dart';
-
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
 
-  void _showLogoutDialog(BuildContext context, CustomerAuthService auth) {
-    // CartProvider'ı burada al
-    final cartProvider = Provider.of<CartProvider>(context, listen: false);
-
+  void _showLogoutDialog(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -39,8 +32,8 @@ class ProfilePage extends StatelessWidget {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              auth.signOut();
-              cartProvider.clearCart(deleteFromDb: true); // Sepeti Temizle
+              ref.read(authControllerProvider.notifier).logout();
+              ref.read(cartProvider.notifier).clearCart();
             },
             child: const Text(
               "Evet, Çıkış Yap",
@@ -53,16 +46,14 @@ class ProfilePage extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final auth = Provider.of<CustomerAuthService>(context);
-    final user = auth.currentUser;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authControllerProvider);
     final t = AppLocalizations.of(context);
-    final languageProvider = Provider.of<LanguageProvider>(context);
-
+    final languageProvider = legacy_provider.Provider.of<LanguageProvider>(context);
     final theme = Theme.of(context);
 
-    // MİSAFİR KONTROLÜ
-    final bool isGuest = user == null || user.isAnonymous;
+    final bool isGuest = authState is! AuthAuthenticated;
+    final AuthUser? user = isGuest ? null : authState.user;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -176,7 +167,7 @@ class ProfilePage extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            user.phoneNumber ?? user.email ?? "Kullanıcı",
+                            user?.displayName ?? user?.phone ?? 'Kullanıcı',
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
@@ -254,7 +245,6 @@ class ProfilePage extends StatelessWidget {
 
             const SizedBox(height: 12),
 
-            // MENÜ LİSTESİ (Sadece giriş yapmışlara özel menüler gizlenebilir veya login'e yönlendirilebilir)
             _buildMenuItem(
               context,
               icon: Icons.favorite_border,
@@ -300,8 +290,6 @@ class ProfilePage extends StatelessWidget {
               icon: Icons.location_on_outlined,
               title: t.translate('my_addresses'),
               onTap: () {
-                // Misafirler de adres ekleyebilmeli (Sepet akışı için), ama kaydetmek için login isteyebiliriz.
-                // Şimdilik açık bırakalım.
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -320,13 +308,12 @@ class ProfilePage extends StatelessWidget {
 
             const SizedBox(height: 40),
 
-            // Çıkış Yap (Misafir için gizlenebilir veya "Verileri Sil" yapılabilir)
             if (!isGuest)
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: OutlinedButton.icon(
-                  onPressed: () => _showLogoutDialog(context, auth),
+                  onPressed: () => _showLogoutDialog(context, ref),
                   icon: const Icon(Icons.logout),
                   label: Text(t.translate('logout')),
                   style: OutlinedButton.styleFrom(
@@ -341,7 +328,7 @@ class ProfilePage extends StatelessWidget {
 
             const SizedBox(height: 40),
 
-            // GELİŞTİRİCİ ARAÇLARI (Sadece Debug modda veya test için)
+            // GELİŞTİRİCİ ARAÇLARI
             const Divider(),
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 8),
@@ -362,7 +349,6 @@ class ProfilePage extends StatelessWidget {
                 style: TextStyle(fontSize: 10),
               ),
               onTap: () async {
-                // Onay Dialog
                 bool confirm =
                     await showDialog(
                       context: context,
@@ -413,7 +399,7 @@ class ProfilePage extends StatelessWidget {
                 try {
                   await DatabaseSeeder().seedSystem();
                   if (context.mounted) {
-                    Navigator.pop(context); // Loading kapa
+                    Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text("Veritabanı başarıyla yenilendi!"),
@@ -422,75 +408,11 @@ class ProfilePage extends StatelessWidget {
                     );
                   }
                 } catch (e) {
-                  print("Error seeding: $e");
                   if (context.mounted) {
-                    Navigator.pop(context); // Loading kapa
+                    Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text("Hata oluştu: $e"),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                }
-              },
-            ),
-
-            // TEST SIPARIŞI BUTONU (YENİ)
-            ListTile(
-              leading: const Icon(Icons.add_shopping_cart, color: Colors.blue),
-              title: const Text("Test Siparişi Oluştur"),
-              subtitle: const Text(
-                "Aktif sipariş banner'ını denemek için sahte sipariş oluşturur.",
-                style: TextStyle(fontSize: 10),
-              ),
-              onTap: () async {
-                if (auth.currentUser == null) return;
-
-                try {
-                  // Basit bir sipariş oluştur
-                  final order = kktc_market.Order(
-                    id: 'test_order_${DateTime.now().millisecondsSinceEpoch}',
-                    userId: auth.currentUser!.uid,
-                    businessId: 'test_business',
-                    status: OrderStatus
-                        .preparing
-                        .value, // Bu status banner'da görünmeli
-                    totalAmount: 150.0,
-                    userAddress: 'Test Adresi',
-                    items: [
-                      kktc_market.OrderItem(
-                        productId: 'test_product_1', // Fixed: Added productId
-                        name: 'Test Ürün',
-                        quantity: 1,
-                        price: 150.0,
-                      ),
-                    ],
-                    createdAt: DateTime.now(),
-                    deliveryTime:
-                        '30-45 dk', // Fixed: String instead of DateTime
-                  );
-
-                  await FirebaseFirestore.instance
-                      .collection('orders')
-                      .doc(order.id)
-                      .set(order.toMap());
-
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          "Test siparişi oluşturuldu! Ana sayfaya gidiniz.",
-                        ),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text("Hata: $e"),
                         backgroundColor: Colors.red,
                       ),
                     );

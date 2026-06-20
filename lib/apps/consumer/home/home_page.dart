@@ -1,26 +1,26 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart' as p;
 import 'package:hoppa/apps/consumer/cart/cart_provider.dart';
-import 'package:hoppa/apps/consumer/home/product_provider.dart';
 import 'package:hoppa/shared/core/services/navigation_provider.dart';
 import 'package:hoppa/apps/consumer/business/business_provider.dart';
 import 'package:hoppa/apps/consumer/business/business_selection_page.dart';
 import 'package:hoppa/apps/consumer/business/selection_category_page.dart';
 import 'package:hoppa/apps/consumer/cart/widgets/cart_price_badge.dart';
 import 'package:hoppa/apps/consumer/home/widgets/modern_product_card.dart';
-import 'package:hoppa/apps/consumer/home/widgets/promo_slider.dart';
 import 'package:hoppa/apps/consumer/orders/widgets/active_order_card.dart';
 import 'package:hoppa/apps/consumer/product/product_detail_page.dart';
-import 'package:hoppa/shared/models/campaign.dart';
+import 'package:hoppa/apps/consumer/repositories/consumer_shop_repository.dart';
+import 'package:hoppa/shared/models/business_product.dart';
 
-class HomePage extends StatefulWidget {
+class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  ConsumerState<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage>
+class _HomePageState extends ConsumerState<HomePage>
     with AutomaticKeepAliveClientMixin<HomePage> {
   final ScrollController _scrollController = ScrollController();
   bool _isScrolled = false;
@@ -31,7 +31,6 @@ class _HomePageState extends State<HomePage>
   List<GlobalKey> _subCategoryKeys = [];
 
   int _crossAxisCount = 2;
-  final String _sortOption = 'Önerilen';
 
   final List<String> _sortOptions = [
     'Önerilen',
@@ -124,23 +123,15 @@ class _HomePageState extends State<HomePage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final businessProvider = Provider.of<BusinessProvider>(
+      final businessProvider = p.Provider.of<BusinessProvider>(
         context,
         listen: false,
       );
       if (businessProvider.selectedBusiness != null) {
         // Eğer Çiçekçi ise varsayılan kategori 'Çiçek' olmalı
         if (businessProvider.selectedBusiness!.type.label == 'Çiçek') {
-          Provider.of<ProductProvider>(
-            context,
-            listen: false,
-          ).setCategory('Çiçek');
+          ref.read(selectedCatalogCategoryProvider.notifier).state = 'Çiçek';
         }
-
-        Provider.of<ProductProvider>(
-          context,
-          listen: false,
-        ).fetchProducts(businessId: businessProvider.selectedBusiness!.id);
       }
     });
 
@@ -163,11 +154,12 @@ class _HomePageState extends State<HomePage>
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              Provider.of<CartProvider>(
-                context,
-                listen: false,
-              ).clearCart(deleteFromDb: true);
-              Provider.of<BusinessProvider>(
+              ref.read(cartProvider.notifier).clearCart();
+              ref.read(selectedCatalogCategoryProvider.notifier).state = 'Tümü';
+              ref.read(selectedCatalogSubCategoryProvider.notifier).state = 'Tümü';
+              ref.read(selectedCatalogSortOptionProvider.notifier).state = 'Önerilen';
+              ref.read(catalogSearchQueryProvider.notifier).state = '';
+              p.Provider.of<BusinessProvider>(
                 context,
                 listen: false,
               ).clearBusiness();
@@ -200,59 +192,25 @@ class _HomePageState extends State<HomePage>
     if (previousScrolled != _isScrolled) {
       setState(() {});
     }
-
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
-      final businessId = Provider.of<BusinessProvider>(
-        context,
-        listen: false,
-      ).selectedBusiness?.id;
-      if (businessId != null) {
-        Provider.of<ProductProvider>(
-          context,
-          listen: false,
-        ).fetchProducts(businessId: businessId);
-      }
-    }
   }
 
   void _onCategorySelected(int index, String categoryName) {
-    final businessProvider = Provider.of<BusinessProvider>(
-      context,
-      listen: false,
-    );
-    final productProvider = Provider.of<ProductProvider>(
+    final businessProvider = p.Provider.of<BusinessProvider>(
       context,
       listen: false,
     );
     final isFlorist = businessProvider.selectedBusiness?.type.label == 'Çiçek';
 
     if (isFlorist) {
-      // Çiçekçi mantığı: Ana kategori hep 'Çiçek', üstteki butonlar alt kategoriyi seçer
       if (categoryName == 'Tümü') {
-        // Tümü seçilirse SubCategory de Tümü olsun
-        productProvider.setSubCategory('Tümü');
+        ref.read(selectedCatalogSubCategoryProvider.notifier).state = 'Tümü';
       } else {
-        productProvider.setSubCategory(categoryName);
+        ref.read(selectedCatalogSubCategoryProvider.notifier).state = categoryName;
       }
-      // Ana kategori Çiçek olarak kalmalı (init'te set ediliyor ama garanti olsun)
-      if (productProvider.selectedCategory != 'Çiçek') {
-        // Bu method subcategory'i sıfırlıyor o yüzden dikkatli kullanılmalı
-        // Ancak biz zaten subcategory set ettik, o yüzden setCategory çağırırsak ezilir.
-        // Doğru sıra: setCategory -> setSubCategory
-        // Ama setCategory zaten sıfırlıyor.
-        // O yüzden önce Category set edip sonra SubCategory set etmeliyiz.
-        // Fakat UI'da zaten Çiçek seçili varsayıyoruz.
-      }
+      ref.read(selectedCatalogCategoryProvider.notifier).state = 'Çiçek';
     } else {
-      // Market mantığı: Normal kategori seçimi
-      productProvider.setCategory(categoryName);
-    }
-
-    // FETCH TRIGGER
-    final businessId = businessProvider.selectedBusiness?.id;
-    if (businessId != null) {
-      productProvider.fetchProducts(businessId: businessId);
+      ref.read(selectedCatalogCategoryProvider.notifier).state = categoryName;
+      ref.read(selectedCatalogSubCategoryProvider.notifier).state = 'Tümü';
     }
 
     _scrollToCenter(_categoryScrollController, index, 83.0);
@@ -264,22 +222,8 @@ class _HomePageState extends State<HomePage>
   }
 
   void _onSubCategorySelected(int index, String subCategory) {
-    Provider.of<ProductProvider>(
-      context,
-      listen: false,
-    ).setSubCategory(subCategory);
+    ref.read(selectedCatalogSubCategoryProvider.notifier).state = subCategory;
 
-    // FETCH TRIGGER
-    final businessId = Provider.of<BusinessProvider>(
-      context,
-      listen: false,
-    ).selectedBusiness?.id;
-    if (businessId != null) {
-      Provider.of<ProductProvider>(
-        context,
-        listen: false,
-      ).fetchProducts(businessId: businessId);
-    }
     if (index < _subCategoryKeys.length &&
         _subCategoryKeys[index].currentContext != null) {
       Scrollable.ensureVisible(
@@ -317,7 +261,7 @@ class _HomePageState extends State<HomePage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final businessProvider = Provider.of<BusinessProvider>(context);
+    final businessProvider = p.Provider.of<BusinessProvider>(context);
 
     // 1. KATEGORİ SEÇİLMEDİYSE -> KATEGORİ SAYFASI
     if (businessProvider.selectedCategory == null) {
@@ -331,11 +275,15 @@ class _HomePageState extends State<HomePage>
 
     // 3. İŞLETME SEÇİLDİYSE -> ÜRÜN LİSTESİ (MEVCUT HOME)
     final selectedBusiness = businessProvider.selectedBusiness!;
-    final productProvider = Provider.of<ProductProvider>(context);
+    final productsAsync = ref.watch(filteredShopProductsProvider(selectedBusiness.id));
     final theme = Theme.of(context);
 
+    final selectedCategory = ref.watch(selectedCatalogCategoryProvider);
+    final selectedSubCategory = ref.watch(selectedCatalogSubCategoryProvider);
+    final selectedSortOption = ref.watch(selectedCatalogSortOptionProvider);
+
     List<String> currentSubCategories =
-        _subCategoriesMap[productProvider.selectedCategory] ?? [];
+        _subCategoriesMap[selectedCategory] ?? [];
 
     if (_subCategoryKeys.length != currentSubCategories.length) {
       _subCategoryKeys = List.generate(
@@ -458,7 +406,7 @@ class _HomePageState extends State<HomePage>
                           child: TextField(
                             readOnly: true,
                             onTap: () {
-                              Provider.of<NavigationProvider>(
+                              p.Provider.of<NavigationProvider>(
                                 context,
                                 listen: false,
                               ).setIndex(1);
@@ -472,7 +420,7 @@ class _HomePageState extends State<HomePage>
                                   color: theme.primaryColor,
                                 ),
                                 onPressed: () {
-                                  Provider.of<NavigationProvider>(
+                                  p.Provider.of<NavigationProvider>(
                                     context,
                                     listen: false,
                                   ).setIndex(1);
@@ -513,13 +461,11 @@ class _HomePageState extends State<HomePage>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (productProvider.selectedCategory == 'Tümü' &&
-                      productProvider.activeCampaigns.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 16.0),
-                      child: PromoSlider(
-                        campaigns: productProvider.activeCampaigns,
-                      ),
+                  if (selectedCategory == 'Tümü' &&
+                      false) // Disabled campaigns for REST API
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16.0),
+                      child: SizedBox.shrink(),
                     ),
 
                   // Active Order Banner (Moved here)
@@ -568,16 +514,16 @@ class _HomePageState extends State<HomePage>
                               // Diğerlerinde subCategory'nin eşleşmesi
                               if (catName == 'Tümü') {
                                 isSelected =
-                                    productProvider.selectedSubCategory ==
+                                    selectedSubCategory ==
                                     'Tümü';
                               } else {
                                 isSelected =
-                                    productProvider.selectedSubCategory ==
+                                    selectedSubCategory ==
                                     catName;
                               }
                             } else {
                               isSelected =
-                                  catName == productProvider.selectedCategory;
+                                  catName == selectedCategory;
                             }
 
                             return _buildCategoryItem(cat, isSelected, index);
@@ -603,7 +549,7 @@ class _HomePageState extends State<HomePage>
                           ) {
                             final subCat = currentSubCategories[index];
                             final isSelected =
-                                subCat == productProvider.selectedSubCategory;
+                                subCat == selectedSubCategory;
                             return GestureDetector(
                               key: _subCategoryKeys[index],
                               onTap: () =>
@@ -677,7 +623,7 @@ class _HomePageState extends State<HomePage>
                           ),
                           child: DropdownButtonHideUnderline(
                             child: DropdownButton<String>(
-                              value: productProvider.selectedSortOption,
+                              value: selectedSortOption,
                               icon: const Icon(
                                 Icons.sort,
                                 size: 18,
@@ -697,23 +643,7 @@ class _HomePageState extends State<HomePage>
                               }).toList(),
                               onChanged: (newValue) {
                                 if (newValue != null) {
-                                  Provider.of<ProductProvider>(
-                                    context,
-                                    listen: false,
-                                  ).setSortOption(newValue);
-
-                                  // FETCH TRIGGER
-                                  final businessId =
-                                      Provider.of<BusinessProvider>(
-                                        context,
-                                        listen: false,
-                                      ).selectedBusiness?.id;
-                                  if (businessId != null) {
-                                    Provider.of<ProductProvider>(
-                                      context,
-                                      listen: false,
-                                    ).fetchProducts(businessId: businessId);
-                                  }
+                                  ref.read(selectedCatalogSortOptionProvider.notifier).state = newValue;
                                 }
                               },
                             ),
@@ -735,79 +665,92 @@ class _HomePageState extends State<HomePage>
               ),
             ),
 
-            if (productProvider.products.isEmpty && !productProvider.isLoading)
-              const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.all(50),
-                  child: Center(
-                    child: Column(
-                      children: [
-                        Icon(Icons.search_off, size: 60, color: Colors.grey),
-                        SizedBox(height: 10),
-                        Text(
-                          "Bu kategoride ürün bulunamadı.",
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                      ],
+            ...productsAsync.when(
+              loading: () => const [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.all(50),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                ),
+              ],
+              error: (err, stack) => const [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.all(50),
+                    child: Center(
+                      child: Text(
+                        "Dükkanlar yüklenirken bir hata oluştu",
+                        style: TextStyle(color: Colors.red),
+                      ),
                     ),
                   ),
                 ),
-              )
-            else
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
-                sliver: SliverGrid(
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: _crossAxisCount,
-                    childAspectRatio: _crossAxisCount == 1
-                        ? 2.8
-                        : (_crossAxisCount == 2 ? 0.72 : 0.65),
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 16,
-                  ),
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    final product = productProvider.products[index];
+              ],
+              data: (filteredProducts) {
+                if (filteredProducts.isEmpty) {
+                  return const [
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.all(50),
+                        child: Center(
+                          child: Column(
+                            children: [
+                              Icon(Icons.search_off, size: 60, color: Colors.grey),
+                              SizedBox(height: 10),
+                              Text(
+                                "Bu kategoride ürün bulunamadı.",
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ];
+                }
 
-                    // Find matching campaign
-                    Campaign? campaign;
-                    try {
-                      campaign = productProvider.activeCampaigns.firstWhere(
-                        (c) =>
-                            c.targetProducts.contains(product.productBarcode),
-                      );
-                    } catch (_) {}
+                return [
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    sliver: SliverGrid(
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: _crossAxisCount,
+                        childAspectRatio: _crossAxisCount == 1
+                            ? 2.8
+                            : (_crossAxisCount == 2 ? 0.72 : 0.65),
+                        mainAxisSpacing: 16,
+                        crossAxisSpacing: 16,
+                      ),
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final product = filteredProducts[index];
 
-                    return GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                ProductDetailPage(businessProduct: product),
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    ProductDetailPage(businessProduct: product),
+                              ),
+                            );
+                          },
+                          child: ModernProductCard(
+                            businessProduct: product,
+                            isListView: _crossAxisCount == 1,
+                            isCompact: _crossAxisCount > 2,
+                            campaign: null,
                           ),
                         );
-                      },
-                      child: ModernProductCard(
-                        businessProduct: product,
-                        isListView: _crossAxisCount == 1,
-                        isCompact: _crossAxisCount > 2,
-                        campaign: campaign,
-                      ),
-                    );
-                  }, childCount: productProvider.products.length),
-                ),
-              ),
-
-            if (productProvider.isLoading)
-              const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Center(child: CircularProgressIndicator()),
-                ),
-              ),
+                      }, childCount: filteredProducts.length),
+                    ),
+                  ),
+                ];
+              },
+            ),
 
             const SliverToBoxAdapter(child: SizedBox(height: 80)),
           ],

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:hoppa/shared/core/services/order_service.dart';
-import 'package:hoppa/apps/consumer/services/customer_auth_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:core_network/core_network.dart';
 import 'package:hoppa/apps/consumer/cart/cart_provider.dart';
+import 'package:hoppa/apps/consumer/repositories/consumer_order_repository.dart';
 import 'package:hoppa/shared/models/address.dart';
 
-class PaymentPage extends StatefulWidget {
+class PaymentPage extends ConsumerStatefulWidget {
   final Address deliveryAddress;
   final String phoneNumber;
   final String deliveryTime;
@@ -20,10 +20,10 @@ class PaymentPage extends StatefulWidget {
   });
 
   @override
-  State<PaymentPage> createState() => _PaymentPageState();
+  ConsumerState<PaymentPage> createState() => _PaymentPageState();
 }
 
-class _PaymentPageState extends State<PaymentPage> {
+class _PaymentPageState extends ConsumerState<PaymentPage> {
   final _noteController = TextEditingController();
 
   String _paymentMethod = 'cash_on_delivery';
@@ -43,72 +43,79 @@ class _PaymentPageState extends State<PaymentPage> {
     setState(() => _isLoading = true);
 
     try {
-      final cart = Provider.of<CartProvider>(context, listen: false);
-      final auth = Provider.of<CustomerAuthService>(context, listen: false);
-      final orderService = OrderService();
+      final cartState = ref.read(cartProvider);
+      final cartNotifier = ref.read(cartProvider.notifier);
+      final orderRepo = ref.read(consumerOrderRepositoryProvider);
 
       double deliveryFee = widget.isPickUp ? 0.0 : 20.0;
-      double finalTotal = cart.totalAmount + deliveryFee;
+      double finalTotal = cartState.totalAmount + deliveryFee;
 
       // Clean address - just the actual address, no prefixes or notes
-      String cleanAddress =
-          "${widget.deliveryAddress.title} - ${widget.deliveryAddress.formattedAddress}";
-
-      // Delivery method
-      String deliveryMethod = widget.isPickUp ? 'pickup' : 'delivery';
+      String cleanAddress = widget.isPickUp
+          ? "Gel Al: ${widget.deliveryAddress.fullDetails}"
+          : "${widget.deliveryAddress.title}: ${widget.deliveryAddress.fullDetails}";
 
       // User's order note - just the text
       String orderNote = _noteController.text.trim();
 
-      // Doorbell preference
-      bool dontRingBell = _dontRingBell;
+      String? addressId = widget.isPickUp ? null : widget.deliveryAddress.id;
 
-      await orderService.createOrder(
-        userId: auth.currentUser?.uid ?? 'guest',
-        userPhone: widget.phoneNumber,
-        address: cleanAddress, // Clean address only
-        deliveryTime: widget.deliveryTime,
-        items: cart.items,
-        totalAmount: finalTotal,
-        deliveryMethod: deliveryMethod, // Separate field
-        orderNote: orderNote, // Separate field
-        dontRingBell: dontRingBell, // Separate field
-        addressLatitude: widget.deliveryAddress.latitude, // Location data
-        addressLongitude: widget.deliveryAddress.longitude, // Location data
-      );
+      final orderData = {
+        'shopId': cartState.currentBusinessId,
+        'items': cartState.items.map((item) => {
+          'productId': item.businessProduct.id,
+          'quantity': item.quantity.round(),
+        }).toList(),
+        if (addressId != null) 'addressId': addressId,
+        'deliveryAddress': cleanAddress,
+        'notes': orderNote,
+      };
 
-      cart.clearCart(deleteFromDb: true);
+      await orderRepo.createOrder(orderData);
+
+      // Clear cart locally
+      cartNotifier.clearCart();
+
       if (mounted) {
         Navigator.popUntil(context, (route) => route.isFirst);
         _showSuccessDialog();
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.error_outline_rounded, color: Colors.white),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  "Hata: $e",
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+      String errorMsg = e.toString();
+      if (e is AppException) {
+        errorMsg = e.message;
+      } else if (e is Exception) {
+        errorMsg = e.toString().replaceAll("Exception: ", "");
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline_rounded, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    "Hata: $errorMsg",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
+            backgroundColor: Colors.red.shade600,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.only(bottom: 110, left: 16, right: 16),
+            elevation: 4,
           ),
-          backgroundColor: Colors.red.shade600,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          margin: const EdgeInsets.only(bottom: 110, left: 16, right: 16),
-          elevation: 4,
-        ),
-      );
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -169,9 +176,12 @@ class _PaymentPageState extends State<PaymentPage> {
 
   @override
   Widget build(BuildContext context) {
-    final cart = Provider.of<CartProvider>(context);
+    final cartState = ref.watch(cartProvider);
+    final campaignsAsync = ref.watch(cartCampaignsProvider);
+    final activeCampaigns = campaignsAsync.value ?? [];
+
     double deliveryFee = widget.isPickUp ? 0.0 : 20.0;
-    double total = cart.totalAmount + deliveryFee;
+    double total = cartState.totalAmount + deliveryFee;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
@@ -309,10 +319,9 @@ class _PaymentPageState extends State<PaymentPage> {
                             child: const Text(
                               "Çok Yakında",
                               style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black54,
-                              ),
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black54),
                             ),
                           ),
                         ],
@@ -347,7 +356,7 @@ class _PaymentPageState extends State<PaymentPage> {
                           ).copyWith(dividerColor: Colors.transparent),
                           child: ExpansionTile(
                             title: Text(
-                              "${cart.items.length} Ürün",
+                              "${cartState.items.length} Ürün",
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 15,
@@ -366,11 +375,11 @@ class _PaymentPageState extends State<PaymentPage> {
                               16,
                               16,
                             ),
-                            children: cart.items.map((item) {
+                            children: cartState.items.map((item) {
                               double price = item.businessProduct.price;
-                              if (cart.activeCampaigns.isNotEmpty) {
+                              if (activeCampaigns.isNotEmpty) {
                                 try {
-                                  final campaign = cart.activeCampaigns
+                                  final campaign = activeCampaigns
                                       .firstWhere(
                                         (c) => c.targetProducts.contains(
                                           item.businessProduct.productBarcode,
@@ -434,7 +443,7 @@ class _PaymentPageState extends State<PaymentPage> {
                             children: [
                               _summaryRow(
                                 "Ara Toplam",
-                                "${cart.totalAmount.toStringAsFixed(2)} ₺",
+                                "${cartState.totalAmount.toStringAsFixed(2)} ₺",
                               ),
                               const SizedBox(height: 8),
                               _summaryRow(
@@ -522,9 +531,7 @@ class _PaymentPageState extends State<PaymentPage> {
                                   ? "Gel Al Siparişi"
                                   : "Eve Teslimat",
                               style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
+                                  fontWeight: FontWeight.bold, fontSize: 16),
                             ),
                             const Spacer(),
                             Text(

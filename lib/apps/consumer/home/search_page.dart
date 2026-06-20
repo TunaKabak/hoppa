@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:hoppa/apps/consumer/home/product_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart' as p;
+import 'package:hoppa/apps/consumer/repositories/consumer_shop_repository.dart';
 import 'package:hoppa/apps/consumer/home/widgets/modern_product_card.dart';
 import 'package:hoppa/shared/core/services/navigation_provider.dart';
-import 'package:hoppa/shared/models/campaign.dart';
+import 'package:hoppa/apps/consumer/business/business_provider.dart';
 import 'package:hoppa/apps/consumer/product/product_detail_page.dart';
 
-class SearchPage extends StatefulWidget {
+class SearchPage extends ConsumerStatefulWidget {
   const SearchPage({super.key});
 
   @override
-  State<SearchPage> createState() => _SearchPageState();
+  ConsumerState<SearchPage> createState() => _SearchPageState();
 }
 
-class _SearchPageState extends State<SearchPage> {
+class _SearchPageState extends ConsumerState<SearchPage> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   String _query = '';
@@ -23,7 +24,7 @@ class _SearchPageState extends State<SearchPage> {
     super.initState();
     // Listen to navigation changes
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<NavigationProvider>(
+      p.Provider.of<NavigationProvider>(
         context,
         listen: false,
       ).addListener(_onNavChange);
@@ -32,7 +33,7 @@ class _SearchPageState extends State<SearchPage> {
 
   void _onNavChange() {
     if (!mounted) return;
-    final navProvider = Provider.of<NavigationProvider>(context, listen: false);
+    final navProvider = p.Provider.of<NavigationProvider>(context, listen: false);
     if (navProvider.currentIndex == 1) {
       // Small delay to ensure visibility
       Future.delayed(const Duration(milliseconds: 100), () {
@@ -45,7 +46,10 @@ class _SearchPageState extends State<SearchPage> {
 
   @override
   void dispose() {
-    Provider.of<NavigationProvider>(
+    // Clear the search query when leaving search page to not affect other views
+    ref.read(catalogSearchQueryProvider.notifier).state = '';
+    
+    p.Provider.of<NavigationProvider>(
       context,
       listen: false,
     ).removeListener(_onNavChange);
@@ -56,7 +60,6 @@ class _SearchPageState extends State<SearchPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Basit bir Scaffold ile arama sayfası
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -79,6 +82,7 @@ class _SearchPageState extends State<SearchPage> {
             setState(() {
               _query = value;
             });
+            ref.read(catalogSearchQueryProvider.notifier).state = value;
           },
         ),
         actions: [
@@ -90,6 +94,7 @@ class _SearchPageState extends State<SearchPage> {
                   _searchController.clear();
                   _query = '';
                 });
+                ref.read(catalogSearchQueryProvider.notifier).state = '';
               },
             ),
           const SizedBox(width: 8),
@@ -104,8 +109,17 @@ class _SearchPageState extends State<SearchPage> {
   }
 
   Widget _buildSearchResults() {
-    final productProvider = Provider.of<ProductProvider>(context);
-    final allProducts = productProvider.products;
+    final businessProvider = p.Provider.of<BusinessProvider>(context, listen: false);
+    final selectedBusiness = businessProvider.selectedBusiness;
+
+    if (selectedBusiness == null) {
+      return const Center(
+        child: Text(
+          "Lütfen önce bir işletme seçin.",
+          style: TextStyle(color: Colors.grey, fontSize: 16),
+        ),
+      );
+    }
 
     if (_query.isEmpty) {
       return Center(
@@ -123,66 +137,60 @@ class _SearchPageState extends State<SearchPage> {
       );
     }
 
-    // Arama Mantığı
-    final results = allProducts.where((businessProduct) {
-      final q = _query.toLowerCase();
-      final p = businessProduct.product;
-      return p.name.toLowerCase().contains(q) ||
-          p.brand.toLowerCase().contains(q) ||
-          p.category.toLowerCase().contains(q) ||
-          p.subCategory.toLowerCase().contains(q);
-    }).toList();
+    final productsAsync = ref.watch(filteredShopProductsProvider(selectedBusiness.id));
 
-    if (results.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.search_off, size: 80, color: Colors.grey.shade200),
-            const SizedBox(height: 16),
-            const Text(
-              "Sonuç bulunamadı.",
-              style: TextStyle(color: Colors.grey, fontSize: 16),
-            ),
-          ],
+    return productsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => const Center(
+        child: Text(
+          "Ürünler yüklenirken bir hata oluştu.",
+          style: TextStyle(color: Colors.red),
         ),
-      );
-    }
-
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: results.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final product = results[index];
-
-        // Find matching campaign
-        Campaign? campaign;
-        try {
-          campaign = productProvider.activeCampaigns.firstWhere(
-            (c) => c.targetProducts.contains(product.productBarcode),
-          );
-        } catch (_) {}
-
-        // (inside _buildSearchResults)
-        return SizedBox(
-          height: 120,
-          child: GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      ProductDetailPage(businessProduct: product),
+      ),
+      data: (results) {
+        if (results.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.search_off, size: 80, color: Colors.grey.shade200),
+                const SizedBox(height: 16),
+                const Text(
+                  "Sonuç bulunamadı.",
+                  style: TextStyle(color: Colors.grey, fontSize: 16),
                 ),
-              );
-            },
-            child: ModernProductCard(
-              businessProduct: product,
-              isListView: true,
-              campaign: campaign,
+              ],
             ),
-          ),
+          );
+        }
+
+        return ListView.separated(
+          padding: const EdgeInsets.all(16),
+          itemCount: results.length,
+          separatorBuilder: (context, index) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            final product = results[index];
+
+            return SizedBox(
+              height: 120,
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          ProductDetailPage(businessProduct: product),
+                    ),
+                  );
+                },
+                child: ModernProductCard(
+                  businessProduct: product,
+                  isListView: true,
+                  campaign: null,
+                ),
+              ),
+            );
+          },
         );
       },
     );
