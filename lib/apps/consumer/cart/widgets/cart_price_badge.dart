@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart' as p;
 import 'package:intl/intl.dart';
 import 'package:hoppa/shared/core/services/navigation_provider.dart';
 import 'package:hoppa/apps/consumer/cart/cart_provider.dart';
 
-class CartPriceBadge extends StatelessWidget {
+class CartPriceBadge extends ConsumerWidget {
   final VoidCallback? onTap;
 
   const CartPriceBadge({super.key, this.onTap});
 
   @override
-  Widget build(BuildContext context) {
-    final totalAmount = context.watch<CartProvider>().totalAmount;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final totalAmount = ref.watch(cartProvider).totalAmount;
 
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 300),
@@ -77,7 +78,7 @@ class _AnimatedCounterState extends State<_AnimatedCounter>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final navProvider = Provider.of<NavigationProvider>(context, listen: false);
+    final navProvider = p.Provider.of<NavigationProvider>(context, listen: false);
 
     return GestureDetector(
       onTap: widget.onTap ?? () => navProvider.setIndex(2),

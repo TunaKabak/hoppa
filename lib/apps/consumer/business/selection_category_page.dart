@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:hoppa/apps/consumer/services/customer_auth_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' as rp;
+import 'package:core_auth/core_auth.dart';
 import 'package:hoppa/apps/consumer/address/delivery_provider.dart';
 import 'package:hoppa/apps/consumer/address/address_list_page.dart';
 import 'package:hoppa/apps/consumer/business/business_provider.dart';
@@ -164,16 +164,13 @@ class SelectionCategoryPage extends StatelessWidget {
   }
 }
 
-class _SelectionHeader extends StatelessWidget {
+class _SelectionHeader extends rp.ConsumerWidget {
   const _SelectionHeader();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, rp.WidgetRef ref) {
     final theme = Theme.of(context);
-    final authService = Provider.of<CustomerAuthService>(
-      context,
-      listen: false,
-    );
+    final authState = ref.watch(authControllerProvider);
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -205,23 +202,11 @@ class _SelectionHeader extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-                    stream: authService.getUserStream(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        );
-                      }
-
+                  Builder(
+                    builder: (context) {
                       String displayName = "Hoppa";
-                      if (snapshot.hasData && snapshot.data!.exists) {
-                        final data = snapshot.data!.data();
-                        if (data != null && data.containsKey('name')) {
-                          displayName = "Merhaba, ${data['name']}";
-                        }
+                      if (authState is AuthAuthenticated) {
+                        displayName = "Merhaba, ${authState.user.displayName}";
                       }
 
                       return Text(
@@ -284,7 +269,7 @@ class _SelectionHeader extends StatelessWidget {
             ),
             onSelected: (value) async {
               if (value == 'logout') {
-                await authService.signOut();
+                await ref.read(authControllerProvider.notifier).logout();
                 // AuthStateChanges listener will handle navigation if setup in main.dart
                 // Otherwise we might need to navigate manually:
                 if (context.mounted) {

@@ -15,8 +15,6 @@ class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
 
   void _showLogoutDialog(BuildContext context, WidgetRef ref) {
-    final cartProvider = legacy_provider.Provider.of<CartProvider>(context, listen: false);
-
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -35,7 +33,7 @@ class ProfilePage extends ConsumerWidget {
             onPressed: () {
               Navigator.pop(context);
               ref.read(authControllerProvider.notifier).logout();
-              cartProvider.clearCart(deleteFromDb: true);
+              ref.read(cartProvider.notifier).clearCart();
             },
             child: const Text(
               "Evet, Çıkış Yap",

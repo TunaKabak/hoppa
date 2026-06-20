@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:hoppa/apps/consumer/home/product_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart' as p;
+import 'package:hoppa/apps/consumer/repositories/consumer_shop_repository.dart';
 import 'package:hoppa/shared/core/services/navigation_provider.dart';
 
-class CategoryPage extends StatelessWidget {
+class CategoryPage extends ConsumerWidget {
   const CategoryPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     // Kategori verilerini manuel tanımlıyoruz (İkonlar ve Renkler için)
     final List<Map<String, dynamic>> categories = [
       {'name': 'Su & İçecek', 'icon': Icons.water_drop, 'color': Colors.blue},
@@ -49,7 +50,7 @@ class CategoryPage extends StatelessWidget {
         itemCount: categories.length,
         itemBuilder: (context, index) {
           final cat = categories[index];
-          return _buildCategoryCard(context, cat);
+          return _buildCategoryCard(context, ref, cat);
         },
       ),
     );
@@ -57,19 +58,17 @@ class CategoryPage extends StatelessWidget {
 
   Widget _buildCategoryCard(
     BuildContext context,
+    WidgetRef ref,
     Map<String, dynamic> category,
   ) {
     return GestureDetector(
       onTap: () {
         // 1. Ürünleri bu kategoriye göre filtrele
-        final productProvider = Provider.of<ProductProvider>(
-          context,
-          listen: false,
-        );
-        productProvider.setCategory(category['name']);
+        ref.read(selectedCatalogCategoryProvider.notifier).state = category['name'];
+        ref.read(selectedCatalogSubCategoryProvider.notifier).state = 'Tümü';
 
         // 2. Ana Sayfaya Git (Ürünler orada listeleniyor)
-        final navProvider = Provider.of<NavigationProvider>(
+        final navProvider = p.Provider.of<NavigationProvider>(
           context,
           listen: false,
         );

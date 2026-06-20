@@ -9,8 +9,6 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
-import 'apps/merchant/services/merchant_auth_service.dart';
 import 'shared/core/services/language_provider.dart';
 import 'shared/core/l10n/app_localizations.dart';
 import 'shared/core/theme/app_theme.dart';
@@ -43,7 +41,6 @@ class MerchantApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        Provider<MerchantAuthService>(create: (_) => MerchantAuthService()),
         ChangeNotifierProvider<LanguageProvider>(
           create: (_) => LanguageProvider(),
         ),

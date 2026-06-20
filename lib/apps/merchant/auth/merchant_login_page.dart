@@ -1,26 +1,31 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:hoppa/apps/merchant/services/merchant_auth_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:core_auth/core_auth.dart';
 import 'package:hoppa/shared/core/services/database_seeder.dart';
 import 'widgets/auth_layout.dart';
 import 'widgets/auth_text_field.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'merchant_register_screen.dart';
 
-class LoginPage extends StatefulWidget {
+class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  ConsumerState<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage>
+class _LoginPageState extends ConsumerState<LoginPage>
     with SingleTickerProviderStateMixin {
-  final MerchantAuthService _auth = MerchantAuthService();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _isLoading = false;
+  final _passwordFocusNode = FocusNode();
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
+
+  List<Map<String, String>> _savedProfiles = [];
+  Map<String, String>? _selectedProfile;
+  bool _isChooserMode = false;
 
   @override
   void initState() {
@@ -31,17 +36,30 @@ class _LoginPageState extends State<LoginPage>
     );
     _fadeAnim = CurvedAnimation(parent: _animController, curve: Curves.easeOut);
     _animController.forward();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadSavedProfiles();
+    });
   }
 
   @override
   void dispose() {
     _usernameController.dispose();
     _passwordController.dispose();
+    _passwordFocusNode.dispose();
     _animController.dispose();
     super.dispose();
   }
 
-  // --- YENİ: API ile B2B Giriş Akışı ---
+  void _loadSavedProfiles() async {
+    final repo = ref.read(authRepositoryProvider);
+    final list = await repo.getSavedProfiles();
+    setState(() {
+      _savedProfiles = list;
+      _isChooserMode = list.isNotEmpty;
+    });
+  }
+
   void _loginWithCredentials() async {
     FocusScope.of(context).unfocus();
 
@@ -57,23 +75,63 @@ class _LoginPageState extends State<LoginPage>
       return;
     }
 
-    setState(() => _isLoading = true);
+    await ref.read(authControllerProvider.notifier).loginWithEmail(username, password);
+  }
 
-    try {
-      await _auth.loginWithCredentials(username, password);
-      // Başarılı girişte wrapper otomatik yönlendirecek
-    } catch (e) {
+  void _selectProfile(Map<String, String> profile) {
+    setState(() {
+      _selectedProfile = profile;
+      _usernameController.text = profile['email'] ?? '';
+      _passwordController.clear();
+      _isChooserMode = false;
+    });
+    // Auto focus password node
+    Future.delayed(const Duration(milliseconds: 100), () {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString().replaceAll('Exception: ', '')),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _passwordFocusNode.requestFocus();
       }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+    });
+  }
+
+  void _removeProfile(String email) async {
+    final repo = ref.read(authRepositoryProvider);
+    await repo.removeSavedProfile(email);
+    final list = await repo.getSavedProfiles();
+    setState(() {
+      _savedProfiles = list;
+      if (list.isEmpty) {
+        _isChooserMode = false;
+        _selectedProfile = null;
+        _usernameController.clear();
+      } else if (_selectedProfile?['email'] == email) {
+        _selectedProfile = null;
+        _isChooserMode = true;
+      }
+    });
+  }
+
+  String _getInitials(String name) {
+    if (name.isEmpty) return '??';
+    final parts = name.split(' ');
+    if (parts.length >= 2) {
+      if (parts[0].isNotEmpty && parts[1].isNotEmpty) {
+        return (parts[0][0] + parts[1][0]).toUpperCase();
+      }
     }
+    return parts[0].substring(0, parts[0].length >= 2 ? 2 : 1).toUpperCase();
+  }
+
+  Color _getAvatarColor(String name) {
+    final hash = name.hashCode;
+    final colors = [
+      const Color(0xFF00A651), // Emerald
+      const Color(0xFFE95D22), // Orange
+      const Color(0xFF0288D1), // Light Blue
+      const Color(0xFF795548), // Brown
+      const Color(0xFFD81B60), // Pink
+      const Color(0xFF673AB7), // Deep Purple
+    ];
+    return colors[hash.abs() % colors.length];
   }
 
   @override
@@ -81,8 +139,22 @@ class _LoginPageState extends State<LoginPage>
     const kPrimaryColor = Color(0xFF00A651);
     const kSecondaryColor = Color(0xFFE95D22);
 
+    final authState = ref.watch(authControllerProvider);
+    final isLoading = authState is AuthLoading;
+
+    ref.listen<AuthState>(authControllerProvider, (previous, next) {
+      if (!mounted) return;
+      if (next is AuthError) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(next.errorMessage),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    });
+
     return AuthLayout(
-      // Enable glass effect for the card container
       enableGlass: true,
       child: FadeTransition(
         opacity: _fadeAnim,
@@ -115,105 +187,295 @@ class _LoginPageState extends State<LoginPage>
                 color: kSecondaryColor,
               ),
             ),
-            const SizedBox(height: 48),
+            const SizedBox(height: 36),
 
-            // Main Action Area
-            Container(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                "Giriş Yap",
-                style: GoogleFonts.poppins(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+            if (_isChooserMode) ...[
+              // ACCOUNT CHOOSER VIEW
+              Container(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  "Hesap Seçin",
+                  style: GoogleFonts.poppins(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                "İşletme paneline erişmek için bilgilerinizi giriniz.",
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  color: Colors.grey.shade600,
-                  fontWeight: FontWeight.w400,
+              const SizedBox(height: 6),
+              Container(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  "Devam etmek istediğiniz işletmeyi seçin.",
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: Colors.grey.shade600,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
+              const SizedBox(height: 20),
+              
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 280),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  physics: const ClampingScrollPhysics(),
+                  itemCount: _savedProfiles.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    final profile = _savedProfiles[index];
+                    final name = profile['businessName'] ?? 'Bilinmeyen İşletme';
+                    final email = profile['email'] ?? '';
 
-            AuthTextField(
-              controller: _usernameController,
-              hint: "Kullanıcı Adı veya E-posta",
-              icon: Icons.store_mall_directory_rounded,
-              primaryColor: kPrimaryColor,
-            ),
-            const SizedBox(height: 16),
-            AuthTextField(
-              controller: _passwordController,
-              hint: "Şifre",
-              icon: Icons.lock_outline_rounded,
-              isPassword: true,
-              primaryColor: kPrimaryColor,
-            ),
-            const SizedBox(height: 24),
-
-            SizedBox(
-              height: 56,
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _loginWithCredentials,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: kPrimaryColor,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shadowColor: Colors.transparent,
+                    return InkWell(
+                      onTap: () => _selectProfile(profile),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.6),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 22,
+                              backgroundColor: _getAvatarColor(name),
+                              child: Text(
+                                _getInitials(name),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                      color: const Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    email,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.inter(
+                                      color: Colors.grey.shade600,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline_rounded, color: Colors.grey, size: 20),
+                              onPressed: () => _removeProfile(email),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+              
+              OutlinedButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _isChooserMode = false;
+                    _selectedProfile = null;
+                    _usernameController.clear();
+                    _passwordController.clear();
+                  });
+                },
+                icon: const Icon(Icons.add_rounded, size: 20),
+                label: const Text("Başka Bir Hesap Ekle"),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: kPrimaryColor,
+                  side: const BorderSide(color: kPrimaryColor, width: 1.5),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
+                  minimumSize: const Size(double.infinity, 50),
                 ),
-                child: _isLoading
-                    ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : Text(
-                        "Giriş Yap",
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+              ),
+            ] else ...[
+              // LOGIN FORM VIEW
+              if (_selectedProfile != null) ...[
+                // PASSWORD ONLY HEADER CARD
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _isChooserMode = true;
+                      });
+                    },
+                    icon: const Icon(Icons.arrow_back_rounded, size: 18, color: kPrimaryColor),
+                    label: const Text(
+                      "Hesap Seçimine Dön",
+                      style: TextStyle(color: kPrimaryColor, fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9).withOpacity(0.8),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 20,
+                        backgroundColor: _getAvatarColor(_selectedProfile!['businessName'] ?? ''),
+                        child: Text(
+                          _getInitials(_selectedProfile!['businessName'] ?? ''),
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
                         ),
                       ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _selectedProfile!['businessName'] ?? '',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _selectedProfile!['email'] ?? '',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ] else ...[
+                // STANDARD HEADERS
+                Container(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    "Giriş Yap",
+                    style: GoogleFonts.poppins(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    "İşletme paneline erişmek için bilgilerinizi giriniz.",
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+
+              if (_selectedProfile == null) ...[
+                AuthTextField(
+                  controller: _usernameController,
+                  hint: "Kullanıcı Adı veya E-posta",
+                  icon: Icons.store_mall_directory_rounded,
+                  primaryColor: kPrimaryColor,
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              AuthTextField(
+                controller: _passwordController,
+                hint: "Şifre",
+                icon: Icons.lock_outline_rounded,
+                isPassword: true,
+                focusNode: _passwordFocusNode,
+                primaryColor: kPrimaryColor,
               ),
-            ),
+              const SizedBox(height: 24),
 
-            // Veya kaldırıldı, sadece tek giriş metodu
-            const SizedBox(height: 16),
-
-            TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const MerchantRegisterScreen()),
-                );
-              },
-              child: Text(
-                "Hesabınız yok mu? İşletme Başvurusu Yap",
-                style: GoogleFonts.inter(
-                  color: kPrimaryColor,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
+              SizedBox(
+                height: 56,
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: isLoading ? null : _loginWithCredentials,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kPrimaryColor,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shadowColor: Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: isLoading
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text(
+                          "Giriş Yap",
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                 ),
               ),
-            ),
+
+              const SizedBox(height: 16),
+
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const MerchantRegisterScreen()),
+                  );
+                },
+                child: Text(
+                  "Hesabınız yok mu? İşletme Başvurusu Yap",
+                  style: GoogleFonts.inter(
+                    color: kPrimaryColor,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
 
             const SizedBox(height: 20),
-            // GİZLİ MENU (Reset & Merchant Upgrade)
+            // GİZLİ MENU
             GestureDetector(
               onLongPress: () async {
                 final confirm = await showDialog<bool>(
@@ -240,33 +502,21 @@ class _LoginPageState extends State<LoginPage>
                 );
 
                 if (confirm == true) {
-                  setState(() => _isLoading = true);
                   await DatabaseSeeder().seedSystem();
-                  setState(() => _isLoading = false);
+                  if (!context.mounted) return;
+                  
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text("Veriler başarıyla sıfırlandı!"),
                     ),
                   );
-                }
-              },
-              onDoubleTap: () async {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        "Test Modu: Gizli menü sadece seeder çalıştırır.",
-                      ),
-                      backgroundColor: Colors.blue,
-                      duration: Duration(seconds: 1),
-                    ),
-                  );
+                  _loadSavedProfiles();
                 }
               },
               child: Container(
                 padding: const EdgeInsets.all(8),
                 child: Text(
-                  "v1.0.0 (Dev)",
+                  "v1.0.0 (Custom Backend)",
                   style: GoogleFonts.inter(
                     color: Colors.grey.shade300,
                     fontSize: 10,
@@ -311,33 +561,27 @@ class _TypewriterSloganState extends State<TypewriterSlogan> {
   void _startAnimation() async {
     while (mounted) {
       if (_isTyping) {
-        // Yazma efekti
         String targetPhrase = widget.phrases[_phraseIndex];
         for (int i = 0; i <= targetPhrase.length; i++) {
           if (!mounted) return;
           setState(() {
             _currentText = targetPhrase.substring(0, i);
           });
-          await Future.delayed(const Duration(milliseconds: 100)); // Yazma hızı
+          await Future.delayed(const Duration(milliseconds: 100));
         }
 
-        // Yazma bitti, bekle
         if (!mounted) return;
         _isTyping = false;
-        await Future.delayed(
-          const Duration(seconds: 2),
-        ); // Tam metin bekleme süresi
+        await Future.delayed(const Duration(seconds: 2));
       } else {
-        // Silme efekti
         for (int i = _currentText.length; i >= 0; i--) {
           if (!mounted) return;
           setState(() {
             _currentText = _currentText.substring(0, i);
           });
-          await Future.delayed(const Duration(milliseconds: 50)); // Silme hızı
+          await Future.delayed(const Duration(milliseconds: 50));
         }
 
-        // Silme bitti, sonraki cümleye geç
         if (!mounted) return;
         _isTyping = true;
         setState(() {
@@ -356,12 +600,11 @@ class _TypewriterSloganState extends State<TypewriterSlogan> {
       children: [
         Text(widget.prefix, style: widget.style),
         Text(_currentText, style: widget.style),
-        // İmleç (Cursor)
         if (_isTyping)
           Text(
             "|",
             style: widget.style.copyWith(
-              color: const Color(0xFFE95D22).withOpacity(0.5),
+              color: const Color(0xFFE95D22).withValues(alpha: 0.5),
             ),
           ),
       ],
@@ -369,4 +612,30 @@ class _TypewriterSloganState extends State<TypewriterSlogan> {
   }
 }
 
-// Dalgalı Clipping Sınıfı
+
+class WaveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    var path = Path();
+    path.lineTo(0, size.height - 40);
+
+    var firstControlPoint = Offset(size.width / 4, size.height);
+    var firstEndPoint = Offset(size.width / 2.25, size.height - 30);
+    path.quadraticBezierTo(firstControlPoint.dx, firstControlPoint.dy,
+        firstEndPoint.dx, firstEndPoint.dy);
+
+    var secondControlPoint =
+        Offset(size.width - (size.width / 3.25), size.height - 65);
+    var secondEndPoint = Offset(size.width, size.height - 40);
+    path.quadraticBezierTo(secondControlPoint.dx, secondControlPoint.dy,
+        secondEndPoint.dx, secondEndPoint.dy);
+
+    path.lineTo(size.width, 0);
+    path.close();
+
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
+}

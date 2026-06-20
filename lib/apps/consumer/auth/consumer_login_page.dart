@@ -90,6 +90,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
     final _isLoading = authState is AuthLoading || _isSeeding;
 
     ref.listen<AuthState>(authControllerProvider, (previous, next) {
+      if (!mounted) return;
       if (next is AuthError) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -355,6 +356,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                 if (confirm == true) {
                   setState(() => _isSeeding = true);
                   await DatabaseSeeder().seedSystem();
+                  if (!mounted) return;
                   setState(() => _isSeeding = false);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(

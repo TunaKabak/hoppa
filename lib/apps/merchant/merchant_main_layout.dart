@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:hoppa/apps/merchant/services/merchant_auth_service.dart';
-import 'package:hoppa/shared/core/services/business_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:core_auth/core_auth.dart';
 import 'package:hoppa/shared/models/business.dart';
+import 'package:hoppa/apps/consumer/repositories/consumer_shop_repository.dart';
+import 'package:hoppa/apps/merchant/providers/merchant_api_providers.dart';
 import 'package:hoppa/apps/merchant/auth/merchant_login_page.dart';
 import 'package:hoppa/apps/merchant/merchant_dashboard_page.dart';
 import 'package:hoppa/apps/merchant/merchant_order_list_page.dart';
@@ -16,19 +17,18 @@ import 'package:hoppa/apps/merchant/auth/merchant_auth_wrapper.dart' as hoppa_wr
 
 final GlobalKey<ScaffoldState> merchantDrawerKey = GlobalKey<ScaffoldState>();
 
-class MerchantMainLayout extends StatefulWidget {
+class MerchantMainLayout extends ConsumerStatefulWidget {
   final String businessId;
   const MerchantMainLayout({super.key, required this.businessId});
 
   @override
-  State<MerchantMainLayout> createState() => _MerchantMainLayoutState();
+  ConsumerState<MerchantMainLayout> createState() => _MerchantMainLayoutState();
 }
 
-class _MerchantMainLayoutState extends State<MerchantMainLayout> {
+class _MerchantMainLayoutState extends ConsumerState<MerchantMainLayout> {
   int _selectedIndex = 0;
   String _businessName = 'İşletme Paneli';
-  String _storeRole = 'employee'; // default
-
+  
   String _activeBusinessId = '';
   List<Business> _allBusinesses = [];
   bool _isLoading = true;
@@ -42,21 +42,23 @@ class _MerchantMainLayoutState extends State<MerchantMainLayout> {
 
   @override
   void dispose() {
-    _businessesSub?.cancel();
     super.dispose();
   }
 
   Future<void> _initData() async {
-    await _loadStoreRole();
-    if (_storeRole == 'super_admin') {
-      await _loadAllBusinesses();
-      if (_activeBusinessId.isEmpty && _allBusinesses.isNotEmpty) {
-        _activeBusinessId = _allBusinesses.first.id;
+    final authState = ref.read(authControllerProvider);
+    if (authState is AuthAuthenticated) {
+      if (authState.user.isSuperAdmin) {
+        await _loadAllBusinesses();
+        if (_activeBusinessId.isEmpty && _allBusinesses.isNotEmpty) {
+          _activeBusinessId = _allBusinesses.first.id;
+        }
+      }
+      if (_activeBusinessId.isNotEmpty) {
+        await _loadBusinessName();
       }
     }
-    if (_activeBusinessId.isNotEmpty) {
-      await _loadBusinessName();
-    }
+    
     if (mounted) {
       setState(() {
         _isLoading = false;
@@ -64,69 +66,40 @@ class _MerchantMainLayoutState extends State<MerchantMainLayout> {
     }
   }
 
-  StreamSubscription<List<Business>>? _businessesSub;
-
   Future<void> _loadAllBusinesses() async {
     try {
-      // First, await the future to quickly get the initial state and unblock init
-      final list = await BusinessService().getBusinessesFuture();
+      final list = await ref.read(consumerShopRepositoryProvider).getShops();
       if (mounted) {
         setState(() {
           _allBusinesses = list;
         });
       }
-
-      // Then setup real-time listener for future updates (e.g. after approval)
-      _businessesSub?.cancel();
-      _businessesSub = BusinessService().getBusinesses().listen((updatedList) {
-        if (mounted) {
-          setState(() {
-            _allBusinesses = updatedList;
-            if (_activeBusinessId.isEmpty && _allBusinesses.isNotEmpty) {
-              _activeBusinessId = _allBusinesses.first.id;
-              _loadBusinessName();
-            }
-          });
-        }
-      });
     } catch (_) {}
   }
 
   Future<void> _loadBusinessName() async {
     if (_activeBusinessId.isEmpty) return;
-    try {
-      final business = await BusinessService().getBusinessById(
-        _activeBusinessId,
-      );
-      if (business != null && mounted) {
-        setState(() => _businessName = business.name);
-      }
-    } catch (_) {}
-  }
+    
+    final authState = ref.read(authControllerProvider);
+    if (authState is AuthAuthenticated && !authState.user.isSuperAdmin) {
+      return;
+    }
 
-  Future<void> _loadStoreRole() async {
-    final authService = Provider.of<MerchantAuthService>(
-      context,
-      listen: false,
-    );
-    final userData = await authService.getUserData();
-    if (userData != null && mounted) {
-      setState(() {
-        _storeRole = userData['role'] == 'super_admin'
-            ? 'super_admin'
-            : (userData['storeRole'] ??
-                  'employee'); // admin, manager, employee vs
-      });
+    if (_allBusinesses.isNotEmpty) {
+      try {
+        final business = _allBusinesses.firstWhere((b) => b.id == _activeBusinessId);
+        setState(() => _businessName = business.name);
+      } catch (_) {}
     }
   }
 
-  bool get _canSeeCampaigns =>
-      _storeRole == 'admin' ||
-      _storeRole == 'manager' ||
-      _storeRole == 'store_manager' ||
-      _storeRole == 'super_admin';
+  bool _canSeeCampaigns(AuthUser user) =>
+      user.role == 'admin' ||
+      user.role == 'manager' ||
+      user.role == 'store_manager' ||
+      user.isSuperAdmin;
 
-  List<Widget> get _pages {
+  List<Widget> _getPages(AuthUser user) {
     if (_isLoading) {
       return [const Center(child: CircularProgressIndicator())];
     }
@@ -142,13 +115,14 @@ class _MerchantMainLayoutState extends State<MerchantMainLayout> {
       MerchantProductListPage(
         key: ValueKey('prods_$_activeBusinessId'),
         businessId: _activeBusinessId,
+        isActiveTab: _selectedIndex == 2,
       ),
       MerchantAnalyticsPage(
         key: ValueKey('analy_$_activeBusinessId'),
         businessId: _activeBusinessId,
       ),
     ];
-    if (_canSeeCampaigns) {
+    if (_canSeeCampaigns(user)) {
       pages.add(
         MerchantCampaignsPage(
           key: ValueKey('camp_$_activeBusinessId'),
@@ -156,7 +130,7 @@ class _MerchantMainLayoutState extends State<MerchantMainLayout> {
         ),
       );
     }
-    if (_storeRole == 'super_admin') {
+    if (user.isSuperAdmin) {
       pages.add(
         const AdminApprovalsPage(key: ValueKey('admin_approvals')),
       );
@@ -170,17 +144,17 @@ class _MerchantMainLayoutState extends State<MerchantMainLayout> {
     return pages;
   }
 
-  List<_NavItem> get _navItems {
+  List<_NavItem> _getNavItems(AuthUser user) {
     final items = [
       const _NavItem(Icons.dashboard_rounded, 'Dashboard'),
       const _NavItem(Icons.receipt_long_rounded, 'Siparişler'),
       const _NavItem(Icons.inventory_2_rounded, 'Ürünler'),
       const _NavItem(Icons.analytics_rounded, 'Raporlar'),
     ];
-    if (_canSeeCampaigns) {
+    if (_canSeeCampaigns(user)) {
       items.add(const _NavItem(Icons.campaign_rounded, 'Kampanyalar'));
     }
-    if (_storeRole == 'super_admin') {
+    if (user.isSuperAdmin) {
       items.add(const _NavItem(Icons.admin_panel_settings_rounded, 'Başvurular'));
     }
     items.add(const _NavItem(Icons.settings_rounded, 'Ayarlar'));
@@ -191,26 +165,37 @@ class _MerchantMainLayoutState extends State<MerchantMainLayout> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final authState = ref.watch(authControllerProvider);
+
+    if (authState is! AuthAuthenticated) {
+      return const LoginPage();
+    }
+
+    final user = authState.user;
 
     return PopScope(
       canPop: _selectedIndex == 0,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        
-        // Eğer dashboard'da değilsek, önce dashboard'a dön.
         setState(() {
           _selectedIndex = 0;
         });
       },
       child: Scaffold(
         key: merchantDrawerKey,
-        drawer: _buildDrawer(theme, colorScheme),
-        body: IndexedStack(index: _selectedIndex, children: _pages),
+        drawer: _buildDrawer(theme, colorScheme, user),
+        body: IndexedStack(index: _selectedIndex, children: _getPages(user)),
       ),
     );
   }
 
-  Widget _buildDrawer(ThemeData theme, ColorScheme colorScheme) {
+  Widget _buildDrawer(ThemeData theme, ColorScheme colorScheme, AuthUser user) {
+    final navItems = _getNavItems(user);
+    final shopState = ref.watch(shopControllerProvider);
+    final String currentBusinessName = user.isSuperAdmin
+        ? _businessName
+        : (shopState.value?.name ?? user.businessName ?? 'İşletme Paneli');
+    
     return Drawer(
       child: Column(
         children: [
@@ -244,7 +229,7 @@ class _MerchantMainLayoutState extends State<MerchantMainLayout> {
                 const SizedBox(height: 16),
 
                 // Market Selector Dropdown for Super Admin
-                if (_storeRole == 'super_admin')
+                if (user.isSuperAdmin)
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -295,7 +280,7 @@ class _MerchantMainLayoutState extends State<MerchantMainLayout> {
                   )
                 else
                   Text(
-                    _businessName,
+                    currentBusinessName,
                     style: theme.textTheme.titleMedium?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -313,8 +298,8 @@ class _MerchantMainLayoutState extends State<MerchantMainLayout> {
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    _storeRole == 'super_admin'
-                        ? 'Super Admin Bypassed'
+                    user.isSuperAdmin
+                        ? 'Super Admin Mode'
                         : 'İşletme Paneli',
                     style: const TextStyle(
                       color: Colors.white70,
@@ -332,9 +317,9 @@ class _MerchantMainLayoutState extends State<MerchantMainLayout> {
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 12),
-              itemCount: _navItems.length,
+              itemCount: navItems.length,
               itemBuilder: (context, index) {
-                final item = _navItems[index];
+                final item = navItems[index];
                 final isSelected = _selectedIndex == index;
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 4),
@@ -397,11 +382,7 @@ class _MerchantMainLayoutState extends State<MerchantMainLayout> {
                 borderRadius: BorderRadius.circular(8),
               ),
               onTap: () async {
-                final authService = Provider.of<MerchantAuthService>(
-                  context,
-                  listen: false,
-                );
-                await authService.signOut();
+                await ref.read(authControllerProvider.notifier).logout();
                 if (mounted) {
                   Navigator.of(context).pushAndRemoveUntil(
                     MaterialPageRoute(builder: (_) => const hoppa_wrapper.MerchantAuthWrapper()),

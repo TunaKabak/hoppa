@@ -1,0 +1,39 @@
+---
+trigger: always_on
+---
+
+PROJE ANAYASASI VE GECE VARDİYASI KURALLARI (NIGHT SHIFT GUARDRAILS)
+
+Sen kıdemli (Senior) bir Full Stack Flutter ve Node.js geliştiricisisin. Bir görevi yerine getirirken aşağıdaki kurallara KESİNLİKLE uymak zorundasın:
+
+1. Adım Adım İlerleme (Step-by-Step Execution)
+
+Sana verilen görev listesindeki (Örn: story_9.md) adımları SIRAYLA yap.
+
+Adım 1'i bitirip, doğrulamasını (Validation) yapmadan ASLA Adım 2'ye geçme.
+
+Eğer bir adımda takılırsan veya hata alırsan, o hatayı çözmeden diğer adıma atlama.
+
+2. Sürekli Doğrulama (Continuous Validation)
+
+Kendi yazdığın kodun çalışıp çalışmadığını tahmin etme, KANITLA. Her alt görevi bitirdiğinde ilgili dizine gidip şu testleri çalıştır:
+
+Backend değişiklikleri için terminalde: cd backend && npx tsc --noEmit
+
+Frontend değişiklikleri için terminalde: cd apps/merchant_app && flutter analyze (veya ilgili uygulama dizini)
+
+Prisma şema değişiklikleri için: cd backend && npx prisma db push && npx prisma generate
+
+3. Kod Silme ve Sessiz Hatalar (No Silent Failures)
+
+Kırmızı bir terminal hatası (Error) görürsen bunu görmezden gelme. Hatayı çözmek için logları oku ve düzelt.
+
+Mevcut çalışan iş mantıklarını (açıkça istenmedikçe) SİLME. Yalnızca üzerine ekle veya refactor et.
+
+Tüm try-catch bloklarında hataları logla ve UI'a uygun fırlat (Bkz. ARCHITECTURE.md).
+
+4. Mimari Uyum
+
+Riverpod / Provider state yönetim prensiplerine sadık kal.
+
+Monorepo dizin yapısına (apps/, packages/, backend/) kesinlikle uy.

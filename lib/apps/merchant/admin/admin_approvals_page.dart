@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../services/merchant_admin_service.dart';
+import 'package:intl/intl.dart';
+import 'providers/super_admin_providers.dart';
 
-class AdminApprovalsPage extends StatefulWidget {
+class AdminApprovalsPage extends ConsumerStatefulWidget {
   const AdminApprovalsPage({super.key});
 
   @override
-  State<AdminApprovalsPage> createState() => _AdminApprovalsPageState();
+  ConsumerState<AdminApprovalsPage> createState() => _AdminApprovalsPageState();
 }
 
-class _AdminApprovalsPageState extends State<AdminApprovalsPage> {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final MerchantAdminService _adminService = MerchantAdminService();
+class _AdminApprovalsPageState extends ConsumerState<AdminApprovalsPage> {
   bool _isLoading = false;
 
   Future<void> _handleAction(Future<void> Function() action, String successMessage) async {
@@ -50,7 +49,10 @@ class _AdminApprovalsPageState extends State<AdminApprovalsPage> {
             onPressed: () {
               Navigator.pop(ctx);
               _handleAction(
-                () => _adminService.approveMerchant(userId),
+                () => ref.read(pendingMerchantsProvider.notifier).updateMerchantStatus(
+                      id: userId,
+                      status: 'ACTIVE',
+                    ),
                 "$businessName başarıyla onaylandı.",
               );
             },
@@ -82,7 +84,11 @@ class _AdminApprovalsPageState extends State<AdminApprovalsPage> {
             onPressed: () {
               Navigator.pop(ctx);
               _handleAction(
-                () => _adminService.rejectMerchant(userId, tc.text),
+                () => ref.read(pendingMerchantsProvider.notifier).updateMerchantStatus(
+                      id: userId,
+                      status: 'REJECTED',
+                      revisionMessage: tc.text,
+                    ),
                 "Başvuru reddedildi.",
               );
             },
@@ -114,7 +120,11 @@ class _AdminApprovalsPageState extends State<AdminApprovalsPage> {
             onPressed: () {
               Navigator.pop(ctx);
               _handleAction(
-                () => _adminService.requestRevisionMerchant(userId, tc.text),
+                () => ref.read(pendingMerchantsProvider.notifier).updateMerchantStatus(
+                      id: userId,
+                      status: 'REVISION',
+                      revisionMessage: tc.text,
+                    ),
                 "Revizyon talebi gönderildi.",
               );
             },
@@ -138,7 +148,10 @@ class _AdminApprovalsPageState extends State<AdminApprovalsPage> {
             onPressed: () {
               Navigator.pop(ctx);
               _handleAction(
-                () => _adminService.holdMerchant(userId),
+                () => ref.read(pendingMerchantsProvider.notifier).updateMerchantStatus(
+                      id: userId,
+                      status: 'ON_HOLD',
+                    ),
                 "Başvuru beklemeye alındı.",
               );
             },
@@ -149,47 +162,23 @@ class _AdminApprovalsPageState extends State<AdminApprovalsPage> {
     );
   }
 
-  void _confirmDelete(String userId) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text("Kalıcı Sil", style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: Colors.grey)),
-        content: const Text("Bu kullanıcı kaydını veritabanından KALICI olarak silmek istiyor musunuz?"),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("İptal")),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.grey.shade800),
-            onPressed: () {
-              Navigator.pop(ctx);
-              _handleAction(
-                () => _adminService.deleteMerchant(userId),
-                "Kullanıcı başarıyla silindi.",
-              );
-            },
-            child: const Text("Sil", style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildBadge(String status) {
     Color color;
     String label;
     switch (status) {
-      case 'pending':
+      case 'PENDING':
         color = Colors.orange;
         label = 'Yeni Başvuru';
         break;
-      case 'on_hold':
+      case 'ON_HOLD':
         color = Colors.blue;
         label = 'Beklemede';
         break;
-      case 'revision_requested':
+      case 'REVISION':
         color = Colors.purple;
         label = 'Revizyon İstendi';
         break;
-      case 'rejected':
+      case 'REJECTED':
         color = Colors.red;
         label = 'Reddedildi';
         break;
@@ -207,6 +196,8 @@ class _AdminApprovalsPageState extends State<AdminApprovalsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final pendingMerchantsAsyncValue = ref.watch(pendingMerchantsProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: Text("İşletme Başvuruları", style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
@@ -214,17 +205,13 @@ class _AdminApprovalsPageState extends State<AdminApprovalsPage> {
       ),
       body: Stack(
         children: [
-          StreamBuilder<QuerySnapshot>(
-            stream: _db.collection('business_users')
-                      .where('status', whereIn: ['pending', 'on_hold', 'revision_requested', 'rejected'])
-                      .snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.hasError) return const Center(child: Text("Bir hata oluştu."));
-              if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-
-              final docs = snapshot.data?.docs ?? [];
-
-              if (docs.isEmpty) {
+          pendingMerchantsAsyncValue.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (err, stack) => Center(
+              child: Text("Bir hata oluştu: \$err", style: GoogleFonts.inter(color: Colors.red)),
+            ),
+            data: (merchants) {
+              if (merchants.isEmpty) {
                 return Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -239,16 +226,14 @@ class _AdminApprovalsPageState extends State<AdminApprovalsPage> {
 
               return ListView.separated(
                 padding: const EdgeInsets.all(16),
-                itemCount: docs.length,
+                itemCount: merchants.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
-                  final data = docs[index].data() as Map<String, dynamic>;
-                  final userId = docs[index].id;
-                  final businessName = data['businessName'] ?? 'İsimsiz İşletme';
-                  final email = data['email'] ?? '';
-                  final phone = data['phone'] ?? '';
-                  final date = data['createdAt'] != null ? (data['createdAt'] as Timestamp).toDate().toString() : '';
-                  final status = data['status'] ?? 'pending';
+                  final merchant = merchants[index];
+                  final status = merchant.status;
+                  final date = merchant.createdAt != null 
+                      ? DateFormat('dd/MM/yyyy HH:mm').format(merchant.createdAt!)
+                      : '';
 
                   return Card(
                     elevation: 2,
@@ -262,17 +247,17 @@ class _AdminApprovalsPageState extends State<AdminApprovalsPage> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Expanded(
-                                child: Text(businessName, style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600)),
+                                child: Text(merchant.businessName, style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600)),
                               ),
                               _buildBadge(status),
                             ],
                           ),
                           const Divider(height: 16),
-                          _buildInfoRow(Icons.email_outlined, email),
-                          _buildInfoRow(Icons.phone_outlined, phone),
-                          _buildInfoRow(Icons.calendar_today_outlined, date.split('.')[0]),
+                          _buildInfoRow(Icons.email_outlined, merchant.email),
+                          _buildInfoRow(Icons.phone_outlined, merchant.phone ?? 'Belirtilmemiş'),
+                          _buildInfoRow(Icons.calendar_today_outlined, date),
                           
-                          if (status == 'rejected' || status == 'revision_requested') ...[
+                          if (status == 'REJECTED' || status == 'REVISION') ...[
                             const SizedBox(height: 8),
                             Container(
                               padding: const EdgeInsets.all(8),
@@ -283,7 +268,7 @@ class _AdminApprovalsPageState extends State<AdminApprovalsPage> {
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
-                                      status == 'rejected' ? (data['rejectionReason'] ?? 'Sebep yok') : (data['revisionMessage'] ?? 'Sebep yok'),
+                                      merchant.revisionMessage ?? 'Sebep belirtilmemiş',
                                       style: TextStyle(fontSize: 12, color: Colors.red.shade900),
                                     ),
                                   ),
@@ -303,39 +288,34 @@ class _AdminApprovalsPageState extends State<AdminApprovalsPage> {
                                 style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
                                 icon: const Icon(Icons.check, size: 18),
                                 label: const Text("Onayla"),
-                                onPressed: () => _confirmApprove(userId, businessName),
+                                onPressed: () => _confirmApprove(merchant.id, merchant.businessName),
                               ),
                               
-                              if (status != 'rejected')
+                              if (status != 'REJECTED')
                                 ElevatedButton.icon(
                                   style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
                                   icon: const Icon(Icons.close, size: 18),
                                   label: const Text("Reddet"),
-                                  onPressed: () => _promptReject(userId),
+                                  onPressed: () => _promptReject(merchant.id),
                                 ),
                                 
-                              if (status != 'revision_requested')
+                              if (status != 'REVISION')
                                 ElevatedButton.icon(
                                   style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, foregroundColor: Colors.white),
                                   icon: const Icon(Icons.edit_note, size: 18),
                                   label: const Text("Revizyon"),
-                                  onPressed: () => _promptRevision(userId),
+                                  onPressed: () => _promptRevision(merchant.id),
                                 ),
                                 
-                              if (status != 'on_hold')
+                              if (status != 'ON_HOLD')
                                 ElevatedButton.icon(
                                   style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, foregroundColor: Colors.white),
                                   icon: const Icon(Icons.pause, size: 18),
                                   label: const Text("Beklet"),
-                                  onPressed: () => _confirmHold(userId),
+                                  onPressed: () => _confirmHold(merchant.id),
                                 ),
                                 
-                              ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(backgroundColor: Colors.grey.shade700, foregroundColor: Colors.white),
-                                icon: const Icon(Icons.delete, size: 18),
-                                label: const Text("Sil"),
-                                onPressed: () => _confirmDelete(userId),
-                              ),
+                              // Kalıcı sil yerine status = REJECTED ile çöpe atacağız veya listeden gizleyeceğiz
                             ],
                           )
                         ],
@@ -361,12 +341,24 @@ class _AdminApprovalsPageState extends State<AdminApprovalsPage> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 16, color: Colors.grey.shade600),
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Icon(icon, size: 16, color: Colors.grey.shade600),
+          ),
           const SizedBox(width: 8),
-          Text(text, style: GoogleFonts.inter(color: Colors.grey.shade700, fontSize: 13)),
+          Expanded(
+            child: Text(
+              text, 
+              style: GoogleFonts.inter(color: Colors.grey.shade700, fontSize: 13),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 2,
+            ),
+          ),
         ],
       ),
     );
   }
 }
+

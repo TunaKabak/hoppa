@@ -40,7 +40,7 @@ export class AuthController {
    */
   public async verifyOtp(req: Request, res: Response): Promise<void> {
     try {
-      const { phoneNumber, code } = req.body;
+      const { phoneNumber, code, name, surname } = req.body;
 
       if (!phoneNumber || !code) {
         res.status(400).json({ error: true, message: "Telefon numarası veya kod eksik." });
@@ -59,11 +59,13 @@ export class AuthController {
         where: { phone: phoneNumber },
         create: {
           phone: phoneNumber,
-          name: "Misafir", // Varsayılan değerler
-          surname: "Kullanıcı"
+          name: name || "Misafir", // Varsayılan değerler
+          surname: surname || "Kullanıcı"
         },
         update: {
-          lastLogin: new Date()
+          lastLogin: new Date(),
+          ...(name && { name }),
+          ...(surname && { surname })
         }
       });
 
@@ -79,6 +81,31 @@ export class AuthController {
       });
     } catch (error) {
       console.error("[AuthController.verifyOtp] Error:", error);
+      res.status(500).json({ error: true, message: "Sunucu hatası." });
+    }
+  }
+
+  /**
+   * GET /api/auth/check-phone/:phone
+   */
+  public async checkPhoneExists(req: Request, res: Response): Promise<void> {
+    try {
+      const { phone } = req.params;
+      if (!phone) {
+        res.status(400).json({ error: true, message: "Telefon numarası eksik." });
+        return;
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { phone }
+      });
+
+      res.status(200).json({
+        error: false,
+        data: { exists: !!user }
+      });
+    } catch (error) {
+      console.error("[AuthController.checkPhoneExists] Error:", error);
       res.status(500).json({ error: true, message: "Sunucu hatası." });
     }
   }

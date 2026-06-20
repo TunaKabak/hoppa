@@ -68,7 +68,7 @@ class ApiClient {
   // --- Response Wrapper ---
   Future<Map<String, dynamic>> _processResponse(http.Response response) async {
     String message = "Bilinmeyen bir hata oluştu";
-    Map<String, dynamic>? data;
+    dynamic data;
 
     try {
       final decodedJson = jsonDecode(response.body);
@@ -139,6 +139,62 @@ class ApiClient {
         uri,
         headers: headers,
         body: body != null ? jsonEncode(body) : null,
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw TimeoutException("Bağlantı zaman aşımına uğradı"),
+      );
+
+      return await _processResponse(response);
+    } on SocketException catch (_) {
+      throw NetworkException("İnternet bağlantınızı kontrol edin.");
+    } on TimeoutException catch (e) {
+      throw NetworkException(e.message ?? "Zaman aşımı");
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw NetworkException(e.toString());
+    }
+  }
+
+  Future<Map<String, dynamic>> put(
+    String endpoint, {
+    Map<String, dynamic>? body,
+    bool requiresAuth = true,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl$endpoint');
+      final headers = await _buildHeaders(requiresAuth);
+
+      final response = await _client.put(
+        uri,
+        headers: headers,
+        body: body != null ? jsonEncode(body) : null,
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw TimeoutException("Bağlantı zaman aşımına uğradı"),
+      );
+
+      return await _processResponse(response);
+    } on SocketException catch (_) {
+      throw NetworkException("İnternet bağlantınızı kontrol edin.");
+    } on TimeoutException catch (e) {
+      throw NetworkException(e.message ?? "Zaman aşımı");
+    } catch (e) {
+      if (e is AppException) rethrow;
+      throw NetworkException(e.toString());
+    }
+  }
+
+  Future<Map<String, dynamic>> delete(
+    String endpoint, {
+    bool requiresAuth = true,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl$endpoint');
+      final headers = await _buildHeaders(requiresAuth);
+
+      final response = await _client.delete(
+        uri,
+        headers: headers,
       ).timeout(
         const Duration(seconds: 10),
         onTimeout: () => throw TimeoutException("Bağlantı zaman aşımına uğradı"),

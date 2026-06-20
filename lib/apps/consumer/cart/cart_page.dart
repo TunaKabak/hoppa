@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart' as p;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hoppa/apps/consumer/cart/cart_provider.dart';
 import 'package:hoppa/apps/consumer/checkout/checkout_page.dart';
 import 'package:hoppa/shared/core/services/navigation_provider.dart';
@@ -10,15 +11,16 @@ import 'package:hoppa/apps/consumer/business/business_provider.dart';
 import 'package:hoppa/apps/consumer/cart/widgets/min_cart_amount_progress.dart';
 import 'package:hoppa/apps/consumer/services/customer_auth_service.dart';
 import 'package:hoppa/apps/consumer/auth/consumer_login_page.dart';
+import 'package:core_auth/core_auth.dart';
 
-class CartPage extends StatefulWidget {
+class CartPage extends ConsumerStatefulWidget {
   const CartPage({super.key});
 
   @override
-  State<CartPage> createState() => _CartPageState();
+  ConsumerState<CartPage> createState() => _CartPageState();
 }
 
-class _CartPageState extends State<CartPage> {
+class _CartPageState extends ConsumerState<CartPage> {
   bool _isExpanded = false;
   String _groupBy = 'none';
 
@@ -26,30 +28,33 @@ class _CartPageState extends State<CartPage> {
     if (Navigator.canPop(context)) {
       Navigator.pop(context);
     } else {
-      Provider.of<NavigationProvider>(context, listen: false).setIndex(0);
+      p.Provider.of<NavigationProvider>(context, listen: false).setIndex(0);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final cart = Provider.of<CartProvider>(context);
-    final businessProvider = Provider.of<BusinessProvider>(context);
-    final deliveryProvider = Provider.of<DeliveryProvider>(context);
+    final cartState = ref.watch(cartProvider);
+    final businessProvider = p.Provider.of<BusinessProvider>(context);
+    final deliveryProvider = p.Provider.of<DeliveryProvider>(context);
 
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
     const double deliveryFee = 20.0;
-    final double finalTotal = cart.totalAmount > 0
-        ? cart.totalAmount + deliveryFee
+    final double finalTotal = cartState.totalAmount > 0
+        ? cartState.totalAmount + deliveryFee
         : 0;
 
-    final requiredMinAmount = cart.getRequiredMinAmount(
+    final requiredMinAmount = getRequiredMinAmount(
       businessProvider.selectedBusiness,
       deliveryProvider.selectedAddress,
     );
 
-    final bool canCheckout = cart.totalAmount >= requiredMinAmount;
+    final bool canCheckout = cartState.totalAmount >= requiredMinAmount;
+
+    final campaignsAsync = ref.watch(cartCampaignsProvider);
+    final activeCampaigns = campaignsAsync.value ?? [];
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -66,24 +71,24 @@ class _CartPageState extends State<CartPage> {
           onPressed: () => _handleClose(context),
         ),
         actions: [
-          if (cart.items.isNotEmpty)
+          if (cartState.items.isNotEmpty)
             IconButton(
               icon: Icon(Icons.delete_sweep_outlined, color: colorScheme.error),
               tooltip: "Tüm Sepeti Boşalt",
-              onPressed: () => _showClearCartDialog(context, cart),
+              onPressed: () => _showClearCartDialog(context, ref.read(cartProvider.notifier)),
             ),
         ],
       ),
-      body: cart.items.isEmpty
+      body: cartState.items.isEmpty
           ? _buildEmptyCart(context, colorScheme)
           : Column(
               children: [
                 if (requiredMinAmount > 0)
                   MinCartAmountProgress(
-                    currentAmount: cart.totalAmount,
+                    currentAmount: cartState.totalAmount,
                     minAmount: requiredMinAmount,
                   ),
-                if (cart.items.isNotEmpty)
+                if (cartState.items.isNotEmpty)
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
@@ -140,14 +145,14 @@ class _CartPageState extends State<CartPage> {
                   child: _groupBy == 'none'
                       ? ListView.separated(
                           padding: const EdgeInsets.all(16),
-                          itemCount: cart.items.length,
+                          itemCount: cartState.items.length,
                           separatorBuilder: (context, index) =>
                               const SizedBox(height: 16),
                           itemBuilder: (context, index) {
-                            final item = cart.items[index];
+                            final item = cartState.items[index];
                             Campaign? campaign;
                             try {
-                              campaign = cart.activeCampaigns.firstWhere(
+                              campaign = activeCampaigns.firstWhere(
                                 (c) => c.targetProducts.contains(
                                   item.businessProduct.productBarcode,
                                 ),
@@ -162,18 +167,18 @@ class _CartPageState extends State<CartPage> {
                             );
                           },
                         )
-                      : _buildGroupedList(cart, colorScheme),
+                      : _buildGroupedList(cartState, activeCampaigns, colorScheme),
                 ),
 
                 Container(
                   padding: const EdgeInsets.symmetric(
                     vertical: 16,
                     horizontal: 24,
-                  ), // Padding azaltıldı, yatay korundu
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(20), // Radius küçültüldü
+                      top: Radius.circular(20),
                     ),
                     boxShadow: [
                       BoxShadow(
@@ -195,7 +200,7 @@ class _CartPageState extends State<CartPage> {
                                   children: [
                                     _summaryRow(
                                       "Ara Toplam",
-                                      "${cart.totalAmount.toStringAsFixed(2)} ₺",
+                                      "${cartState.totalAmount.toStringAsFixed(2)} ₺",
                                     ),
                                     const SizedBox(height: 12),
                                     _summaryRow(
@@ -264,11 +269,11 @@ class _CartPageState extends State<CartPage> {
 
                         const SizedBox(
                           height: 16,
-                        ), // Boşluk azaltıldı (24 -> 16)
+                        ),
 
                         SizedBox(
                           width: double.infinity,
-                          height: 48, // Buton yüksekliği azaltıldı (56 -> 48)
+                          height: 48,
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: canCheckout
@@ -276,21 +281,14 @@ class _CartPageState extends State<CartPage> {
                                   : Colors.grey,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(
-                                  12,
-                                ), // Radius (16 -> 12)
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              elevation: 2, // Elevation azaltıldı
+                              elevation: 2,
                             ),
                             onPressed: canCheckout
                                 ? () {
-                                    final auth =
-                                        Provider.of<CustomerAuthService>(
-                                          context,
-                                          listen: false,
-                                        );
-                                    if (auth.currentUser == null ||
-                                        auth.currentUser!.isAnonymous) {
+                                    final authState = ref.read(authControllerProvider);
+                                    if (authState is! AuthAuthenticated) {
                                       Navigator.of(
                                         context,
                                         rootNavigator: true,
@@ -316,7 +314,7 @@ class _CartPageState extends State<CartPage> {
                                   ? "Sepeti Onayla"
                                   : "Minimum Tutar Sağlanamadı",
                               style: const TextStyle(
-                                fontSize: 16, // Font size (18 -> 16)
+                                fontSize: 16,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -326,12 +324,11 @@ class _CartPageState extends State<CartPage> {
                         if (!_isExpanded) ...[
                           const SizedBox(
                             height: 8,
-                          ), // Boşluk azaltıldı (12 -> 8)
+                          ),
                           SizedBox(
                             width: double.infinity,
-                            height: 40, // Buton yüksekliği azaltıldı (56 -> 40)
+                            height: 40,
                             child: TextButton(
-                              // OutlinedButton -> TextButton (daha sade)
                               style: TextButton.styleFrom(
                                 foregroundColor: Colors.grey[600],
                               ),
@@ -339,7 +336,7 @@ class _CartPageState extends State<CartPage> {
                               child: const Text(
                                 "Alışverişe Devam Et",
                                 style: TextStyle(
-                                  fontSize: 14, // Font size (16 -> 14)
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -355,10 +352,10 @@ class _CartPageState extends State<CartPage> {
     );
   }
 
-  Widget _buildGroupedList(CartProvider cart, ColorScheme colorScheme) {
+  Widget _buildGroupedList(CartState cartState, List<Campaign> activeCampaigns, ColorScheme colorScheme) {
     final theme = Theme.of(context);
     Map<String, List<CartItem>> groups = {};
-    for (var item in cart.items) {
+    for (var item in cartState.items) {
       String key = _groupBy == 'brand'
           ? item.businessProduct.product.brand
           : item.businessProduct.product.category;
@@ -416,7 +413,7 @@ class _CartPageState extends State<CartPage> {
                     tooltip: "$key grubunu sil",
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
-                    onPressed: () => _showRemoveGroupDialog(context, cart, key),
+                    onPressed: () => _showRemoveGroupDialog(context, ref.read(cartProvider.notifier), key),
                   ),
                 ],
               ),
@@ -424,7 +421,7 @@ class _CartPageState extends State<CartPage> {
             ...items.map((item) {
               Campaign? campaign;
               try {
-                campaign = cart.activeCampaigns.firstWhere(
+                campaign = activeCampaigns.firstWhere(
                   (c) => c.targetProducts.contains(
                     item.businessProduct.productBarcode,
                   ),
@@ -450,7 +447,7 @@ class _CartPageState extends State<CartPage> {
 
   void _showRemoveGroupDialog(
     BuildContext context,
-    CartProvider cart,
+    CartNotifier cartNotifier,
     String groupName,
   ) {
     showDialog(
@@ -466,7 +463,7 @@ class _CartPageState extends State<CartPage> {
           ),
           TextButton(
             onPressed: () {
-              cart.removeGroup(_groupBy, groupName);
+              cartNotifier.removeGroup(_groupBy, groupName);
               Navigator.pop(context);
             },
             child: const Text(
@@ -541,7 +538,7 @@ class _CartPageState extends State<CartPage> {
     );
   }
 
-  void _showClearCartDialog(BuildContext context, CartProvider cart) {
+  void _showClearCartDialog(BuildContext context, CartNotifier cartNotifier) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -557,7 +554,7 @@ class _CartPageState extends State<CartPage> {
           ),
           TextButton(
             onPressed: () {
-              cart.clearCart(deleteFromDb: true);
+              cartNotifier.clearCart();
               Navigator.pop(context);
             },
             child: const Text(

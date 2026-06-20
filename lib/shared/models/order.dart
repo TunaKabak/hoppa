@@ -39,32 +39,25 @@ class Order {
   });
 
   factory Order.fromMap(Map<String, dynamic> data, String id) {
-    // Extract basic fields
-    String userAddress = data['user_address'] ?? '';
-
-    // Try new format first
+    // Extract basic fields with support for both REST API and Firestore
+    String userAddress = data['deliveryAddress'] ?? data['user_address'] ?? '';
     String deliveryMethod = data['delivery_method'] ?? '';
-    String orderNote = data['order_note'] ?? '';
+    String orderNote = data['customerNote'] ?? data['order_note'] ?? '';
     bool dontRingBell = data['dont_ring_bell'] ?? false;
 
     // Backward compatibility: Parse old format if new fields are empty
     if (deliveryMethod.isEmpty) {
-      // Determine delivery method from old format
       deliveryMethod = userAddress.contains('[GEL AL]') ? 'pickup' : 'delivery';
-
-      // Clean up address from old prefix
       userAddress = userAddress
           .replaceFirst(RegExp(r'^\[GEL AL\]\s*', caseSensitive: false), '')
           .trim();
 
-      // Extract note from old format: "Address (Not: note text)"
       if (userAddress.contains('Not:')) {
         List<String> parts = userAddress.split('Not:');
         if (parts.length > 1) {
           userAddress = parts[0].trim();
           String extractedNote = parts[1].replaceAll(')', '').trim();
 
-          // Check for doorbell flag in note
           if (extractedNote.contains('[ZİLİ ÇALMA!]')) {
             dontRingBell = true;
             extractedNote = extractedNote
@@ -72,30 +65,64 @@ class Order {
                 .replaceAll(' - ', '')
                 .trim();
           }
-
           orderNote = extractedNote;
         }
       }
     }
 
+    DateTime parsedCreatedAt;
+    final rawCreatedAt = data['createdAt'] ?? data['created_at'];
+    if (rawCreatedAt == null) {
+      parsedCreatedAt = DateTime.now();
+    } else if (rawCreatedAt is Timestamp) {
+      parsedCreatedAt = rawCreatedAt.toDate();
+    } else {
+      parsedCreatedAt = DateTime.tryParse(rawCreatedAt.toString()) ?? DateTime.now();
+    }
+
+    final itemsRaw = data['items'] as List<dynamic>? ?? [];
+    final parsedItems = itemsRaw.map((item) {
+      final itemMap = Map<String, dynamic>.from(item);
+      final productId = itemMap['productId'] ?? itemMap['product_id'] ?? '';
+      
+      // REST API format has nested product name: product: { name }
+      String name = itemMap['name'] ?? '';
+      if (itemMap['product'] != null && itemMap['product'] is Map) {
+        name = itemMap['product']['name'] ?? name;
+      }
+      
+      final price = itemMap['unitPrice'] != null 
+          ? (double.tryParse(itemMap['unitPrice'].toString()) ?? 0.0)
+          : (double.tryParse((itemMap['price'] ?? 0.0).toString()) ?? 0.0);
+          
+      final quantity = (double.tryParse((itemMap['quantity'] ?? 0.0).toString()) ?? 0.0);
+      
+      return OrderItem(
+        productId: productId,
+        name: name,
+        price: price,
+        quantity: quantity,
+      );
+    }).toList();
+
     return Order(
       id: id,
-      userId: data['user_id'] ?? '',
-      businessId: data['business_id'] ?? '',
+      userId: data['consumerId'] ?? data['user_id'] ?? '',
+      businessId: data['shopId'] ?? data['business_id'] ?? '',
       status: data['status'] ?? OrderStatus.pending.value,
-      totalAmount: (data['total_amount'] ?? 0.0).toDouble(),
+      totalAmount: data['totalAmount'] != null 
+          ? (double.tryParse(data['totalAmount'].toString()) ?? 0.0)
+          : (double.tryParse((data['total_amount'] ?? 0.0).toString()) ?? 0.0),
       userAddress: userAddress,
       deliveryTime: data['delivery_time'] ?? '',
-      note: data['note'] ?? '', // Keep for backward compatibility
+      note: data['note'] ?? '',
       deliveryMethod: deliveryMethod,
       orderNote: orderNote,
       dontRingBell: dontRingBell,
-      addressLatitude: (data['address_latitude'] ?? 0.0).toDouble(),
-      addressLongitude: (data['address_longitude'] ?? 0.0).toDouble(),
-      createdAt: (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      items: (data['items'] as List<dynamic>? ?? [])
-          .map((item) => OrderItem.fromMap(item))
-          .toList(),
+      addressLatitude: data['address_latitude'] != null ? (data['address_latitude'] as num).toDouble() : 0.0,
+      addressLongitude: data['address_longitude'] != null ? (data['address_longitude'] as num).toDouble() : 0.0,
+      createdAt: parsedCreatedAt,
+      items: parsedItems,
     );
   }
 

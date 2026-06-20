@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart' as p;
 import 'package:hoppa/apps/consumer/home/home_page.dart';
 import 'package:hoppa/apps/consumer/cart/cart_page.dart';
 import 'package:hoppa/apps/consumer/cart/cart_provider.dart';
@@ -12,14 +13,14 @@ import 'package:hoppa/apps/consumer/business/business_provider.dart'; // YENİ
 import 'package:hoppa/apps/consumer/home/search_page.dart';
 import 'package:hoppa/apps/consumer/services/customer_auth_service.dart';
 
-class MainLayoutPage extends StatefulWidget {
+class MainLayoutPage extends ConsumerStatefulWidget {
   const MainLayoutPage({super.key});
 
   @override
-  State<MainLayoutPage> createState() => _MainLayoutPageState();
+  ConsumerState<MainLayoutPage> createState() => _MainLayoutPageState();
 }
 
-class _MainLayoutPageState extends State<MainLayoutPage> {
+class _MainLayoutPageState extends ConsumerState<MainLayoutPage> {
   final PageStorageBucket _bucket = PageStorageBucket();
   final GlobalKey<NavigatorState> _profileNavigatorKey =
       GlobalKey<NavigatorState>();
@@ -30,17 +31,6 @@ class _MainLayoutPageState extends State<MainLayoutPage> {
   @override
   void initState() {
     super.initState();
-    // Sayfa (veya Key) değiştiğinde Sepeti Getir
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final authService = Provider.of<CustomerAuthService>(
-        context,
-        listen: false,
-      );
-      final userId = authService.currentUser?.uid;
-      if (userId != null) {
-        Provider.of<CartProvider>(context, listen: false).fetchCart(userId);
-      }
-    });
     _pages = [
       const HomePage(),
       const SearchPage(), // Search
@@ -56,7 +46,7 @@ class _MainLayoutPageState extends State<MainLayoutPage> {
     // Splash'ten sonra veya Oturum açıldığında her zaman Kategoriler (Ana Sayfa) ile başla
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        final navProvider = Provider.of<NavigationProvider>(
+        final navProvider = p.Provider.of<NavigationProvider>(
           context,
           listen: false,
         );
@@ -72,9 +62,9 @@ class _MainLayoutPageState extends State<MainLayoutPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final primaryColor = theme.colorScheme.primary;
-    final navProvider = Provider.of<NavigationProvider>(context);
-    final cart = Provider.of<CartProvider>(context);
-    final businessProvider = Provider.of<BusinessProvider>(context);
+    final navProvider = p.Provider.of<NavigationProvider>(context);
+    final cart = ref.watch(cartProvider);
+    final businessProvider = p.Provider.of<BusinessProvider>(context);
 
     // Seçili sekmeyi belirle
     int currentIndex = navProvider.currentIndex;
@@ -270,7 +260,7 @@ class _MainLayoutPageState extends State<MainLayoutPage> {
     int index,
     String label,
     NavigationProvider navProvider,
-    CartProvider cart,
+    CartState cart,
     Color activeColor,
   ) {
     bool isSelected = navProvider.currentIndex == index;

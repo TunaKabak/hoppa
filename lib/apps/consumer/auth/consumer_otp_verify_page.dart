@@ -94,7 +94,12 @@ class _OtpVerifyPageState extends ConsumerState<OtpVerifyPage> {
     _focusNode.unfocus();
     
     // Core Auth: OTP Doğrulama İsteği
-    ref.read(authControllerProvider.notifier).verifyOtp(widget.phoneNumber, smsCode);
+    ref.read(authControllerProvider.notifier).verifyOtp(
+      widget.phoneNumber,
+      smsCode,
+      name: widget.firstName,
+      surname: widget.lastName,
+    );
   }
 
   @override
@@ -103,6 +108,7 @@ class _OtpVerifyPageState extends ConsumerState<OtpVerifyPage> {
     final _isLoading = authState is AuthLoading;
 
     ref.listen<AuthState>(authControllerProvider, (previous, next) {
+      if (!mounted) return;
       if (next is AuthError) {
         _otpController.clear();
         _focusNode.requestFocus();

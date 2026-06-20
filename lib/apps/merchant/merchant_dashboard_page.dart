@@ -8,17 +8,20 @@ import 'package:hoppa/shared/core/services/business_service.dart';
 import 'package:hoppa/shared/core/services/product_service.dart';
 import 'package:hoppa/apps/merchant/merchant_order_list_page.dart';
 import 'package:hoppa/apps/merchant/merchant_main_layout.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hoppa/apps/merchant/providers/merchant_api_providers.dart';
+import 'package:hoppa/apps/merchant/merchant_settings_page.dart';
 
-class MerchantDashboardPage extends StatefulWidget {
+class MerchantDashboardPage extends ConsumerStatefulWidget {
   final String businessId;
 
   const MerchantDashboardPage({super.key, required this.businessId});
 
   @override
-  State<MerchantDashboardPage> createState() => _MerchantDashboardPageState();
+  ConsumerState<MerchantDashboardPage> createState() => _MerchantDashboardPageState();
 }
 
-class _MerchantDashboardPageState extends State<MerchantDashboardPage>
+class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
     with SingleTickerProviderStateMixin {
   final OrderService _orderService = OrderService();
   late StreamSubscription<QuerySnapshot> _orderSubscription;
@@ -53,8 +56,6 @@ class _MerchantDashboardPageState extends State<MerchantDashboardPage>
     super.dispose();
   }
 
-  bool _isShopOpen = true; // Local state for shop status
-
   // ... (existing helper methods)
 
   // ... (existing helper methods)
@@ -64,7 +65,6 @@ class _MerchantDashboardPageState extends State<MerchantDashboardPage>
     if (mounted && business != null) {
       setState(() {
         _businessName = business.name;
-        _isShopOpen = business.isOpen;
       });
     }
   }
@@ -141,15 +141,49 @@ class _MerchantDashboardPageState extends State<MerchantDashboardPage>
   }
 
   Future<void> _toggleShopStatus(bool value) async {
-    setState(() => _isShopOpen = value); // Optimistic update
     try {
-      await _businessService.updateBusinessStatus(widget.businessId, value);
+      await ref.read(shopControllerProvider.notifier).toggleStatus(value);
     } catch (e) {
-      if (mounted) {
-        setState(() => _isShopOpen = !value); // Revert on error
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Durum güncellenemedi: $e")));
+      if (!mounted) return;
+      
+      final errorMsg = e.toString();
+      final lowerError = errorMsg.toLowerCase();
+      if (lowerError.contains("lütfen dükkan ve resmi işletme") || 
+          lowerError.contains("ayarlarınızı tamamlayın") ||
+          lowerError.contains("resmi isletme")) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text("Eksik Bilgi"),
+            content: const Text(
+              "Dükkanınızı açabilmek için lokasyon, çalışma saatleri ve resmi işletme (Vergi/Kimlik No) ayarlarınızı tamamlamanız gerekmektedir.",
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Kapat"),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => MerchantSettingsPage(
+                        businessId: widget.businessId,
+                      ),
+                    ),
+                  );
+                },
+                child: const Text("Ayarlara Git"),
+              ),
+            ],
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Durum güncellenemedi: $errorMsg")),
+        );
       }
     }
   }
@@ -157,6 +191,8 @@ class _MerchantDashboardPageState extends State<MerchantDashboardPage>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final shopState = ref.watch(shopControllerProvider);
+    final isShopOpen = shopState.value?.isActive ?? false;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -176,10 +212,10 @@ class _MerchantDashboardPageState extends State<MerchantDashboardPage>
               ),
             ),
             Text(
-              _isShopOpen ? "Dükkan AÇIK" : "Dükkan KAPALI",
+              isShopOpen ? "Dükkan AÇIK" : "Dükkan KAPALI",
               style: TextStyle(
                 fontSize: 12,
-                color: _isShopOpen ? Colors.greenAccent : Colors.redAccent,
+                color: isShopOpen ? Colors.greenAccent : Colors.redAccent,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -189,14 +225,23 @@ class _MerchantDashboardPageState extends State<MerchantDashboardPage>
         actions: [
           Transform.scale(
             scale: 0.8,
-            child: Switch(
-              value: _isShopOpen,
-              activeThumbColor: Colors.greenAccent,
-              activeTrackColor: Colors.greenAccent.withValues(alpha: 0.2),
-              inactiveThumbColor: Colors.redAccent,
-              inactiveTrackColor: Colors.redAccent.withValues(alpha: 0.2),
-              onChanged: _toggleShopStatus,
-            ),
+            child: shopState.isLoading 
+              ? const SizedBox(
+                  width: 40, 
+                  height: 40, 
+                  child: Padding(
+                    padding: EdgeInsets.all(10.0), 
+                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                  )
+                )
+              : Switch(
+                  value: isShopOpen,
+                  activeThumbColor: Colors.greenAccent,
+                  activeTrackColor: Colors.greenAccent.withValues(alpha: 0.2),
+                  inactiveThumbColor: Colors.redAccent,
+                  inactiveTrackColor: Colors.redAccent.withValues(alpha: 0.2),
+                  onChanged: _toggleShopStatus,
+                ),
           ),
           const SizedBox(width: 8),
         ],

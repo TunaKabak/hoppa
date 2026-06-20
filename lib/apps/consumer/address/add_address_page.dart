@@ -1,22 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:hoppa/shared/core/services/address_service.dart';
+import 'package:hoppa/apps/consumer/repositories/address_repository.dart';
 import 'package:hoppa/shared/models/address.dart';
 import 'package:hoppa/shared/core/data/kktc_districts.dart';
+import 'package:hoppa/apps/consumer/providers/consumer_location_controller.dart';
 
-class AddAddressPage extends StatefulWidget {
+class AddAddressPage extends ConsumerStatefulWidget {
   final Address? addressToEdit; // Düzenlenecek adres (Opsiyonel)
 
   const AddAddressPage({super.key, this.addressToEdit});
 
   @override
-  State<AddAddressPage> createState() => _AddAddressPageState();
+  ConsumerState<AddAddressPage> createState() => _AddAddressPageState();
 }
 
-class _AddAddressPageState extends State<AddAddressPage> {
+class _AddAddressPageState extends ConsumerState<AddAddressPage> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _detailsController = TextEditingController();
@@ -29,7 +30,6 @@ class _AddAddressPageState extends State<AddAddressPage> {
   bool _isLocationGetting = false;
   double _latitude = 35.1856; // Default: Nicosia
   double _longitude = 33.3823;
-  bool _locationFound = false;
 
   final List<String> _cities = kKktcDistricts.keys.toList();
   final List<String> _quickTitles = ['Ev', 'İş', 'Diğer'];
@@ -46,7 +46,6 @@ class _AddAddressPageState extends State<AddAddressPage> {
       _detailsController.text = addr.fullDetails;
       _latitude = addr.latitude;
       _longitude = addr.longitude;
-      _locationFound = true;
 
       // Şehir ve Bölge Seçimi
       if (_cities.contains(addr.city)) {
@@ -72,35 +71,52 @@ class _AddAddressPageState extends State<AddAddressPage> {
     }
   }
 
-  Future<void> _getCurrentLocation() async {
+  Future<void> _fetchAndSetLocation() async {
     setState(() => _isLocationGetting = true);
 
     try {
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          throw Exception("Konum izni reddedildi");
-        }
+      final result = await ref.read(consumerLocationProvider.notifier).determineLocation();
+      
+      if (result != null) {
+        setState(() {
+          _latitude = result.latitude;
+          _longitude = result.longitude;
+          
+          // Dropdown Mismatch Protection (Safe Assignment)
+          if (_cities.contains(result.city)) {
+            _selectedCity = result.city;
+            if (kKktcDistricts[result.city]!.contains(result.district)) {
+              _selectedDistrict = result.district;
+            } else {
+              _selectedDistrict = null;
+            }
+          } else {
+            _selectedCity = null;
+            _selectedDistrict = null;
+          }
+          
+          _detailsController.text = result.streetAddress;
+        });
+
+        _mapController.move(LatLng(result.latitude, result.longitude), 15.0);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Konum başarıyla alındı.")),
+        );
       }
-
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-
-      _mapController.move(LatLng(position.latitude, position.longitude), 15);
-      // _resolveAddress zaten map hareket ettiği için tetiklenecek mi?
-      // Hayır, programatik hareket InteractionEnd tetiklemez. Manuel çağıralım.
-      await _resolveAddress(position.latitude, position.longitude);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Konum hatası: $e"),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Konum alınamadı, lütfen manuel giriniz."),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
-      setState(() => _isLocationGetting = false);
+      if (mounted) {
+        setState(() => _isLocationGetting = false);
+      }
     }
   }
 
@@ -108,7 +124,6 @@ class _AddAddressPageState extends State<AddAddressPage> {
     setState(() {
       _latitude = lat;
       _longitude = lng;
-      _locationFound = true;
     });
 
     try {
@@ -127,23 +142,41 @@ class _AddAddressPageState extends State<AddAddressPage> {
           }
         }
 
-        if (foundCity != null) {
-          setState(() {
-            _selectedCity = foundCity;
-            if (kKktcDistricts[foundCity]!.contains(place.subLocality)) {
-              _selectedDistrict = place.subLocality;
-            } else {
-              _selectedDistrict = kKktcDistricts[foundCity]!.first;
-            }
-          });
+        // Apply Unnamed Road filtering
+        String street = place.thoroughfare ?? '';
+        String number = place.subThoroughfare ?? '';
+        if (street.toLowerCase().contains("unnamed road")) {
+          street = "";
+        }
 
-          String street = place.thoroughfare ?? '';
-          String number = place.subThoroughfare ?? '';
-          if (street.isNotEmpty) {
-            _detailsController.text = "$street $number";
+        if (foundCity != null) {
+          if (mounted) {
+            setState(() {
+              _selectedCity = foundCity;
+              if (kKktcDistricts[foundCity]!.contains(place.subLocality)) {
+                _selectedDistrict = place.subLocality;
+              } else {
+                _selectedDistrict = kKktcDistricts[foundCity]!.first;
+              }
+            });
+
+            if (street.isNotEmpty) {
+              _detailsController.text = "$street $number".trim();
+            }
           }
 
           debugPrint("📍 ADRES ÇÖZÜMLENDİ: $foundCity, $street");
+        } else {
+          // Dropdown Mismatch Protection
+          if (mounted) {
+            setState(() {
+              _selectedCity = null;
+              _selectedDistrict = null;
+            });
+            if (street.isNotEmpty) {
+              _detailsController.text = "$street $number".trim();
+            }
+          }
         }
       }
     } catch (e) {
@@ -153,6 +186,17 @@ class _AddAddressPageState extends State<AddAddressPage> {
 
   void _saveAddress() async {
     if (!_formKey.currentState!.validate()) return;
+
+    if (_selectedCity == null || _selectedDistrict == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Lütfen Şehir ve Bölge seçiniz"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
@@ -166,21 +210,30 @@ class _AddAddressPageState extends State<AddAddressPage> {
         longitude: _longitude,
       );
 
+      final repo = ref.read(addressRepositoryProvider);
+      Address savedAddress;
       if (widget.addressToEdit != null) {
         // GÜNCELLEME
-        await AddressService().updateAddress(addressData);
+        savedAddress = await repo.updateAddress(addressData);
       } else {
         // YENİ EKLEME
-        await AddressService().addAddress(addressData);
+        savedAddress = await repo.createAddress(addressData);
       }
 
+      ref.invalidate(addressesProvider);
+
       if (mounted) {
-        Navigator.pop(context, addressData); // Güncellenen datayı geri dön
+        Navigator.pop(context, savedAddress); // Güncellenen datayı geri dön
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Hata: $e")));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(
+          content: Text("Hata: $e"),
+          backgroundColor: Colors.red,
+        ));
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -270,7 +323,7 @@ class _AddAddressPageState extends State<AddAddressPage> {
                       backgroundColor: Colors.white,
                       onPressed: _isLocationGetting
                           ? null
-                          : _getCurrentLocation,
+                          : _fetchAndSetLocation,
                       child: _isLocationGetting
                           ? const Padding(
                               padding: EdgeInsets.all(12),
@@ -445,16 +498,19 @@ class _AddAddressPageState extends State<AddAddressPage> {
                                   isExpanded: true,
                                   value: _selectedDistrict,
                                   hint: const Text("Bölge"),
-                                  items: kKktcDistricts[_selectedCity]!
-                                      .map(
-                                        (dist) => DropdownMenuItem(
-                                          value: dist,
-                                          child: Text(dist),
-                                        ),
-                                      )
-                                      .toList(),
-                                  onChanged: (val) =>
-                                      setState(() => _selectedDistrict = val!),
+                                  items: _selectedCity == null
+                                      ? []
+                                      : kKktcDistricts[_selectedCity]!
+                                          .map(
+                                            (dist) => DropdownMenuItem(
+                                              value: dist,
+                                              child: Text(dist),
+                                            ),
+                                          )
+                                          .toList(),
+                                  onChanged: _selectedCity == null
+                                      ? null
+                                      : (val) => setState(() => _selectedDistrict = val),
                                 ),
                               ),
                             ),
@@ -476,6 +532,23 @@ class _AddAddressPageState extends State<AddAddressPage> {
                           filled: true,
                           fillColor: Colors.white,
                           contentPadding: const EdgeInsets.all(16),
+                          suffixIcon: _isLocationGetting
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: Padding(
+                                    padding: EdgeInsets.all(12.0),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                )
+                              : IconButton(
+                                  icon: const Icon(Icons.my_location),
+                                  onPressed: _fetchAndSetLocation,
+                                  tooltip: "Konumumu Bul",
+                                  color: theme.primaryColor,
+                                ),
                         ),
                         validator: (v) =>
                             v!.isEmpty ? "Adres detayı giriniz" : null,

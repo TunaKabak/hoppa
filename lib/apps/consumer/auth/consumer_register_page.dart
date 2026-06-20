@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:hoppa/apps/consumer/services/customer_auth_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:core_auth/core_auth.dart';
 import 'consumer_otp_verify_page.dart';
 import 'widgets/auth_layout.dart';
 import 'widgets/auth_text_field.dart';
 
-class RegisterPage extends StatefulWidget {
+class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
 
   @override
-  State<RegisterPage> createState() => _RegisterPageState();
+  ConsumerState<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _RegisterPageState extends State<RegisterPage> {
+class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _nameController = TextEditingController();
   final _surnameController = TextEditingController();
   final _phoneController = TextEditingController();
-  final CustomerAuthService _auth = CustomerAuthService();
   bool _isLoading = false;
   String _selectedCountryCode = "+90";
 
@@ -28,10 +28,9 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   void _startRegister() async {
-    FocusScope.of(context).unfocus();
     if (!mounted) return;
+    FocusScope.of(context).unfocus();
     final messenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
 
     if (_nameController.text.isEmpty ||
         _surnameController.text.isEmpty ||
@@ -42,13 +41,10 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    setState(() => _isLoading = true);
-
     String phoneInput = _phoneController.text.trim();
 
     if (_selectedCountryCode == "+90" &&
         (phoneInput.length != 10 || !phoneInput.startsWith('5'))) {
-      setState(() => _isLoading = false);
       messenger.showSnackBar(
         const SnackBar(
           content: Text(
@@ -61,52 +57,75 @@ class _RegisterPageState extends State<RegisterPage> {
 
     String phone = "$_selectedCountryCode$phoneInput";
 
-    bool exists = await _auth.checkUserExists(phone);
-    if (exists) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text(
-              "Bu numara ile zaten kayıtlı bir kullanıcı var. Lütfen giriş yapınız.",
-            ),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
-      return;
-    }
+    setState(() => _isLoading = true);
 
-    await _auth.verifyPhoneNumber(
-      phoneNumber: phone,
-      codeSent: (verificationId, resendToken) {
+    try {
+      // Check if user exists on the NestJS backend
+      final response = await ref.read(apiClientProvider).get('/api/auth/check-phone/$phone');
+      final exists = response['data']?['exists'] == true;
+
+      if (exists) {
         if (mounted) {
           setState(() => _isLoading = false);
-          navigator.push(
-            MaterialPageRoute(
-              builder: (context) => OtpVerifyPage(
-                verificationId: verificationId,
-                phoneNumber: phone,
-                firstName: _nameController.text.trim(),
-                lastName: _surnameController.text.trim(),
+          messenger.showSnackBar(
+            const SnackBar(
+              content: Text(
+                "Bu numara ile zaten kayıtlı bir kullanıcı var. Lütfen giriş yapınız.",
               ),
+              backgroundColor: Colors.orange,
             ),
           );
         }
-      },
-      verificationFailed: (e) {
-        if (mounted) {
-          setState(() => _isLoading = false);
-          messenger.showSnackBar(SnackBar(content: Text("Hata: ${e.message}")));
-        }
-      },
-    );
+        return;
+      }
+
+      // Send OTP via backend
+      ref.read(authControllerProvider.notifier).sendOtp(phone);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text("Bir hata oluştu: ${e.toString()}"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
+    final authState = ref.watch(authControllerProvider);
+    final isAuthLoading = authState is AuthLoading || _isLoading;
+
+    ref.listen<AuthState>(authControllerProvider, (previous, next) {
+      if (!mounted) return;
+      if (next is AuthError) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(next.errorMessage),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } else if (next is OtpSentState) {
+        setState(() => _isLoading = false);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => OtpVerifyPage(
+              verificationId: "",
+              phoneNumber: next.phoneNumber,
+              firstName: _nameController.text.trim(),
+              lastName: _surnameController.text.trim(),
+            ),
+          ),
+        );
+      }
+    });
 
     return AuthLayout(
       showAppBar: true,
@@ -183,8 +202,8 @@ class _RegisterPageState extends State<RegisterPage> {
             width: double.infinity,
             height: 56,
             child: ElevatedButton(
-              onPressed: _isLoading ? null : _startRegister,
-              child: _isLoading
+              onPressed: isAuthLoading ? null : _startRegister,
+              child: isAuthLoading
                   ? const SizedBox(
                       width: 24,
                       height: 24,

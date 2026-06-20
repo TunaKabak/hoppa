@@ -4,13 +4,16 @@ import 'package:google_fonts/google_fonts.dart';
 import '../providers/merchant_register_provider.dart';
 import 'widgets/auth_text_field.dart';
 
-class MerchantRegisterScreen extends StatelessWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:core_auth/core_auth.dart';
+
+class MerchantRegisterScreen extends ConsumerWidget {
   const MerchantRegisterScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return ChangeNotifierProvider(
-      create: (_) => MerchantRegisterProvider(),
+      create: (_) => MerchantRegisterProvider(ref.read(authRepositoryProvider)),
       child: const _RegisterView(),
     );
   }
