@@ -90,7 +90,7 @@ export class AuthController {
    */
   public async checkPhoneExists(req: Request, res: Response): Promise<void> {
     try {
-      const { phone } = req.params;
+      const phone = req.params.phone as string;
       if (!phone) {
         res.status(400).json({ error: true, message: "Telefon numarası eksik." });
         return;
