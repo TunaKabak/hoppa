@@ -528,8 +528,8 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                           // Product Image
                           ClipRRect(
                             borderRadius: BorderRadius.circular(8),
-                            child: Image.network(
-                              p.imageUrl ?? '',
+                            child: (p.imageUrl != null && p.imageUrl!.isNotEmpty) ? Image.network(
+                              p.imageUrl!,
                               width: 70,
                               height: 70,
                               fit: BoxFit.cover,
@@ -543,7 +543,15 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                                       color: Colors.grey,
                                     ),
                                   ),
-                            ),
+                            ) : Container(
+                                    width: 70,
+                                    height: 70,
+                                    color: Colors.grey[200],
+                                    child: const Icon(
+                                      Icons.image_not_supported,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
                           ),
                           const SizedBox(width: 12),
 
@@ -874,7 +882,7 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                               ),
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
-                                child: Image.network(
+                                child: (product.imageUrl.isNotEmpty) ? Image.network(
                                   product.imageUrl,
                                   width: 60,
                                   height: 60,
@@ -886,7 +894,12 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                                         color: Colors.grey[200],
                                         child: const Icon(Icons.image, color: Colors.grey),
                                       ),
-                                ),
+                                ) : Container(
+                                        width: 60,
+                                        height: 60,
+                                        color: Colors.grey[200],
+                                        child: const Icon(Icons.image_not_supported, color: Colors.grey),
+                                      ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
