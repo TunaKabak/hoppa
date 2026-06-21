@@ -8,6 +8,7 @@ import 'package:hoppa/apps/consumer/favorites/favorite_provider.dart';
 import 'package:hoppa/apps/consumer/services/customer_auth_service.dart';
 import 'package:hoppa/apps/consumer/auth/consumer_login_page.dart';
 import 'package:core_auth/core_auth.dart';
+import 'package:hoppa/apps/consumer/business/business_provider.dart';
 
 class ModernProductCard extends ConsumerWidget {
   final BusinessProduct businessProduct;
@@ -28,6 +29,7 @@ class ModernProductCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final product = businessProduct.product;
     final cart = ref.watch(cartProvider);
+    final isClosed = p.Provider.of<BusinessProvider>(context, listen: false).selectedBusiness?.isOpen == false;
 
     // Sepetteki miktar kontrolü
     double quantity = 0;
@@ -185,6 +187,7 @@ class ModernProductCard extends ConsumerWidget {
                         ref,
                         quantity,
                         theme,
+                        isClosed,
                         isSmall: true,
                       ),
                     ],
@@ -307,7 +310,7 @@ class ModernProductCard extends ConsumerWidget {
                 Positioned(
                   bottom: 8,
                   right: 8,
-                  child: _buildQuantityControl(context, ref, quantity, theme),
+                  child: _buildQuantityControl(context, ref, quantity, theme, isClosed),
                 ),
               ],
             ),
@@ -394,7 +397,8 @@ class ModernProductCard extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     double quantity,
-    ThemeData theme, {
+    ThemeData theme,
+    bool isClosed, {
     bool isSmall = false,
   }) {
     final isWeighted = businessProduct.product.isWeighted;
@@ -405,7 +409,7 @@ class ModernProductCard extends ConsumerWidget {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(20),
-          onTap: () {
+          onTap: isClosed ? null : () {
             _handleAdd(context, ref);
           },
           child: Container(
@@ -425,7 +429,7 @@ class ModernProductCard extends ConsumerWidget {
             ),
             child: Icon(
               Icons.add,
-              color: theme.primaryColor,
+              color: isClosed ? Colors.grey : theme.primaryColor,
               size: isSmall ? 18 : 20,
             ),
           ),
@@ -499,7 +503,7 @@ class ModernProductCard extends ConsumerWidget {
             color: Colors.transparent,
             child: InkWell(
               borderRadius: BorderRadius.circular(20),
-              onTap: () {
+              onTap: isClosed ? null : () {
                 _handleAdd(context, ref);
               },
               child: Container(
@@ -507,7 +511,7 @@ class ModernProductCard extends ConsumerWidget {
                 alignment: Alignment.center,
                 child: Icon(
                   Icons.add,
-                  color: theme.primaryColor,
+                  color: isClosed ? Colors.grey : theme.primaryColor,
                   size: isSmall ? 16 : 18,
                 ),
               ),

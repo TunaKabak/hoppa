@@ -80,6 +80,19 @@ class _CheckoutPageState extends State<CheckoutPage> {
     } else {
       _phoneController.text = "0533 876 54 32";
     }
+
+    // YENİ: Adres null ise geri dön
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_isPickUp && _selectedAddress == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Lütfen önce bir teslimat adresi seçiniz."),
+            backgroundColor: Colors.red,
+          ),
+        );
+        Navigator.pop(context);
+      }
+    });
   }
 
   @override
@@ -354,25 +367,25 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   else
                     // EVE TESLİM: Kullanıcı Adresi
                     GestureDetector(
-                      onTap: () async {
-                        final selectedAddress = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                const AddressListPage(isSelectionMode: true),
-                          ),
-                        );
+                      // onTap: () async {
+                      //   final selectedAddress = await Navigator.push(
+                      //     context,
+                      //     MaterialPageRoute(
+                      //       builder: (context) =>
+                      //           const AddressListPage(isSelectionMode: true),
+                      //     ),
+                      //   );
 
-                        if (selectedAddress != null) {
-                          setState(() {
-                            _selectedAddress = selectedAddress;
-                          });
-                          Provider.of<DeliveryProvider>(
-                            context,
-                            listen: false,
-                          ).setAddress(selectedAddress);
-                        }
-                      },
+                      //   if (selectedAddress != null) {
+                      //     setState(() {
+                      //       _selectedAddress = selectedAddress;
+                      //     });
+                      //     Provider.of<DeliveryProvider>(
+                      //       context,
+                      //       listen: false,
+                      //     ).setAddress(selectedAddress);
+                      //   }
+                      // },
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
@@ -423,13 +436,21 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                 ],
                               ),
                             ),
-                            const Icon(
-                              Icons.edit,
-                              color: Colors.grey,
-                              size: 20,
-                            ),
+                            // const Icon(
+                            //   Icons.edit,
+                            //   color: Colors.grey,
+                            //   size: 20,
+                            // ),
                           ],
                         ),
+                      ),
+                    ),
+                  if (!_isPickUp)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 8, left: 4),
+                      child: Text(
+                        "Teslimat adresini değiştirmek için lütfen ana sayfaya dönünüz.",
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
                       ),
                     ),
 
