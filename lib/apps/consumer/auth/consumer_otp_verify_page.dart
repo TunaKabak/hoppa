@@ -212,7 +212,18 @@ class _OtpVerifyPageState extends ConsumerState<OtpVerifyPage> {
 
               // 2. Görsel Kutular (Önde gösterilir)
               GestureDetector(
-                onTap: () => _focusNode.requestFocus(),
+                onTap: () {
+                  if (!_focusNode.hasFocus) {
+                    FocusScope.of(context).requestFocus(_focusNode);
+                  } else {
+                    _focusNode.unfocus();
+                    Future.delayed(const Duration(milliseconds: 50), () {
+                      if (mounted) {
+                        FocusScope.of(context).requestFocus(_focusNode);
+                      }
+                    });
+                  }
+                },
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: List.generate(6, (index) {
