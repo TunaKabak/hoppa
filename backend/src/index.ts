@@ -1,3 +1,7 @@
+// Capture raw environment variables before dotenv config
+const rawDbUrl = process.env.DATABASE_URL || "undefined";
+const rawDirectUrl = process.env.DIRECT_URL || "undefined";
+
 import path from "path";
 import dotenv from "dotenv";
 dotenv.config({ path: path.join(__dirname, "../.env") });
@@ -69,18 +73,36 @@ app.get("/", (req, res) => {
   const envPath = path.join(__dirname, "../.env");
   const envExists = fs.existsSync(envPath);
   
+  let safeRawDb = rawDbUrl;
+  if (safeRawDb !== "undefined") {
+    safeRawDb = safeRawDb.replace(/:([^@:]+)@/, ":****@");
+  }
+
+  let safeRawDirect = rawDirectUrl;
+  if (safeRawDirect !== "undefined") {
+    safeRawDirect = safeRawDirect.replace(/:([^@:]+)@/, ":****@");
+  }
+
   let dbUrl = process.env.DATABASE_URL || "undefined";
   if (dbUrl !== "undefined") {
     dbUrl = dbUrl.replace(/:([^@:]+)@/, ":****@");
   }
 
+  let directUrl = process.env.DIRECT_URL || "undefined";
+  if (directUrl !== "undefined") {
+    directUrl = directUrl.replace(/:([^@:]+)@/, ":****@");
+  }
+
   res.status(200).json({
     error: false,
     data: {
-      message: "Hoppa Backend API is running. (Version env-unquoted-v1)",
+      message: "Hoppa Backend API is running. (Version env-unquoted-v2)",
       envExists,
       envPath,
       dbUrl,
+      directUrl,
+      safeRawDb,
+      safeRawDirect,
       cwd: process.cwd()
     }
   });
