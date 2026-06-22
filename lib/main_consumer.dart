@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:core_auth/core_auth.dart';
 
 import 'apps/consumer/services/customer_auth_service.dart';
 import 'shared/core/services/language_provider.dart';
@@ -23,7 +24,8 @@ class MyHttpOverrides extends HttpOverrides {
   @override
   HttpClient createHttpClient(SecurityContext? context) {
     return super.createHttpClient(context)
-      ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+      ..badCertificateCallback =
+          (X509Certificate cert, String host, int port) => true;
   }
 }
 
@@ -52,8 +54,31 @@ void main() async {
   runApp(const riverpod.ProviderScope(child: ConsumerApp()));
 }
 
-class ConsumerApp extends StatelessWidget {
+class ConsumerApp extends riverpod.ConsumerStatefulWidget {
   const ConsumerApp({super.key});
+
+  @override
+  riverpod.ConsumerState<ConsumerApp> createState() => _ConsumerAppState();
+}
+
+class _ConsumerAppState extends riverpod.ConsumerState<ConsumerApp> {
+  @override
+  void initState() {
+    super.initState();
+    _wakeUpServer();
+  }
+
+  void _wakeUpServer() {
+    ref
+        .read(apiClientProvider)
+        .get('/health', requiresAuth: false)
+        .then((_) {
+          print("Server is up and running.");
+        })
+        .catchError((error) {
+          print("Error waking up server: $error");
+        });
+  }
 
   @override
   Widget build(BuildContext context) {

@@ -8,6 +8,7 @@ import 'package:hoppa/shared/core/services/campaign_service.dart'; // Campaign S
 import 'package:hoppa/shared/core/services/navigation_provider.dart'; // Navigation Provider
 import 'package:hoppa/apps/consumer/cart/widgets/cart_price_badge.dart'; // YENİ
 import 'package:provider/provider.dart' as p;
+import 'package:hoppa/apps/consumer/business/business_provider.dart';
 
 class ProductDetailPage extends ConsumerStatefulWidget {
   final BusinessProduct businessProduct;
@@ -43,6 +44,8 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
   Widget build(BuildContext context) {
     final product = widget.businessProduct.product;
     final cart = ref.watch(cartProvider);
+    final isClosed = p.Provider.of<BusinessProvider>(context, listen: false).selectedBusiness?.isOpen == false;
+
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -313,12 +316,12 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
         ),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         width: double.infinity,
-        child: SafeArea(child: _buildCartAction(context, cart)),
+        child: SafeArea(child: _buildCartAction(context, cart, isClosed)),
       ),
     );
   }
 
-  Widget _buildCartAction(BuildContext context, CartState cart) {
+  Widget _buildCartAction(BuildContext context, CartState cart, bool isClosed) {
     // Sepette var mı kontrol et
     final cartItemIndex = cart.items.indexWhere(
       (item) => item.businessProduct.id == widget.businessProduct.id,
@@ -373,7 +376,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
           // ARTIR BUTONU
           _buildCounterButton(
             icon: Icons.add,
-            onTap: () {
+            onTap: isClosed ? null : () {
               _handleCartAction(() async {
                 await Future.delayed(const Duration(milliseconds: 200));
                 try {
@@ -399,7 +402,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
       return SizedBox(
         height: 56,
         child: ElevatedButton(
-          onPressed: _isActionLoading
+          onPressed: (_isActionLoading || isClosed)
               ? null
               : () {
                   _handleCartAction(() async {
@@ -477,11 +480,12 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
 
   Widget _buildCounterButton({
     required IconData icon,
-    required VoidCallback onTap,
+    required VoidCallback? onTap,
     bool isAdd = false,
   }) {
+    final isDisabled = _isActionLoading || onTap == null;
     return InkWell(
-      onTap: _isActionLoading ? null : onTap,
+      onTap: isDisabled ? null : onTap,
       borderRadius: BorderRadius.circular(30),
       child: Container(
         width: 60,
@@ -504,7 +508,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
         ),
         child: Icon(
           icon,
-          color: _isActionLoading ? Colors.grey : const Color(0xFF00A651),
+          color: isDisabled ? Colors.grey : const Color(0xFF00A651),
           size: 28,
         ),
       ),
