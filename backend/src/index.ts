@@ -62,9 +62,28 @@ app.use("/api/consumer", consumerRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/media", mediaRoutes);
 
+import fs from "fs";
+
 // Health Check
 app.get("/", (req, res) => {
-  res.status(200).json({ error: false, data: { message: "Hoppa Backend API is running. (Version prisma-shared-v1)" } });
+  const envPath = path.join(__dirname, "../.env");
+  const envExists = fs.existsSync(envPath);
+  
+  let dbUrl = process.env.DATABASE_URL || "undefined";
+  if (dbUrl !== "undefined") {
+    dbUrl = dbUrl.replace(/:([^@:]+)@/, ":****@");
+  }
+
+  res.status(200).json({
+    error: false,
+    data: {
+      message: "Hoppa Backend API is running. (Version prisma-shared-v1)",
+      envExists,
+      envPath,
+      dbUrl,
+      cwd: process.cwd()
+    }
+  });
 });
 
 // Sunucuyu Başlat
