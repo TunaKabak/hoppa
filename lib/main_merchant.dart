@@ -9,6 +9,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:core_auth/core_auth.dart';
 import 'shared/core/services/language_provider.dart';
 import 'shared/core/l10n/app_localizations.dart';
 import 'shared/core/theme/app_theme.dart';
@@ -27,15 +28,41 @@ void main() async {
 
   if (!AppConfig.isProduction) {
     FirebaseAuth.instance.useAuthEmulator(AppConfig.localHostIp, 9300);
-    FirebaseFirestore.instance.useFirestoreEmulator(AppConfig.localHostIp, 8080);
+    FirebaseFirestore.instance.useFirestoreEmulator(
+      AppConfig.localHostIp,
+      8080,
+    );
   }
 
   await initializeDateFormatting('tr_TR', null);
   runApp(const riverpod.ProviderScope(child: MerchantApp()));
 }
 
-class MerchantApp extends StatelessWidget {
+class MerchantApp extends riverpod.ConsumerStatefulWidget {
   const MerchantApp({super.key});
+
+  @override
+  riverpod.ConsumerState<MerchantApp> createState() => _MerchantAppState();
+}
+
+class _MerchantAppState extends riverpod.ConsumerState<MerchantApp> {
+  @override
+  void initState() {
+    super.initState();
+    _wakeUpServer();
+  }
+
+  void _wakeUpServer() {
+    ref
+        .read(apiClientProvider)
+        .get('/health', requiresAuth: false)
+        .then((_) {
+          print("Server is up and running.");
+        })
+        .catchError((error) {
+          print("Error waking up server: $error");
+        });
+  }
 
   @override
   Widget build(BuildContext context) {

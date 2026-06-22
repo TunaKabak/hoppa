@@ -6,6 +6,7 @@ import 'package:hoppa/shared/models/campaign.dart';
 import 'package:hoppa/shared/models/business.dart';
 import 'package:hoppa/shared/models/address.dart';
 import 'package:hoppa/shared/core/utils/location_utils.dart';
+import 'package:hoppa/apps/consumer/repositories/consumer_shop_repository.dart';
 
 class CartItem {
   final BusinessProduct businessProduct;
@@ -56,10 +57,27 @@ class CartState {
 }
 
 class CartNotifier extends StateNotifier<CartState> {
-  CartNotifier() : super(CartState(items: []));
+  final Ref ref;
+
+  CartNotifier(this.ref) : super(CartState(items: []));
 
   void addToCart(BusinessProduct product) {
     final businessId = product.businessId;
+
+    // Dükkan aktiflik kontrolü (Double Lock)
+    final shopsAsync = ref.read(consumerShopsProvider);
+    final shops = shopsAsync.value ?? [];
+    if (shops.isNotEmpty) {
+      try {
+        final shop = shops.firstWhere((s) => s.id == businessId);
+        if (!shop.isOpen) {
+          throw Exception("Bu dükkan kapalı olduğu için sepetinize ürün eklenemez.");
+        }
+      } catch (_) {
+        // Eğer dükkan listede bulunamazsa devam edebilir veya hata fırlatılabilir.
+        // Şimdilik pas geçiyoruz.
+      }
+    }
 
     // ALTIN KURAL: Farklı dükkan kontrolü
     if (state.items.isNotEmpty && state.currentBusinessId != null) {
@@ -144,7 +162,7 @@ class CartNotifier extends StateNotifier<CartState> {
 
 // Riverpod Providers
 final cartProvider = StateNotifierProvider<CartNotifier, CartState>((ref) {
-  return CartNotifier();
+  return CartNotifier(ref);
 });
 
 final cartCampaignsProvider = StreamProvider<List<Campaign>>((ref) {
