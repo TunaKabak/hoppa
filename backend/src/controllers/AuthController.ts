@@ -28,9 +28,9 @@ export class AuthController {
       } else {
         res.status(500).json({ error: true, message: "OTP gönderimi sırasında bir hata oluştu." });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("[AuthController.requestOtp] Error:", error);
-      res.status(500).json({ error: true, message: "Sunucu hatası." });
+      res.status(500).json({ error: true, message: "Sunucu hatası: " + error.message });
     }
   }
 
@@ -79,9 +79,9 @@ export class AuthController {
           user: user
         }
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("[AuthController.verifyOtp] Error:", error);
-      res.status(500).json({ error: true, message: "Sunucu hatası." });
+      res.status(500).json({ error: true, message: "Sunucu hatası: " + error.message });
     }
   }
 

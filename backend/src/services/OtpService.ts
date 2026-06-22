@@ -51,9 +51,9 @@ export class OtpService {
       const message = `Hoppa doğrulama kodunuz: ${rawCode}. Bizi seçtiğiniz için teşekkürler!`;
       await this.smsProvider.sendSms(phoneNumber, message);
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error("[OtpService] OTP istek hatası:", error);
-      return false;
+      throw new Error("DB_ERROR: " + error.message);
     }
   }
 
