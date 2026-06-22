@@ -1,10 +1,9 @@
 import { Request, Response } from "express";
 import { OtpService } from "../services/OtpService";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../config/db";
 import { JwtUtils } from "../utils/JwtUtils";
 
 const otpService = new OtpService();
-const prisma = new PrismaClient();
 
 export class AuthController {
   

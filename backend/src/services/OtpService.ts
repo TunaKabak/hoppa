@@ -1,9 +1,7 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../config/db";
 import { ISmsProvider } from "../providers/sms/ISmsProvider";
 import { MockSmsProvider } from "../providers/sms/MockSmsProvider";
 import { RealSmsProvider } from "../providers/sms/RealSmsProvider";
-
-const prisma = new PrismaClient();
 
 export class OtpService {
   private smsProvider: ISmsProvider;

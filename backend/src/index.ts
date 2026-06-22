@@ -1,9 +1,9 @@
+import path from "path";
 import dotenv from "dotenv";
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, "../.env") });
 
 import express from "express";
 import cors from "cors";
-import path from "path";
 
 // Clean up environment variables (strip quotes) before importing controllers/services
 if (process.env.DATABASE_URL) {
