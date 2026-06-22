@@ -1,6 +1,30 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import express from "express";
 import cors from "cors";
 import path from "path";
+
+// Clean up environment variables (strip quotes) before importing controllers/services
+if (process.env.DATABASE_URL) {
+  process.env.DATABASE_URL = process.env.DATABASE_URL.replace(/^["']|["']$/g, "");
+}
+if (process.env.DIRECT_URL) {
+  process.env.DIRECT_URL = process.env.DIRECT_URL.replace(/^["']|["']$/g, "");
+}
+if (process.env.JWT_SECRET) {
+  process.env.JWT_SECRET = process.env.JWT_SECRET.replace(/^["']|["']$/g, "");
+}
+if (process.env.SMS_PROVIDER_MODE) {
+  process.env.SMS_PROVIDER_MODE = process.env.SMS_PROVIDER_MODE.replace(/^["']|["']$/g, "");
+}
+if (process.env.TEST_PHONE_NUMBERS) {
+  process.env.TEST_PHONE_NUMBERS = process.env.TEST_PHONE_NUMBERS.replace(/^["']|["']$/g, "");
+}
+if (process.env.TEST_OTP_CODE) {
+  process.env.TEST_OTP_CODE = process.env.TEST_OTP_CODE.replace(/^["']|["']$/g, "");
+}
+
 import { AuthController } from "./controllers/AuthController";
 import { MerchantAuthController } from "./controllers/MerchantAuthController";
 import merchantRoutes from "./routes/merchantRoutes";
