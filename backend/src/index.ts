@@ -64,7 +64,7 @@ app.use("/api/media", mediaRoutes);
 
 // Health Check
 app.get("/", (req, res) => {
-  res.status(200).json({ error: false, data: { message: "Hoppa Backend API is running." } });
+  res.status(200).json({ error: false, data: { message: "Hoppa Backend API is running. (Version dotenv-v1)" } });
 });
 
 // Sunucuyu Başlat
