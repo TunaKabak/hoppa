@@ -1,12 +1,8 @@
-// Capture raw environment variables before dotenv config
-const rawDbUrl = process.env.DATABASE_URL || "undefined";
-const rawDirectUrl = process.env.DIRECT_URL || "undefined";
-
 import path from "path";
 import dotenv from "dotenv";
 dotenv.config({ path: path.join(__dirname, "../.env") });
 
-import express from "express";
+import express, { Request, Response } from "express";
 import cors from "cors";
 
 // Clean up environment variables (strip quotes) before importing controllers/services
@@ -66,46 +62,8 @@ app.use("/api/consumer", consumerRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/media", mediaRoutes);
 
-import fs from "fs";
-
-// Health Check
-app.get("/", (req, res) => {
-  const envPath = path.join(__dirname, "../.env");
-  const envExists = fs.existsSync(envPath);
-  
-  let safeRawDb = rawDbUrl;
-  if (safeRawDb !== "undefined") {
-    safeRawDb = safeRawDb.replace(/:([^@:]+)@/, ":****@");
-  }
-
-  let safeRawDirect = rawDirectUrl;
-  if (safeRawDirect !== "undefined") {
-    safeRawDirect = safeRawDirect.replace(/:([^@:]+)@/, ":****@");
-  }
-
-  let dbUrl = process.env.DATABASE_URL || "undefined";
-  if (dbUrl !== "undefined") {
-    dbUrl = dbUrl.replace(/:([^@:]+)@/, ":****@");
-  }
-
-  let directUrl = process.env.DIRECT_URL || "undefined";
-  if (directUrl !== "undefined") {
-    directUrl = directUrl.replace(/:([^@:]+)@/, ":****@");
-  }
-
-  res.status(200).json({
-    error: false,
-    data: {
-      message: "Hoppa Backend API is running. (Version env-unquoted-v2)",
-      envExists,
-      envPath,
-      dbUrl,
-      directUrl,
-      safeRawDb,
-      safeRawDirect,
-      cwd: process.cwd()
-    }
-  });
+app.get('/health', (req: Request, res: Response) => {
+    res.status(200).json({ status: "OK", timestamp: new Date() });
 });
 
 // Sunucuyu Başlat
