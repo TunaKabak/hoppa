@@ -227,7 +227,11 @@ model Order {
   status          OrderStatus @default(PENDING)
   customerNote    String?     // Müşterinin sipariş veya kurye için ekleyeceği not
   
+  paymentMethod   PaymentMethod @default(CASH_ON_DELIVERY)
+  paymentStatus   PaymentStatus @default(PENDING)
+  
   items           OrderItem[]
+  paymentTransactions PaymentTransaction[]
 
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
@@ -243,4 +247,44 @@ model OrderItem {
   
   quantity    Int
   unitPrice   Decimal  @db.Decimal(10, 2)
+}
+
+// Ödeme Yöntemleri
+enum PaymentMethod {
+  CASH_ON_DELIVERY
+  CARD_ON_DELIVERY
+  ONLINE_PAYMENT
+}
+
+// Ödeme Durumları
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+// Para Birimleri
+enum Currency {
+  TRY
+  GBP
+  EUR
+  USD
+}
+
+// Ödeme İşlemleri / Logları
+model PaymentTransaction {
+  id             String        @id @default(uuid())
+  orderId        String
+  order          Order         @relation(fields: [orderId], references: [id])
+  amount         Decimal       @db.Decimal(10, 2)
+  currency       Currency      @default(TRY)
+  exchangeRate   Decimal?      @db.Decimal(10, 4)
+  provider       String?       // Örn: CARDPLUS, PAYTR, STRIPE
+  routingType    String?       // Örn: BIN tabanlı yönlendirme tipi
+  status         PaymentStatus @default(PENDING)
+  providerTxId   String?       // Sağlayıcıdan dönen işlem ID'si
+  
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 }

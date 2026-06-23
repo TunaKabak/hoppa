@@ -4,6 +4,7 @@ import 'package:core_network/core_network.dart';
 import 'package:hoppa/apps/consumer/cart/cart_provider.dart';
 import 'package:hoppa/apps/consumer/repositories/consumer_order_repository.dart';
 import 'package:hoppa/shared/models/address.dart';
+import 'package:hoppa/apps/consumer/checkout/three_d_secure_page.dart';
 
 class PaymentPage extends ConsumerStatefulWidget {
   final Address deliveryAddress;
@@ -26,6 +27,13 @@ class PaymentPage extends ConsumerStatefulWidget {
 class _PaymentPageState extends ConsumerState<PaymentPage> {
   final _noteController = TextEditingController();
 
+  final _cardNumberController = TextEditingController();
+  final _cardExpiryController = TextEditingController();
+  final _cardCVCController = TextEditingController();
+  final _cardHolderController = TextEditingController();
+  
+  String _cardLogo = '';
+
   String _paymentMethod = 'cash_on_delivery';
   bool _isLoading = false;
   bool _dontRingBell = false;
@@ -36,7 +44,31 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
   @override
   void dispose() {
     _noteController.dispose();
+    _cardNumberController.dispose();
+    _cardExpiryController.dispose();
+    _cardCVCController.dispose();
+    _cardHolderController.dispose();
     super.dispose();
+  }
+
+  void _updateCardLogo(String cardNumber) {
+    final cleanNumber = cardNumber.replaceAll(' ', '');
+    if (cleanNumber.length >= 6) {
+      final bin = cleanNumber.substring(0, 6);
+      if (['454360', '543771', '402235'].contains(bin)) {
+        setState(() => _cardLogo = '💳 Cardplus');
+      } else if (['432042', '516888', '540061'].contains(bin)) {
+        setState(() => _cardLogo = '💳 PAYTR');
+      } else if (cleanNumber.startsWith('4')) {
+        setState(() => _cardLogo = '💳 Visa');
+      } else if (cleanNumber.startsWith('5')) {
+        setState(() => _cardLogo = '💳 MasterCard');
+      } else {
+        setState(() => _cardLogo = '💳 Kart');
+      }
+    } else {
+      setState(() => _cardLogo = '');
+    }
   }
 
   void _submitOrder() async {
@@ -60,6 +92,27 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
 
       String? addressId = widget.isPickUp ? null : widget.deliveryAddress.id;
 
+      Map<String, dynamic>? cardDetails;
+      if (_paymentMethod == 'online_payment') {
+        if (_cardNumberController.text.isEmpty ||
+            _cardExpiryController.text.isEmpty ||
+            _cardCVCController.text.isEmpty ||
+            _cardHolderController.text.isEmpty) {
+          throw Exception("Lütfen kart bilgilerini eksiksiz girin.");
+        }
+        final expiryParts = _cardExpiryController.text.split('/');
+        if (expiryParts.length != 2) {
+          throw Exception("Son kullanma tarihi AA/YY formatında olmalıdır.");
+        }
+        cardDetails = {
+          'cardNumber': _cardNumberController.text,
+          'expiryMonth': expiryParts[0],
+          'expiryYear': expiryParts[1],
+          'cvc': _cardCVCController.text,
+          'cardHolderName': _cardHolderController.text,
+        };
+      }
+
       final orderData = {
         'shopId': cartState.currentBusinessId,
         'items': cartState.items.map((item) => {
@@ -69,16 +122,28 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
         if (addressId != null) 'addressId': addressId,
         'deliveryAddress': cleanAddress,
         'notes': orderNote,
+        'paymentMethod': _paymentMethod.toUpperCase(),
+        if (cardDetails != null) 'cardDetails': cardDetails,
       };
 
-      await orderRepo.createOrder(orderData);
+      final result = await orderRepo.createOrder(orderData);
+      final paymentUrl = result['paymentUrl'] as String?;
 
       // Clear cart locally
       cartNotifier.clearCart();
 
       if (mounted) {
-        Navigator.popUntil(context, (route) => route.isFirst);
-        _showSuccessDialog();
+        if (paymentUrl != null && paymentUrl.isNotEmpty) {
+           Navigator.push(
+             context,
+             MaterialPageRoute(
+               builder: (context) => ThreeDSecurePage(paymentUrl: paymentUrl),
+             ),
+           );
+        } else {
+           Navigator.popUntil(context, (route) => route.isFirst);
+           _showSuccessDialog();
+        }
       }
     } catch (e) {
       String errorMsg = e.toString();
@@ -272,7 +337,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                           icon: Icons.money_rounded,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: _buildPaymentCard(
                           id: 'card_on_delivery',
@@ -282,52 +347,17 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                           icon: Icons.credit_card_rounded,
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildPaymentCard(
+                          id: 'online_payment',
+                          title: 'Online Kart',
+                          icon: Icons.language,
+                        ),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  Opacity(
-                    opacity: 0.5,
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.shade300),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.language, color: Colors.grey),
-                          const SizedBox(width: 12),
-                          const Text(
-                            "Online Ödeme",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.grey,
-                            ),
-                          ),
-                          const Spacer(),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[300],
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: const Text(
-                              "Çok Yakında",
-                              style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black54),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  if (_paymentMethod == 'online_payment') _buildCreditCardForm(),
 
                   const SizedBox(height: 24),
 
@@ -720,6 +750,111 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildCreditCardForm() {
+    return Container(
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: kPrimaryColor.withOpacity(0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: kPrimaryColor.withOpacity(0.05),
+            blurRadius: 10,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                "Kart Bilgileri",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              if (_cardLogo.isNotEmpty)
+                Text(
+                  _cardLogo,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: kPrimaryColor,
+                    fontSize: 14,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _cardNumberController,
+            keyboardType: TextInputType.number,
+            maxLength: 19,
+            onChanged: _updateCardLogo,
+            decoration: InputDecoration(
+              labelText: "Kart Numarası",
+              counterText: "",
+              prefixIcon: const Icon(Icons.credit_card),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _cardExpiryController,
+                  keyboardType: TextInputType.datetime,
+                  maxLength: 5,
+                  decoration: InputDecoration(
+                    labelText: "AA/YY",
+                    counterText: "",
+                    prefixIcon: const Icon(Icons.calendar_today),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  controller: _cardCVCController,
+                  keyboardType: TextInputType.number,
+                  maxLength: 3,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: "CVC",
+                    counterText: "",
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _cardHolderController,
+            textCapitalization: TextCapitalization.words,
+            decoration: InputDecoration(
+              labelText: "Kart Üzerindeki İsim",
+              prefixIcon: const Icon(Icons.person_outline),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

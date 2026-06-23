@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
-import { PrismaClient, OrderStatus } from "@prisma/client";
+import { PrismaClient, OrderStatus, PaymentMethod, PaymentStatus } from "@prisma/client";
+import { PaymentRoutingService } from "../services/PaymentRoutingService";
 
 const prisma = new PrismaClient();
 
@@ -14,7 +15,7 @@ export class OrderController {
         return res.status(401).json({ error: true, message: "Kullanıcı bilgisi eksik veya yetkisiz." });
       }
 
-      const { shopId, items, deliveryAddress, addressId, notes } = req.body;
+      const { shopId, items, deliveryAddress, addressId, notes, paymentMethod, cardDetails } = req.body;
 
       if (!shopId) {
         return res.status(400).json({ error: true, message: "Dükkan bilgisi (shopId) zorunludur." });
@@ -126,7 +127,9 @@ export class OrderController {
       }
 
       // 6. Prisma `$transaction` ile sipariş ve kalemleri kaydet
-      const order = await prisma.$transaction(async (tx) => {
+      const transactionResult = await prisma.$transaction(async (tx) => {
+        const method = paymentMethod || "CASH_ON_DELIVERY";
+        
         const createdOrder = await tx.order.create({
           data: {
             consumerId,
@@ -136,7 +139,9 @@ export class OrderController {
             totalAmount,
             deliveryFee: 0,
             status: "PENDING",
-            customerNote: notes || null
+            customerNote: notes || null,
+            paymentMethod: method,
+            paymentStatus: "PENDING"
           }
         });
 
@@ -155,12 +160,41 @@ export class OrderController {
           data: orderItemsData
         });
 
-        return createdOrder;
+        let paymentUrl = undefined;
+
+        if (method === "ONLINE_PAYMENT") {
+           if (!cardDetails) {
+             throw new Error("Online ödeme için kart bilgileri gereklidir.");
+           }
+
+           const routeResponse = await PaymentRoutingService.routePayment({
+             orderId: createdOrder.id,
+             amount: Number(totalAmount),
+             cardDetails
+           });
+
+           await tx.paymentTransaction.create({
+             data: {
+               orderId: createdOrder.id,
+               amount: routeResponse.amount,
+               currency: routeResponse.currency,
+               exchangeRate: routeResponse.exchangeRate,
+               provider: routeResponse.provider,
+               routingType: routeResponse.routingType,
+               status: "PENDING",
+               providerTxId: routeResponse.providerTxId
+             }
+           });
+
+           paymentUrl = routeResponse.paymentUrl;
+        }
+
+        return { createdOrder, paymentUrl };
       });
 
       // Oluşturulan siparişi detaylıca döndür
       const fullOrder = await prisma.order.findUnique({
-        where: { id: order.id },
+        where: { id: transactionResult.createdOrder.id },
         include: {
           shop: { select: { name: true, imageUrl: true } },
           items: {
@@ -171,7 +205,11 @@ export class OrderController {
         }
       });
 
-      return res.status(201).json({ error: false, data: fullOrder });
+      return res.status(201).json({ 
+        error: false, 
+        data: fullOrder,
+        paymentUrl: transactionResult.paymentUrl
+      });
     } catch (error: any) {
       return res.status(500).json({ error: true, message: error.message });
     }
