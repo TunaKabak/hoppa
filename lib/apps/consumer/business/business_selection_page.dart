@@ -20,6 +20,9 @@ class BusinessSelectionPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // İzlenecek lifecycle provider'ı çağır
+    ref.watch(shopLifecyclePollingProvider);
+    
     const kPrimaryColor = Color(0xFF00A651);
 
     return Scaffold(
@@ -143,6 +146,7 @@ class BusinessSelectionPage extends ConsumerWidget {
               // --- İŞLETME LİSTESİ ---
               Expanded(
                 child: ref.watch(consumerShopsProvider).when(
+                  skipLoadingOnReload: true,
                   loading: () => const Center(child: CircularProgressIndicator()),
                   error: (err, stack) => const Center(child: Text("Dükkanlar yüklenirken bir hata oluştu. Lütfen tekrar deneyin.")),
                   data: (allBusinesses) {
@@ -256,12 +260,17 @@ class BusinessSelectionPage extends ConsumerWidget {
                       });
                     }
 
-                    return ListView.builder(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      itemCount: businesses.length,
+                    return RefreshIndicator(
+                      onRefresh: () async {
+                        ref.invalidate(consumerShopsProvider);
+                        await ref.read(consumerShopsProvider.future);
+                      },
+                      child: ListView.builder(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        itemCount: businesses.length,
                       itemBuilder: (context, index) {
                         final business = businesses[index];
 
@@ -290,6 +299,7 @@ class BusinessSelectionPage extends ConsumerWidget {
                           distanceText,
                         );
                       },
+                    ),
                     );
                   },
                 ),
@@ -334,7 +344,7 @@ class BusinessSelectionPage extends ConsumerWidget {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withAlpha(13),
                 blurRadius: 10,
                 offset: const Offset(0, 2),
               ),
@@ -405,7 +415,7 @@ class BusinessSelectionPage extends ConsumerWidget {
                       border: Border.all(color: Colors.white, width: 2),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withAlpha(26),
                           blurRadius: 4,
                           offset: const Offset(0, 2),
                         ),
