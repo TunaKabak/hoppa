@@ -64,6 +64,7 @@ class ConsumerShopRepository {
       String subCategoryName = 'Tümü';
 
       if (json['category'] != null) {
+        print("DEBUG CATEGORY: ${json['category']}");
         final cat = json['category'];
         if (cat['parent'] != null) {
           categoryName = cat['parent']['name'] as String? ?? 'Genel';
@@ -71,6 +72,8 @@ class ConsumerShopRepository {
         } else {
           categoryName = cat['name'] as String? ?? 'Genel';
         }
+      } else {
+        print("DEBUG CATEGORY: null");
       }
 
       final productMap = {

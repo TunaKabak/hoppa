@@ -95,7 +95,33 @@ export class ConsumerShopController {
         orderBy: { createdAt: 'desc' }
       });
 
-      return res.status(200).json({ error: false, data: products });
+      // Enrich with GlobalProduct categories if category is missing
+      const barcodes = products.map(p => p.barcode).filter(Boolean) as string[];
+      let globalProducts: any[] = [];
+      if (barcodes.length > 0) {
+        globalProducts = await prisma.globalProduct.findMany({
+          where: { barcode: { in: barcodes } }
+        });
+      }
+
+      const enrichedProducts = products.map(p => {
+        let catObj = p.category as any;
+        if (!catObj && p.barcode) {
+          const gp = globalProducts.find(g => g.barcode === p.barcode);
+          if (gp) {
+            catObj = {
+              name: gp.subCategory || gp.category,
+              parent: gp.subCategory ? { name: gp.category } : null
+            };
+          }
+        }
+        return {
+          ...p,
+          category: catObj
+        };
+      });
+
+      return res.status(200).json({ error: false, data: enrichedProducts });
     } catch (error: any) {
       return res.status(500).json({ error: true, message: error.message });
     }
