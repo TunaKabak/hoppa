@@ -113,6 +113,7 @@ model Shop {
 
   // Çalışma Saatleri ve Finansal
   workingHours          Json?
+  deliveryTime          String?               // Örn: "30-45 dk"
   minOrderAmount        Decimal               @db.Decimal(10, 2) @default(150.0)
   minimumOrderAmount    Float                 @default(150.0)
   deliveryPricingType   DeliveryPricingType   @default(FIXED)

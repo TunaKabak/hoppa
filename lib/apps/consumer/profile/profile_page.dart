@@ -79,13 +79,13 @@ class ProfilePage extends ConsumerWidget {
                   gradient: LinearGradient(
                     colors: [
                       theme.primaryColor,
-                      theme.primaryColor.withOpacity(0.8),
+                      theme.primaryColor.withValues(alpha: 0.8),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: theme.primaryColor.withOpacity(0.3),
+                      color: theme.primaryColor.withValues(alpha: 0.3),
                       blurRadius: 10,
                       offset: const Offset(0, 5),
                     ),
@@ -145,7 +145,7 @@ class ProfilePage extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 10,
                     ),
                   ],
@@ -154,7 +154,7 @@ class ProfilePage extends ConsumerWidget {
                   children: [
                     CircleAvatar(
                       radius: 30,
-                      backgroundColor: theme.primaryColor.withOpacity(0.1),
+                      backgroundColor: theme.primaryColor.withValues(alpha: 0.1),
                       child: Icon(
                         Icons.person,
                         size: 30,
@@ -202,7 +202,7 @@ class ProfilePage extends ConsumerWidget {
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
+                    color: Colors.blue.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(

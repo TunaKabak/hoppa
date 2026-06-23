@@ -207,7 +207,7 @@ class _CartPageState extends ConsumerState<CartPage> {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withValues(alpha: 0.1),
                         blurRadius: 20,
                         offset: const Offset(0, -5),
                       ),
@@ -475,7 +475,7 @@ class _CartPageState extends ConsumerState<CartPage> {
                   IconButton(
                     icon: Icon(
                       Icons.highlight_remove,
-                      color: Colors.red.withOpacity(0.7),
+                      color: Colors.red.withValues(alpha: 0.7),
                     ),
                     tooltip: "$key grubunu sil",
                     padding: EdgeInsets.zero,
@@ -580,7 +580,7 @@ class _CartPageState extends ConsumerState<CartPage> {
           Icon(
             Icons.shopping_cart_outlined,
             size: 100,
-            color: colorScheme.secondary.withOpacity(0.2),
+            color: colorScheme.secondary.withValues(alpha: 0.2),
           ),
           const SizedBox(height: 20),
           const Text(

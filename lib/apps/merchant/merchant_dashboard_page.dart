@@ -1,9 +1,8 @@
 import 'dart:async'; // StreamSubscription için
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:hoppa/shared/core/services/order_service.dart';
 import 'package:hoppa/shared/models/order_status.dart'; // Restored
+import 'package:hoppa/shared/models/order.dart' as model;
 import 'package:hoppa/shared/core/services/business_service.dart';
 import 'package:hoppa/shared/core/services/product_service.dart';
 import 'package:hoppa/apps/merchant/merchant_order_list_page.dart';
@@ -11,6 +10,7 @@ import 'package:hoppa/apps/merchant/merchant_main_layout.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hoppa/apps/merchant/providers/merchant_api_providers.dart';
 import 'package:hoppa/apps/merchant/merchant_settings_page.dart';
+import 'package:hoppa/apps/merchant/repositories/merchant_order_repository.dart';
 
 class MerchantDashboardPage extends ConsumerStatefulWidget {
   final String businessId;
@@ -23,34 +23,33 @@ class MerchantDashboardPage extends ConsumerStatefulWidget {
 
 class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
     with SingleTickerProviderStateMixin {
-  final OrderService _orderService = OrderService();
-  late StreamSubscription<QuerySnapshot> _orderSubscription;
   final AudioPlayer _audioPlayer = AudioPlayer();
   late AnimationController _flashController;
   late Animation<Color?> _flashAnimation;
+  Timer? _pollingTimer;
 
   // İlk açılışta mevcut siparişleri bildirim olarak saymamak için bayrak
   bool _isFirstListen = true;
   String? _businessName;
   final BusinessService _businessService = BusinessService();
 
-  // ... (existing variables)
-  late Stream<QuerySnapshot> _dailyOrdersStream;
-
   @override
   void initState() {
     super.initState();
     _fetchBusinessDetails();
-    _initMerchantNotificationListener();
     _initFlashAnimation();
-    _dailyOrdersStream = _orderService.getDailyOrdersStream(
-      businessId: widget.businessId,
-    );
+    
+    // Polling orders every 15 seconds for notifications
+    _pollingTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      if (mounted) {
+        ref.invalidate(merchantOrdersProvider);
+      }
+    });
   }
 
   @override
   void dispose() {
-    _orderSubscription.cancel();
+    _pollingTimer?.cancel();
     _flashController.dispose();
     _audioPlayer.dispose();
     super.dispose();
@@ -77,7 +76,7 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
 
     _flashAnimation = ColorTween(
       begin: Colors.transparent,
-      end: Colors.red.withOpacity(0.3),
+      end: Colors.red.withValues(alpha: 0.3),
     ).animate(_flashController);
 
     _flashController.addStatusListener((status) {
@@ -87,49 +86,48 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
     });
   }
 
-  // MARKET BİLDİRİM DİNLEYİCİSİ
-  void _initMerchantNotificationListener() {
-    _orderSubscription = FirebaseFirestore.instance
-        .collection('orders')
-        .where('business_id', isEqualTo: widget.businessId)
-        .where('status', isEqualTo: OrderStatus.pending.value)
-        .snapshots()
-        .listen((snapshot) {
-          if (_isFirstListen) {
-            _isFirstListen = false;
-            return;
-          }
+  void _handleNewOrdersNotification(List<model.Order> previous, List<model.Order> next) {
+    if (_isFirstListen) {
+      _isFirstListen = false;
+      return;
+    }
 
-          for (var change in snapshot.docChanges) {
-            if (change.type == DocumentChangeType.added) {
-              _playSound();
-              _flashController.forward(from: 0);
+    final prevPendingIds = previous
+        .where((o) => o.status == OrderStatus.pending.value)
+        .map((o) => o.id)
+        .toSet();
 
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text(
-                      "YENİ SİPARİŞ GELDİ!",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    backgroundColor: Colors.red,
-                    action: SnackBarAction(
-                      label: "GİT",
-                      textColor: Colors.white,
-                      onPressed: () => _navigateToList(
-                        context,
-                        filter: OrderStatus.pending.value,
-                      ),
-                    ),
-                  ),
-                );
-              }
-            }
-          }
-        });
+    final newPendingOrders = next
+        .where((o) => o.status == OrderStatus.pending.value && !prevPendingIds.contains(o.id))
+        .toList();
+
+    if (newPendingOrders.isNotEmpty) {
+      _playSound();
+      _flashController.forward(from: 0);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              "YENİ SİPARİŞ GELDİ!",
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: "GİT",
+              textColor: Colors.white,
+              onPressed: () => _navigateToList(
+                context,
+                filter: OrderStatus.pending.value,
+              ),
+            ),
+          ),
+        );
+      }
+    }
   }
 
   void _playSound() async {
@@ -193,6 +191,17 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
     final theme = Theme.of(context);
     final shopState = ref.watch(shopControllerProvider);
     final isShopOpen = shopState.value?.isActive ?? false;
+
+    // Listen for new orders to show notification
+    ref.listen<AsyncValue<List<model.Order>>>(
+      merchantOrdersProvider,
+      (previous, next) {
+        if (next.hasValue) {
+          final previousData = previous?.value ?? [];
+          _handleNewOrdersNotification(previousData, next.value!);
+        }
+      },
+    );
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -262,30 +271,36 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
   }
 
   Widget _buildDashboardContent(ThemeData theme) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: _dailyOrdersStream,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    final ordersAsync = ref.watch(merchantOrdersProvider);
 
-        final orders = snapshot.data?.docs ?? [];
+    return ordersAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(child: Text("Hata: $error")),
+      data: (allOrders) {
+        // Dashboard metric calculations (Daily orders can be filtered here if needed, 
+        // for now we'll just show all orders since backend usually returns relevant orders 
+        // or we can filter by today. Let's filter by today to match previous behavior.)
+        final now = DateTime.now();
+        final orders = allOrders.where((o) {
+           final date = o.createdAt;
+           return date.year == now.year && date.month == now.month && date.day == now.day;
+        }).toList();
 
         // Calculations
         final pendingCount = orders
-            .where((d) => d['status'] == OrderStatus.pending.value)
+            .where((d) => d.status == OrderStatus.pending.value)
             .length;
         final activeCount = orders
             .where(
               (d) =>
-                  d['status'] == OrderStatus.pending.value ||
-                  d['status'] == OrderStatus.preparing.value ||
-                  d['status'] == OrderStatus.onWay.value,
+                  d.status == OrderStatus.pending.value ||
+                  d.status == OrderStatus.preparing.value ||
+                  d.status == OrderStatus.onWay.value,
             )
             .length;
 
         final cancelledCount = orders
-            .where((d) => d['status'] == OrderStatus.cancelled.value)
+            .where((d) => d.status == OrderStatus.cancelled.value)
             .length;
         final totalCount = orders.length;
         final cancelRate = totalCount > 0
@@ -293,9 +308,9 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
             : 0.0;
 
         final totalRevenue = orders.fold<double>(0.0, (sum, doc) {
-          final s = doc['status'];
+          final s = doc.status;
           if (s != OrderStatus.cancelled.value) {
-            return sum + (doc['total_amount'] ?? 0.0);
+            return sum + doc.totalAmount;
           }
           return sum;
         });
@@ -378,7 +393,7 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
                     context,
                     title: "Hazırlanıyor",
                     count:
-                        "${orders.where((d) => d['status'] == 'preparing').length}",
+                        "${orders.where((d) => d.status == 'preparing').length}",
                     icon: Icons.soup_kitchen,
                     color: Colors.orange,
                     onTap: () => _navigateToList(
@@ -390,7 +405,7 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
                     context,
                     title: "Yolda",
                     count:
-                        "${orders.where((d) => d['status'] == 'onWay').length}",
+                        "${orders.where((d) => d.status == 'onWay').length}",
                     icon: Icons.delivery_dining,
                     color: Colors.purple,
                     onTap: () => _navigateToList(
@@ -402,7 +417,7 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
                     context,
                     title: "Teslim",
                     count:
-                        "${orders.where((d) => d['status'] == 'delivered').length}",
+                        "${orders.where((d) => d.status == 'delivered').length}",
                     icon: Icons.check_circle,
                     color: Colors.green,
                     onTap: () => _navigateToList(
@@ -423,9 +438,9 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [
@@ -441,7 +456,7 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
           ),
           Text(
             title,
-            style: TextStyle(fontSize: 12, color: color.withOpacity(0.8)),
+            style: TextStyle(fontSize: 12, color: color.withValues(alpha: 0.8)),
           ),
         ],
       ),
@@ -459,7 +474,7 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.red.withOpacity(0.4),
+              color: Colors.red.withValues(alpha: 0.4),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -470,7 +485,7 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -628,9 +643,9 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.3), width: 1),
+          border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -658,7 +673,7 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
               title,
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: color.withOpacity(0.8),
+                color: color.withValues(alpha: 0.8),
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
               ),

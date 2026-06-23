@@ -244,7 +244,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: kPrimaryColor.withOpacity(0.1),
+                color: kPrimaryColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(Icons.check_rounded, color: kPrimaryColor, size: 50),
@@ -490,7 +490,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.02),
+                          color: Colors.black.withValues(alpha: 0.02),
                           blurRadius: 10,
                         ),
                       ],
@@ -685,7 +685,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.02),
+                          color: Colors.black.withValues(alpha: 0.02),
                           blurRadius: 10,
                         ),
                       ],
@@ -698,7 +698,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: kPrimaryColor.withOpacity(0.1),
+                                color: kPrimaryColor.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Icon(
@@ -768,7 +768,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 20,
                   offset: const Offset(0, -5),
                 ),
@@ -783,7 +783,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                   backgroundColor: kPrimaryColor,
                   foregroundColor: Colors.white,
                   elevation: 5,
-                  shadowColor: kPrimaryColor.withOpacity(0.4),
+                  shadowColor: kPrimaryColor.withValues(alpha: 0.4),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -863,7 +863,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
         duration: const Duration(milliseconds: 200),
         padding: EdgeInsets.symmetric(vertical: isSubOption ? 12 : 20, horizontal: 12),
         decoration: BoxDecoration(
-          color: isSelected ? kPrimaryColor.withOpacity(isSubOption ? 0.08 : 0.05) : Colors.white,
+          color: isSelected ? kPrimaryColor.withValues(alpha: isSubOption ? 0.08 : 0.05) : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected ? kPrimaryColor : Colors.grey.shade200,
@@ -917,10 +917,10 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: kPrimaryColor.withOpacity(0.3)),
+        border: Border.all(color: kPrimaryColor.withValues(alpha: 0.3)),
         boxShadow: [
           BoxShadow(
-            color: kPrimaryColor.withOpacity(0.05),
+            color: kPrimaryColor.withValues(alpha: 0.05),
             blurRadius: 10,
           ),
         ],

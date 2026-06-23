@@ -1,44 +1,36 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
-import 'package:hoppa/apps/consumer/services/customer_auth_service.dart';
-import 'package:hoppa/shared/core/services/order_service.dart';
-import 'package:hoppa/shared/core/widgets/animated_sliding_toggle.dart'; // YENİ BİLEŞEN
+import 'package:hoppa/apps/consumer/repositories/consumer_order_repository.dart';
+import 'package:hoppa/shared/core/widgets/animated_sliding_toggle.dart';
 import 'package:hoppa/shared/models/order.dart' as model;
-import 'package:hoppa/shared/models/order_status.dart'; // Added import
+import 'package:hoppa/shared/models/order_status.dart';
 import 'package:hoppa/apps/consumer/orders/order_detail_page.dart';
 
-class OrderHistoryPage extends StatefulWidget {
+class OrderHistoryPage extends ConsumerStatefulWidget {
   const OrderHistoryPage({super.key});
 
   @override
-  State<OrderHistoryPage> createState() => _OrderHistoryPageState();
+  ConsumerState<OrderHistoryPage> createState() => _OrderHistoryPageState();
 }
 
-class _OrderHistoryPageState extends State<OrderHistoryPage> {
+class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage> {
   // Filtreleme Durumu: 0 = Aktif, 1 = Geçmiş
   int _selectedFilterIndex = 0;
-
-  // Stream'i hafızada tutmak için değişken
-  late Stream<QuerySnapshot> _ordersStream;
 
   @override
   void initState() {
     super.initState();
-    final auth = Provider.of<CustomerAuthService>(context, listen: false);
-    final userId = auth.currentUser?.uid;
-
-    if (userId != null) {
-      _ordersStream = OrderService().getUserOrders(userId);
-    } else {
-      _ordersStream = const Stream.empty();
-    }
+    // Refresh the orders when page is opened
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.invalidate(consumerOrdersProvider);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     const kPrimaryColor = Color(0xFF00A651);
+    final ordersAsync = ref.watch(consumerOrdersProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
@@ -72,24 +64,12 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
 
           // --- SİPARİŞ LİSTESİ ---
           Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: _ordersStream,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                if (snapshot.hasError) {
-                  return Center(child: Text("Hata: ${snapshot.error}"));
-                }
-
-                final allOrders = snapshot.data?.docs ?? [];
-
-                final filteredOrders = allOrders.where((doc) {
-                  final statusStr =
-                      (doc.data() as Map<String, dynamic>)['status'];
-                  final s = OrderStatus.fromString(statusStr ?? 'pending');
-
+            child: ordersAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, stack) => Center(child: Text("Hata: $err")),
+              data: (allOrders) {
+                final filteredOrders = allOrders.where((order) {
+                  final s = OrderStatus.fromString(order.status);
                   if (_selectedFilterIndex == 0) {
                     return s.isActive;
                   } else {
@@ -143,16 +123,15 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
 }
 
 class _OrderCard extends StatelessWidget {
-  final DocumentSnapshot order;
+  final model.Order order;
 
   const _OrderCard({required this.order});
 
   @override
   Widget build(BuildContext context) {
-    final data = order.data() as Map<String, dynamic>;
-    final status = data['status'] ?? 'pending';
-    final items = data['items'] as List<dynamic>;
-    final date = (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now();
+    final status = order.status;
+    final items = order.items;
+    final date = order.createdAt;
     final formattedDate = DateFormat(
       'dd MMM yyyy, HH:mm',
       'tr_TR',
@@ -164,7 +143,7 @@ class _OrderCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -179,7 +158,7 @@ class _OrderCard extends StatelessWidget {
             _buildStatusBadge(status),
             const Spacer(),
             Text(
-              "${(data['total_amount'] as num).toStringAsFixed(2)} ₺",
+              "${order.totalAmount.toStringAsFixed(2)} ₺",
               style: const TextStyle(
                 fontWeight: FontWeight.w900,
                 fontSize: 16,
@@ -224,7 +203,7 @@ class _OrderCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            "${item['quantity'] is double ? (item['quantity'] as double).toStringAsFixed(1) : item['quantity']}x",
+                            "${item.quantity}x",
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               color: Color(0xFF00A651),
@@ -235,12 +214,12 @@ class _OrderCard extends StatelessWidget {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            item['name'],
+                            item.name.isNotEmpty ? item.name : "Bilinmeyen Ürün",
                             style: const TextStyle(fontSize: 14),
                           ),
                         ),
                         Text(
-                          "${item['price']} ₺",
+                          "${item.price} ₺",
                           style: const TextStyle(
                             fontSize: 14,
                             color: Colors.grey,
@@ -251,7 +230,7 @@ class _OrderCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                if (data['delivery_time'] != null)
+                if (order.deliveryTime.isNotEmpty)
                   Row(
                     children: [
                       const Icon(
@@ -261,7 +240,7 @@ class _OrderCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        "Teslimat: ${data['delivery_time']}",
+                        "Teslimat: ${order.deliveryTime}",
                         style: const TextStyle(
                           fontSize: 12,
                           color: Colors.grey,
@@ -270,8 +249,7 @@ class _OrderCard extends StatelessWidget {
                     ],
                   ),
 
-                if (data['user_address'] != null &&
-                    data['user_address'].toString().contains('Not:'))
+                if (order.orderNote.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 8.0),
                     child: Container(
@@ -286,7 +264,7 @@ class _OrderCard extends StatelessWidget {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              data['user_address'].split('Not:')[1].trim(),
+                              order.orderNote,
                               style: const TextStyle(
                                 fontSize: 12,
                                 color: Colors.black87,
@@ -303,12 +281,11 @@ class _OrderCard extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      final orderModel = model.Order.fromMap(data, order.id);
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) =>
-                              OrderDetailPage(order: orderModel),
+                              OrderDetailPage(order: order),
                         ),
                       );
                     },
@@ -343,9 +320,9 @@ class _OrderCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.5)),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

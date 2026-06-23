@@ -189,7 +189,7 @@ class _AdminApprovalsPageState extends ConsumerState<AdminApprovalsPage> {
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: color.withOpacity(0.15), borderRadius: BorderRadius.circular(8)),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
       child: Text(label, style: GoogleFonts.inter(color: color, fontSize: 12, fontWeight: FontWeight.bold)),
     );
   }

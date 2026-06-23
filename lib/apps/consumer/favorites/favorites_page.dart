@@ -124,14 +124,14 @@ class _FavoritesPageState extends State<FavoritesPage> {
                           Positioned.fill(
                             child: Container(
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.7),
+                                color: Colors.white.withValues(alpha: 0.7),
                                 borderRadius: BorderRadius.circular(16),
                               ),
                               child: Center(
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                   decoration: BoxDecoration(
-                                    color: Colors.red.withOpacity(0.9),
+                                    color: Colors.red.withValues(alpha: 0.9),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: const Text(

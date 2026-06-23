@@ -37,10 +37,16 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
   late TextEditingController _taxController;
   late TextEditingController _identityController;
 
-  // Controllers - Operation
+  // Controllers - Operation & Delivery
   late TextEditingController _minBasketController;
-  late TextEditingController _deliveryTimeController;
-
+  late TextEditingController _baseDeliveryFeeController;
+  late TextEditingController _deliveryFeePerKmController;
+  late TextEditingController _freeDeliveryThresholdController;
+  
+  String _selectedDeliveryTime = '30-45 dk';
+  String _deliveryPricingType = 'FIXED';
+  
+  final List<String> _deliveryTimeOptions = ['15-30 dk', '30-45 dk', '45-60 dk', '60+ dk'];
   // Delivery Radius
   double _deliveryRadius = 5.0;
 
@@ -160,7 +166,9 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
     _phoneController = TextEditingController();
     _addressController = TextEditingController();
     _minBasketController = TextEditingController();
-    _deliveryTimeController = TextEditingController();
+    _baseDeliveryFeeController = TextEditingController();
+    _deliveryFeePerKmController = TextEditingController();
+    _freeDeliveryThresholdController = TextEditingController();
     _taxController = TextEditingController();
     _identityController = TextEditingController();
     _districtController = TextEditingController();
@@ -182,7 +190,16 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
     _phoneController.text = shop.businessPhone ?? '';
     _addressController.text = '';
     _parseAddress(shop.address ?? '');
-    _minBasketController.text = shop.minOrderAmount?.toString() ?? '0.0';
+    _minBasketController.text = shop.minOrderAmount?.toString() ?? '150.0';
+    _baseDeliveryFeeController.text = shop.baseDeliveryFee?.toString() ?? '30.0';
+    _deliveryFeePerKmController.text = shop.deliveryFeePerKm?.toString() ?? '5.0';
+    _freeDeliveryThresholdController.text = shop.freeDeliveryThreshold?.toString() ?? '';
+    
+    if (_deliveryTimeOptions.contains(shop.deliveryTime)) {
+      _selectedDeliveryTime = shop.deliveryTime!;
+    }
+    _deliveryPricingType = shop.deliveryPricingType ?? 'FIXED';
+    
     _deliveryRadius = shop.deliveryRadiusKm ?? 5.0;
     _taxController.text = shop.taxNumber ?? '';
     _identityController.text = shop.identityNumber ?? '';
@@ -229,7 +246,9 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
     _addressController.dispose();
     _districtController.dispose();
     _minBasketController.dispose();
-    _deliveryTimeController.dispose();
+    _baseDeliveryFeeController.dispose();
+    _deliveryFeePerKmController.dispose();
+    _freeDeliveryThresholdController.dispose();
     _taxController.dispose();
     _identityController.dispose();
     super.dispose();
@@ -281,6 +300,11 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
         'longitude': _longitude,
         'imageUrl': _imageUrl,
         'headerImageUrl': _headerImageUrl,
+        'deliveryTime': _selectedDeliveryTime,
+        'deliveryPricingType': _deliveryPricingType,
+        'baseDeliveryFee': double.tryParse(_baseDeliveryFeeController.text) ?? 30.0,
+        'deliveryFeePerKm': double.tryParse(_deliveryFeePerKmController.text) ?? 5.0,
+        'freeDeliveryThreshold': double.tryParse(_freeDeliveryThresholdController.text),
       });
 
       if (mounted) {
@@ -575,16 +599,84 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: TextFormField(
-                  controller: _deliveryTimeController,
+                child: DropdownButtonFormField<String>(
+                  value: _selectedDeliveryTime,
                   decoration: const InputDecoration(
                     labelText: "Ort. Teslimat Süresi",
                     border: OutlineInputBorder(),
-                    hintText: "30-45 dk",
                   ),
+                  items: _deliveryTimeOptions.map((String option) {
+                    return DropdownMenuItem<String>(
+                      value: option,
+                      child: Text(option),
+                    );
+                  }).toList(),
+                  onChanged: (String? newValue) {
+                    if (newValue != null) {
+                      setState(() {
+                        _selectedDeliveryTime = newValue;
+                      });
+                    }
+                  },
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: _deliveryPricingType,
+                  decoration: const InputDecoration(
+                    labelText: "Ücretlendirme Tipi",
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'FIXED', child: Text('Sabit Ücret')),
+                    DropdownMenuItem(value: 'DISTANCE_BASED', child: Text('Mesafeye Göre')),
+                  ],
+                  onChanged: (String? newValue) {
+                    if (newValue != null) {
+                      setState(() {
+                        _deliveryPricingType = newValue;
+                      });
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: TextFormField(
+                  controller: _baseDeliveryFeeController,
+                  decoration: const InputDecoration(
+                    labelText: "Temel Teslimat Ücreti (₺)",
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+              ),
+            ],
+          ),
+          if (_deliveryPricingType == 'DISTANCE_BASED') ...[
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _deliveryFeePerKmController,
+              decoration: const InputDecoration(
+                labelText: "Km Başına Ekstra Ücret (₺)",
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.number,
+            ),
+          ],
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _freeDeliveryThresholdController,
+            decoration: const InputDecoration(
+              labelText: "Ücretsiz Teslimat Limiti (₺) - İsteğe Bağlı",
+              border: OutlineInputBorder(),
+            ),
+            keyboardType: TextInputType.number,
           ),
           const SizedBox(height: 24),
           Row(

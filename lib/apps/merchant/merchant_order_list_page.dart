@@ -1,10 +1,12 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:hoppa/shared/core/services/order_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hoppa/shared/models/order.dart' as model;
 import 'package:hoppa/shared/models/order_status.dart';
 import 'package:hoppa/apps/merchant/merchant_main_layout.dart';
+import 'package:hoppa/apps/merchant/repositories/merchant_order_repository.dart';
 
-class MerchantOrderListPage extends StatelessWidget {
+class MerchantOrderListPage extends ConsumerStatefulWidget {
   final String businessId;
   final String? filterStatus;
 
@@ -15,9 +17,37 @@ class MerchantOrderListPage extends StatelessWidget {
   });
 
   @override
+  ConsumerState<MerchantOrderListPage> createState() => _MerchantOrderListPageState();
+}
+
+class _MerchantOrderListPageState extends ConsumerState<MerchantOrderListPage> {
+  Timer? _pollingTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Refresh periodically
+    _startPolling();
+  }
+
+  void _startPolling() {
+    _pollingTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) {
+        ref.invalidate(merchantOrdersProvider);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final OrderService orderService = OrderService();
     final theme = Theme.of(context);
+    final ordersAsync = ref.watch(merchantOrdersProvider);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -28,35 +58,40 @@ class MerchantOrderListPage extends StatelessWidget {
           icon: const Icon(Icons.menu_rounded),
           onPressed: () => merchantDrawerKey.currentState?.openDrawer(),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              ref.invalidate(merchantOrdersProvider);
+            },
+          ),
+        ],
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: orderService.getIncomingOrders(businessId: businessId),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: ordersAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => Center(child: Text("Hata: $error")),
+        data: (allOrders) {
+          var orders = allOrders.toList();
 
-          var orders = snapshot.data!.docs;
-
-          if (filterStatus == OrderStatus.pending.value) {
+          if (widget.filterStatus == OrderStatus.pending.value) {
             orders = orders
-                .where((d) => d['status'] == OrderStatus.pending.value)
+                .where((d) => d.status == OrderStatus.pending.value)
                 .toList();
-          } else if (filterStatus == 'active') {
+          } else if (widget.filterStatus == 'active') {
             orders = orders
                 .where(
                   (d) => [
                     OrderStatus.preparing.value,
                     OrderStatus.onWay.value,
                     OrderStatus.readyForPickup.value,
-                  ].contains(d['status']),
+                  ].contains(d.status),
                 )
                 .toList();
           }
 
           orders.sort((a, b) {
-            Timestamp t1 = (a.data() as Map)['created_at'] ?? Timestamp.now();
-            Timestamp t2 = (b.data() as Map)['created_at'] ?? Timestamp.now();
+            final t1 = a.createdAt;
+            final t2 = b.createdAt;
             return t2.compareTo(t1);
           });
 
@@ -73,7 +108,7 @@ class MerchantOrderListPage extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             itemCount: orders.length,
             itemBuilder: (context, index) {
-              return _buildOrderCard(context, orders[index], orderService);
+              return _buildOrderCard(context, orders[index], ref);
             },
           );
         },
@@ -82,26 +117,24 @@ class MerchantOrderListPage extends StatelessWidget {
   }
 
   String _getAppBarTitle() {
-    if (filterStatus == OrderStatus.pending.value) return 'Onay Bekleyenler';
-    if (filterStatus == 'active') return 'Aktif Siparişler';
+    if (widget.filterStatus == OrderStatus.pending.value) return 'Onay Bekleyenler';
+    if (widget.filterStatus == 'active') return 'Aktif Siparişler';
     return 'Tüm Siparişler';
   }
 
   Widget _buildOrderCard(
     BuildContext context,
-    DocumentSnapshot orderDoc,
-    OrderService service,
+    model.Order order,
+    WidgetRef ref,
   ) {
-    final data = orderDoc.data() as Map<String, dynamic>;
-    final status = data['status'] ?? OrderStatus.pending.value;
-    final items = (data['items'] as List<dynamic>);
+    final status = order.status;
+    final items = order.items;
 
     // YENİ: Gel Al kontrolü
-    final bool isPickUp =
-        (data['is_pickup'] ?? false) || (data['delivery_method'] == 'pickup');
+    final bool isPickUp = order.deliveryMethod == 'pickup';
 
     final delayColor = _getOrderDelayColor(
-      data['created_at'] ?? Timestamp.now(),
+      order.createdAt,
       status,
     );
 
@@ -121,7 +154,7 @@ class MerchantOrderListPage extends StatelessWidget {
 
         // Başlık
         leading: CircleAvatar(
-          backgroundColor: _getStatusColor(status).withOpacity(0.1),
+          backgroundColor: _getStatusColor(status).withValues(alpha: 0.1),
           child: Icon(
             _getStatusIcon(status),
             color: _getStatusColor(status),
@@ -131,7 +164,7 @@ class MerchantOrderListPage extends StatelessWidget {
         title: Row(
           children: [
             Text(
-              "Sipariş #${orderDoc.id.substring(0, 4).toUpperCase()}",
+              "Sipariş #${order.id.substring(0, 4).toUpperCase()}",
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             if (isPickUp) ...[
@@ -158,20 +191,20 @@ class MerchantOrderListPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "${items.length} Ürün • ${data['total_amount']} ₺",
+              "${items.length} Ürün • ${order.totalAmount} ₺",
               style: const TextStyle(
                 color: Colors.green,
                 fontWeight: FontWeight.bold,
               ),
             ),
             if (_buildDelayIndicator(
-                  data['created_at'] ?? Timestamp.now(),
+                  order.createdAt,
                   status,
                 ) !=
                 null) ...[
               const SizedBox(height: 4),
               _buildDelayIndicator(
-                data['created_at'] ?? Timestamp.now(),
+                order.createdAt,
                 status,
               )!,
             ],
@@ -191,11 +224,11 @@ class MerchantOrderListPage extends StatelessWidget {
                     child: Row(
                       children: [
                         Text(
-                          "${item['quantity']}x",
+                          "${item.quantity}x",
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(width: 8),
-                        Expanded(child: Text(item['name'])),
+                        Expanded(child: Text(item.name.isNotEmpty ? item.name : "Bilinmeyen Ürün")),
                       ],
                     ),
                   ),
@@ -207,7 +240,7 @@ class MerchantOrderListPage extends StatelessWidget {
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
-                        data['user_address'] ?? '-',
+                        order.userAddress.isNotEmpty ? order.userAddress : '-',
                         style: const TextStyle(
                           fontSize: 12,
                           color: Colors.grey,
@@ -222,7 +255,7 @@ class MerchantOrderListPage extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    _buildActionButton(orderDoc.id, status, isPickUp, service),
+                    _buildActionButton(order.id, status, isPickUp, ref),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -239,15 +272,24 @@ class MerchantOrderListPage extends StatelessWidget {
     String id,
     String status,
     bool isPickUp,
-    OrderService service,
+    WidgetRef ref,
   ) {
     final statusEnum = OrderStatus.fromString(status);
+
+    Future<void> updateStatus(String newStatus) async {
+      try {
+        await ref.read(merchantOrderRepositoryProvider).updateOrderStatus(id, newStatus);
+        ref.invalidate(merchantOrdersProvider);
+      } catch (e) {
+        // Hata yönetimi (örneğin SnackBar ile gösterilebilir, basit tutmak için print ile bırakıldı)
+        print("Sipariş güncellenirken hata oluştu: $e");
+      }
+    }
 
     switch (statusEnum) {
       case OrderStatus.pending:
         return FilledButton.icon(
-          onPressed: () =>
-              service.updateOrderStatus(id, OrderStatus.preparing.value),
+          onPressed: () => updateStatus(OrderStatus.preparing.value),
           icon: const Icon(Icons.check),
           label: const Text("ONAYLA"),
           style: FilledButton.styleFrom(backgroundColor: Colors.green),
@@ -256,16 +298,14 @@ class MerchantOrderListPage extends StatelessWidget {
         // Eğer Gel Al ise "Kuryeye Ver" yerine "Hazır, Müşteri Bekleniyor" butonunu göster
         if (isPickUp) {
           return FilledButton.icon(
-            onPressed: () =>
-                service.updateOrderStatus(id, OrderStatus.readyForPickup.value),
+            onPressed: () => updateStatus(OrderStatus.readyForPickup.value),
             icon: const Icon(Icons.store),
             label: Text(OrderStatus.readyForPickup.label),
             style: FilledButton.styleFrom(backgroundColor: Colors.teal),
           );
         } else {
           return FilledButton.icon(
-            onPressed: () =>
-                service.updateOrderStatus(id, OrderStatus.onWay.value),
+            onPressed: () => updateStatus(OrderStatus.onWay.value),
             icon: const Icon(Icons.motorcycle),
             label: const Text("KURYEYE VER"),
             style: FilledButton.styleFrom(backgroundColor: Colors.blue),
@@ -273,16 +313,14 @@ class MerchantOrderListPage extends StatelessWidget {
         }
       case OrderStatus.onWay:
         return FilledButton.icon(
-          onPressed: () =>
-              service.updateOrderStatus(id, OrderStatus.delivered.value),
+          onPressed: () => updateStatus(OrderStatus.delivered.value),
           icon: const Icon(Icons.done),
           label: const Text("TESLİM ET"),
           style: FilledButton.styleFrom(backgroundColor: Colors.grey),
         );
       case OrderStatus.readyForPickup: // Yeni Durum
         return FilledButton.icon(
-          onPressed: () =>
-              service.updateOrderStatus(id, OrderStatus.delivered.value),
+          onPressed: () => updateStatus(OrderStatus.delivered.value),
           icon: const Icon(Icons.done_all),
           label: const Text("TESLİM ET"),
           style: FilledButton.styleFrom(backgroundColor: Colors.green.shade700),
@@ -301,27 +339,27 @@ class MerchantOrderListPage extends StatelessWidget {
   }
 
   // YENİ: Gecikme Rengi
-  Color _getOrderDelayColor(Timestamp createdAt, String status) {
+  Color _getOrderDelayColor(DateTime createdAt, String status) {
     // Sadece aktif siparişlerde gecikme kontrolü yapılır
     if (status == OrderStatus.delivered.value ||
         status == OrderStatus.cancelled.value) {
       return Colors.transparent;
     }
 
-    final diff = DateTime.now().difference(createdAt.toDate());
+    final diff = DateTime.now().difference(createdAt);
     if (diff.inMinutes >= 30) return Colors.red; // Kritik
     if (diff.inMinutes >= 15) return Colors.orange; // Uyarı
     return Colors.transparent; // Normal
   }
 
   // YENİ: Gecikme Metni
-  Widget? _buildDelayIndicator(Timestamp createdAt, String status) {
+  Widget? _buildDelayIndicator(DateTime createdAt, String status) {
     if (status == OrderStatus.delivered.value ||
         status == OrderStatus.cancelled.value) {
       return null;
     }
 
-    final diff = DateTime.now().difference(createdAt.toDate());
+    final diff = DateTime.now().difference(createdAt);
     if (diff.inMinutes < 15) return null;
 
     final color = diff.inMinutes >= 30 ? Colors.red : Colors.orange;
@@ -330,7 +368,7 @@ class MerchantOrderListPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(4),
         border: Border.all(color: color),
       ),

@@ -399,7 +399,7 @@ class _MerchantAnalyticsPageState extends State<MerchantAnalyticsPage> {
               dotData: const FlDotData(show: false),
               belowBarData: BarAreaData(
                 show: true,
-                color: Colors.orange.withOpacity(0.2),
+                color: Colors.orange.withValues(alpha: 0.2),
               ),
             ),
           ],
@@ -429,7 +429,7 @@ class _MerchantAnalyticsPageState extends State<MerchantAnalyticsPage> {
             border: Border.all(color: Colors.grey.shade200),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.03),
+                color: Colors.black.withValues(alpha: 0.03),
                 blurRadius: 5,
                 offset: const Offset(0, 2),
               ),
@@ -442,7 +442,7 @@ class _MerchantAnalyticsPageState extends State<MerchantAnalyticsPage> {
                 height: 30,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Text(
