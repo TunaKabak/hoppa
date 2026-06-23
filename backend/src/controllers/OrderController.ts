@@ -1,8 +1,10 @@
 import { Request, Response } from "express";
 import { PrismaClient, OrderStatus, PaymentMethod, PaymentStatus } from "@prisma/client";
 import { PaymentRoutingService } from "../services/PaymentRoutingService";
+import { CampaignService } from "../services/CampaignService";
 
 const prisma = new PrismaClient();
+const campaignService = new CampaignService();
 
 export class OrderController {
   /**
@@ -132,6 +134,9 @@ export class OrderController {
       const transactionResult = await prisma.$transaction(async (tx) => {
         const method = paymentMethod || "CASH_ON_DELIVERY";
         
+        // Backend Delivery Fee Calculation via Campaign Engine
+        const deliveryResult = await campaignService.calculateDeliveryFee(consumerId, shop, totalAmount);
+        
         const createdOrder = await tx.order.create({
           data: {
             consumerId,
@@ -139,7 +144,7 @@ export class OrderController {
             addressId: finalAddressId,
             deliveryAddress: snapshotAddress, // immutable adres snapshot'ı
             totalAmount,
-            deliveryFee: 0,
+            deliveryFee: deliveryResult.fee,
             status: "PENDING",
             customerNote: notes || null,
             paymentMethod: method,
