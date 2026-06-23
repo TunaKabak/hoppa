@@ -109,10 +109,57 @@ class _ActiveOrderCardState extends ConsumerState<ActiveOrderCard> {
                                     ),
                               ),
                               const SizedBox(height: 4),
+                              // YENİ: Sipariş Özeti (Kalemler, Miktar)
+                              Text(
+                                order.items.map((item) => "${item.quantity.toInt()}x ${item.name}").join(", "),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Colors.grey[800],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              // YENİ: Ödeme Tipi, Saat ve Teslimat Süresi
+                              Row(
+                                children: [
+                                  Icon(Icons.payment, size: 12, color: Colors.grey[600]),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    order.paymentMethod == "ONLINE_PAYMENT" ? "Online Kredi Kartı" : "Kapıda Ödeme",
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600], fontSize: 11),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Icon(Icons.access_time, size: 12, color: Colors.grey[600]),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${order.createdAt.hour.toString().padLeft(2, '0')}:${order.createdAt.minute.toString().padLeft(2, '0')}',
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600], fontSize: 11),
+                                  ),
+                                ],
+                              ),
+                              if (order.orderNote.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Icon(Icons.notes, size: 12, color: Colors.orange[400]),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        'Not: ${order.orderNote}',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.orange[800], fontStyle: FontStyle.italic, fontSize: 11),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                              const SizedBox(height: 4),
                               Text(
                                 'Tahmini Teslimat: ${order.deliveryTime.isNotEmpty ? order.deliveryTime : "-"}',
                                 style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(color: Colors.grey[600]),
+                                    ?.copyWith(color: Colors.grey[600], fontSize: 11),
                               ),
                             ],
                           ),

@@ -224,7 +224,7 @@ class _MerchantOrderListPageState extends ConsumerState<MerchantOrderListPage> {
                     child: Row(
                       children: [
                         Text(
-                          "${item.quantity}x",
+                          "${item.quantity.toInt()}x",
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(width: 8),
@@ -233,6 +233,48 @@ class _MerchantOrderListPageState extends ConsumerState<MerchantOrderListPage> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(Icons.payment, size: 16, color: Colors.grey[600]),
+                    const SizedBox(width: 4),
+                    Text(
+                      order.paymentMethod == "ONLINE_PAYMENT" ? "Online Kredi Kartı" : "Kapıda Ödeme",
+                      style: TextStyle(color: Colors.grey[800], fontSize: 13, fontWeight: FontWeight.bold),
+                    ),
+                    const Spacer(),
+                    Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${order.createdAt.hour.toString().padLeft(2, '0')}:${order.createdAt.minute.toString().padLeft(2, '0')}',
+                      style: TextStyle(color: Colors.grey[800], fontSize: 13),
+                    ),
+                  ],
+                ),
+                if (order.orderNote.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange.shade200),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.notes, size: 16, color: Colors.orange[800]),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            order.orderNote,
+                            style: TextStyle(color: Colors.orange[900], fontStyle: FontStyle.italic, fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 12),
                 Row(
                   children: [

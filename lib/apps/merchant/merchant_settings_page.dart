@@ -47,8 +47,10 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
   String _deliveryPricingType = 'FIXED';
   
   final List<String> _deliveryTimeOptions = ['15-30 dk', '30-45 dk', '45-60 dk', '60+ dk'];
-  // Delivery Radius
+  // Delivery Radius & Polygon
   double _deliveryRadius = 5.0;
+  bool _isPolygonMode = false;
+  List<LatLng> _deliveryPolygon = [];
 
   // Working Hours (Weekly)
   Map<String, dynamic> _workingHours = {};
@@ -201,6 +203,22 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
     _deliveryPricingType = shop.deliveryPricingType ?? 'FIXED';
     
     _deliveryRadius = shop.deliveryRadiusKm ?? 5.0;
+    if (shop.deliveryPolygon != null && shop.deliveryPolygon!.isNotEmpty) {
+      _isPolygonMode = true;
+      try {
+        _deliveryPolygon = shop.deliveryPolygon!.map((point) {
+          return LatLng(
+            double.parse(point['lat'].toString()),
+            double.parse(point['lng'].toString()),
+          );
+        }).toList();
+      } catch (e) {
+        _deliveryPolygon = [];
+      }
+    } else {
+      _isPolygonMode = false;
+      _deliveryPolygon = [];
+    }
     _taxController.text = shop.taxNumber ?? '';
     _identityController.text = shop.identityNumber ?? '';
     _latitude = shop.latitude;
@@ -290,7 +308,8 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
         'name': _nameController.text,
         'address': combinedAddress,
         'minOrderAmount': double.tryParse(_minBasketController.text) ?? 0.0,
-        'deliveryRadiusKm': _deliveryRadius,
+        'deliveryRadiusKm': _isPolygonMode ? null : _deliveryRadius,
+        'deliveryPolygon': _isPolygonMode ? _deliveryPolygon.map((p) => {'lat': p.latitude, 'lng': p.longitude}).toList() : null,
         'workingHours': _workingHours,
         'isActive': _shop?.isActive ?? true,
         'businessPhone': _phoneController.text,
@@ -1154,31 +1173,78 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text("Yarıçap (km):", style: TextStyle(fontSize: 16)),
-              Text(
-                "${_deliveryRadius.toStringAsFixed(1)} km",
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blue,
-                ),
+              const Text(
+                "Teslimat Bölgesi Modu",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              ToggleButtons(
+                isSelected: [!_isPolygonMode, _isPolygonMode],
+                onPressed: (index) {
+                  setState(() {
+                    _isPolygonMode = index == 1;
+                  });
+                },
+                borderRadius: BorderRadius.circular(8),
+                constraints: const BoxConstraints(minHeight: 36, minWidth: 100),
+                children: const [
+                  Text("Yarıçap"),
+                  Text("Özel Bölge"),
+                ],
               ),
             ],
           ),
-          Slider(
-            value: _deliveryRadius,
-            min: 1.0,
-            max: 20.0,
-            divisions: 38, // 0.5 km steps
-            label: "${_deliveryRadius.toStringAsFixed(1)} km",
-            onChanged: (val) {
-              setState(() {
-                _deliveryRadius = val;
-              });
-            },
-          ),
           const SizedBox(height: 24),
-          // Mock Map Preview
+          if (!_isPolygonMode) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text("Yarıçap (km):", style: TextStyle(fontSize: 16)),
+                Text(
+                  "${_deliveryRadius.toStringAsFixed(1)} km",
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                  ),
+                ),
+              ],
+            ),
+            Slider(
+              value: _deliveryRadius,
+              min: 1.0,
+              max: 20.0,
+              divisions: 38, // 0.5 km steps
+              label: "${_deliveryRadius.toStringAsFixed(1)} km",
+              onChanged: (val) {
+                setState(() {
+                  _deliveryRadius = val;
+                });
+              },
+            ),
+          ] else ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text("Poligon Sınırları:", style: TextStyle(fontSize: 16)),
+                TextButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _deliveryPolygon.clear();
+                    });
+                  },
+                  icon: const Icon(Icons.clear, size: 18, color: Colors.red),
+                  label: const Text("Temizle", style: TextStyle(color: Colors.red)),
+                ),
+              ],
+            ),
+            const Text(
+              "Harita üzerine tıklayarak bölgenizin sınır noktalarını (köşelerini) belirleyin. En az 3 nokta gereklidir.",
+              style: TextStyle(color: Colors.grey, fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+          ],
+          const SizedBox(height: 16),
+          // Map Preview
           Container(
             height: 300,
             decoration: BoxDecoration(
@@ -1198,6 +1264,13 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
                   interactionOptions: const InteractionOptions(
                     flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
                   ),
+                  onTap: _isPolygonMode
+                      ? (tapPosition, point) {
+                          setState(() {
+                            _deliveryPolygon.add(point);
+                          });
+                        }
+                      : null,
                 ),
                 children: [
                   TileLayer(
@@ -1205,25 +1278,73 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
                         'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                     userAgentPackageName: 'com.example.hoppa',
                   ),
-                  CircleLayer(
-                    circles: [
-                      CircleMarker(
-                        point: LatLng(
-                          (_latitude ?? 0) != 0
-                              ? _latitude!
-                              : 41.0082,
-                          (_longitude ?? 0) != 0
-                              ? _longitude!
-                              : 28.9784,
+                  if (!_isPolygonMode)
+                    CircleLayer(
+                      circles: [
+                        CircleMarker(
+                          point: LatLng(
+                            (_latitude ?? 0) != 0
+                                ? _latitude!
+                                : 41.0082,
+                            (_longitude ?? 0) != 0
+                                ? _longitude!
+                                : 28.9784,
+                          ),
+                          radius: _deliveryRadius * 1000, // Convert km to meters
+                          useRadiusInMeter: true,
+                          color: Colors.blue.withValues(alpha: 0.2),
+                          borderColor: Colors.blue,
+                          borderStrokeWidth: 2,
                         ),
-                        radius: _deliveryRadius * 1000, // Convert km to meters
-                        useRadiusInMeter: true,
-                        color: Colors.blue.withValues(alpha: 0.2),
-                        borderColor: Colors.blue,
-                        borderStrokeWidth: 2,
-                      ),
-                    ],
-                  ),
+                      ],
+                    )
+                  else ...[
+                    PolygonLayer(
+                      polygons: [
+                        if (_deliveryPolygon.length >= 3)
+                          Polygon(
+                            points: _deliveryPolygon,
+                            color: Colors.blue.withValues(alpha: 0.2),
+                            borderColor: Colors.blue,
+                            borderStrokeWidth: 2,
+                          ),
+                      ],
+                    ),
+                    PolylineLayer(
+                      polylines: [
+                        if (_deliveryPolygon.isNotEmpty)
+                          Polyline(
+                            points: [
+                              ..._deliveryPolygon,
+                              if (_deliveryPolygon.length >= 3) _deliveryPolygon.first,
+                            ],
+                            color: Colors.blue,
+                            strokeWidth: 2,
+                          ),
+                      ],
+                    ),
+                    MarkerLayer(
+                      markers: _deliveryPolygon.map((p) => Marker(
+                        point: p,
+                        width: 16,
+                        height: 16,
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _deliveryPolygon.remove(p);
+                            });
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.blue, width: 3),
+                            ),
+                          ),
+                        ),
+                      )).toList(),
+                    ),
+                  ],
                   MarkerLayer(
                     markers: [
                       Marker(

@@ -40,6 +40,57 @@ export class OrderController {
         return res.status(400).json({ error: true, message: "Dükkan şu anda kapalı, sipariş verilemez." });
       }
 
+      // GMT+3 Zaman Dilimi Kontrolü
+      const now = new Date();
+      const gmt3Time = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Istanbul" }));
+      const currentHour = gmt3Time.getHours();
+      const currentMinute = gmt3Time.getMinutes();
+      
+      const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const currentDayName = days[gmt3Time.getDay()];
+      
+      let isOpenRightNow = true;
+
+      if (shop.workingHours && typeof shop.workingHours === 'object') {
+        const wh = shop.workingHours as any;
+        const todaySchedule = wh[currentDayName];
+        if (todaySchedule) {
+          if (todaySchedule.isOpen === false) {
+             isOpenRightNow = false;
+          } else if (todaySchedule.openTime && todaySchedule.closeTime) {
+             const [openH, openM] = todaySchedule.openTime.split(':').map(Number);
+             const [closeH, closeM] = todaySchedule.closeTime.split(':').map(Number);
+             
+             const currentTotalMins = currentHour * 60 + currentMinute;
+             const openTotalMins = openH * 60 + openM;
+             let closeTotalMins = closeH * 60 + closeM;
+             
+             if (closeTotalMins < openTotalMins) {
+               // Ertesi güne sarkma durumu, örn: 08:00 - 02:00
+               closeTotalMins += 24 * 60;
+             }
+             
+             let checkMins = currentTotalMins;
+             if (currentTotalMins < openTotalMins && closeTotalMins > 24 * 60) {
+               checkMins += 24 * 60;
+             }
+             
+             if (checkMins < openTotalMins || checkMins >= closeTotalMins) {
+               isOpenRightNow = false;
+             }
+          }
+        }
+      } else {
+        // Varsayılan kontrol: 08:00 - 22:00
+        if (currentHour < 8 || currentHour >= 22) {
+          isOpenRightNow = false;
+        }
+      }
+
+      if (!isOpenRightNow) {
+        return res.status(400).json({ error: true, message: "Dükkan şu an çalışma saatleri dışındadır. Lütfen daha sonra tekrar deneyiniz." });
+      }
+
       // 2. Ürünlerin fiyatlarını veritabanından çek ve doğrula
       const productIds = items.map((item: any) => item.productId);
       const dbProducts = await prisma.product.findMany({

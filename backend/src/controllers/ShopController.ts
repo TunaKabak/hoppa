@@ -27,7 +27,7 @@ export class ShopController {
 
       const {
         name, description, address, latitude, longitude,
-        deliveryRadiusKm, workingHours, minOrderAmount, minimumOrderAmount, imageUrl, headerImageUrl,
+        deliveryRadiusKm, deliveryPolygon, workingHours, minOrderAmount, minimumOrderAmount, imageUrl, headerImageUrl,
         taxNumber, businessPhone, identityNumber,
         deliveryPricingType, baseDeliveryFee, deliveryFeePerKm, freeDeliveryThreshold, deliveryTime
       } = req.body;
@@ -47,6 +47,7 @@ export class ShopController {
           latitude,
           longitude,
           deliveryRadiusKm,
+          deliveryPolygon,
           workingHours,
           minOrderAmount: minimumOrderAmount ?? minOrderAmount,
           minimumOrderAmount: minimumOrderAmount ?? minOrderAmount,
@@ -72,6 +73,7 @@ export class ShopController {
           latitude,
           longitude,
           deliveryRadiusKm,
+          deliveryPolygon,
           workingHours,
           minOrderAmount: minimumOrderAmount ?? minOrderAmount,
           minimumOrderAmount: minimumOrderAmount ?? minOrderAmount,

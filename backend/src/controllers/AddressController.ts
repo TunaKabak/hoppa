@@ -15,7 +15,7 @@ export class AddressController {
       }
 
       const addresses = await prisma.address.findMany({
-        where: { userId },
+        where: { userId, isDeleted: false },
         orderBy: { createdAt: "desc" }
       });
 
@@ -124,9 +124,23 @@ export class AddressController {
         return res.status(404).json({ error: true, message: "Silinecek adres bulunamadı." });
       }
 
-      await prisma.address.delete({
-        where: { id: addressId }
+      // Check if address is used in any orders
+      const orderCount = await prisma.order.count({
+        where: { addressId: addressId }
       });
+
+      if (orderCount > 0) {
+        // Soft delete
+        await prisma.address.update({
+          where: { id: addressId },
+          data: { isDeleted: true }
+        });
+      } else {
+        // Hard delete
+        await prisma.address.delete({
+          where: { id: addressId }
+        });
+      }
 
       return res.status(200).json({ error: false, data: { message: "Adres başarıyla silindi." } });
     } catch (error: any) {
