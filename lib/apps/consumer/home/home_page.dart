@@ -11,7 +11,7 @@ import 'package:hoppa/apps/consumer/home/widgets/modern_product_card.dart';
 import 'package:hoppa/apps/consumer/orders/widgets/active_order_card.dart';
 import 'package:hoppa/apps/consumer/product/product_detail_page.dart';
 import 'package:hoppa/apps/consumer/repositories/consumer_shop_repository.dart';
-import 'package:hoppa/shared/models/business_product.dart';
+
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -472,13 +472,33 @@ class _HomePageState extends ConsumerState<HomePage>
                           Icon(Icons.warning_amber_rounded, color: Colors.orange.shade800),
                           const SizedBox(width: 8),
                           Expanded(
-                            child: Text(
-                              "Bu dükkan şu an kapalıdır. Sipariş verilemez.",
-                              style: TextStyle(
-                                color: Colors.orange.shade900,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Bu işletme şu an kapalı. Ürünleri inceleyebilirsiniz ancak sipariş veremezsiniz.",
+                                  style: TextStyle(
+                                    color: Colors.orange.shade900,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Icon(Icons.access_time, size: 14, color: Colors.orange.shade900),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      "İşletme Saatleri: ${selectedBusiness.openingTime} - ${selectedBusiness.closingTime}",
+                                      style: TextStyle(
+                                        color: Colors.orange.shade900,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -507,7 +527,7 @@ class _HomePageState extends ConsumerState<HomePage>
                   // Dinamik Kategori Listesi
                   Builder(
                     builder: (context) {
-                      final String typeLabel = businessProvider.selectedBusiness?.type.label ?? 'Market';
+                      final String typeLabel = selectedBusiness.type.label;
                       
                       final List<Map<String, dynamic>> categories;
                       if (typeLabel == 'Çiçek') {

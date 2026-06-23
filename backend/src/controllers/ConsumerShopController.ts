@@ -13,7 +13,6 @@ export class ConsumerShopController {
       // Sadece onaylanmış (ACTIVE) satıcıların aktif (isActive: true) dükkanlarını getir
       const shops = await prisma.shop.findMany({
         where: { 
-          isActive: true,
           merchant: {
             status: "ACTIVE" // represents isApproved: true
           }
@@ -71,7 +70,6 @@ export class ConsumerShopController {
       const shop = await prisma.shop.findFirst({
         where: { 
           id: shopId, 
-          isActive: true,
           merchant: {
             status: "ACTIVE"
           }

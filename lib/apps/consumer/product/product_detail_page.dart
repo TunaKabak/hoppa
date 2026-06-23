@@ -9,6 +9,7 @@ import 'package:hoppa/shared/core/services/navigation_provider.dart'; // Navigat
 import 'package:hoppa/apps/consumer/cart/widgets/cart_price_badge.dart'; // YENİ
 import 'package:provider/provider.dart' as p;
 import 'package:hoppa/apps/consumer/business/business_provider.dart';
+import 'package:hoppa/apps/consumer/repositories/consumer_shop_repository.dart';
 
 class ProductDetailPage extends ConsumerStatefulWidget {
   final BusinessProduct businessProduct;
@@ -44,7 +45,17 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
   Widget build(BuildContext context) {
     final product = widget.businessProduct.product;
     final cart = ref.watch(cartProvider);
-    final isClosed = p.Provider.of<BusinessProvider>(context, listen: false).selectedBusiness?.isOpen == false;
+    
+    // Doğru dükkan aktiflik kontrolü (Seçili dükkana göre değil, ürünün kendi dükkanına göre)
+    final shopsAsync = ref.watch(consumerShopsProvider);
+    final shops = shopsAsync.value ?? [];
+    bool isClosed = false;
+    if (shops.isNotEmpty) {
+      try {
+        final shop = shops.firstWhere((s) => s.id == widget.businessProduct.businessId);
+        isClosed = !shop.isOpen;
+      } catch (_) {}
+    }
 
 
     return Scaffold(
