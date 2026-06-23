@@ -7,8 +7,6 @@ import 'package:hoppa/apps/consumer/address/delivery_provider.dart';
 import 'package:hoppa/apps/consumer/business/business_provider.dart';
 import 'package:hoppa/apps/consumer/checkout/payment_page.dart';
 import 'package:hoppa/shared/core/widgets/animated_sliding_toggle.dart';
-import 'package:hoppa/apps/consumer/address/address_list_page.dart';
-import 'package:hoppa/shared/core/services/business_service.dart';
 
 class CheckoutPage extends StatefulWidget {
   const CheckoutPage({super.key});
@@ -139,9 +137,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
     String dayName = "";
     if (_selectedDayIndex == 0) {
       dayName = "Bugün";
-    } else if (_selectedDayIndex == 1)
+    } else if (_selectedDayIndex == 1) {
       dayName = "Yarın";
-    else {
+    } else {
       final date = DateTime.now().add(Duration(days: _selectedDayIndex));
       dayName = DateFormat('dd MMM').format(date);
     }
@@ -205,23 +203,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
       listen: false,
     ).selectedBusiness!;
     
-    // Yükleniyor göstergesi (Opsiyonel ama iyi olabilir)
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return const Center(child: CircularProgressIndicator());
-      },
-    );
-
-    final businessDoc = await BusinessService().getBusinessById(selectedBusiness.id);
-    
-    // Yükleniyor gizle
-    if (context.mounted) {
-      Navigator.pop(context);
-    }
-
-    if (businessDoc == null || !businessDoc.isOpen) {
+    // Doğrudan Provider içerisindeki canlı Postgres verisini kullanıyoruz
+    // Firebase çağrısı yapmak UUID uyuşmazlığı nedeniyle hataya yol açıyordu
+    if (!selectedBusiness.isOpen) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -327,7 +311,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                               Container(
                                 padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
-                                  color: Colors.blue.withOpacity(0.1),
+                                  color: Colors.blue.withAlpha(26),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: const Icon(
@@ -401,7 +385,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                             Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: kPrimaryColor.withOpacity(0.1),
+                                color: kPrimaryColor.withAlpha(26),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Icon(
@@ -471,7 +455,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: kPrimaryColor.withOpacity(0.1),
+                            color: kPrimaryColor.withAlpha(26),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(Icons.phone, color: kPrimaryColor),
@@ -536,10 +520,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: kPrimaryColor.withOpacity(0.1),
+                        color: kPrimaryColor.withAlpha(26),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: kPrimaryColor.withOpacity(0.3),
+                          color: kPrimaryColor.withAlpha(77),
                         ),
                       ),
                       child: Row(
@@ -590,13 +574,14 @@ class _CheckoutPageState extends State<CheckoutPage> {
                           String dayName;
                           if (index == 0) {
                             dayName = "Bugün";
-                          } else if (index == 1)
+                          } else if (index == 1) {
                             dayName = "Yarın";
-                          else
+                          } else {
                             dayName = DateFormat(
                               'dd MMM',
                               'tr_TR',
                             ).format(date);
+                          }
 
                           return GestureDetector(
                             onTap: () => setState(() {
@@ -688,7 +673,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                             child: Container(
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? kPrimaryColor.withOpacity(0.1)
+                                    ? kPrimaryColor.withAlpha(26)
                                     : Colors.white,
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
@@ -757,7 +742,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withAlpha(13),
                   blurRadius: 20,
                   offset: const Offset(0, -5),
                 ),

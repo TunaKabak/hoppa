@@ -1,5 +1,6 @@
 import 'package:core_network/core_network.dart';
 import 'package:core_auth/core_auth.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:hoppa/shared/models/business.dart';
@@ -89,6 +90,16 @@ class ConsumerShopRepository {
 // Riverpod Providers
 final consumerShopRepositoryProvider = Provider<ConsumerShopRepository>((ref) {
   return ConsumerShopRepository(ref.watch(apiClientProvider));
+});
+
+// App Lifecycle Listener for auto-refreshing shops when app resumes
+final shopLifecyclePollingProvider = Provider.autoDispose<void>((ref) {
+  final listener = AppLifecycleListener(
+    onResume: () {
+      ref.invalidate(consumerShopsProvider);
+    },
+  );
+  ref.onDispose(() => listener.dispose());
 });
 
 final consumerShopsProvider = FutureProvider<List<Business>>((ref) async {
