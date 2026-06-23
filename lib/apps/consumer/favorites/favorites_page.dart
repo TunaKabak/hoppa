@@ -5,6 +5,7 @@ import 'package:hoppa/shared/models/business_product.dart';
 import 'package:hoppa/apps/consumer/favorites/favorite_provider.dart';
 import 'package:hoppa/apps/consumer/home/widgets/modern_product_card.dart';
 import 'package:hoppa/shared/core/services/business_service.dart';
+import 'package:hoppa/apps/consumer/repositories/consumer_shop_repository.dart';
 
 class FavoritesPage extends StatefulWidget {
   const FavoritesPage({super.key});
@@ -18,32 +19,40 @@ class _FavoritesPageState extends State<FavoritesPage> {
   final BusinessService _businessService = BusinessService();
 
   Future<List<Map<String, dynamic>>> _fetchFavoriteProducts(List<String> ids) async {
-    List<Map<String, dynamic>> results = [];
-    if (ids.isEmpty) return results;
+    if (ids.isEmpty) return [];
 
-    // Fetch individual products (avoiding max 10 whereIn limit by doing parallel fetches)
-    final futures = ids.map((id) => _db.collection('business_products').doc(id).get());
-    final snapshots = await Future.wait(futures);
+    // Migrate from Firestore to Prisma/API 
+    // Fetch products from the new backend endpoint via ConsumerShopRepository
+    try {
+      final repository = Provider.of<ConsumerShopRepository>(context, listen: false);
+      return await repository.getFavoriteProducts(ids);
+    } catch (e) {
+      print("Error fetching favorite products from API: $e");
+      
+      // Fallback: If the API fails (e.g. backend not deployed yet), try old Firestore way
+      List<Map<String, dynamic>> results = [];
+      try {
+        final futures = ids.map((id) => _db.collection('business_products').doc(id).get());
+        final snapshots = await Future.wait(futures);
 
-    for (var doc in snapshots) {
-      if (doc.exists) {
-        final productDoc = doc.data() as Map<String, dynamic>;
-        final businessProduct = BusinessProduct.fromMap(productDoc, doc.id);
-        
-        // Fetch parent business to check status
-        final business = await _businessService.getBusinessById(businessProduct.businessId);
-        
-        // Is it active?
-        final bool isAvailable = business != null && business.isOpen;
-        
-        results.add({
-          'product': businessProduct,
-          'isAvailable': isAvailable,
-        });
+        for (var doc in snapshots) {
+          if (doc.exists) {
+            final productDoc = doc.data() as Map<String, dynamic>;
+            final businessProduct = BusinessProduct.fromMap(productDoc, doc.id);
+            final business = await _businessService.getBusinessById(businessProduct.businessId);
+            final bool isAvailable = business != null && business.isOpen;
+            
+            results.add({
+              'product': businessProduct,
+              'isAvailable': isAvailable,
+            });
+          }
+        }
+      } catch (firestoreError) {
+        print("Fallback Firestore error: $firestoreError");
       }
+      return results;
     }
-    
-    return results;
   }
 
   @override
@@ -124,14 +133,14 @@ class _FavoritesPageState extends State<FavoritesPage> {
                           Positioned.fill(
                             child: Container(
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.7),
+                                color: Colors.white.withValues(alpha: 0.7),
                                 borderRadius: BorderRadius.circular(16),
                               ),
                               child: Center(
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                   decoration: BoxDecoration(
-                                    color: Colors.red.withOpacity(0.9),
+                                    color: Colors.red.withValues(alpha: 0.9),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: const Text(

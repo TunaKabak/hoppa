@@ -9,11 +9,15 @@ class ConsumerOrderRepository {
   ConsumerOrderRepository(this._apiClient);
 
   /// POST /api/consumer/orders
-  Future<Order> createOrder(Map<String, dynamic> orderData) async {
+  Future<Map<String, dynamic>> createOrder(Map<String, dynamic> orderData) async {
     final response = await _apiClient.post('/api/consumer/orders', body: orderData);
     final data = response['data'] as Map<String, dynamic>;
     final id = data['id'] as String? ?? '';
-    return Order.fromMap(data, id);
+    final order = Order.fromMap(data, id);
+    return {
+      'order': order,
+      'paymentUrl': response['paymentUrl'],
+    };
   }
 
   /// GET /api/consumer/orders

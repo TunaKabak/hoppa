@@ -25,10 +25,11 @@ export class ShopController {
       const merchantId = req.user?.id;
       if (!merchantId) return res.status(401).json({ error: true, message: "Kullanıcı bilgisi eksik." });
 
-      const { 
-        name, description, address, latitude, longitude, 
-        deliveryRadiusKm, workingHours, minOrderAmount, imageUrl, headerImageUrl,
-        taxNumber, businessPhone, identityNumber 
+      const {
+        name, description, address, latitude, longitude,
+        deliveryRadiusKm, deliveryPolygon, workingHours, minOrderAmount, minimumOrderAmount, imageUrl, headerImageUrl,
+        taxNumber, businessPhone, identityNumber,
+        deliveryPricingType, baseDeliveryFee, deliveryFeePerKm, freeDeliveryThreshold, deliveryTime
       } = req.body;
 
       // Build merchant update payload dynamically
@@ -46,8 +47,15 @@ export class ShopController {
           latitude,
           longitude,
           deliveryRadiusKm,
+          deliveryPolygon,
           workingHours,
-          minOrderAmount,
+          minOrderAmount: minimumOrderAmount ?? minOrderAmount,
+          minimumOrderAmount: minimumOrderAmount ?? minOrderAmount,
+          deliveryPricingType,
+          baseDeliveryFee,
+          deliveryFeePerKm,
+          freeDeliveryThreshold,
+          deliveryTime,
           imageUrl,
           headerImageUrl,
           taxNumber,
@@ -65,8 +73,15 @@ export class ShopController {
           latitude,
           longitude,
           deliveryRadiusKm,
+          deliveryPolygon,
           workingHours,
-          minOrderAmount,
+          minOrderAmount: minimumOrderAmount ?? minOrderAmount,
+          minimumOrderAmount: minimumOrderAmount ?? minOrderAmount,
+          deliveryPricingType,
+          baseDeliveryFee,
+          deliveryFeePerKm,
+          freeDeliveryThreshold,
+          deliveryTime,
           imageUrl,
           headerImageUrl,
           taxNumber

@@ -81,7 +81,7 @@ class AddressListPage extends ConsumerWidget {
                       child: ListTile(
                         contentPadding: const EdgeInsets.all(12),
                         leading: CircleAvatar(
-                          backgroundColor: theme.primaryColor.withOpacity(0.1),
+                          backgroundColor: theme.primaryColor.withValues(alpha: 0.1),
                           child: Icon(
                             _getIconForTitle(address.title),
                             color: theme.primaryColor,
@@ -164,7 +164,7 @@ class AddressListPage extends ConsumerWidget {
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, -5),
                 ),

@@ -1,97 +1,74 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:hoppa/shared/core/services/order_service.dart';
-import 'package:hoppa/shared/models/order.dart' as model;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:core_auth/core_auth.dart';
+import 'package:hoppa/apps/consumer/repositories/consumer_order_repository.dart';
 import 'package:hoppa/shared/models/order_status.dart';
 import 'package:hoppa/apps/consumer/orders/order_detail_page.dart';
 
-class ActiveOrderCard extends StatefulWidget {
+class ActiveOrderCard extends ConsumerStatefulWidget {
   final String? businessId;
 
   const ActiveOrderCard({super.key, this.businessId});
 
   @override
-  State<ActiveOrderCard> createState() => _ActiveOrderCardState();
+  ConsumerState<ActiveOrderCard> createState() => _ActiveOrderCardState();
 }
 
-class _ActiveOrderCardState extends State<ActiveOrderCard> {
-  final OrderService _orderService = OrderService();
-  final String? _userId = FirebaseAuth.instance.currentUser?.uid;
-  late Stream<model.Order?> _orderStream;
+class _ActiveOrderCardState extends ConsumerState<ActiveOrderCard> {
+  Timer? _pollingTimer;
 
   @override
   void initState() {
     super.initState();
-    if (_userId != null) {
-      _orderStream = _orderService.getActiveOrderStream(
-        _userId,
-        businessId: widget.businessId,
-      );
-    } else {
-      _orderStream = const Stream.empty();
-    }
+    // Refresh orders periodically
+    _startPolling();
   }
 
-  @override
-  void didUpdateWidget(ActiveOrderCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.businessId != oldWidget.businessId) {
-      _initStream();
-    }
-  }
-
-  void _initStream() {
-    setState(() {
-      if (_userId != null) {
-        _orderStream = _orderService.getActiveOrderStream(
-          _userId,
-          businessId: widget.businessId,
-        );
-      } else {
-        _orderStream = const Stream.empty();
+  void _startPolling() {
+    _pollingTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) {
+        ref.invalidate(consumerOrdersProvider);
       }
     });
   }
 
   @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authControllerProvider);
+    final bool isGuest = authState is! AuthAuthenticated;
+    
     // Eğer kullanıcı giriş yapmamışsa kartı gösterme
-    if (_userId == null) return const SizedBox.shrink();
+    if (isGuest) return const SizedBox.shrink();
 
-    return StreamBuilder<model.Order?>(
-      stream: _orderStream,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return _buildSkeleton(context);
-        }
+    final ordersAsync = ref.watch(consumerOrdersProvider);
 
-        if (snapshot.hasError) {
-          print("ActiveOrderCard Stream Error: ${snapshot.error}");
-          // Firebase index eksikliği veya yetki hatalarında boş dön (Arayüzde çirkin hata gösterme)
-          final errorStr = snapshot.error.toString().toLowerCase();
-          if (errorStr.contains('failed-precondition') ||
-              errorStr.contains('permission-denied')) {
-            return const SizedBox.shrink();
-          }
-
-          return _buildErrorFallback(
-            context,
-            "Sipariş yüklenirken hata oluştu.",
-          );
-        }
-
-        if (!snapshot.hasData || snapshot.data == null) {
-          return const SizedBox.shrink();
-        }
+    return ordersAsync.when(
+      loading: () => _buildSkeleton(context),
+      error: (error, stack) {
+        return const SizedBox.shrink();
+      },
+      data: (allOrders) {
 
         try {
-          final order = snapshot.data!;
-          final statusEnum = OrderStatus.fromString(order.status);
+          // Find first active order for this business
+          final activeOrders = allOrders.where((order) {
+            final s = OrderStatus.fromString(order.status);
+            final matchesBusiness = widget.businessId == null || order.businessId == widget.businessId;
+            return matchesBusiness && s.isActive;
+          }).toList();
 
-          // Eğer sipariş tamamlanmış veya iptal edilmişse gösterme
-          if (statusEnum.isCompleted) {
+          if (activeOrders.isEmpty) {
             return const SizedBox.shrink();
           }
+
+          final order = activeOrders.first;
 
           return Card(
             color: Colors.white,
@@ -132,10 +109,57 @@ class _ActiveOrderCardState extends State<ActiveOrderCard> {
                                     ),
                               ),
                               const SizedBox(height: 4),
+                              // YENİ: Sipariş Özeti (Kalemler, Miktar)
                               Text(
-                                'Tahmini Teslimat: ${order.deliveryTime}',
+                                order.items.map((item) => "${item.quantity.toInt()}x ${item.name}").join(", "),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Colors.grey[800],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              // YENİ: Ödeme Tipi, Saat ve Teslimat Süresi
+                              Row(
+                                children: [
+                                  Icon(Icons.payment, size: 12, color: Colors.grey[600]),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    order.paymentMethod == "ONLINE_PAYMENT" ? "Online Kredi Kartı" : "Kapıda Ödeme",
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600], fontSize: 11),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Icon(Icons.access_time, size: 12, color: Colors.grey[600]),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${order.createdAt.hour.toString().padLeft(2, '0')}:${order.createdAt.minute.toString().padLeft(2, '0')}',
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600], fontSize: 11),
+                                  ),
+                                ],
+                              ),
+                              if (order.orderNote.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Icon(Icons.notes, size: 12, color: Colors.orange[400]),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        'Not: ${order.orderNote}',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.orange[800], fontStyle: FontStyle.italic, fontSize: 11),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                              const SizedBox(height: 4),
+                              Text(
+                                'Tahmini Teslimat: ${order.deliveryTime.isNotEmpty ? order.deliveryTime : "-"}',
                                 style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(color: Colors.grey[600]),
+                                    ?.copyWith(color: Colors.grey[600], fontSize: 11),
                               ),
                             ],
                           ),
@@ -151,7 +175,7 @@ class _ActiveOrderCardState extends State<ActiveOrderCard> {
                     _buildStepProgressBar(
                       context,
                       order.status,
-                      order.deliveryMethod,
+                      "delivery", // varsayılan delivery
                     ),
                   ],
                 ),
@@ -159,7 +183,6 @@ class _ActiveOrderCardState extends State<ActiveOrderCard> {
             ),
           );
         } catch (e) {
-          // Veri işleme hatasında (örn: eksik alan, parse hatası) sessizce gizle
           return const SizedBox.shrink();
         }
       },
@@ -273,33 +296,6 @@ class _ActiveOrderCardState extends State<ActiveOrderCard> {
           height: 2,
           color: isActive ? Colors.orange : Colors.grey[300],
           margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildErrorFallback(BuildContext context, String message) {
-    return Card(
-      color: Colors.red[50],
-      elevation: 0,
-      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.red.shade200),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          children: [
-            const Icon(Icons.error_outline, color: Colors.red),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                message,
-                style: TextStyle(color: Colors.red.shade700, fontSize: 13),
-              ),
-            ),
-          ],
         ),
       ),
     );

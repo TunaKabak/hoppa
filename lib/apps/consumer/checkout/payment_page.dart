@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:core_network/core_network.dart';
 import 'package:hoppa/apps/consumer/cart/cart_provider.dart';
 import 'package:hoppa/apps/consumer/repositories/consumer_order_repository.dart';
 import 'package:hoppa/shared/models/address.dart';
+import 'package:hoppa/apps/consumer/checkout/three_d_secure_page.dart';
+import 'package:hoppa/shared/core/utils/card_input_formatters.dart';
+import 'package:provider/provider.dart' as p;
+import 'package:hoppa/apps/consumer/address/delivery_provider.dart';
+import 'package:hoppa/apps/consumer/business/business_provider.dart';
 
 class PaymentPage extends ConsumerStatefulWidget {
   final Address deliveryAddress;
@@ -26,6 +32,13 @@ class PaymentPage extends ConsumerStatefulWidget {
 class _PaymentPageState extends ConsumerState<PaymentPage> {
   final _noteController = TextEditingController();
 
+  final _cardNumberController = TextEditingController();
+  final _cardExpiryController = TextEditingController();
+  final _cardCVCController = TextEditingController();
+  final _cardHolderController = TextEditingController();
+  
+  String _cardLogo = '';
+
   String _paymentMethod = 'cash_on_delivery';
   bool _isLoading = false;
   bool _dontRingBell = false;
@@ -36,7 +49,31 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
   @override
   void dispose() {
     _noteController.dispose();
+    _cardNumberController.dispose();
+    _cardExpiryController.dispose();
+    _cardCVCController.dispose();
+    _cardHolderController.dispose();
     super.dispose();
+  }
+
+  void _updateCardLogo(String cardNumber) {
+    final cleanNumber = cardNumber.replaceAll(' ', '');
+    if (cleanNumber.length >= 6) {
+      final bin = cleanNumber.substring(0, 6);
+      if (['454360', '543771', '402235'].contains(bin)) {
+        setState(() => _cardLogo = '💳 Cardplus');
+      } else if (['432042', '516888', '540061'].contains(bin)) {
+        setState(() => _cardLogo = '💳 PAYTR');
+      } else if (cleanNumber.startsWith('4')) {
+        setState(() => _cardLogo = '💳 Visa');
+      } else if (cleanNumber.startsWith('5')) {
+        setState(() => _cardLogo = '💳 MasterCard');
+      } else {
+        setState(() => _cardLogo = '💳 Kart');
+      }
+    } else {
+      setState(() => _cardLogo = '');
+    }
   }
 
   void _submitOrder() async {
@@ -47,18 +84,78 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
       final cartNotifier = ref.read(cartProvider.notifier);
       final orderRepo = ref.read(consumerOrderRepositoryProvider);
 
-      double deliveryFee = widget.isPickUp ? 0.0 : 20.0;
+      final businessProvider = p.Provider.of<BusinessProvider>(context, listen: false);
+      final selectedBusiness = businessProvider.selectedBusiness;
+      final activeCampaigns = ref.read(cartCampaignsProvider).value ?? [];
+      
+      bool hasFreeDeliveryCampaign = activeCampaigns.any((c) => c.type == "FREE_DELIVERY_FIRST_ORDERS");
+      
+      double deliveryFee = selectedBusiness?.baseDeliveryFee ?? 30.0;
+      if (selectedBusiness?.freeDeliveryThreshold != null && 
+          cartState.totalAmount >= selectedBusiness!.freeDeliveryThreshold!) {
+        deliveryFee = 0.0;
+      }
+      if (hasFreeDeliveryCampaign) {
+        deliveryFee = 0.0;
+      }
+      
+      if (widget.isPickUp) {
+        deliveryFee = 0.0;
+      }
+
       double finalTotal = cartState.totalAmount + deliveryFee;
+
+      final deliveryProvider = p.Provider.of<DeliveryProvider>(context, listen: false);
+      final userAddress = deliveryProvider.selectedAddress;
 
       // Clean address - just the actual address, no prefixes or notes
       String cleanAddress = widget.isPickUp
-          ? "Gel Al: ${widget.deliveryAddress.fullDetails}"
+          ? (userAddress != null 
+              ? "Gel Al: ${userAddress.title}: ${userAddress.fullDetails}" 
+              : "Gel Al: ${widget.deliveryAddress.fullDetails}")
           : "${widget.deliveryAddress.title}: ${widget.deliveryAddress.fullDetails}";
 
       // User's order note - just the text
       String orderNote = _noteController.text.trim();
 
-      String? addressId = widget.isPickUp ? null : widget.deliveryAddress.id;
+      String? addressId = widget.isPickUp ? userAddress?.id : widget.deliveryAddress.id;
+
+      Map<String, dynamic>? cardDetails;
+      if (_paymentMethod == 'online_payment') {
+        if (_cardNumberController.text.isEmpty ||
+            _cardExpiryController.text.isEmpty ||
+            _cardCVCController.text.isEmpty ||
+            _cardHolderController.text.isEmpty) {
+          throw Exception("Lütfen kart bilgilerini eksiksiz girin.");
+        }
+        final expiryParts = _cardExpiryController.text.split('/');
+        if (expiryParts.length != 2) {
+          throw Exception("Son kullanma tarihi AA/YY formatında olmalıdır.");
+        }
+        
+        final month = int.tryParse(expiryParts[0]) ?? 0;
+        final year = int.tryParse(expiryParts[1]) ?? 0;
+
+        if (month < 1 || month > 12) {
+          throw Exception("Geçersiz ay girdiniz.");
+        }
+
+        final now = DateTime.now();
+        final currentYear = now.year % 100;
+        final currentMonth = now.month;
+
+        if (year < currentYear || (year == currentYear && month < currentMonth)) {
+          throw Exception("Kartın süresi dolmuş.");
+        }
+
+        cardDetails = {
+          'cardNumber': _cardNumberController.text,
+          'expiryMonth': expiryParts[0],
+          'expiryYear': expiryParts[1],
+          'cvc': _cardCVCController.text,
+          'cardHolderName': _cardHolderController.text,
+        };
+      }
 
       final orderData = {
         'shopId': cartState.currentBusinessId,
@@ -69,16 +166,28 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
         if (addressId != null) 'addressId': addressId,
         'deliveryAddress': cleanAddress,
         'notes': orderNote,
+        'paymentMethod': _paymentMethod.toUpperCase(),
+        if (cardDetails != null) 'cardDetails': cardDetails,
       };
 
-      await orderRepo.createOrder(orderData);
+      final result = await orderRepo.createOrder(orderData);
+      final paymentUrl = result['paymentUrl'] as String?;
 
       // Clear cart locally
       cartNotifier.clearCart();
 
       if (mounted) {
-        Navigator.popUntil(context, (route) => route.isFirst);
-        _showSuccessDialog();
+        if (paymentUrl != null && paymentUrl.isNotEmpty) {
+           Navigator.push(
+             context,
+             MaterialPageRoute(
+               builder: (context) => ThreeDSecurePage(paymentUrl: paymentUrl),
+             ),
+           );
+        } else {
+           Navigator.popUntil(context, (route) => route.isFirst);
+           _showSuccessDialog();
+        }
       }
     } catch (e) {
       String errorMsg = e.toString();
@@ -135,7 +244,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: kPrimaryColor.withOpacity(0.1),
+                color: kPrimaryColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(Icons.check_rounded, color: kPrimaryColor, size: 50),
@@ -180,7 +289,24 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     final campaignsAsync = ref.watch(cartCampaignsProvider);
     final activeCampaigns = campaignsAsync.value ?? [];
 
-    double deliveryFee = widget.isPickUp ? 0.0 : 20.0;
+    final businessProvider = p.Provider.of<BusinessProvider>(context);
+    final selectedBusiness = businessProvider.selectedBusiness;
+    
+    bool hasFreeDeliveryCampaign = activeCampaigns.any((c) => c.type == "FREE_DELIVERY_FIRST_ORDERS");
+    
+    double deliveryFee = selectedBusiness?.baseDeliveryFee ?? 30.0;
+    if (selectedBusiness?.freeDeliveryThreshold != null && 
+        cartState.totalAmount >= selectedBusiness!.freeDeliveryThreshold!) {
+      deliveryFee = 0.0;
+    }
+    if (hasFreeDeliveryCampaign) {
+      deliveryFee = 0.0;
+    }
+    
+    if (widget.isPickUp) {
+      deliveryFee = 0.0;
+    }
+
     double total = cartState.totalAmount + deliveryFee;
 
     return Scaffold(
@@ -264,69 +390,90 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                   Row(
                     children: [
                       Expanded(
-                        child: _buildPaymentCard(
-                          id: 'cash_on_delivery',
-                          title: widget.isPickUp
-                              ? 'Mağazada Nakit'
-                              : 'Kapıda Nakit',
-                          icon: Icons.money_rounded,
+                        child: _buildPaymentOption(
+                          title: 'Kredi / Banka Kartı',
+                          icon: Icons.credit_card,
+                          isSelected: _paymentMethod == 'online_payment',
+                          onTap: () => setState(() => _paymentMethod = 'online_payment'),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 8),
                       Expanded(
-                        child: _buildPaymentCard(
-                          id: 'card_on_delivery',
-                          title: widget.isPickUp
-                              ? 'Mağazada Kart'
-                              : 'Kapıda Kart',
-                          icon: Icons.credit_card_rounded,
+                        child: _buildPaymentOption(
+                          title: widget.isPickUp ? 'Mağazada Ödeme' : 'Kapıda Ödeme',
+                          icon: widget.isPickUp ? Icons.store_outlined : Icons.local_shipping_outlined,
+                          isSelected: _paymentMethod != 'online_payment',
+                          onTap: () {
+                            setState(() {
+                              if (_paymentMethod == 'online_payment') {
+                                _paymentMethod = 'cash_on_delivery';
+                              }
+                            });
+                          },
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  Opacity(
-                    opacity: 0.5,
-                    child: Container(
-                      width: double.infinity,
+                  AnimatedCrossFade(
+                    duration: const Duration(milliseconds: 300),
+                    crossFadeState: _paymentMethod != 'online_payment'
+                        ? CrossFadeState.showFirst
+                        : CrossFadeState.showSecond,
+                    firstChild: Container(
+                      margin: const EdgeInsets.only(top: 12),
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.shade300),
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.grey.shade200),
                       ),
-                      child: Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.language, color: Colors.grey),
-                          const SizedBox(width: 12),
                           const Text(
-                            "Online Ödeme",
+                            "Nasıl ödemek istersiniz?",
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: Colors.grey,
+                              fontSize: 14,
+                              color: Colors.black87,
                             ),
                           ),
-                          const Spacer(),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[300],
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: const Text(
-                              "Çok Yakında",
-                              style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black54),
-                            ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildPaymentOption(
+                                  title: widget.isPickUp ? 'Nakit' : 'Kapıda Nakit',
+                                  icon: Icons.money_rounded,
+                                  isSelected: _paymentMethod == 'cash_on_delivery',
+                                  isSubOption: true,
+                                  onTap: () => setState(() => _paymentMethod = 'cash_on_delivery'),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _buildPaymentOption(
+                                  title: widget.isPickUp ? 'Kart' : 'Kapıda Kredi Kartı',
+                                  icon: Icons.credit_card_rounded,
+                                  isSelected: _paymentMethod == 'card_on_delivery',
+                                  isSubOption: true,
+                                  onTap: () => setState(() => _paymentMethod = 'card_on_delivery'),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     ),
+                    secondChild: const SizedBox(width: double.infinity, height: 0),
+                  ),
+                  AnimatedCrossFade(
+                    duration: const Duration(milliseconds: 300),
+                    crossFadeState: _paymentMethod == 'online_payment'
+                        ? CrossFadeState.showFirst
+                        : CrossFadeState.showSecond,
+                    firstChild: _buildCreditCardForm(),
+                    secondChild: const SizedBox(width: double.infinity, height: 0),
                   ),
 
                   const SizedBox(height: 24),
@@ -343,7 +490,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.02),
+                          color: Colors.black.withValues(alpha: 0.02),
                           blurRadius: 10,
                         ),
                       ],
@@ -446,16 +593,53 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                                 "${cartState.totalAmount.toStringAsFixed(2)} ₺",
                               ),
                               const SizedBox(height: 8),
-                              _summaryRow(
-                                widget.isPickUp
-                                    ? "Teslimat Ücreti (Gel Al)"
-                                    : "Teslimat Ücreti",
-                                widget.isPickUp
-                                    ? "0.00 ₺"
-                                    : "${deliveryFee.toStringAsFixed(2)} ₺",
-                                color: widget.isPickUp
-                                    ? Colors.green
-                                    : kSecondaryColor,
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    widget.isPickUp
+                                        ? "Teslimat Ücreti (Gel Al)"
+                                        : "Teslimat Ücreti",
+                                    style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                                  ),
+                                  Row(
+                                    children: [
+                                      if (deliveryFee == 0 && !widget.isPickUp) ...[
+                                        Text(
+                                          "${(selectedBusiness?.baseDeliveryFee ?? 30.0).toStringAsFixed(2)} ₺",
+                                          style: const TextStyle(
+                                            color: Colors.grey,
+                                            fontSize: 14,
+                                            decoration: TextDecoration.lineThrough,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: Colors.green.shade100,
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            "Ücretsiz",
+                                            style: TextStyle(color: Colors.green.shade800, fontSize: 12, fontWeight: FontWeight.bold),
+                                          ),
+                                        ),
+                                      ] else ...[
+                                        Text(
+                                          widget.isPickUp
+                                              ? "0.00 ₺"
+                                              : "${deliveryFee.toStringAsFixed(2)} ₺",
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                            color: widget.isPickUp ? Colors.green : kSecondaryColor,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ],
                               ),
                               const Padding(
                                 padding: EdgeInsets.symmetric(vertical: 12),
@@ -501,7 +685,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.02),
+                          color: Colors.black.withValues(alpha: 0.02),
                           blurRadius: 10,
                         ),
                       ],
@@ -514,7 +698,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: kPrimaryColor.withOpacity(0.1),
+                                color: kPrimaryColor.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Icon(
@@ -584,7 +768,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 20,
                   offset: const Offset(0, -5),
                 ),
@@ -599,7 +783,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                   backgroundColor: kPrimaryColor,
                   foregroundColor: Colors.white,
                   elevation: 5,
-                  shadowColor: kPrimaryColor.withOpacity(0.4),
+                  shadowColor: kPrimaryColor.withValues(alpha: 0.4),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -666,18 +850,20 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     );
   }
 
-  Widget _buildPaymentCard({
-    required String id,
+  Widget _buildPaymentOption({
     required String title,
     required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+    bool isSubOption = false,
   }) {
-    bool isSelected = _paymentMethod == id;
     return GestureDetector(
-      onTap: () => setState(() => _paymentMethod = id),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(vertical: isSubOption ? 12 : 20, horizontal: 12),
         decoration: BoxDecoration(
-          color: isSelected ? kPrimaryColor.withOpacity(0.05) : Colors.white,
+          color: isSelected ? kPrimaryColor.withValues(alpha: isSubOption ? 0.08 : 0.05) : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected ? kPrimaryColor : Colors.grey.shade200,
@@ -689,15 +875,16 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
             Icon(
               icon,
               color: isSelected ? kPrimaryColor : Colors.grey,
-              size: 32,
+              size: isSubOption ? 24 : 32,
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: isSubOption ? 6 : 8),
             Text(
               title,
+              textAlign: TextAlign.center,
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 color: isSelected ? kPrimaryColor : Colors.grey[700],
-                fontSize: 14,
+                fontSize: isSubOption ? 13 : 14,
               ),
             ),
           ],
@@ -720,6 +907,114 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildCreditCardForm() {
+    return Container(
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: kPrimaryColor.withValues(alpha: 0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: kPrimaryColor.withValues(alpha: 0.05),
+            blurRadius: 10,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                "Kart Bilgileri",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              if (_cardLogo.isNotEmpty)
+                Text(
+                  _cardLogo,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: kPrimaryColor,
+                    fontSize: 14,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _cardNumberController,
+            keyboardType: TextInputType.number,
+            maxLength: 19,
+            onChanged: _updateCardLogo,
+            decoration: InputDecoration(
+              labelText: "Kart Numarası",
+              counterText: "",
+              prefixIcon: const Icon(Icons.credit_card),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _cardExpiryController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    LengthLimitingTextInputFormatter(5),
+                    CardExpiryInputFormatter(),
+                  ],
+                  decoration: InputDecoration(
+                    labelText: "AA/YY",
+                    counterText: "",
+                    prefixIcon: const Icon(Icons.calendar_today),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextField(
+                  controller: _cardCVCController,
+                  keyboardType: TextInputType.number,
+                  maxLength: 3,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: "CVC",
+                    counterText: "",
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _cardHolderController,
+            textCapitalization: TextCapitalization.words,
+            decoration: InputDecoration(
+              labelText: "Kart Üzerindeki İsim",
+              prefixIcon: const Icon(Icons.person_outline),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

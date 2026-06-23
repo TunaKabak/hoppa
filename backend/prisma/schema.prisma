@@ -110,10 +110,17 @@ model Shop {
   latitude         Float?
   longitude        Float?
   deliveryRadiusKm Float     @default(5.0)
+  deliveryPolygon  Json?     // Özel Teslimat Bölgesi (Poligon koordinatları)
 
   // Çalışma Saatleri ve Finansal
-  workingHours     Json?
-  minOrderAmount   Decimal   @db.Decimal(10, 2) @default(0)
+  workingHours          Json?
+  deliveryTime          String?               // Örn: "30-45 dk"
+  minOrderAmount        Decimal               @db.Decimal(10, 2) @default(150.0)
+  minimumOrderAmount    Float                 @default(150.0)
+  deliveryPricingType   DeliveryPricingType   @default(FIXED)
+  baseDeliveryFee       Float                 @default(30.0)
+  deliveryFeePerKm      Float                 @default(5.0)
+  freeDeliveryThreshold Float?
   
   products         Product[]
   orders           Order[]
@@ -198,6 +205,8 @@ model Address {
   
   orders      Order[]
 
+  isDeleted   Boolean  @default(false)
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -227,7 +236,11 @@ model Order {
   status          OrderStatus @default(PENDING)
   customerNote    String?     // Müşterinin sipariş veya kurye için ekleyeceği not
   
+  paymentMethod   PaymentMethod @default(CASH_ON_DELIVERY)
+  paymentStatus   PaymentStatus @default(PENDING)
+  
   items           OrderItem[]
+  paymentTransactions PaymentTransaction[]
 
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
@@ -243,4 +256,75 @@ model OrderItem {
   
   quantity    Int
   unitPrice   Decimal  @db.Decimal(10, 2)
+}
+
+// Ödeme Yöntemleri
+enum PaymentMethod {
+  CASH_ON_DELIVERY
+  CARD_ON_DELIVERY
+  ONLINE_PAYMENT
+}
+
+// Ödeme Durumları
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+// Para Birimleri
+enum Currency {
+  TRY
+  GBP
+  EUR
+  USD
+}
+
+enum DeliveryPricingType {
+  FIXED
+  DISTANCE_BASED
+}
+
+enum CampaignType {
+  FREE_DELIVERY_FIRST_ORDERS
+  PERCENTAGE_DISCOUNT
+  FIXED_AMOUNT_DISCOUNT
+}
+
+// Ödeme İşlemleri / Logları
+model PaymentTransaction {
+  id             String        @id @default(uuid())
+  orderId        String
+  order          Order         @relation(fields: [orderId], references: [id])
+  
+  amount         Decimal       @db.Decimal(10, 2)
+  currency       Currency      @default(TRY)
+  exchangeRate   Decimal?      @db.Decimal(10, 4) // Eğer kur çevrimi varsa
+  
+  provider       String        // Örn: "iyzico", "stripe", "cash"
+  routingType    String?       // Hangi kurala göre seçildi (örn: "BIN_BASED", "LEAST_COST")
+  status         PaymentStatus @default(PENDING)
+  providerTxId   String?       // Sağlayıcı tarafındaki işlem numarası
+  
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([orderId])
+}
+
+// ------------------------------------------------------------------
+// KAMPANYA VE İNDİRİMLER (CAMPAIGN DATA MODELS)
+// ------------------------------------------------------------------
+
+model Campaign {
+  id              String       @id @default(uuid())
+  title           String
+  description     String
+  type            CampaignType @default(FREE_DELIVERY_FIRST_ORDERS)
+  isActive        Boolean      @default(true)
+  maxUsesPerUser  Int          @default(5)
+  startDate       DateTime?
+  endDate         DateTime?
+  createdAt       DateTime     @default(now())
 }

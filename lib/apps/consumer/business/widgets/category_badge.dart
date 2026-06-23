@@ -19,7 +19,7 @@ class CategoryBadge extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: badgeData.backgroundColor.withOpacity(0.4),
+              color: badgeData.backgroundColor.withValues(alpha: 0.4),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),

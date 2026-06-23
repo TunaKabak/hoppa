@@ -1,7 +1,10 @@
 import { Request, Response } from "express";
-import { PrismaClient, OrderStatus } from "@prisma/client";
+import { PrismaClient, OrderStatus, PaymentMethod, PaymentStatus } from "@prisma/client";
+import { PaymentRoutingService } from "../services/PaymentRoutingService";
+import { CampaignService } from "../services/CampaignService";
 
 const prisma = new PrismaClient();
+const campaignService = new CampaignService();
 
 export class OrderController {
   /**
@@ -14,7 +17,7 @@ export class OrderController {
         return res.status(401).json({ error: true, message: "Kullanıcı bilgisi eksik veya yetkisiz." });
       }
 
-      const { shopId, items, deliveryAddress, addressId, notes } = req.body;
+      const { shopId, items, deliveryAddress, addressId, notes, paymentMethod, cardDetails } = req.body;
 
       if (!shopId) {
         return res.status(400).json({ error: true, message: "Dükkan bilgisi (shopId) zorunludur." });
@@ -35,6 +38,57 @@ export class OrderController {
 
       if (!shop.isActive) {
         return res.status(400).json({ error: true, message: "Dükkan şu anda kapalı, sipariş verilemez." });
+      }
+
+      // GMT+3 Zaman Dilimi Kontrolü
+      const now = new Date();
+      const gmt3Time = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Istanbul" }));
+      const currentHour = gmt3Time.getHours();
+      const currentMinute = gmt3Time.getMinutes();
+      
+      const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const currentDayName = days[gmt3Time.getDay()];
+      
+      let isOpenRightNow = true;
+
+      if (shop.workingHours && typeof shop.workingHours === 'object') {
+        const wh = shop.workingHours as any;
+        const todaySchedule = wh[currentDayName];
+        if (todaySchedule) {
+          if (todaySchedule.isOpen === false) {
+             isOpenRightNow = false;
+          } else if (todaySchedule.openTime && todaySchedule.closeTime) {
+             const [openH, openM] = todaySchedule.openTime.split(':').map(Number);
+             const [closeH, closeM] = todaySchedule.closeTime.split(':').map(Number);
+             
+             const currentTotalMins = currentHour * 60 + currentMinute;
+             const openTotalMins = openH * 60 + openM;
+             let closeTotalMins = closeH * 60 + closeM;
+             
+             if (closeTotalMins < openTotalMins) {
+               // Ertesi güne sarkma durumu, örn: 08:00 - 02:00
+               closeTotalMins += 24 * 60;
+             }
+             
+             let checkMins = currentTotalMins;
+             if (currentTotalMins < openTotalMins && closeTotalMins > 24 * 60) {
+               checkMins += 24 * 60;
+             }
+             
+             if (checkMins < openTotalMins || checkMins >= closeTotalMins) {
+               isOpenRightNow = false;
+             }
+          }
+        }
+      } else {
+        // Varsayılan kontrol: 08:00 - 22:00
+        if (currentHour < 8 || currentHour >= 22) {
+          isOpenRightNow = false;
+        }
+      }
+
+      if (!isOpenRightNow) {
+        return res.status(400).json({ error: true, message: "Dükkan şu an çalışma saatleri dışındadır. Lütfen daha sonra tekrar deneyiniz." });
       }
 
       // 2. Ürünlerin fiyatlarını veritabanından çek ve doğrula
@@ -100,7 +154,9 @@ export class OrderController {
           return res.status(400).json({ error: true, message: "Lütfen teslimat adresi için haritadan konum seçiniz." });
         }
 
-        snapshotAddress = `${userAddress.title}: ${userAddress.fullAddress}${userAddress.district ? ' ' + userAddress.district : ''}${userAddress.city ? '/' + userAddress.city : ''}`;
+        snapshotAddress = (deliveryAddress && typeof deliveryAddress === "string") 
+          ? deliveryAddress 
+          : `${userAddress.title}: ${userAddress.fullAddress}${userAddress.district ? ' ' + userAddress.district : ''}${userAddress.city ? '/' + userAddress.city : ''}`;
       } else if (deliveryAddress && typeof deliveryAddress === "string") {
         // Direkt metin olarak adres girildiyse, veritabanına Address olarak kaydet/bul ve snapshot'ı metin yap
         let existingAddress = await prisma.address.findFirst({
@@ -126,7 +182,12 @@ export class OrderController {
       }
 
       // 6. Prisma `$transaction` ile sipariş ve kalemleri kaydet
-      const order = await prisma.$transaction(async (tx) => {
+      const transactionResult = await prisma.$transaction(async (tx) => {
+        const method = paymentMethod || "CASH_ON_DELIVERY";
+        
+        // Backend Delivery Fee Calculation via Campaign Engine
+        const deliveryResult = await campaignService.calculateDeliveryFee(consumerId, shop, totalAmount);
+        
         const createdOrder = await tx.order.create({
           data: {
             consumerId,
@@ -134,9 +195,11 @@ export class OrderController {
             addressId: finalAddressId,
             deliveryAddress: snapshotAddress, // immutable adres snapshot'ı
             totalAmount,
-            deliveryFee: 0,
+            deliveryFee: deliveryResult.fee,
             status: "PENDING",
-            customerNote: notes || null
+            customerNote: notes || null,
+            paymentMethod: method,
+            paymentStatus: "PENDING"
           }
         });
 
@@ -155,12 +218,41 @@ export class OrderController {
           data: orderItemsData
         });
 
-        return createdOrder;
+        let paymentUrl = undefined;
+
+        if (method === "ONLINE_PAYMENT") {
+           if (!cardDetails) {
+             throw new Error("Online ödeme için kart bilgileri gereklidir.");
+           }
+
+           const routeResponse = await PaymentRoutingService.routePayment({
+             orderId: createdOrder.id,
+             amount: Number(totalAmount),
+             cardDetails
+           });
+
+           await tx.paymentTransaction.create({
+             data: {
+               orderId: createdOrder.id,
+               amount: routeResponse.amount,
+               currency: routeResponse.currency,
+               exchangeRate: routeResponse.exchangeRate,
+               provider: routeResponse.provider,
+               routingType: routeResponse.routingType,
+               status: "PENDING",
+               providerTxId: routeResponse.providerTxId
+             }
+           });
+
+           paymentUrl = routeResponse.paymentUrl;
+        }
+
+        return { createdOrder, paymentUrl };
       });
 
       // Oluşturulan siparişi detaylıca döndür
       const fullOrder = await prisma.order.findUnique({
-        where: { id: order.id },
+        where: { id: transactionResult.createdOrder.id },
         include: {
           shop: { select: { name: true, imageUrl: true } },
           items: {
@@ -171,7 +263,11 @@ export class OrderController {
         }
       });
 
-      return res.status(201).json({ error: false, data: fullOrder });
+      return res.status(201).json({ 
+        error: false, 
+        data: fullOrder,
+        paymentUrl: transactionResult.paymentUrl
+      });
     } catch (error: any) {
       return res.status(500).json({ error: true, message: error.message });
     }

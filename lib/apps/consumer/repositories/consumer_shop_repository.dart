@@ -60,14 +60,28 @@ class ConsumerShopRepository {
           ? imageUrl
           : 'https://via.placeholder.com/150';
 
-      final categoryName = json['category'] != null ? (json['category']['name'] as String? ?? 'Genel') : 'Genel';
+      String categoryName = 'Genel';
+      String subCategoryName = 'Tümü';
+
+      if (json['category'] != null) {
+        print("DEBUG CATEGORY: ${json['category']}");
+        final cat = json['category'];
+        if (cat['parent'] != null) {
+          categoryName = cat['parent']['name'] as String? ?? 'Genel';
+          subCategoryName = cat['name'] as String? ?? 'Tümü';
+        } else {
+          categoryName = cat['name'] as String? ?? 'Genel';
+        }
+      } else {
+        print("DEBUG CATEGORY: null");
+      }
 
       final productMap = {
         'barcode': id,
         'name': name,
         'brand': 'Hoppa',
         'category': categoryName,
-        'subCategory': 'Tümü',
+        'subCategory': subCategoryName,
         'imageUrl': validImageUrl,
         'isWeighted': false,
         'description': description,
@@ -83,6 +97,74 @@ class ConsumerShopRepository {
       };
 
       return BusinessProduct.fromMap(map, id);
+    }).toList();
+  }
+
+  Future<List<Map<String, dynamic>>> getFavoriteProducts(List<String> productIds) async {
+    if (productIds.isEmpty) return [];
+    
+    final response = await _apiClient.post('/api/consumer/favorites/products', body: {
+      'productIds': productIds
+    });
+    
+    final data = response['data'] as List<dynamic>?;
+    if (data == null) return [];
+    
+    return data.map((item) {
+      final productJson = item['product'];
+      final isAvailable = item['isAvailable'] as bool? ?? false;
+      
+      final id = productJson['id'] as String? ?? '';
+      final shopId = productJson['shopId'] as String? ?? '';
+      final name = productJson['name'] as String? ?? '';
+      final description = productJson['description'] as String? ?? '';
+      final price = productJson['price'] != null ? double.tryParse(productJson['price'].toString()) ?? 0.0 : 0.0;
+      final stock = productJson['stock'] != null ? (int.tryParse(productJson['stock'].toString()) ?? 0).toDouble() : 0.0;
+      final isActive = productJson['isActive'] as bool? ?? true;
+      
+      final imageUrl = productJson['imageUrl'] as String? ?? '';
+      final validImageUrl = _isValidImageUrl(imageUrl)
+          ? imageUrl
+          : 'https://via.placeholder.com/150';
+
+      String categoryName = 'Genel';
+      String subCategoryName = 'Tümü';
+
+      if (productJson['category'] != null) {
+        final cat = productJson['category'];
+        if (cat['parent'] != null) {
+          categoryName = cat['parent']['name'] as String? ?? 'Genel';
+          subCategoryName = cat['name'] as String? ?? 'Tümü';
+        } else {
+          categoryName = cat['name'] as String? ?? 'Genel';
+        }
+      }
+
+      final productMap = {
+        'barcode': id,
+        'name': name,
+        'brand': productJson['brand'] ?? 'Hoppa',
+        'category': categoryName,
+        'subCategory': subCategoryName,
+        'imageUrl': validImageUrl,
+        'isWeighted': false,
+        'description': description,
+      };
+
+      final map = {
+        'businessId': shopId,
+        'productBarcode': id,
+        'price': price,
+        'stock': stock,
+        'isAvailable': isActive,
+        'product_details': productMap,
+      };
+
+      final bp = BusinessProduct.fromMap(map, id);
+      return {
+        'product': bp,
+        'isAvailable': isAvailable,
+      };
     }).toList();
   }
 }

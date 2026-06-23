@@ -120,8 +120,8 @@ class _CategoryGridItemState extends State<CategoryGridItem>
                 boxShadow: [
                   BoxShadow(
                     color: _isPressed
-                        ? Colors.black.withOpacity(0.08)
-                        : Colors.black.withOpacity(0.05),
+                        ? Colors.black.withValues(alpha: 0.08)
+                        : Colors.black.withValues(alpha: 0.05),
                     blurRadius: _isPressed ? 8 : 10,
                     offset: Offset(0, _isPressed ? 2 : 4),
                   ),
@@ -142,11 +142,11 @@ class _CategoryGridItemState extends State<CategoryGridItem>
                   onTap: isClosed ? null : _handleTap,
                   borderRadius: BorderRadius.circular(16),
                   splashColor:
-                      (widget.category['color'] as Color?)?.withOpacity(0.2) ??
-                      Colors.blue.withOpacity(0.2),
+                      (widget.category['color'] as Color?)?.withValues(alpha: 0.2) ??
+                      Colors.blue.withValues(alpha: 0.2),
                   highlightColor:
-                      (widget.category['color'] as Color?)?.withOpacity(0.1) ??
-                      Colors.blue.withOpacity(0.1),
+                      (widget.category['color'] as Color?)?.withValues(alpha: 0.1) ??
+                      Colors.blue.withValues(alpha: 0.1),
                   child: Stack(
                     children: [
                       // Gradient overlay for featured items
@@ -158,8 +158,8 @@ class _CategoryGridItemState extends State<CategoryGridItem>
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
                               colors: [
-                                Colors.black.withOpacity(0.3),
-                                Colors.black.withOpacity(0.6),
+                                Colors.black.withValues(alpha: 0.3),
+                                Colors.black.withValues(alpha: 0.6),
                               ],
                             ),
                           ),
@@ -170,7 +170,7 @@ class _CategoryGridItemState extends State<CategoryGridItem>
                         Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(16),
-                            color: Colors.black.withOpacity(0.5),
+                            color: Colors.black.withValues(alpha: 0.5),
                           ),
                         ),
 
@@ -187,7 +187,7 @@ class _CategoryGridItemState extends State<CategoryGridItem>
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
                                   color: (widget.category['color'] as Color)
-                                      .withOpacity(0.1),
+                                      .withValues(alpha: 0.1),
                                   shape: BoxShape.circle,
                                 ),
                                 child: Icon(

@@ -274,7 +274,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  backgroundColor: Colors.white.withOpacity(0.5),
+                  backgroundColor: Colors.white.withValues(alpha: 0.5),
                 ),
               ),
             ),
@@ -480,7 +480,7 @@ class _TypewriterSloganState extends State<TypewriterSlogan> {
           Text(
             "|",
             style: widget.style.copyWith(
-              color: const Color(0xFFE95D22).withOpacity(0.5),
+              color: const Color(0xFFE95D22).withValues(alpha: 0.5),
             ),
           ),
       ],
