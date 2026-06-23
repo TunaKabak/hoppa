@@ -25,6 +25,7 @@ class MerchantShop {
   final double? baseDeliveryFee;
   final double? deliveryFeePerKm;
   final double? freeDeliveryThreshold;
+  final List<dynamic>? deliveryPolygon;
 
   MerchantShop({
     required this.id,
@@ -49,6 +50,7 @@ class MerchantShop {
     this.baseDeliveryFee,
     this.deliveryFeePerKm,
     this.freeDeliveryThreshold,
+    this.deliveryPolygon,
   });
 
   factory MerchantShop.fromMap(Map<String, dynamic> map) {
@@ -76,6 +78,7 @@ class MerchantShop {
       baseDeliveryFee: map['baseDeliveryFee'] != null ? (map['baseDeliveryFee'] as num).toDouble() : null,
       deliveryFeePerKm: map['deliveryFeePerKm'] != null ? (map['deliveryFeePerKm'] as num).toDouble() : null,
       freeDeliveryThreshold: map['freeDeliveryThreshold'] != null ? (map['freeDeliveryThreshold'] as num).toDouble() : null,
+      deliveryPolygon: map['deliveryPolygon'] != null ? List<dynamic>.from(map['deliveryPolygon']) : null,
     );
   }
 
@@ -101,6 +104,7 @@ class MerchantShop {
       'baseDeliveryFee': baseDeliveryFee,
       'deliveryFeePerKm': deliveryFeePerKm,
       'freeDeliveryThreshold': freeDeliveryThreshold,
+      'deliveryPolygon': deliveryPolygon,
     };
   }
 }

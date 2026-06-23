@@ -110,6 +110,7 @@ model Shop {
   latitude         Float?
   longitude        Float?
   deliveryRadiusKm Float     @default(5.0)
+  deliveryPolygon  Json?     // Özel Teslimat Bölgesi (Poligon koordinatları)
 
   // Çalışma Saatleri ve Finansal
   workingHours          Json?
@@ -203,6 +204,8 @@ model Address {
   longitude   Float?
   
   orders      Order[]
+
+  isDeleted   Boolean  @default(false)
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

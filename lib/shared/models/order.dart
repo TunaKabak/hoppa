@@ -19,6 +19,7 @@ class Order {
   final bool dontRingBell; // Doorbell preference
   final double addressLatitude; // Delivery address latitude
   final double addressLongitude; // Delivery address longitude
+  final String paymentMethod; // Payment Method
 
   Order({
     required this.id,
@@ -36,6 +37,7 @@ class Order {
     this.dontRingBell = false,
     this.addressLatitude = 0.0,
     this.addressLongitude = 0.0,
+    this.paymentMethod = 'CASH_ON_DELIVERY',
   });
 
   factory Order.fromMap(Map<String, dynamic> data, String id) {
@@ -121,6 +123,7 @@ class Order {
       dontRingBell: dontRingBell,
       addressLatitude: data['address_latitude'] != null ? (data['address_latitude'] as num).toDouble() : 0.0,
       addressLongitude: data['address_longitude'] != null ? (data['address_longitude'] as num).toDouble() : 0.0,
+      paymentMethod: data['paymentMethod'] ?? data['payment_method'] ?? 'CASH_ON_DELIVERY',
       createdAt: parsedCreatedAt,
       items: parsedItems,
     );
