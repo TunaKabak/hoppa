@@ -128,7 +128,7 @@ class _PromoSliderState extends State<PromoSlider> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: fallbackColor.withOpacity(0.4),
+              color: fallbackColor.withValues(alpha: 0.4),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -144,7 +144,7 @@ class _PromoSliderState extends State<PromoSlider> {
                   child: Image.network(
                     campaign.imageUrl,
                     fit: BoxFit.cover,
-                    color: Colors.black.withOpacity(
+                    color: Colors.black.withValues(alpha: 
                       0.3,
                     ), // Darken for readability
                     colorBlendMode: BlendMode.darken,
@@ -164,7 +164,7 @@ class _PromoSliderState extends State<PromoSlider> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(

@@ -18,6 +18,13 @@ class MerchantShop {
   final String? businessPhone;
   final String? identityNumber;
   final String type;
+  
+  // Yeni teslimat alanları
+  final String? deliveryTime;
+  final String? deliveryPricingType;
+  final double? baseDeliveryFee;
+  final double? deliveryFeePerKm;
+  final double? freeDeliveryThreshold;
 
   MerchantShop({
     required this.id,
@@ -37,6 +44,11 @@ class MerchantShop {
     this.businessPhone,
     this.identityNumber,
     this.type = 'OTHER',
+    this.deliveryTime,
+    this.deliveryPricingType = 'FIXED',
+    this.baseDeliveryFee,
+    this.deliveryFeePerKm,
+    this.freeDeliveryThreshold,
   });
 
   factory MerchantShop.fromMap(Map<String, dynamic> map) {
@@ -59,6 +71,11 @@ class MerchantShop {
       businessPhone: merchantMap?['businessPhone'],
       identityNumber: merchantMap?['identityNumber'],
       type: map['type'] ?? 'OTHER',
+      deliveryTime: map['deliveryTime'],
+      deliveryPricingType: map['deliveryPricingType'] ?? 'FIXED',
+      baseDeliveryFee: map['baseDeliveryFee'] != null ? (map['baseDeliveryFee'] as num).toDouble() : null,
+      deliveryFeePerKm: map['deliveryFeePerKm'] != null ? (map['deliveryFeePerKm'] as num).toDouble() : null,
+      freeDeliveryThreshold: map['freeDeliveryThreshold'] != null ? (map['freeDeliveryThreshold'] as num).toDouble() : null,
     );
   }
 
@@ -79,6 +96,11 @@ class MerchantShop {
       'businessPhone': businessPhone,
       'identityNumber': identityNumber,
       'type': type,
+      'deliveryTime': deliveryTime,
+      'deliveryPricingType': deliveryPricingType,
+      'baseDeliveryFee': baseDeliveryFee,
+      'deliveryFeePerKm': deliveryFeePerKm,
+      'freeDeliveryThreshold': freeDeliveryThreshold,
     };
   }
 }

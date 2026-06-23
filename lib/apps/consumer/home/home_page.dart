@@ -322,7 +322,7 @@ class _HomePageState extends ConsumerState<HomePage>
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: theme.primaryColor.withOpacity(0.1),
+                        color: theme.primaryColor.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -620,7 +620,7 @@ class _HomePageState extends ConsumerState<HomePage>
                                       ? [
                                           BoxShadow(
                                             color: theme.primaryColor
-                                                .withOpacity(0.3),
+                                                .withValues(alpha: 0.3),
                                             blurRadius: 4,
                                             offset: const Offset(0, 2),
                                           ),
@@ -814,7 +814,7 @@ class _HomePageState extends ConsumerState<HomePage>
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
           color: isSelected
-              ? theme.primaryColor.withOpacity(0.1)
+              ? theme.primaryColor.withValues(alpha: 0.1)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(6),
           border: Border.all(
@@ -861,7 +861,7 @@ class _HomePageState extends ConsumerState<HomePage>
                         BoxShadow(
                           color: Theme.of(
                             context,
-                          ).primaryColor.withOpacity(0.3),
+                          ).primaryColor.withValues(alpha: 0.3),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),

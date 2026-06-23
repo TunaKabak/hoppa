@@ -164,15 +164,27 @@ async function main() {
   });
 
   const marketProducts = [
-    { name: "1 Litre Su", price: 10.0, stock: 100, description: "Doğal kaynak suyu" },
-    { name: "Taze Ekmek", price: 15.0, stock: 50, description: "Günlük taze ekmek" },
-    { name: "Günlük Süt", price: 45.0, stock: 30, description: "Pastörize günlük süt" },
+    { name: "1 Litre Su", price: 10.0, stock: 100, description: "Doğal kaynak suyu", category: "Su & İçecek", subCategory: "Su" },
+    { name: "Taze Ekmek", price: 15.0, stock: 50, description: "Günlük taze ekmek", category: "Fırın", subCategory: "Ekmek" },
+    { name: "Günlük Süt", price: 45.0, stock: 30, description: "Pastörize günlük süt", category: "Süt & Kahvaltılık", subCategory: "Süt" },
   ];
 
   for (const p of marketProducts) {
+    // Kategori/Alt kategori bul veya oluştur
+    let parentCat = await prisma.category.findFirst({ where: { name: p.category } });
+    if (!parentCat) {
+      parentCat = await prisma.category.create({ data: { name: p.category } });
+    }
+    
+    let subCat = await prisma.category.findFirst({ where: { name: p.subCategory, parentId: parentCat.id } });
+    if (!subCat) {
+      subCat = await prisma.category.create({ data: { name: p.subCategory, parentId: parentCat.id } });
+    }
+
     await prisma.product.create({
       data: {
         shopId: testMarketShop.id,
+        categoryId: subCat.id,
         name: p.name,
         price: p.price,
         stock: p.stock,

@@ -166,7 +166,7 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
       decoration: BoxDecoration(
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             offset: const Offset(0, -4),
             blurRadius: 10,
           ),
@@ -204,7 +204,7 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
       decoration: BoxDecoration(
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             offset: const Offset(0, -4),
             blurRadius: 10,
           ),
@@ -273,7 +273,7 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                     decoration: BoxDecoration(
-                      color: a.color.withOpacity(0.1),
+                      color: a.color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
@@ -311,7 +311,7 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
+                color: Colors.blue.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Row(
@@ -970,6 +970,59 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Dükkan Özet Kartı
+                Container(
+                  margin: const EdgeInsets.only(bottom: 24),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blueGrey.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.blueGrey.shade100),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.storefront, color: Colors.blueGrey.shade700),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              shop.name,
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blueGrey.shade900,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Icon(Icons.timer_outlined, size: 16, color: Colors.blueGrey.shade600),
+                          const SizedBox(width: 6),
+                          Text(
+                            "Ort. Teslimat: ${shop.deliveryTime ?? 'Belirtilmedi'}",
+                            style: TextStyle(color: Colors.blueGrey.shade700, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(Icons.shopping_basket_outlined, size: 16, color: Colors.blueGrey.shade600),
+                          const SizedBox(width: 6),
+                          Text(
+                            "Min Sepet: ${shop.minOrderAmount?.toStringAsFixed(2) ?? '0.00'} ₺",
+                            style: TextStyle(color: Colors.blueGrey.shade700, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
                 const Text(
                   "Yeni Ürün Oluştur",
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),

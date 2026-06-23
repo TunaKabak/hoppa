@@ -103,7 +103,7 @@ class _MerchantMainLayoutState extends ConsumerState<MerchantMainLayout> {
     if (_isLoading) {
       return [const Center(child: CircularProgressIndicator())];
     }
-    final pages = [
+    final List<Widget> pages = [
       MerchantDashboardPage(
         key: ValueKey('dash_$_activeBusinessId'),
         businessId: _activeBusinessId,

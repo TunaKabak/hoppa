@@ -348,7 +348,7 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 10,
                       offset: const Offset(0, -5),
                     ),
@@ -377,7 +377,7 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
                             child: FilterChip(
                               label: Text(title),
                               selected: isSelected,
-                              selectedColor: theme.primaryColor.withOpacity(
+                              selectedColor: theme.primaryColor.withValues(alpha: 
                                 0.2,
                               ),
                               checkmarkColor: theme.primaryColor,
@@ -568,7 +568,7 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
                               borderRadius: BorderRadius.circular(16),
                             ),
                             elevation: 4,
-                            shadowColor: theme.primaryColor.withOpacity(0.4),
+                            shadowColor: theme.primaryColor.withValues(alpha: 0.4),
                           ),
                           child: _isLoading
                               ? const CircularProgressIndicator(

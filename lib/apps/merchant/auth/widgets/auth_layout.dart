@@ -83,7 +83,7 @@ class _AuthLayoutState extends State<AuthLayout> with WidgetsBindingObserver {
       appBar: widget.showAppBar
           ? AppBar(
               backgroundColor: _showSmallLogo
-                  ? Colors.white.withOpacity(0.9)
+                  ? Colors.white.withValues(alpha: 0.9)
                   : Colors.transparent,
               elevation: _showSmallLogo ? 1 : 0,
               centerTitle: true,
@@ -121,8 +121,8 @@ class _AuthLayoutState extends State<AuthLayout> with WidgetsBindingObserver {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Colors.white.withOpacity(0.7),
-                      Colors.white.withOpacity(0.9),
+                      Colors.white.withValues(alpha: 0.7),
+                      Colors.white.withValues(alpha: 0.9),
                     ],
                   ),
                 ),
@@ -159,10 +159,10 @@ class _AuthLayoutState extends State<AuthLayout> with WidgetsBindingObserver {
                                   margin: const EdgeInsets.all(24),
                                   padding: const EdgeInsets.all(24),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.4),
+                                    color: Colors.white.withValues(alpha: 0.4),
                                     borderRadius: BorderRadius.circular(24),
                                     border: Border.all(
-                                      color: Colors.white.withOpacity(0.6),
+                                      color: Colors.white.withValues(alpha: 0.6),
                                     ),
                                   ),
                                   child: widget.child,

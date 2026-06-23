@@ -233,7 +233,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                       child: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.6),
+                          color: Colors.white.withValues(alpha: 0.6),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: Colors.grey.shade200),
                         ),
@@ -335,7 +335,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9).withOpacity(0.8),
+                    color: const Color(0xFFF1F5F9).withValues(alpha: 0.8),
                     borderRadius: BorderRadius.circular(18),
                   ),
                   child: Row(
