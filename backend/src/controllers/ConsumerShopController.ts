@@ -86,7 +86,11 @@ export class ConsumerShopController {
           isActive: true
         },
         include: {
-          category: true
+          category: {
+            include: {
+              parent: true
+            }
+          }
         },
         orderBy: { createdAt: 'desc' }
       });
