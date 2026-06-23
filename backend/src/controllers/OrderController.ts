@@ -101,7 +101,9 @@ export class OrderController {
           return res.status(400).json({ error: true, message: "Lütfen teslimat adresi için haritadan konum seçiniz." });
         }
 
-        snapshotAddress = `${userAddress.title}: ${userAddress.fullAddress}${userAddress.district ? ' ' + userAddress.district : ''}${userAddress.city ? '/' + userAddress.city : ''}`;
+        snapshotAddress = (deliveryAddress && typeof deliveryAddress === "string") 
+          ? deliveryAddress 
+          : `${userAddress.title}: ${userAddress.fullAddress}${userAddress.district ? ' ' + userAddress.district : ''}${userAddress.city ? '/' + userAddress.city : ''}`;
       } else if (deliveryAddress && typeof deliveryAddress === "string") {
         // Direkt metin olarak adres girildiyse, veritabanına Address olarak kaydet/bul ve snapshot'ı metin yap
         let existingAddress = await prisma.address.findFirst({

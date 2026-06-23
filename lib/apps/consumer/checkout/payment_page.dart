@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:core_network/core_network.dart';
 import 'package:hoppa/apps/consumer/cart/cart_provider.dart';
 import 'package:hoppa/apps/consumer/repositories/consumer_order_repository.dart';
 import 'package:hoppa/shared/models/address.dart';
 import 'package:hoppa/apps/consumer/checkout/three_d_secure_page.dart';
+import 'package:hoppa/shared/core/utils/card_input_formatters.dart';
+import 'package:provider/provider.dart' as p;
+import 'package:hoppa/apps/consumer/address/delivery_provider.dart';
 
 class PaymentPage extends ConsumerStatefulWidget {
   final Address deliveryAddress;
@@ -82,15 +86,20 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
       double deliveryFee = widget.isPickUp ? 0.0 : 20.0;
       double finalTotal = cartState.totalAmount + deliveryFee;
 
+      final deliveryProvider = p.Provider.of<DeliveryProvider>(context, listen: false);
+      final userAddress = deliveryProvider.selectedAddress;
+
       // Clean address - just the actual address, no prefixes or notes
       String cleanAddress = widget.isPickUp
-          ? "Gel Al: ${widget.deliveryAddress.fullDetails}"
+          ? (userAddress != null 
+              ? "Gel Al: ${userAddress.title}: ${userAddress.fullDetails}" 
+              : "Gel Al: ${widget.deliveryAddress.fullDetails}")
           : "${widget.deliveryAddress.title}: ${widget.deliveryAddress.fullDetails}";
 
       // User's order note - just the text
       String orderNote = _noteController.text.trim();
 
-      String? addressId = widget.isPickUp ? null : widget.deliveryAddress.id;
+      String? addressId = widget.isPickUp ? userAddress?.id : widget.deliveryAddress.id;
 
       Map<String, dynamic>? cardDetails;
       if (_paymentMethod == 'online_payment') {
@@ -104,6 +113,22 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
         if (expiryParts.length != 2) {
           throw Exception("Son kullanma tarihi AA/YY formatında olmalıdır.");
         }
+        
+        final month = int.tryParse(expiryParts[0]) ?? 0;
+        final year = int.tryParse(expiryParts[1]) ?? 0;
+
+        if (month < 1 || month > 12) {
+          throw Exception("Geçersiz ay girdiniz.");
+        }
+
+        final now = DateTime.now();
+        final currentYear = now.year % 100;
+        final currentMonth = now.month;
+
+        if (year < currentYear || (year == currentYear && month < currentMonth)) {
+          throw Exception("Kartın süresi dolmuş.");
+        }
+
         cardDetails = {
           'cardNumber': _cardNumberController.text,
           'expiryMonth': expiryParts[0],
@@ -329,35 +354,91 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                   Row(
                     children: [
                       Expanded(
-                        child: _buildPaymentCard(
-                          id: 'cash_on_delivery',
-                          title: widget.isPickUp
-                              ? 'Mağazada Nakit'
-                              : 'Kapıda Nakit',
-                          icon: Icons.money_rounded,
+                        child: _buildPaymentOption(
+                          title: 'Kredi / Banka Kartı',
+                          icon: Icons.credit_card,
+                          isSelected: _paymentMethod == 'online_payment',
+                          onTap: () => setState(() => _paymentMethod = 'online_payment'),
                         ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: _buildPaymentCard(
-                          id: 'card_on_delivery',
-                          title: widget.isPickUp
-                              ? 'Mağazada Kart'
-                              : 'Kapıda Kart',
-                          icon: Icons.credit_card_rounded,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildPaymentCard(
-                          id: 'online_payment',
-                          title: 'Online Kart',
-                          icon: Icons.language,
+                        child: _buildPaymentOption(
+                          title: widget.isPickUp ? 'Mağazada Ödeme' : 'Kapıda Ödeme',
+                          icon: widget.isPickUp ? Icons.store_outlined : Icons.local_shipping_outlined,
+                          isSelected: _paymentMethod != 'online_payment',
+                          onTap: () {
+                            setState(() {
+                              if (_paymentMethod == 'online_payment') {
+                                _paymentMethod = 'cash_on_delivery';
+                              }
+                            });
+                          },
                         ),
                       ),
                     ],
                   ),
-                  if (_paymentMethod == 'online_payment') _buildCreditCardForm(),
+                  AnimatedCrossFade(
+                    duration: const Duration(milliseconds: 300),
+                    crossFadeState: _paymentMethod != 'online_payment'
+                        ? CrossFadeState.showFirst
+                        : CrossFadeState.showSecond,
+                    firstChild: Container(
+                      margin: const EdgeInsets.only(top: 12),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Nasıl ödemek istersiniz?",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildPaymentOption(
+                                  title: widget.isPickUp ? 'Nakit' : 'Kapıda Nakit',
+                                  icon: Icons.money_rounded,
+                                  isSelected: _paymentMethod == 'cash_on_delivery',
+                                  isSubOption: true,
+                                  onTap: () => setState(() => _paymentMethod = 'cash_on_delivery'),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: _buildPaymentOption(
+                                  title: widget.isPickUp ? 'Kart' : 'Kapıda Kredi Kartı',
+                                  icon: Icons.credit_card_rounded,
+                                  isSelected: _paymentMethod == 'card_on_delivery',
+                                  isSubOption: true,
+                                  onTap: () => setState(() => _paymentMethod = 'card_on_delivery'),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    secondChild: const SizedBox(width: double.infinity, height: 0),
+                  ),
+                  AnimatedCrossFade(
+                    duration: const Duration(milliseconds: 300),
+                    crossFadeState: _paymentMethod == 'online_payment'
+                        ? CrossFadeState.showFirst
+                        : CrossFadeState.showSecond,
+                    firstChild: _buildCreditCardForm(),
+                    secondChild: const SizedBox(width: double.infinity, height: 0),
+                  ),
 
                   const SizedBox(height: 24),
 
@@ -696,18 +777,20 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     );
   }
 
-  Widget _buildPaymentCard({
-    required String id,
+  Widget _buildPaymentOption({
     required String title,
     required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+    bool isSubOption = false,
   }) {
-    bool isSelected = _paymentMethod == id;
     return GestureDetector(
-      onTap: () => setState(() => _paymentMethod = id),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(vertical: isSubOption ? 12 : 20, horizontal: 12),
         decoration: BoxDecoration(
-          color: isSelected ? kPrimaryColor.withOpacity(0.05) : Colors.white,
+          color: isSelected ? kPrimaryColor.withOpacity(isSubOption ? 0.08 : 0.05) : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected ? kPrimaryColor : Colors.grey.shade200,
@@ -719,15 +802,16 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
             Icon(
               icon,
               color: isSelected ? kPrimaryColor : Colors.grey,
-              size: 32,
+              size: isSubOption ? 24 : 32,
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: isSubOption ? 6 : 8),
             Text(
               title,
+              textAlign: TextAlign.center,
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 color: isSelected ? kPrimaryColor : Colors.grey[700],
-                fontSize: 14,
+                fontSize: isSubOption ? 13 : 14,
               ),
             ),
           ],
@@ -810,8 +894,11 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
               Expanded(
                 child: TextField(
                   controller: _cardExpiryController,
-                  keyboardType: TextInputType.datetime,
-                  maxLength: 5,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    LengthLimitingTextInputFormatter(5),
+                    CardExpiryInputFormatter(),
+                  ],
                   decoration: InputDecoration(
                     labelText: "AA/YY",
                     counterText: "",

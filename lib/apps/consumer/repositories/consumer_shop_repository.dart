@@ -60,14 +60,25 @@ class ConsumerShopRepository {
           ? imageUrl
           : 'https://via.placeholder.com/150';
 
-      final categoryName = json['category'] != null ? (json['category']['name'] as String? ?? 'Genel') : 'Genel';
+      String categoryName = 'Genel';
+      String subCategoryName = 'Tümü';
+
+      if (json['category'] != null) {
+        final cat = json['category'];
+        if (cat['parent'] != null) {
+          categoryName = cat['parent']['name'] as String? ?? 'Genel';
+          subCategoryName = cat['name'] as String? ?? 'Tümü';
+        } else {
+          categoryName = cat['name'] as String? ?? 'Genel';
+        }
+      }
 
       final productMap = {
         'barcode': id,
         'name': name,
         'brand': 'Hoppa',
         'category': categoryName,
-        'subCategory': 'Tümü',
+        'subCategory': subCategoryName,
         'imageUrl': validImageUrl,
         'isWeighted': false,
         'description': description,
