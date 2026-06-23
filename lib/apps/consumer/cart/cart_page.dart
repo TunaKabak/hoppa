@@ -9,6 +9,7 @@ import 'package:hoppa/shared/models/campaign.dart';
 import 'package:hoppa/apps/consumer/address/delivery_provider.dart';
 import 'package:hoppa/apps/consumer/business/business_provider.dart';
 import 'package:hoppa/apps/consumer/cart/widgets/min_cart_amount_progress.dart';
+import 'package:hoppa/apps/consumer/cart/widgets/free_delivery_progress.dart';
 import 'package:hoppa/apps/consumer/services/customer_auth_service.dart';
 import 'package:hoppa/apps/consumer/auth/consumer_login_page.dart';
 import 'package:core_auth/core_auth.dart';
@@ -41,20 +42,39 @@ class _CartPageState extends ConsumerState<CartPage> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    const double deliveryFee = 20.0;
+    final selectedBusiness = businessProvider.selectedBusiness;
+    
+    // Check if campaign gives free delivery
+    bool hasFreeDeliveryCampaign = false;
+    final campaignsAsync = ref.watch(cartCampaignsProvider);
+    final activeCampaigns = campaignsAsync.value ?? [];
+    if (activeCampaigns.any((c) => c.type == "FREE_DELIVERY_FIRST_ORDERS")) {
+      hasFreeDeliveryCampaign = true; // Temporary optimistic UI logic
+    }
+
+    double deliveryFee = selectedBusiness?.baseDeliveryFee ?? 30.0;
+    
+    // Apply free delivery threshold logic
+    if (selectedBusiness?.freeDeliveryThreshold != null && 
+        cartState.totalAmount >= selectedBusiness!.freeDeliveryThreshold!) {
+      deliveryFee = 0.0;
+    }
+    
+    // Apply campaign logic
+    if (hasFreeDeliveryCampaign) {
+      deliveryFee = 0.0;
+    }
+
     final double finalTotal = cartState.totalAmount > 0
         ? cartState.totalAmount + deliveryFee
         : 0;
 
     final requiredMinAmount = getRequiredMinAmount(
-      businessProvider.selectedBusiness,
+      selectedBusiness,
       deliveryProvider.selectedAddress,
     );
 
     final bool canCheckout = cartState.totalAmount >= requiredMinAmount;
-
-    final campaignsAsync = ref.watch(cartCampaignsProvider);
-    final activeCampaigns = campaignsAsync.value ?? [];
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -87,6 +107,11 @@ class _CartPageState extends ConsumerState<CartPage> {
                   MinCartAmountProgress(
                     currentAmount: cartState.totalAmount,
                     minAmount: requiredMinAmount,
+                  ),
+                if (selectedBusiness?.freeDeliveryThreshold != null && !hasFreeDeliveryCampaign)
+                  FreeDeliveryProgress(
+                    currentAmount: cartState.totalAmount,
+                    thresholdAmount: selectedBusiness!.freeDeliveryThreshold!,
                   ),
                 if (cartState.items.isNotEmpty)
                   Container(
@@ -203,9 +228,51 @@ class _CartPageState extends ConsumerState<CartPage> {
                                       "${cartState.totalAmount.toStringAsFixed(2)} ₺",
                                     ),
                                     const SizedBox(height: 12),
-                                    _summaryRow(
-                                      "Teslimat Ücreti",
-                                      "${deliveryFee.toStringAsFixed(2)} ₺",
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          "Teslimat Ücreti",
+                                          style: TextStyle(
+                                            color: Colors.grey[700],
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        Row(
+                                          children: [
+                                            if (deliveryFee == 0) ...[
+                                              Text(
+                                                "${(selectedBusiness?.baseDeliveryFee ?? 30.0).toStringAsFixed(2)} ₺",
+                                                style: const TextStyle(
+                                                  color: Colors.grey,
+                                                  fontSize: 14,
+                                                  decoration: TextDecoration.lineThrough,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.green.shade100,
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                                child: Text(
+                                                  "Ücretsiz",
+                                                  style: TextStyle(color: Colors.green.shade800, fontSize: 12, fontWeight: FontWeight.bold),
+                                                ),
+                                              ),
+                                            ] else ...[
+                                              Text(
+                                                "${deliveryFee.toStringAsFixed(2)} ₺",
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16,
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ],
                                     ),
                                     const Padding(
                                       padding: EdgeInsets.symmetric(

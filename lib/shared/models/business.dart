@@ -19,8 +19,9 @@ class Business {
   final String averageDeliveryTime;
   final double deliveryRadius;
   final Map<String, dynamic> workingHours;
-  final List<DeliveryTier>
-  deliveryTiers; // YENİ: Mesafe bazlı min tutar kuralları
+  final List<DeliveryTier> deliveryTiers; // YENİ: Mesafe bazlı min tutar kuralları
+  final double baseDeliveryFee;
+  final double? freeDeliveryThreshold;
 
   Business({
     required this.id,
@@ -41,6 +42,8 @@ class Business {
     this.deliveryRadius = 5.0,
     this.workingHours = const {},
     this.deliveryTiers = const [],
+    this.baseDeliveryFee = 30.0,
+    this.freeDeliveryThreshold,
   });
 
   factory Business.fromMap(Map<String, dynamic> data, String id) {
@@ -67,6 +70,10 @@ class Business {
               ?.map((t) => DeliveryTier.fromMap(Map<String, dynamic>.from(t)))
               .toList() ??
           [],
+      baseDeliveryFee: (data['baseDeliveryFee'] ?? 30.0).toDouble(),
+      freeDeliveryThreshold: data['freeDeliveryThreshold'] != null 
+          ? (data['freeDeliveryThreshold']).toDouble() 
+          : null,
     );
   }
 
@@ -89,6 +96,8 @@ class Business {
       'deliveryRadius': deliveryRadius,
       'workingHours': workingHours,
       'deliveryTiers': deliveryTiers.map((t) => t.toMap()).toList(),
+      'baseDeliveryFee': baseDeliveryFee,
+      'freeDeliveryThreshold': freeDeliveryThreshold,
     };
   }
 
@@ -111,6 +120,8 @@ class Business {
     double? deliveryRadius,
     Map<String, dynamic>? workingHours,
     List<DeliveryTier>? deliveryTiers,
+    double? baseDeliveryFee,
+    double? freeDeliveryThreshold,
   }) {
     return Business(
       id: id ?? this.id,
@@ -131,6 +142,8 @@ class Business {
       deliveryRadius: deliveryRadius ?? this.deliveryRadius,
       workingHours: workingHours ?? this.workingHours,
       deliveryTiers: deliveryTiers ?? this.deliveryTiers,
+      baseDeliveryFee: baseDeliveryFee ?? this.baseDeliveryFee,
+      freeDeliveryThreshold: freeDeliveryThreshold ?? this.freeDeliveryThreshold,
     );
   }
 }

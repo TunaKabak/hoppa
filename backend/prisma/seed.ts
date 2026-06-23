@@ -63,6 +63,10 @@ async function main() {
       latitude: 35.1856,
       longitude: 33.3823,
       deliveryRadiusKm: 5.0,
+      minOrderAmount: 150.0,
+      minimumOrderAmount: 150.0,
+      baseDeliveryFee: 30.0,
+      freeDeliveryThreshold: 500.0,
     },
     create: {
       merchantId: merchant.id,
@@ -70,6 +74,9 @@ async function main() {
       description: "E2E testleri için otomatik oluşturulmuş hazır dükkan.",
       address: "Lefkoşa, KKTC",
       minOrderAmount: 150.0,
+      minimumOrderAmount: 150.0,
+      baseDeliveryFee: 30.0,
+      freeDeliveryThreshold: 500.0,
       isActive: true, // Dükkan siparişe açık
       type: "RESTAURANT",
       latitude: 35.1856,
@@ -78,6 +85,18 @@ async function main() {
     },
   });
   console.log("✅ Test Shop Created:", testShop.name);
+
+  // 4.1 İLK 5 SİPARİŞ BEDAVA KAMPANYASI OLUŞTUR
+  const firstOrdersCampaign = await prisma.campaign.create({
+    data: {
+      title: "İlk 5 Sipariş Bedava",
+      description: "Hoppa'ya özel ilk 5 siparişinizde teslimat ücreti bizden!",
+      type: "FREE_DELIVERY_FIRST_ORDERS",
+      isActive: true,
+      maxUsesPerUser: 5,
+    }
+  });
+  console.log("✅ Campaign Created:", firstOrdersCampaign.title);
 
   // 5. YENİ BİR SÜPERMARKET MERCHANT OLUŞTUR
   const marketUser = await prisma.user.upsert({
