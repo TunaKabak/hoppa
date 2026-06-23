@@ -311,16 +311,6 @@ class BusinessSelectionPage extends ConsumerWidget {
 
     return GestureDetector(
       onTap: () {
-        if (!business.isOpen) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Bu işletme şu anda hizmet vermiyor."),
-              backgroundColor: Colors.orange,
-            ),
-          );
-          return;
-        }
-
         final businessProvider = p.Provider.of<BusinessProvider>(
           context,
           listen: false,
@@ -335,19 +325,21 @@ class BusinessSelectionPage extends ConsumerWidget {
 
         businessProvider.selectBusiness(business);
       },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
+      child: Opacity(
+        opacity: business.isOpen ? 1.0 : 0.5,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -524,6 +516,7 @@ class BusinessSelectionPage extends ConsumerWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

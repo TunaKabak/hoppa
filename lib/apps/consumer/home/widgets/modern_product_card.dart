@@ -9,6 +9,7 @@ import 'package:hoppa/apps/consumer/services/customer_auth_service.dart';
 import 'package:hoppa/apps/consumer/auth/consumer_login_page.dart';
 import 'package:core_auth/core_auth.dart';
 import 'package:hoppa/apps/consumer/business/business_provider.dart';
+import 'package:hoppa/apps/consumer/repositories/consumer_shop_repository.dart';
 
 class ModernProductCard extends ConsumerWidget {
   final BusinessProduct businessProduct;
@@ -29,7 +30,17 @@ class ModernProductCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final product = businessProduct.product;
     final cart = ref.watch(cartProvider);
-    final isClosed = p.Provider.of<BusinessProvider>(context, listen: false).selectedBusiness?.isOpen == false;
+    
+    // Doğru dükkan aktiflik kontrolü (Seçili dükkana göre değil, ürünün kendi dükkanına göre)
+    final shopsAsync = ref.watch(consumerShopsProvider);
+    final shops = shopsAsync.value ?? [];
+    bool isClosed = false;
+    if (shops.isNotEmpty) {
+      try {
+        final shop = shops.firstWhere((s) => s.id == businessProduct.businessId);
+        isClosed = !shop.isOpen;
+      } catch (_) {}
+    }
 
     // Sepetteki miktar kontrolü
     double quantity = 0;
