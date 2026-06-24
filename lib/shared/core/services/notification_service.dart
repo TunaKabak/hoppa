@@ -1,7 +1,9 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:core_network/core_network.dart';
+import 'package:hoppa/shared/core/services/notification_navigation_helper.dart';
 
 class NotificationService {
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
@@ -44,8 +46,16 @@ class NotificationService {
 
     await _localNotificationsPlugin.initialize(
       settings: initializationSettings,
-      onDidReceiveNotificationResponse: (payload) {
-        // Handle notification tap
+      onDidReceiveNotificationResponse: (NotificationResponse details) {
+        final payloadStr = details.payload;
+        if (payloadStr != null) {
+          try {
+            final data = jsonDecode(payloadStr) as Map<String, dynamic>;
+            NotificationNavigationHelper.handleNotificationClick(data);
+          } catch (e) {
+            print("Local notification payload error: $e");
+          }
+        }
       },
     );
 
@@ -66,6 +76,18 @@ class NotificationService {
     // Foreground messages handler
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       _showNotification(message);
+    });
+
+    // Background message click handler
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      NotificationNavigationHelper.handleNotificationClick(message.data);
+    });
+
+    // Terminated message click handler
+    _firebaseMessaging.getInitialMessage().then((RemoteMessage? message) {
+      if (message != null) {
+        NotificationNavigationHelper.handleNotificationClick(message.data);
+      }
     });
   }
 
@@ -94,6 +116,7 @@ class NotificationService {
         id: notification.hashCode,
         title: notification.title,
         body: notification.body,
+        payload: jsonEncode(message.data),
         notificationDetails: const NotificationDetails(
           android: AndroidNotificationDetails(
             'high_importance_channel', // id

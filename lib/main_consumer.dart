@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:hoppa/shared/core/services/navigation_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
 import 'package:flutter_flavor/flutter_flavor.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -105,6 +106,7 @@ class _ConsumerAppState extends riverpod.ConsumerState<ConsumerApp> {
         builder: (context, languageProvider, child) {
           return MaterialApp(
             title: 'Hoppa Consumer',
+            navigatorKey: navigatorKey,
             debugShowCheckedModeBanner: false,
 
             locale: languageProvider.currentLocale,

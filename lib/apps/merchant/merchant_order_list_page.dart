@@ -5,15 +5,18 @@ import 'package:hoppa/shared/models/order.dart' as model;
 import 'package:hoppa/shared/models/order_status.dart';
 import 'package:hoppa/apps/merchant/merchant_main_layout.dart';
 import 'package:hoppa/apps/merchant/repositories/merchant_order_repository.dart';
+import 'package:core_auth/core_auth.dart';
 
 class MerchantOrderListPage extends ConsumerStatefulWidget {
-  final String businessId;
+  final String? businessId;
   final String? filterStatus;
+  final String? orderId;
 
   const MerchantOrderListPage({
     super.key,
-    required this.businessId,
+    this.businessId,
     this.filterStatus,
+    this.orderId,
   });
 
   @override
@@ -23,11 +26,13 @@ class MerchantOrderListPage extends ConsumerStatefulWidget {
 class _MerchantOrderListPageState extends ConsumerState<MerchantOrderListPage> {
   Timer? _pollingTimer;
   String? _selectedFilter;
+  String? _selectedOrderId;
 
   @override
   void initState() {
     super.initState();
     _selectedFilter = widget.filterStatus;
+    _selectedOrderId = widget.orderId;
     // Refresh periodically
     _startPolling();
   }
@@ -64,10 +69,15 @@ class _MerchantOrderListPageState extends ConsumerState<MerchantOrderListPage> {
         appBar: AppBar(
           title: Text(_getAppBarTitle()),
           centerTitle: true,
-          leading: IconButton(
-            icon: const Icon(Icons.menu_rounded),
-            onPressed: () => merchantDrawerKey.currentState?.openDrawer(),
-          ),
+          leading: Navigator.canPop(context)
+              ? IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => Navigator.pop(context),
+                )
+              : IconButton(
+                  icon: const Icon(Icons.menu_rounded),
+                  onPressed: () => merchantDrawerKey.currentState?.openDrawer(),
+                ),
           actions: [
             IconButton(
               icon: const Icon(Icons.refresh),
@@ -79,25 +89,47 @@ class _MerchantOrderListPageState extends ConsumerState<MerchantOrderListPage> {
         ),
         body: Column(
           children: [
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: Row(
-                children: [
-                  _buildFilterChip(null, "Tümü", theme),
-                  const SizedBox(width: 8),
-                  _buildFilterChip(OrderStatus.pending.value, "Bekleyenler ⏳", theme),
-                  const SizedBox(width: 8),
-                  _buildFilterChip(OrderStatus.preparing.value, "Hazırlananlar 🍳", theme),
-                  const SizedBox(width: 8),
-                  _buildFilterChip(OrderStatus.onWay.value, "Yoldakiler 🛵", theme),
-                  const SizedBox(width: 8),
-                  _buildFilterChip(OrderStatus.delivered.value, "Tamamlananlar ✅", theme),
-                  const SizedBox(width: 8),
-                  _buildFilterChip(OrderStatus.cancelled.value, "İptaller ❌", theme),
-                ],
+            if (_selectedOrderId != null && _selectedOrderId!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: Row(
+                  children: [
+                    Text(
+                      "Detay Filtresi: #${_selectedOrderId!.substring(0, 8).toUpperCase()}",
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () {
+                        setState(() {
+                          _selectedOrderId = null;
+                        });
+                      },
+                    )
+                  ],
+                ),
+              )
+            else
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: Row(
+                  children: [
+                    _buildFilterChip(null, "Tümü", theme),
+                    const SizedBox(width: 8),
+                    _buildFilterChip(OrderStatus.pending.value, "Bekleyenler ⏳", theme),
+                    const SizedBox(width: 8),
+                    _buildFilterChip(OrderStatus.preparing.value, "Hazırlananlar 🍳", theme),
+                    const SizedBox(width: 8),
+                    _buildFilterChip(OrderStatus.onWay.value, "Yoldakiler 🛵", theme),
+                    const SizedBox(width: 8),
+                    _buildFilterChip(OrderStatus.delivered.value, "Tamamlananlar ✅", theme),
+                    const SizedBox(width: 8),
+                    _buildFilterChip(OrderStatus.cancelled.value, "İptaller ❌", theme),
+                  ],
+                ),
               ),
-            ),
             Expanded(
               child: ordersAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
@@ -105,20 +137,26 @@ class _MerchantOrderListPageState extends ConsumerState<MerchantOrderListPage> {
                 data: (allOrders) {
                   var orders = allOrders.toList();
 
-                  if (_selectedFilter == 'active') {
+                  if (_selectedOrderId != null && _selectedOrderId!.isNotEmpty) {
                     orders = orders
-                        .where(
-                          (d) => [
-                            OrderStatus.preparing.value,
-                            OrderStatus.onWay.value,
-                            OrderStatus.readyForPickup.value,
-                          ].contains(d.status),
-                        )
+                        .where((d) => d.id == _selectedOrderId)
                         .toList();
-                  } else if (_selectedFilter != null) {
-                    orders = orders
-                        .where((d) => d.status == _selectedFilter)
-                        .toList();
+                  } else {
+                    if (_selectedFilter == 'active') {
+                      orders = orders
+                          .where(
+                            (d) => [
+                              OrderStatus.preparing.value,
+                              OrderStatus.onWay.value,
+                              OrderStatus.readyForPickup.value,
+                            ].contains(d.status),
+                          )
+                          .toList();
+                    } else if (_selectedFilter != null) {
+                      orders = orders
+                          .where((d) => d.status == _selectedFilter)
+                          .toList();
+                    }
                   }
 
                   orders.sort((a, b) {
@@ -171,6 +209,9 @@ class _MerchantOrderListPageState extends ConsumerState<MerchantOrderListPage> {
   }
 
   String _getAppBarTitle() {
+    if (_selectedOrderId != null && _selectedOrderId!.isNotEmpty) {
+      return 'Sipariş Detayı';
+    }
     if (_selectedFilter == OrderStatus.pending.value) return 'Onay Bekleyenler';
     if (_selectedFilter == OrderStatus.preparing.value) return 'Hazırlananlar';
     if (_selectedFilter == OrderStatus.onWay.value) return 'Yoldakiler';

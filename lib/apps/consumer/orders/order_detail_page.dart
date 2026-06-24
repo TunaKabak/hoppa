@@ -3,40 +3,75 @@ import 'package:intl/intl.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:hoppa/shared/models/order.dart' as model;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hoppa/apps/consumer/repositories/consumer_order_repository.dart';
 
 import 'package:hoppa/shared/core/services/business_service.dart';
 import 'package:hoppa/shared/models/business.dart';
 import 'package:hoppa/shared/models/business_type.dart';
 import 'package:hoppa/shared/models/order_status.dart';
 
-class OrderDetailPage extends StatefulWidget {
-  final model.Order order;
+class OrderDetailPage extends ConsumerStatefulWidget {
+  final model.Order? order;
+  final String? orderId;
 
-  const OrderDetailPage({super.key, required this.order});
+  const OrderDetailPage({super.key, this.order, this.orderId});
 
   @override
-  State<OrderDetailPage> createState() => _OrderDetailPageState();
+  ConsumerState<OrderDetailPage> createState() => _OrderDetailPageState();
 }
 
-class _OrderDetailPageState extends State<OrderDetailPage> {
+class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
   final BusinessService _businessService = BusinessService();
   Business? _business;
   bool _isLoadingBusiness = true;
+  model.Order? _order;
+  bool _isLoadingOrder = false;
 
   @override
   void initState() {
     super.initState();
-    _fetchBusinessInfo();
+    _order = widget.order;
+    if (_order == null && widget.orderId != null) {
+      _fetchOrderDetails();
+    } else {
+      _fetchBusinessInfo();
+    }
+  }
+
+  Future<void> _fetchOrderDetails() async {
+    setState(() => _isLoadingOrder = true);
+    try {
+      final repository = ref.read(consumerOrderRepositoryProvider);
+      final orders = await repository.getMyOrders();
+      final order = orders.firstWhere((o) => o.id == widget.orderId);
+      if (mounted) {
+        setState(() {
+          _order = order;
+          _isLoadingOrder = false;
+        });
+        _fetchBusinessInfo();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingOrder = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Sipariş yüklenemedi: $e")),
+        );
+      }
+    }
   }
 
   Future<void> _fetchBusinessInfo() async {
-    if (widget.order.businessId.isEmpty) {
+    if (_order == null || _order!.businessId.isEmpty) {
       setState(() => _isLoadingBusiness = false);
       return;
     }
 
     final business = await _businessService.getBusinessById(
-      widget.order.businessId,
+      _order!.businessId,
     );
     if (mounted) {
       setState(() {
@@ -48,8 +83,15 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final status = widget.order.status;
-    final date = widget.order.createdAt;
+    if (_order == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final order = _order!;
+    final status = order.status;
+    final date = order.createdAt;
     final formattedDate = DateFormat('dd MMM yyyy, HH:mm').format(date);
 
     return Scaffold(
@@ -78,65 +120,65 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                     child: Center(child: CircularProgressIndicator()),
                   )
                 : _business == null
-                ? const SizedBox.shrink()
-                : ListTile(
-                    contentPadding: const EdgeInsets.all(16),
-                    leading: CircleAvatar(
-                      radius: 28,
-                      backgroundColor: Colors.grey[200],
-                      backgroundImage: _business!.logoUrl.isNotEmpty
-                          ? NetworkImage(_business!.logoUrl)
-                          : null,
-                      child: _business!.logoUrl.isEmpty
-                          ? const Icon(Icons.store, color: Colors.grey)
-                          : null,
-                    ),
-                    title: Text(
-                      _business!.name,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 4),
-                        Row(
+                    ? const SizedBox.shrink()
+                    : ListTile(
+                        contentPadding: const EdgeInsets.all(16),
+                        leading: CircleAvatar(
+                          radius: 28,
+                          backgroundColor: Colors.grey[200],
+                          backgroundImage: _business!.logoUrl.isNotEmpty
+                              ? NetworkImage(_business!.logoUrl)
+                              : null,
+                          child: _business!.logoUrl.isEmpty
+                              ? const Icon(Icons.store, color: Colors.grey)
+                              : null,
+                        ),
+                        title: Text(
+                          _business!.name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(
-                              Icons.location_on,
-                              size: 14,
-                              color: Colors.grey,
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.location_on,
+                                  size: 14,
+                                  color: Colors.grey,
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    _business!.address,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                _business!.address,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                            if (_business!.phone.isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.phone,
+                                    size: 14,
+                                    color: Colors.grey,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(_business!.phone),
+                                ],
                               ),
-                            ),
+                            ],
                           ],
                         ),
-                        if (_business!.phone.isNotEmpty) ...[
-                          const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.phone,
-                                size: 14,
-                                color: Colors.grey,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(_business!.phone),
-                            ],
-                          ),
-                        ],
-                      ],
-                    ),
-                    // Optional: Add trailing call button if desired
-                  ),
+                        // Optional: Add trailing call button if desired
+                      ),
           ),
 
           const SizedBox(height: 16),
@@ -153,7 +195,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                 const SizedBox(height: 16),
                 _buildTrackingStepper(
                   status,
-                  isPickup: widget.order.deliveryMethod == 'pickup',
+                  isPickup: order.deliveryMethod == 'pickup',
                 ),
                 const SizedBox(height: 12),
                 Center(
@@ -164,7 +206,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                         style: TextStyle(color: Colors.grey[600], fontSize: 13),
                       ),
                       Text(
-                        "Sipariş No: #${widget.order.id.substring(0, 8).toUpperCase()}",
+                        "Sipariş No: #${order.id.substring(0, 8).toUpperCase()}",
                         style: TextStyle(color: Colors.grey[500], fontSize: 12),
                       ),
                     ],
@@ -186,7 +228,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 const Divider(height: 24),
-                ...widget.order.items.map((item) => _buildOrderItem(item)),
+                ...order.items.map((item) => _buildOrderItem(item)),
               ],
             ),
           ),
@@ -205,7 +247,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                 const SizedBox(height: 16),
                 _buildSummaryRow(
                   "Ara Toplam",
-                  "${widget.order.totalAmount.toStringAsFixed(2)} ₺",
+                  "${order.totalAmount.toStringAsFixed(2)} ₺",
                 ),
                 const SizedBox(height: 8),
                 _buildSummaryRow(
@@ -225,7 +267,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                       ),
                     ),
                     Text(
-                      "${widget.order.totalAmount.toStringAsFixed(2)} ₺",
+                      "${order.totalAmount.toStringAsFixed(2)} ₺",
                       style: const TextStyle(
                         fontWeight: FontWeight.w900,
                         fontSize: 18,
@@ -257,21 +299,21 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                     border: Border.all(color: Colors.amber.withAlpha(50)),
                   ),
                   child: Text(
-                    widget.order.orderNote.isNotEmpty
-                        ? widget.order.orderNote
+                    order.orderNote.isNotEmpty
+                        ? order.orderNote
                         : "Not Eklenmemiş",
                     style: TextStyle(
-                      fontStyle: widget.order.orderNote.isNotEmpty
+                      fontStyle: order.orderNote.isNotEmpty
                           ? FontStyle.normal
                           : FontStyle.italic,
-                      color: widget.order.orderNote.isNotEmpty
+                      color: order.orderNote.isNotEmpty
                           ? Colors.black87
                           : Colors.grey,
                     ),
                   ),
                 ),
                 // Zili Çalma Tercihi
-                if (widget.order.dontRingBell) ...[
+                if (order.dontRingBell) ...[
                   const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(12),
@@ -330,7 +372,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                   child: Row(
                     children: [
                       Icon(
-                        widget.order.userAddress.isEmpty
+                        order.userAddress.isEmpty
                             ? Icons.store
                             : Icons.local_shipping,
                         color: Colors.blue,
@@ -341,7 +383,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              widget.order.deliveryMethod == 'pickup'
+                              order.deliveryMethod == 'pickup'
                                   ? "GEL AL"
                                   : "EVE TESLİM",
                               style: const TextStyle(
@@ -352,15 +394,15 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              (widget.order.deliveryTime.isEmpty ||
-                                      widget.order.deliveryTime
+                              (order.deliveryTime.isEmpty ||
+                                      order.deliveryTime
                                           .toLowerCase()
                                           .contains("dk") ||
-                                      widget.order.deliveryTime
+                                      order.deliveryTime
                                           .toLowerCase()
                                           .contains("min"))
                                   ? "HEMEN TESLİM"
-                                  : "Randevulu Teslim - ${widget.order.deliveryTime}",
+                                  : "Randevulu Teslim - ${order.deliveryTime}",
                               style: TextStyle(
                                 color: Colors.grey[700],
                                 fontSize: 13,
@@ -375,7 +417,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
 
                 const SizedBox(height: 16),
 
-                if (widget.order.deliveryMethod != 'pickup') ...[
+                if (order.deliveryMethod != 'pickup') ...[
                   Row(
                     children: [
                       const Icon(
@@ -386,7 +428,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          widget.order.userAddress,
+                          order.userAddress,
                           style: const TextStyle(
                             fontSize: 14,
                             color: Colors.black87,
@@ -401,8 +443,8 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                 const SizedBox(height: 16),
 
                 // MİNİ HARİTA (OpenStreetMap)
-                if (widget.order.addressLatitude != 0.0 &&
-                    widget.order.addressLongitude != 0.0)
+                if (order.addressLatitude != 0.0 &&
+                    order.addressLongitude != 0.0)
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: Container(
@@ -415,8 +457,8 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                       child: FlutterMap(
                         options: MapOptions(
                           initialCenter: LatLng(
-                            widget.order.addressLatitude,
-                            widget.order.addressLongitude,
+                            order.addressLatitude,
+                            order.addressLongitude,
                           ),
                           initialZoom: 15,
                           interactionOptions: const InteractionOptions(
@@ -434,8 +476,8 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                             markers: [
                               Marker(
                                 point: LatLng(
-                                  widget.order.addressLatitude,
-                                  widget.order.addressLongitude,
+                                  order.addressLatitude,
+                                  order.addressLongitude,
                                 ),
                                 width: 40,
                                 height: 40,

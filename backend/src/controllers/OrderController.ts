@@ -45,10 +45,10 @@ export class OrderController {
       const gmt3Time = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Istanbul" }));
       const currentHour = gmt3Time.getHours();
       const currentMinute = gmt3Time.getMinutes();
-      
+
       const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
       const currentDayName = days[gmt3Time.getDay()];
-      
+
       let isOpenRightNow = true;
 
       if (shop.workingHours && typeof shop.workingHours === 'object') {
@@ -56,28 +56,28 @@ export class OrderController {
         const todaySchedule = wh[currentDayName];
         if (todaySchedule) {
           if (todaySchedule.isOpen === false) {
-             isOpenRightNow = false;
+            isOpenRightNow = false;
           } else if (todaySchedule.openTime && todaySchedule.closeTime) {
-             const [openH, openM] = todaySchedule.openTime.split(':').map(Number);
-             const [closeH, closeM] = todaySchedule.closeTime.split(':').map(Number);
-             
-             const currentTotalMins = currentHour * 60 + currentMinute;
-             const openTotalMins = openH * 60 + openM;
-             let closeTotalMins = closeH * 60 + closeM;
-             
-             if (closeTotalMins < openTotalMins) {
-               // Ertesi güne sarkma durumu, örn: 08:00 - 02:00
-               closeTotalMins += 24 * 60;
-             }
-             
-             let checkMins = currentTotalMins;
-             if (currentTotalMins < openTotalMins && closeTotalMins > 24 * 60) {
-               checkMins += 24 * 60;
-             }
-             
-             if (checkMins < openTotalMins || checkMins >= closeTotalMins) {
-               isOpenRightNow = false;
-             }
+            const [openH, openM] = todaySchedule.openTime.split(':').map(Number);
+            const [closeH, closeM] = todaySchedule.closeTime.split(':').map(Number);
+
+            const currentTotalMins = currentHour * 60 + currentMinute;
+            const openTotalMins = openH * 60 + openM;
+            let closeTotalMins = closeH * 60 + closeM;
+
+            if (closeTotalMins < openTotalMins) {
+              // Ertesi güne sarkma durumu, örn: 08:00 - 02:00
+              closeTotalMins += 24 * 60;
+            }
+
+            let checkMins = currentTotalMins;
+            if (currentTotalMins < openTotalMins && closeTotalMins > 24 * 60) {
+              checkMins += 24 * 60;
+            }
+
+            if (checkMins < openTotalMins || checkMins >= closeTotalMins) {
+              isOpenRightNow = false;
+            }
           }
         }
       } else {
@@ -154,8 +154,8 @@ export class OrderController {
           return res.status(400).json({ error: true, message: "Lütfen teslimat adresi için haritadan konum seçiniz." });
         }
 
-        snapshotAddress = (deliveryAddress && typeof deliveryAddress === "string") 
-          ? deliveryAddress 
+        snapshotAddress = (deliveryAddress && typeof deliveryAddress === "string")
+          ? deliveryAddress
           : `${userAddress.title}: ${userAddress.fullAddress}${userAddress.district ? ' ' + userAddress.district : ''}${userAddress.city ? '/' + userAddress.city : ''}`;
       } else if (deliveryAddress && typeof deliveryAddress === "string") {
         // Direkt metin olarak adres girildiyse, veritabanına Address olarak kaydet/bul ve snapshot'ı metin yap
@@ -184,10 +184,10 @@ export class OrderController {
       // 6. Prisma `$transaction` ile sipariş ve kalemleri kaydet
       const transactionResult = await prisma.$transaction(async (tx) => {
         const method = paymentMethod || "CASH_ON_DELIVERY";
-        
+
         // Backend Delivery Fee Calculation via Campaign Engine
         const deliveryResult = await campaignService.calculateDeliveryFee(consumerId, shop, totalAmount);
-        
+
         const createdOrder = await tx.order.create({
           data: {
             consumerId,
@@ -221,30 +221,30 @@ export class OrderController {
         let paymentUrl = undefined;
 
         if (method === "ONLINE_PAYMENT") {
-           if (!cardDetails) {
-             throw new Error("Online ödeme için kart bilgileri gereklidir.");
-           }
+          if (!cardDetails) {
+            throw new Error("Online ödeme için kart bilgileri gereklidir.");
+          }
 
-           const routeResponse = await PaymentRoutingService.routePayment({
-             orderId: createdOrder.id,
-             amount: Number(totalAmount),
-             cardDetails
-           });
+          const routeResponse = await PaymentRoutingService.routePayment({
+            orderId: createdOrder.id,
+            amount: Number(totalAmount),
+            cardDetails
+          });
 
-           await tx.paymentTransaction.create({
-             data: {
-               orderId: createdOrder.id,
-               amount: routeResponse.amount,
-               currency: routeResponse.currency,
-               exchangeRate: routeResponse.exchangeRate,
-               provider: routeResponse.provider,
-               routingType: routeResponse.routingType,
-               status: "PENDING",
-               providerTxId: routeResponse.providerTxId
-             }
-           });
+          await tx.paymentTransaction.create({
+            data: {
+              orderId: createdOrder.id,
+              amount: routeResponse.amount,
+              currency: routeResponse.currency,
+              exchangeRate: routeResponse.exchangeRate,
+              provider: routeResponse.provider,
+              routingType: routeResponse.routingType,
+              status: "PENDING",
+              providerTxId: routeResponse.providerTxId
+            }
+          });
 
-           paymentUrl = routeResponse.paymentUrl;
+          paymentUrl = routeResponse.paymentUrl;
         }
 
         return { createdOrder, paymentUrl };
@@ -280,8 +280,8 @@ export class OrderController {
         });
       }
 
-      return res.status(201).json({ 
-        error: false, 
+      return res.status(201).json({
+        error: false,
         data: fullOrder,
         paymentUrl: transactionResult.paymentUrl
       });
@@ -406,7 +406,7 @@ export class OrderController {
 
       const updatedOrder = await prisma.order.update({
         where: { id: orderId },
-        data: { 
+        data: {
           status: upperStatus,
           ...(updatedPaymentStatus ? { paymentStatus: updatedPaymentStatus as PaymentStatus } : {})
         },
@@ -426,8 +426,8 @@ export class OrderController {
           const { notificationService } = await import("../services/NotificationService");
           let title = "Sipariş Güncellemesi";
           let body = `Siparişinizin durumu güncellendi: ${upperStatus}`;
-          
-          switch(upperStatus) {
+
+          switch (upperStatus) {
             case "PREPARING":
               title = "Siparişiniz Hazırlanıyor 🍳";
               body = "Siparişiniz onaylandı ve hazırlanmaya başlandı.";
@@ -499,7 +499,7 @@ export class OrderController {
           return res.status(400).json({ error: true, message: "Sipariş onaylandığı için iptal edilemez." });
         }
         cancelledBy = "CONSUMER";
-      } 
+      }
       // Merchant cancellation rules
       else if (role === "merchant") {
         if (order.shop.merchantId !== userId) {
@@ -531,7 +531,7 @@ export class OrderController {
       setImmediate(async () => {
         try {
           const { notificationService } = await import("../services/NotificationService");
-          
+
           if (cancelledBy === "CONSUMER") {
             // Notify merchant
             if (order.shop.merchantId) {

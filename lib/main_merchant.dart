@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hoppa/shared/core/services/navigation_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
 import 'package:flutter_flavor/flutter_flavor.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -76,6 +77,7 @@ class _MerchantAppState extends riverpod.ConsumerState<MerchantApp> {
         builder: (context, languageProvider, child) {
           return MaterialApp(
             title: 'Hoppa Merchant',
+            navigatorKey: navigatorKey,
             debugShowCheckedModeBanner: false,
 
             locale: languageProvider.currentLocale,
