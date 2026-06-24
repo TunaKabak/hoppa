@@ -263,6 +263,23 @@ export class OrderController {
         }
       });
 
+      // Send Push Notification asynchronously to Merchant
+      if (shop.merchantId) {
+        setImmediate(async () => {
+          try {
+            const { notificationService } = await import("../services/NotificationService");
+            await notificationService.sendToMerchant(
+              shop.merchantId,
+              "Yeni Sipariş! 🚀",
+              "Dükkanınıza yeni bir sipariş geldi. Hemen hazırlamaya başlayın!",
+              { orderId: fullOrder?.id || transactionResult.createdOrder.id }
+            );
+          } catch (err) {
+            console.error("Error triggering notification on new order:", err);
+          }
+        });
+      }
+
       return res.status(201).json({ 
         error: false, 
         data: fullOrder,

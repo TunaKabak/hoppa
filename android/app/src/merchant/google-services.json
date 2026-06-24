@@ -42,25 +42,6 @@
           "other_platform_oauth_client": []
         }
       }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:1030635596347:android:ce34ce14d2b3e26ff14a1e",
-        "android_client_info": {
-          "package_name": "com.kktcmarket.kktc_market"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyCnJtvQ5GI-Z-uxKGwvLfFQ02XAq1tBthQ"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
     }
   ],
   "configuration_version": "1"
