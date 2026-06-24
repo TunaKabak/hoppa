@@ -19923,3 +19923,5 @@ backend/dist/config/db.js
 backend/dist/services/PaymentRoutingService.js
 analysis_output_final.txt
 analysis_output.txt
+backend/.env
+backend/.env.example
