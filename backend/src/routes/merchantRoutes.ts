@@ -38,5 +38,9 @@ router.delete("/products/:id", (req, res) => productController.deleteProduct(req
 // Order / Sipariş İşlemleri
 router.get("/orders", (req, res) => orderController.getMerchantOrders(req, res));
 router.put("/orders/:id/status", (req, res) => orderController.updateOrderStatus(req, res));
+router.post("/orders/:id/cancel", (req, res) => orderController.cancelOrder(req, res));
+
+// Dashboard İşlemleri
+router.get("/dashboard/stats", (req, res) => shopController.getDashboardStats(req, res));
 
 export default router;

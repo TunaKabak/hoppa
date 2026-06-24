@@ -24,6 +24,7 @@ router.get("/shops/:shopId/products", (req, res) => consumerShopController.getSh
 // Order Operations
 router.post("/orders", (req, res) => orderController.createOrder(req, res));
 router.get("/orders", (req, res) => orderController.getConsumerOrders(req, res));
+router.post("/orders/:id/cancel", (req, res) => orderController.cancelOrder(req, res));
 
 // Address Operations
 router.get("/addresses", (req, res) => addressController.getAddresses(req, res));

@@ -122,13 +122,13 @@ class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage> {
   }
 }
 
-class _OrderCard extends StatelessWidget {
+class _OrderCard extends ConsumerWidget {
   final model.Order order;
 
   const _OrderCard({required this.order});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final status = order.status;
     final items = order.items;
     final date = order.createdAt;
@@ -277,6 +277,27 @@ class _OrderCard extends StatelessWidget {
                   ),
 
                 const SizedBox(height: 16),
+                if (order.status == OrderStatus.pending.value)
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () => _showCancelDialog(context, ref, order.id),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        "Siparişi İptal Et",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                if (order.status == OrderStatus.pending.value)
+                  const SizedBox(height: 8),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -284,8 +305,7 @@ class _OrderCard extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) =>
-                              OrderDetailPage(order: order),
+                          builder: (context) => OrderDetailPage(order: order),
                         ),
                       );
                     },
@@ -308,6 +328,46 @@ class _OrderCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  void _showCancelDialog(BuildContext context, WidgetRef ref, String orderId) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Siparişi İptal Et"),
+          content: const Text("Bu siparişi iptal etmek istediğinize emin misiniz?"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Vazgeç"),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: () async {
+                Navigator.pop(context); // dialog'u kapat
+                try {
+                  await ref.read(consumerOrderRepositoryProvider).cancelOrder(orderId);
+                  ref.invalidate(consumerOrdersProvider);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Siparişiniz iptal edildi.")),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("İptal işlemi başarısız: $e")),
+                    );
+                  }
+                }
+              },
+              child: const Text("Evet, İptal Et"),
+            ),
+          ],
+        );
+      },
     );
   }
 

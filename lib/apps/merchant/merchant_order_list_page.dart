@@ -309,7 +309,6 @@ class _MerchantOrderListPageState extends ConsumerState<MerchantOrderListPage> {
     );
   }
 
-  // YENİ: Sipariş tipine göre değişen buton yapısı
   Widget _buildActionButton(
     String id,
     String status,
@@ -323,53 +322,133 @@ class _MerchantOrderListPageState extends ConsumerState<MerchantOrderListPage> {
         await ref.read(merchantOrderRepositoryProvider).updateOrderStatus(id, newStatus);
         ref.invalidate(merchantOrdersProvider);
       } catch (e) {
-        // Hata yönetimi (örneğin SnackBar ile gösterilebilir, basit tutmak için print ile bırakıldı)
         print("Sipariş güncellenirken hata oluştu: $e");
       }
     }
 
+    Widget actionBtn = const SizedBox();
     switch (statusEnum) {
       case OrderStatus.pending:
-        return FilledButton.icon(
+        actionBtn = FilledButton.icon(
           onPressed: () => updateStatus(OrderStatus.preparing.value),
           icon: const Icon(Icons.check),
           label: const Text("ONAYLA"),
           style: FilledButton.styleFrom(backgroundColor: Colors.green),
         );
+        break;
       case OrderStatus.preparing:
-        // Eğer Gel Al ise "Kuryeye Ver" yerine "Hazır, Müşteri Bekleniyor" butonunu göster
         if (isPickUp) {
-          return FilledButton.icon(
+          actionBtn = FilledButton.icon(
             onPressed: () => updateStatus(OrderStatus.readyForPickup.value),
             icon: const Icon(Icons.store),
             label: Text(OrderStatus.readyForPickup.label),
             style: FilledButton.styleFrom(backgroundColor: Colors.teal),
           );
         } else {
-          return FilledButton.icon(
+          actionBtn = FilledButton.icon(
             onPressed: () => updateStatus(OrderStatus.onWay.value),
             icon: const Icon(Icons.motorcycle),
             label: const Text("KURYEYE VER"),
             style: FilledButton.styleFrom(backgroundColor: Colors.blue),
           );
         }
+        break;
       case OrderStatus.onWay:
-        return FilledButton.icon(
+        actionBtn = FilledButton.icon(
           onPressed: () => updateStatus(OrderStatus.delivered.value),
           icon: const Icon(Icons.done),
           label: const Text("TESLİM ET"),
           style: FilledButton.styleFrom(backgroundColor: Colors.grey),
         );
-      case OrderStatus.readyForPickup: // Yeni Durum
-        return FilledButton.icon(
+        break;
+      case OrderStatus.readyForPickup:
+        actionBtn = FilledButton.icon(
           onPressed: () => updateStatus(OrderStatus.delivered.value),
           icon: const Icon(Icons.done_all),
           label: const Text("TESLİM ET"),
           style: FilledButton.styleFrom(backgroundColor: Colors.green.shade700),
         );
+        break;
       default:
-        return const SizedBox();
+        actionBtn = const SizedBox();
     }
+
+    final bool canCancel = [OrderStatus.pending, OrderStatus.preparing, OrderStatus.onWay].contains(statusEnum);
+
+    return Wrap(
+      spacing: 8,
+      children: [
+        if (canCancel)
+          TextButton.icon(
+            onPressed: () => _showCancelDialog(context, id, ref),
+            icon: const Icon(Icons.cancel_outlined, color: Colors.red),
+            label: const Text("İPTAL ET", style: TextStyle(color: Colors.red)),
+          ),
+        if (actionBtn is! SizedBox) actionBtn,
+      ],
+    );
+  }
+
+  void _showCancelDialog(BuildContext context, String orderId, WidgetRef ref) {
+    final reasonController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Siparişi İptal Et"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text("Bu siparişi iptal etmek istediğinize emin misiniz? Lütfen bir neden belirtin."),
+              const SizedBox(height: 16),
+              TextField(
+                controller: reasonController,
+                decoration: const InputDecoration(
+                  labelText: "İptal Nedeni",
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Vazgeç"),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: () async {
+                final reason = reasonController.text.trim();
+                if (reason.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Lütfen bir iptal nedeni giriniz.")),
+                  );
+                  return;
+                }
+                Navigator.pop(context);
+                try {
+                  await ref.read(merchantOrderRepositoryProvider).cancelOrder(orderId, reason);
+                  ref.invalidate(merchantOrdersProvider);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Sipariş iptal edildi.")),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Hata: $e")),
+                    );
+                  }
+                }
+              },
+              child: const Text("Siparişi İptal Et"),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Color _getStatusColor(String status) {

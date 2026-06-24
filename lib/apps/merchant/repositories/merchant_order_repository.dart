@@ -22,6 +22,18 @@ class MerchantOrderRepository {
       body: {'status': status},
     );
   }
+
+  Future<void> cancelOrder(String orderId, String cancelReason) async {
+    await _apiClient.post(
+      '/api/merchant/orders/$orderId/cancel',
+      body: {'cancelReason': cancelReason},
+    );
+  }
+
+  Future<Map<String, dynamic>> getDashboardStats() async {
+    final response = await _apiClient.get('/api/merchant/dashboard/stats');
+    return response['data'] as Map<String, dynamic>;
+  }
 }
 
 final merchantOrderRepositoryProvider = Provider<MerchantOrderRepository>((
@@ -36,4 +48,11 @@ final merchantOrdersProvider = FutureProvider.autoDispose<List<Order>>((
 ) async {
   final repository = ref.watch(merchantOrderRepositoryProvider);
   return await repository.getMerchantOrders();
+});
+
+final merchantDashboardStatsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((
+  ref,
+) async {
+  final repository = ref.watch(merchantOrderRepositoryProvider);
+  return await repository.getDashboardStats();
 });

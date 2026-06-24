@@ -132,4 +132,60 @@ export class ShopController {
       return res.status(500).json({ error: true, message: error.message });
     }
   }
+
+  async getDashboardStats(req: Request, res: Response) {
+    try {
+      const merchantId = req.user?.id;
+      if (!merchantId) return res.status(401).json({ error: true, message: "Kullanıcı bilgisi eksik." });
+
+      const shop = await prisma.shop.findUnique({ where: { merchantId } });
+      if (!shop) return res.status(404).json({ error: true, message: "Dükkan bulunamadı." });
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const allOrders = await prisma.order.findMany({
+        where: { shopId: shop.id }
+      });
+
+      const todayOrders = allOrders.filter(o => o.createdAt >= today && o.status !== "CANCELLED");
+      const todayOrderCount = todayOrders.length;
+
+      const totalRevenue = allOrders
+        .filter(o => o.paymentStatus === "SUCCESS")
+        .reduce((sum, o) => sum + Number(o.totalAmount), 0);
+
+      const totalOrdersCount = allOrders.length;
+      const cancelledOrdersCount = allOrders.filter(o => o.status === "CANCELLED").length;
+      const cancelRate = totalOrdersCount > 0 ? (cancelledOrdersCount / totalOrdersCount) * 100 : 0;
+
+      // Haftalık Trend: Son 7 günün başarılı siparişleri
+      const weeklyTrend = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        d.setHours(0, 0, 0, 0);
+        const nextD = new Date(d);
+        nextD.setDate(d.getDate() + 1);
+
+        const dailyCount = allOrders.filter(
+          o => o.createdAt >= d && o.createdAt < nextD && o.status !== "CANCELLED"
+        ).length;
+
+        weeklyTrend.push({ date: d.toISOString().split('T')[0], orderCount: dailyCount });
+      }
+
+      return res.status(200).json({
+        error: false,
+        data: {
+          todayOrderCount,
+          totalRevenue,
+          cancelRate,
+          weeklyTrend
+        }
+      });
+    } catch (error: any) {
+      return res.status(500).json({ error: true, message: error.message });
+    }
+  }
 }
