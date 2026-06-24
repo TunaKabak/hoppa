@@ -6,8 +6,9 @@ const prisma = new PrismaClient();
 export class NotificationController {
   async registerToken(req: Request, res: Response) {
     try {
-      const userId = req.user?.id;
-      if (!userId) {
+      const id = req.user?.id;
+      const role = req.user?.role;
+      if (!id || !role) {
         return res.status(401).json({ error: true, message: "Kullanıcı yetkisi bulunamadı." });
       }
 
@@ -17,14 +18,18 @@ export class NotificationController {
         return res.status(400).json({ error: true, message: "Cihaz token ve platform bilgisi zorunludur." });
       }
 
+      const userId = role === "merchant" ? null : id;
+      const merchantId = role === "merchant" ? id : null;
+
       // Upsert the device token to prevent duplicates
       const deviceToken = await prisma.deviceToken.upsert({
         where: { token },
-        update: { userId, platform },
+        update: { userId, merchantId, platform },
         create: {
           token,
           platform,
-          userId
+          userId,
+          merchantId
         }
       });
 
