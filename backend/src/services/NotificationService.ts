@@ -75,6 +75,7 @@ class NotificationService {
         const failedTokens: string[] = [];
         response.responses.forEach((resp: any, idx: number) => {
           if (!resp.success) {
+            console.error(`Failed to send notification to token ${tokens[idx]}:`, resp.error);
             const errorCode = resp.error?.code;
             if (errorCode === 'messaging/invalid-registration-token' ||
                 errorCode === 'messaging/registration-token-not-registered') {
@@ -96,6 +97,67 @@ class NotificationService {
       }
     } catch (error) {
       console.error(`Error sending notification to user ${userId}:`, error);
+    }
+  }
+
+  public async sendToMerchant(merchantId: string, title: string, body: string, data?: { [key: string]: string }): Promise<void> {
+    try {
+      const deviceTokens = await prisma.deviceToken.findMany({
+        where: { merchantId }
+      });
+
+      if (deviceTokens.length === 0) {
+        console.log(`No device tokens found for merchant ${merchantId}. Skipping notification.`);
+        return;
+      }
+
+      const tokens = deviceTokens.map(dt => dt.token);
+
+      if (!this.isInitialized) {
+        console.log(`[MOCK NOTIFICATION] To Merchant: ${merchantId} (${tokens.length} devices) | Title: ${title} | Body: ${body}`);
+        return;
+      }
+
+      const message: MulticastMessage = {
+        notification: {
+          title,
+          body,
+        },
+        data: data || {},
+        tokens: tokens,
+      };
+
+      const response = await getMessaging().sendEachForMulticast(message);
+      
+      console.log(`Notification sent to merchant ${merchantId}. Success count: ${response.successCount}, Failure count: ${response.failureCount}`);
+
+      // Cleanup invalid tokens
+      if (response.failureCount > 0) {
+        const failedTokens: string[] = [];
+        response.responses.forEach((resp: any, idx: number) => {
+          if (!resp.success) {
+            console.error(`Failed to send notification to merchant token ${tokens[idx]}:`, resp.error);
+            const errorCode = resp.error?.code;
+            if (errorCode === 'messaging/invalid-registration-token' ||
+                errorCode === 'messaging/registration-token-not-registered') {
+              failedTokens.push(tokens[idx]);
+            }
+          }
+        });
+
+        if (failedTokens.length > 0) {
+          await prisma.deviceToken.deleteMany({
+            where: {
+              token: {
+                in: failedTokens
+              }
+            }
+          });
+          console.log(`Cleaned up ${failedTokens.length} invalid tokens for merchant ${merchantId}`);
+        }
+      }
+    } catch (error) {
+      console.error(`Error sending notification to merchant ${merchantId}:`, error);
     }
   }
 }

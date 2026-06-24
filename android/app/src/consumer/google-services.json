@@ -26,9 +26,9 @@
     },
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1030635596347:android:ce34ce14d2b3e26ff14a1e",
+        "mobilesdk_app_id": "1:1030635596347:android:6afe97e636d9d14df14a1e",
         "android_client_info": {
-          "package_name": "com.kktcmarket.kktc_market"
+          "package_name": "com.hoppa.merchant"
         }
       },
       "oauth_client": [],
