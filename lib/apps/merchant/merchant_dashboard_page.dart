@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hoppa/apps/merchant/providers/merchant_api_providers.dart';
 import 'package:hoppa/apps/merchant/merchant_settings_page.dart';
 import 'package:hoppa/apps/merchant/repositories/merchant_order_repository.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 class MerchantDashboardPage extends ConsumerStatefulWidget {
   final String businessId;
@@ -272,84 +273,70 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
 
   Widget _buildDashboardContent(ThemeData theme) {
     final ordersAsync = ref.watch(merchantOrdersProvider);
+    final statsAsync = ref.watch(merchantDashboardStatsProvider);
 
     return ordersAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stack) => Center(child: Text("Hata: $error")),
       data: (allOrders) {
-        // Dashboard metric calculations (Daily orders can be filtered here if needed, 
-        // for now we'll just show all orders since backend usually returns relevant orders 
-        // or we can filter by today. Let's filter by today to match previous behavior.)
-        final now = DateTime.now();
-        final orders = allOrders.where((o) {
-           final date = o.createdAt;
-           return date.year == now.year && date.month == now.month && date.day == now.day;
-        }).toList();
+        final activeCount = allOrders.where((d) =>
+            d.status == OrderStatus.pending.value ||
+            d.status == OrderStatus.preparing.value ||
+            d.status == OrderStatus.onWay.value).length;
 
-        // Calculations
-        final pendingCount = orders
-            .where((d) => d.status == OrderStatus.pending.value)
-            .length;
-        final activeCount = orders
-            .where(
-              (d) =>
-                  d.status == OrderStatus.pending.value ||
-                  d.status == OrderStatus.preparing.value ||
-                  d.status == OrderStatus.onWay.value,
-            )
-            .length;
-
-        final cancelledCount = orders
-            .where((d) => d.status == OrderStatus.cancelled.value)
-            .length;
-        final totalCount = orders.length;
-        final cancelRate = totalCount > 0
-            ? (cancelledCount / totalCount * 100)
-            : 0.0;
-
-        final totalRevenue = orders.fold<double>(0.0, (sum, doc) {
-          final s = doc.status;
-          if (s != OrderStatus.cancelled.value) {
-            return sum + doc.totalAmount;
-          }
-          return sum;
-        });
+        final pendingCount = allOrders.where((d) => d.status == OrderStatus.pending.value).length;
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 1. KPI CARDS
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildKPICard(
-                      "Ciro",
-                      "${totalRevenue.toStringAsFixed(0)}₺",
-                      Colors.green,
-                      Icons.wallet,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildKPICard(
-                      "Aktif",
-                      "$activeCount",
-                      Colors.orange,
-                      Icons.motorcycle,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildKPICard(
-                      "İptal",
-                      "%${cancelRate.toStringAsFixed(0)}",
-                      Colors.red,
-                      Icons.cancel,
-                    ),
-                  ),
-                ],
+              // 1. KPI CARDS (from API)
+              statsAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => Center(child: Text("İstatistik Hatası: $error")),
+                data: (stats) {
+                  final totalRevenue = (stats['totalRevenue'] as num?)?.toDouble() ?? 0.0;
+                  final cancelRate = (stats['cancelRate'] as num?)?.toDouble() ?? 0.0;
+                  final weeklyTrend = stats['weeklyTrend'] as List<dynamic>? ?? [];
+
+                  return Column(
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildKPICard(
+                              "Ciro",
+                              "${totalRevenue.toStringAsFixed(0)}₺",
+                              Colors.green,
+                              Icons.wallet,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildKPICard(
+                              "Aktif",
+                              "$activeCount",
+                              Colors.orange,
+                              Icons.motorcycle,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildKPICard(
+                              "İptal",
+                              "%${cancelRate.toStringAsFixed(0)}",
+                              Colors.red,
+                              Icons.cancel,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      _buildWeeklyTrendChart(weeklyTrend, theme),
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 24),
 
@@ -393,7 +380,7 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
                     context,
                     title: "Hazırlanıyor",
                     count:
-                        "${orders.where((d) => d.status == 'preparing').length}",
+                        "${allOrders.where((d) => d.status == 'preparing').length}",
                     icon: Icons.soup_kitchen,
                     color: Colors.orange,
                     onTap: () => _navigateToList(
@@ -405,7 +392,7 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
                     context,
                     title: "Yolda",
                     count:
-                        "${orders.where((d) => d.status == 'onWay').length}",
+                        "${allOrders.where((d) => d.status == 'onWay').length}",
                     icon: Icons.delivery_dining,
                     color: Colors.purple,
                     onTap: () => _navigateToList(
@@ -417,7 +404,7 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
                     context,
                     title: "Teslim",
                     count:
-                        "${orders.where((d) => d.status == 'delivered').length}",
+                        "${allOrders.where((d) => d.status == 'delivered').length}",
                     icon: Icons.check_circle,
                     color: Colors.green,
                     onTap: () => _navigateToList(
@@ -431,6 +418,104 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
           ),
         );
       },
+    );
+  }
+
+  Widget _buildWeeklyTrendChart(List<dynamic> weeklyTrend, ThemeData theme) {
+    if (weeklyTrend.isEmpty) return const SizedBox.shrink();
+
+    final maxVal = weeklyTrend
+        .map((e) => (e['orderCount'] as num).toDouble())
+        .reduce((a, b) => a > b ? a : b);
+    final maxY = maxVal > 0 ? maxVal + (maxVal * 0.2) : 5.0; // %20 padding
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.shade200,
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Son 7 Günlük Trend",
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            height: 180,
+            child: BarChart(
+              BarChartData(
+                maxY: maxY,
+                barTouchData: BarTouchData(enabled: false),
+                titlesData: FlTitlesData(
+                  show: true,
+                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 28,
+                      getTitlesWidget: (value, meta) {
+                        return Text(
+                          value.toInt().toString(),
+                          style: const TextStyle(fontSize: 10, color: Colors.grey),
+                        );
+                      },
+                    ),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        final index = value.toInt();
+                        if (index < 0 || index >= weeklyTrend.length) return const SizedBox.shrink();
+                        final dateStr = weeklyTrend[index]['date'] as String;
+                        final dateParts = dateStr.split('-');
+                        final display = "${dateParts[2]}/${dateParts[1]}"; // DD/MM
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            display,
+                            style: const TextStyle(fontSize: 9, color: Colors.grey),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                gridData: const FlGridData(show: false),
+                barGroups: weeklyTrend.asMap().entries.map((entry) {
+                  final i = entry.key;
+                  final count = (entry.value['orderCount'] as num).toDouble();
+                  return BarChartGroupData(
+                    x: i,
+                    barRods: [
+                      BarChartRodData(
+                        toY: count,
+                        color: theme.primaryColor,
+                        width: 12,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ],
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

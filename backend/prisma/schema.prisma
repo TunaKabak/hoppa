@@ -242,6 +242,10 @@ model Order {
   paymentMethod   PaymentMethod @default(CASH_ON_DELIVERY)
   paymentStatus   PaymentStatus @default(PENDING)
   
+  cancelReason    String?
+  cancelledAt     DateTime?
+  cancelledBy     String?
+  
   items           OrderItem[]
   paymentTransactions PaymentTransaction[]
 

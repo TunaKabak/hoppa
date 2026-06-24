@@ -30,6 +30,12 @@ class ConsumerOrderRepository {
       return Order.fromMap(Map<String, dynamic>.from(json), id);
     }).toList();
   }
+
+  Future<void> cancelOrder(String orderId) async {
+    await _apiClient.post(
+      '/api/consumer/orders/$orderId/cancel',
+    );
+  }
 }
 
 // Riverpod Providers

@@ -399,9 +399,17 @@ export class OrderController {
         }
       }
 
+      let updatedPaymentStatus = undefined;
+      if (upperStatus === "DELIVERED" && order.paymentMethod !== "ONLINE_PAYMENT") {
+        updatedPaymentStatus = "SUCCESS";
+      }
+
       const updatedOrder = await prisma.order.update({
         where: { id: orderId },
-        data: { status: upperStatus },
+        data: { 
+          status: upperStatus,
+          ...(updatedPaymentStatus ? { paymentStatus: updatedPaymentStatus as PaymentStatus } : {})
+        },
         include: {
           consumer: { select: { name: true, surname: true, phone: true } },
           items: {
@@ -448,6 +456,103 @@ export class OrderController {
           });
         } catch (err) {
           console.error("Error triggering notification on order update:", err);
+        }
+      });
+
+      return res.status(200).json({ error: false, data: updatedOrder });
+    } catch (error: any) {
+      return res.status(500).json({ error: true, message: error.message });
+    }
+  }
+
+  /**
+   * Sipariş iptal işlemi (Tüketici veya Satıcı)
+   */
+  async cancelOrder(req: Request, res: Response) {
+    try {
+      const userId = req.user?.id;
+      const role = req.user?.role;
+      const orderId = req.params.id as string;
+      const { cancelReason } = req.body;
+
+      if (!userId || !role) {
+        return res.status(401).json({ error: true, message: "Kullanıcı bilgisi eksik." });
+      }
+
+      const order = await prisma.order.findUnique({
+        where: { id: orderId },
+        include: { shop: true }
+      });
+
+      if (!order) {
+        return res.status(404).json({ error: true, message: "Sipariş bulunamadı." });
+      }
+
+      let cancelledBy = "";
+
+      // Consumer cancellation rules
+      if (role === "user") {
+        if (order.consumerId !== userId) {
+          return res.status(403).json({ error: true, message: "Yetkisiz erişim." });
+        }
+        if (order.status !== "PENDING") {
+          return res.status(400).json({ error: true, message: "Sipariş onaylandığı için iptal edilemez." });
+        }
+        cancelledBy = "CONSUMER";
+      } 
+      // Merchant cancellation rules
+      else if (role === "merchant") {
+        if (order.shop.merchantId !== userId) {
+          return res.status(403).json({ error: true, message: "Yetkisiz erişim." });
+        }
+        if (!["PENDING", "PREPARING", "ON_THE_WAY"].includes(order.status)) {
+          return res.status(400).json({ error: true, message: "Sipariş şu anki durumunda iptal edilemez." });
+        }
+        if (!cancelReason) {
+          return res.status(400).json({ error: true, message: "İptal nedeni belirtilmelidir." });
+        }
+        cancelledBy = "MERCHANT";
+      } else {
+        return res.status(403).json({ error: true, message: "Geçersiz rol." });
+      }
+
+      const updatedOrder = await prisma.order.update({
+        where: { id: orderId },
+        data: {
+          status: "CANCELLED",
+          cancelReason: cancelReason || "Kullanıcı tarafından iptal edildi",
+          cancelledAt: new Date(),
+          cancelledBy,
+          ...(order.paymentMethod === "ONLINE_PAYMENT" ? { paymentStatus: "REFUNDED" } : {})
+        }
+      });
+
+      // Send notifications based on who cancelled
+      setImmediate(async () => {
+        try {
+          const { notificationService } = await import("../services/NotificationService");
+          
+          if (cancelledBy === "CONSUMER") {
+            // Notify merchant
+            if (order.shop.merchantId) {
+              await notificationService.sendToMerchant(
+                order.shop.merchantId,
+                "Sipariş İptali ❌",
+                "Müşteri henüz onaylanmayan siparişi iptal etti.",
+                { orderId: order.id }
+              );
+            }
+          } else if (cancelledBy === "MERCHANT") {
+            // Notify consumer
+            await notificationService.sendToUser(
+              order.consumerId,
+              "Sipariş İptal Edildi ❌",
+              `Siparişiniz dükkan tarafından iptal edildi. Neden: ${cancelReason}`,
+              { orderId: order.id }
+            );
+          }
+        } catch (err) {
+          console.error("Error triggering notification on cancel:", err);
         }
       });
 
