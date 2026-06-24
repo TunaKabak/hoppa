@@ -14,6 +14,8 @@ import 'package:hoppa/apps/merchant/merchant_analytics_page.dart';
 import 'package:hoppa/apps/merchant/campaign/merchant_campaigns_page.dart';
 import 'package:hoppa/apps/merchant/admin/admin_approvals_page.dart';
 import 'package:hoppa/apps/merchant/auth/merchant_auth_wrapper.dart' as hoppa_wrapper;
+import 'package:core_network/core_network.dart';
+import 'package:hoppa/shared/core/services/notification_service.dart';
 
 final GlobalKey<ScaffoldState> merchantDrawerKey = GlobalKey<ScaffoldState>();
 
@@ -38,6 +40,15 @@ class _MerchantMainLayoutState extends ConsumerState<MerchantMainLayout> {
     super.initState();
     _activeBusinessId = widget.businessId;
     _initData();
+
+    // Firebase Cloud Messaging ve Notification kurulumu
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final apiClient = ref.read(apiClientProvider);
+        final notificationService = NotificationService(apiClient);
+        notificationService.initialize();
+      }
+    });
   }
 
   @override

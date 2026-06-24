@@ -135,6 +135,7 @@ enum OrderStatus {
       case 'preparing':
         return OrderStatus.preparing;
       case 'on_way':
+      case 'on_the_way':
         return OrderStatus.onWay;
       case 'ready_for_pickup':
         return OrderStatus.readyForPickup;

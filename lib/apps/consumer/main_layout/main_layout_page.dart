@@ -9,9 +9,12 @@ import 'package:hoppa/apps/consumer/cart/cart_provider.dart';
 import 'package:hoppa/apps/consumer/profile/profile_page.dart';
 import 'package:hoppa/shared/core/services/navigation_provider.dart'; // YENİ
 
-import 'package:hoppa/apps/consumer/business/business_provider.dart'; // YENİ
+import 'package:hoppa/apps/consumer/business/business_provider.dart';
 import 'package:hoppa/apps/consumer/home/search_page.dart';
 import 'package:hoppa/apps/consumer/services/customer_auth_service.dart';
+import 'package:core_network/core_network.dart';
+import 'package:core_auth/core_auth.dart';
+import 'package:hoppa/shared/core/services/notification_service.dart';
 
 class MainLayoutPage extends ConsumerStatefulWidget {
   const MainLayoutPage({super.key});
@@ -50,10 +53,12 @@ class _MainLayoutPageState extends ConsumerState<MainLayoutPage> {
           context,
           listen: false,
         );
-        // NOT: Business verilerini burada temizlememelisiniz.
-        // Eğer MainLayoutPage yeniden oluşturulursa (örn: Auth değişikliği),
-        // mevcut seçimlerin kaybolmasına neden olur.
         navProvider.setIndex(0);
+
+        // Firebase Cloud Messaging ve Notification kurulumu
+        final apiClient = ref.read(apiClientProvider);
+        final notificationService = NotificationService(apiClient);
+        notificationService.initialize();
       }
     });
   }

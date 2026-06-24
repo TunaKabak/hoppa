@@ -34,6 +34,7 @@ import merchantRoutes from "./routes/merchantRoutes";
 import consumerRoutes from "./routes/consumerRoutes";
 import adminRoutes from "./routes/adminRoutes";
 import mediaRoutes from "./routes/media.routes";
+import notificationRoutes from "./routes/notificationRoutes";
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -64,6 +65,7 @@ app.use("/api/merchant", merchantRoutes);
 app.use("/api/consumer", consumerRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/media", mediaRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 app.get('/health', (req: Request, res: Response) => {
     res.status(200).json({ status: "OK", timestamp: new Date() });
