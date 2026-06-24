@@ -491,8 +491,8 @@ export class OrderController {
       let cancelledBy = "";
 
       // Consumer cancellation rules
-      if (role === "user") {
-        if (order.consumerId !== userId) {
+      if (role === "user" || role === "super_admin") {
+        if (order.consumerId !== userId && role !== "super_admin") {
           return res.status(403).json({ error: true, message: "Yetkisiz erişim." });
         }
         if (order.status !== "PENDING") {

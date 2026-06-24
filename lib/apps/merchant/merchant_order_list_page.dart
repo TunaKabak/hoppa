@@ -22,10 +22,12 @@ class MerchantOrderListPage extends ConsumerStatefulWidget {
 
 class _MerchantOrderListPageState extends ConsumerState<MerchantOrderListPage> {
   Timer? _pollingTimer;
+  String? _selectedFilter;
 
   @override
   void initState() {
     super.initState();
+    _selectedFilter = widget.filterStatus;
     // Refresh periodically
     _startPolling();
   }
@@ -49,76 +51,132 @@ class _MerchantOrderListPageState extends ConsumerState<MerchantOrderListPage> {
     final theme = Theme.of(context);
     final ordersAsync = ref.watch(merchantOrdersProvider);
 
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: Text(_getAppBarTitle()),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.menu_rounded),
-          onPressed: () => merchantDrawerKey.currentState?.openDrawer(),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              ref.invalidate(merchantOrdersProvider);
-            },
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () {
+        final currentFocus = FocusScope.of(context);
+        if (!currentFocus.hasPrimaryFocus && currentFocus.focusedChild != null) {
+          FocusManager.instance.primaryFocus?.unfocus();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(
+          title: Text(_getAppBarTitle()),
+          centerTitle: true,
+          leading: IconButton(
+            icon: const Icon(Icons.menu_rounded),
+            onPressed: () => merchantDrawerKey.currentState?.openDrawer(),
           ),
-        ],
-      ),
-      body: ordersAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text("Hata: $error")),
-        data: (allOrders) {
-          var orders = allOrders.toList();
-
-          if (widget.filterStatus == OrderStatus.pending.value) {
-            orders = orders
-                .where((d) => d.status == OrderStatus.pending.value)
-                .toList();
-          } else if (widget.filterStatus == 'active') {
-            orders = orders
-                .where(
-                  (d) => [
-                    OrderStatus.preparing.value,
-                    OrderStatus.onWay.value,
-                    OrderStatus.readyForPickup.value,
-                  ].contains(d.status),
-                )
-                .toList();
-          }
-
-          orders.sort((a, b) {
-            final t1 = a.createdAt;
-            final t2 = b.createdAt;
-            return t2.compareTo(t1);
-          });
-
-          if (orders.isEmpty) {
-            return Center(
-              child: Text(
-                "Sipariş bulunamadı (${_getAppBarTitle()})",
-                style: const TextStyle(color: Colors.grey),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: () {
+                ref.invalidate(merchantOrdersProvider);
+              },
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Row(
+                children: [
+                  _buildFilterChip(null, "Tümü", theme),
+                  const SizedBox(width: 8),
+                  _buildFilterChip(OrderStatus.pending.value, "Bekleyenler ⏳", theme),
+                  const SizedBox(width: 8),
+                  _buildFilterChip(OrderStatus.preparing.value, "Hazırlananlar 🍳", theme),
+                  const SizedBox(width: 8),
+                  _buildFilterChip(OrderStatus.onWay.value, "Yoldakiler 🛵", theme),
+                  const SizedBox(width: 8),
+                  _buildFilterChip(OrderStatus.delivered.value, "Tamamlananlar ✅", theme),
+                  const SizedBox(width: 8),
+                  _buildFilterChip(OrderStatus.cancelled.value, "İptaller ❌", theme),
+                ],
               ),
-            );
-          }
+            ),
+            Expanded(
+              child: ordersAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => Center(child: Text("Hata: $error")),
+                data: (allOrders) {
+                  var orders = allOrders.toList();
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(12),
-            itemCount: orders.length,
-            itemBuilder: (context, index) {
-              return _buildOrderCard(context, orders[index], ref);
-            },
-          );
-        },
+                  if (_selectedFilter == 'active') {
+                    orders = orders
+                        .where(
+                          (d) => [
+                            OrderStatus.preparing.value,
+                            OrderStatus.onWay.value,
+                            OrderStatus.readyForPickup.value,
+                          ].contains(d.status),
+                        )
+                        .toList();
+                  } else if (_selectedFilter != null) {
+                    orders = orders
+                        .where((d) => d.status == _selectedFilter)
+                        .toList();
+                  }
+
+                  orders.sort((a, b) {
+                    final t1 = a.createdAt;
+                    final t2 = b.createdAt;
+                    return t2.compareTo(t1);
+                  });
+
+                  if (orders.isEmpty) {
+                    return Center(
+                      child: Text(
+                        "Sipariş bulunamadı (${_getAppBarTitle()})",
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: orders.length,
+                    itemBuilder: (context, index) {
+                      return _buildOrderCard(context, orders[index], ref);
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String? status, String label, ThemeData theme) {
+    final isSelected = _selectedFilter == status;
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (bool selected) {
+        setState(() {
+          _selectedFilter = selected ? status : null;
+        });
+      },
+      selectedColor: theme.colorScheme.primaryContainer,
+      labelStyle: TextStyle(
+        color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface,
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
       ),
     );
   }
 
   String _getAppBarTitle() {
-    if (widget.filterStatus == OrderStatus.pending.value) return 'Onay Bekleyenler';
-    if (widget.filterStatus == 'active') return 'Aktif Siparişler';
+    if (_selectedFilter == OrderStatus.pending.value) return 'Onay Bekleyenler';
+    if (_selectedFilter == OrderStatus.preparing.value) return 'Hazırlananlar';
+    if (_selectedFilter == OrderStatus.onWay.value) return 'Yoldakiler';
+    if (_selectedFilter == OrderStatus.delivered.value) return 'Tamamlananlar';
+    if (_selectedFilter == OrderStatus.cancelled.value) return 'İptaller';
+    if (_selectedFilter == 'active') return 'Aktif Siparişler';
     return 'Tüm Siparişler';
   }
 
@@ -323,6 +381,11 @@ class _MerchantOrderListPageState extends ConsumerState<MerchantOrderListPage> {
         ref.invalidate(merchantOrdersProvider);
       } catch (e) {
         print("Sipariş güncellenirken hata oluştu: $e");
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Hata: $e")),
+          );
+        }
       }
     }
 

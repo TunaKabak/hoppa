@@ -129,7 +129,7 @@ enum OrderStatus {
 
   /// String'den OrderStatus'a dönüştür
   static OrderStatus fromString(String status) {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case 'pending':
         return OrderStatus.pending;
       case 'preparing':
