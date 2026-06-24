@@ -32,7 +32,7 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction):
   // Doğrulanmış veriyi Request nesnesine ata
   req.user = {
     id: decodedToken.id,
-    role: decodedToken.role,
+    role: decodedToken.role?.toLowerCase(),
   };
 
   next();

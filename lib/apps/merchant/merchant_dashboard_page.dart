@@ -314,11 +314,14 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
                           ),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: _buildKPICard(
-                              "Aktif",
-                              "$activeCount",
-                              Colors.orange,
-                              Icons.motorcycle,
+                            child: GestureDetector(
+                              onTap: () => _navigateToList(context, filter: 'active'),
+                              child: _buildKPICard(
+                                "Aktif",
+                                "$activeCount",
+                                Colors.orange,
+                                Icons.motorcycle,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -392,7 +395,7 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
                     context,
                     title: "Yolda",
                     count:
-                        "${allOrders.where((d) => d.status == 'onWay').length}",
+                        "${allOrders.where((d) => d.status == OrderStatus.onWay.value).length}",
                     icon: Icons.delivery_dining,
                     color: Colors.purple,
                     onTap: () => _navigateToList(

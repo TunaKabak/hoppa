@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart' as rp;
 import 'package:core_auth/core_auth.dart';
 import 'package:hoppa/apps/consumer/address/delivery_provider.dart';
 import 'package:hoppa/apps/consumer/address/address_list_page.dart';
+import 'package:hoppa/apps/consumer/home/widgets/account_bottom_sheet.dart';
 import 'package:hoppa/apps/consumer/business/business_provider.dart';
 import 'package:hoppa/apps/consumer/business/widgets/category_grid_item.dart';
 import 'package:hoppa/apps/consumer/home/widgets/promo_slider.dart';
@@ -253,8 +254,9 @@ class _SelectionHeader extends rp.ConsumerWidget {
           ),
 
           // Account Menu
-          PopupMenuButton<String>(
-            icon: Container(
+          GestureDetector(
+            onTap: () => AccountBottomSheet.show(context),
+            child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -263,46 +265,6 @@ class _SelectionHeader extends rp.ConsumerWidget {
               ),
               child: Icon(Icons.person_outline, color: theme.primaryColor),
             ),
-            offset: const Offset(0, 50),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            onSelected: (value) async {
-              if (value == 'logout') {
-                await ref.read(authControllerProvider.notifier).logout();
-                // AuthStateChanges listener will handle navigation if setup in main.dart
-                // Otherwise we might need to navigate manually:
-                if (context.mounted) {
-                  Navigator.of(
-                    context,
-                  ).pushNamedAndRemoveUntil('/login', (route) => false);
-                }
-              }
-              // Handle 'account' or other cases
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'account',
-                child: Row(
-                  children: [
-                    Icon(Icons.person, color: theme.primaryColor, size: 20),
-                    const SizedBox(width: 8),
-                    const Text("Hesabım"),
-                  ],
-                ),
-              ),
-              const PopupMenuDivider(),
-              const PopupMenuItem(
-                value: 'logout',
-                child: Row(
-                  children: [
-                    Icon(Icons.logout, color: Colors.red, size: 20),
-                    SizedBox(width: 8),
-                    Text("Çıkış Yap", style: TextStyle(color: Colors.red)),
-                  ],
-                ),
-              ),
-            ],
           ),
         ],
       ),

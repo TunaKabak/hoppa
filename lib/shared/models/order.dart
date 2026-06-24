@@ -111,7 +111,7 @@ class Order {
       id: id,
       userId: data['consumerId'] ?? data['user_id'] ?? '',
       businessId: data['shopId'] ?? data['business_id'] ?? '',
-      status: data['status'] ?? OrderStatus.pending.value,
+      status: OrderStatus.fromString(data['status']?.toString() ?? '').value,
       totalAmount: data['totalAmount'] != null 
           ? (double.tryParse(data['totalAmount'].toString()) ?? 0.0)
           : (double.tryParse((data['total_amount'] ?? 0.0).toString()) ?? 0.0),
