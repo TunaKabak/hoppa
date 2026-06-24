@@ -395,6 +395,45 @@ export class OrderController {
         }
       });
 
+      // Send Push Notification asynchronously
+      setImmediate(async () => {
+        try {
+          const { notificationService } = await import("../services/NotificationService");
+          let title = "Sipariş Güncellemesi";
+          let body = `Siparişinizin durumu güncellendi: ${upperStatus}`;
+          
+          switch(upperStatus) {
+            case "PREPARING":
+              title = "Siparişiniz Hazırlanıyor 🍳";
+              body = "Siparişiniz onaylandı ve hazırlanmaya başlandı.";
+              break;
+            case "ON_THE_WAY":
+              title = "Kuryemiz Yola Çıktı! 🛵";
+              body = "Siparişiniz sıcak sıcak geliyor.";
+              break;
+            case "READY_FOR_PICKUP":
+              title = "Siparişiniz Hazır! 🛍️";
+              body = "Siparişiniz hazır, gelip teslim alabilirsiniz.";
+              break;
+            case "DELIVERED":
+              title = "Afiyet Olsun! 🎉";
+              body = "Siparişiniz başarıyla teslim edildi.";
+              break;
+            case "CANCELLED":
+              title = "Sipariş İptal Edildi ❌";
+              body = "Siparişiniz maalesef iptal edildi.";
+              break;
+          }
+
+          await notificationService.sendToUser(updatedOrder.consumerId, title, body, {
+            orderId: updatedOrder.id,
+            status: upperStatus
+          });
+        } catch (err) {
+          console.error("Error triggering notification on order update:", err);
+        }
+      });
+
       return res.status(200).json({ error: false, data: updatedOrder });
     } catch (error: any) {
       return res.status(500).json({ error: true, message: error.message });
