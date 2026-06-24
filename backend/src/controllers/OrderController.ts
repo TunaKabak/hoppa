@@ -353,8 +353,14 @@ export class OrderController {
         return res.status(401).json({ error: true, message: "Kullanıcı bilgisi eksik." });
       }
 
-      if (!status || !Object.values(OrderStatus).includes(status)) {
-        return res.status(400).json({ error: true, message: "Geçersiz veya eksik sipariş durumu (status)." });
+      // Map frontend status values to Prisma Enum
+      let upperStatus = status?.toUpperCase();
+      if (upperStatus === "ON_WAY") {
+        upperStatus = "ON_THE_WAY";
+      }
+
+      if (!upperStatus || !Object.values(OrderStatus).includes(upperStatus)) {
+        return res.status(400).json({ error: true, message: `Geçersiz veya eksik sipariş durumu (status): ${status}` });
       }
 
       const order = await prisma.order.findUnique({
@@ -378,7 +384,7 @@ export class OrderController {
 
       const updatedOrder = await prisma.order.update({
         where: { id: orderId },
-        data: { status },
+        data: { status: upperStatus },
         include: {
           consumer: { select: { name: true, surname: true, phone: true } },
           items: {
