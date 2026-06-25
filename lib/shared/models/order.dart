@@ -21,6 +21,7 @@ class Order {
   final double addressLongitude; // Delivery address longitude
   final String paymentMethod; // Payment Method
   final String? courierId; // Assigned courier's ID
+  final int? estimatedDeliveryDuration;
  
   Order({
     required this.id,
@@ -40,6 +41,7 @@ class Order {
     this.addressLongitude = 0.0,
     this.paymentMethod = 'CASH_ON_DELIVERY',
     this.courierId,
+    this.estimatedDeliveryDuration,
   });
 
   factory Order.fromMap(Map<String, dynamic> data, String id) {
@@ -127,6 +129,11 @@ class Order {
       addressLongitude: data['address_longitude'] != null ? (data['address_longitude'] as num).toDouble() : 0.0,
       paymentMethod: data['paymentMethod'] ?? data['payment_method'] ?? 'CASH_ON_DELIVERY',
       courierId: data['courierId'] ?? data['courier_id'],
+      estimatedDeliveryDuration: data['estimatedDeliveryDuration'] != null 
+          ? int.tryParse(data['estimatedDeliveryDuration'].toString())
+          : (data['estimated_delivery_duration'] != null 
+              ? int.tryParse(data['estimated_delivery_duration'].toString())
+              : null),
       createdAt: parsedCreatedAt,
       items: parsedItems,
     );
@@ -147,6 +154,7 @@ class Order {
       'address_latitude': addressLatitude,
       'address_longitude': addressLongitude,
       'courier_id': courierId,
+      'estimated_delivery_duration': estimatedDeliveryDuration,
       'created_at': Timestamp.fromDate(createdAt),
       'items': items.map((item) => item.toMap()).toList(),
     };
