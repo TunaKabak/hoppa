@@ -1,15 +1,12 @@
 import { prisma } from "../config/db";
 import { ISmsProvider } from "../providers/sms/ISmsProvider";
-import { MockSmsProvider } from "../providers/sms/MockSmsProvider";
-import { RealSmsProvider } from "../providers/sms/RealSmsProvider";
+import { SmsProviderFactory } from "../providers/sms/SmsProviderFactory";
 
 export class OtpService {
   private smsProvider: ISmsProvider;
 
   constructor() {
-    // Strategy Pattern: ORTAM değişkenine göre provider seç
-    const isMock = process.env.SMS_PROVIDER_MODE !== "REAL";
-    this.smsProvider = isMock ? new MockSmsProvider() : new RealSmsProvider();
+    this.smsProvider = SmsProviderFactory.getProvider();
   }
 
   /**
@@ -46,8 +43,7 @@ export class OtpService {
       });
 
       // 5. SMS Gönder
-      const message = `Hoppa doğrulama kodunuz: ${rawCode}. Bizi seçtiğiniz için teşekkürler!`;
-      await this.smsProvider.sendSms(phoneNumber, message);
+      await this.smsProvider.sendOtp(phoneNumber, rawCode);
       return true;
     } catch (error: any) {
       console.error("[OtpService] OTP istek hatası:", error);

@@ -5,11 +5,10 @@ import 'package:hoppa/shared/models/business_product.dart';
 import 'package:hoppa/apps/consumer/cart/cart_provider.dart';
 import 'package:hoppa/shared/models/campaign.dart';
 import 'package:hoppa/apps/consumer/favorites/favorite_provider.dart';
-import 'package:hoppa/apps/consumer/services/customer_auth_service.dart';
 import 'package:hoppa/apps/consumer/auth/consumer_login_page.dart';
 import 'package:core_auth/core_auth.dart';
-import 'package:hoppa/apps/consumer/business/business_provider.dart';
 import 'package:hoppa/apps/consumer/repositories/consumer_shop_repository.dart';
+import 'package:hoppa/shared/core/utils/quantity_formatter.dart';
 
 class ModernProductCard extends ConsumerWidget {
   final BusinessProduct businessProduct;
@@ -362,7 +361,7 @@ class ModernProductCard extends ConsumerWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        product.isWeighted ? "Kg Fiyatı" : "Adet Fiyatı",
+                        "${product.unit.toUpperCase()} Fiyatı",
                         style: TextStyle(color: Colors.grey[400], fontSize: 9),
                       ),
                     ],
@@ -412,7 +411,7 @@ class ModernProductCard extends ConsumerWidget {
     bool isClosed, {
     bool isSmall = false,
   }) {
-    final isWeighted = businessProduct.product.isWeighted;
+    final minQty = businessProduct.product.minQuantity;
 
     // 1. Durum: Sepette yok veya miktar 0 -> "Ekle" butonu (+)
     if (quantity <= 0) {
@@ -479,8 +478,7 @@ class ModernProductCard extends ConsumerWidget {
                 width: isSmall ? 28 : 30,
                 alignment: Alignment.center,
                 child: Icon(
-                  (isWeighted && quantity <= 0.51) ||
-                          (!isWeighted && quantity <= 1.01)
+                  quantity <= minQty + 0.001
                       ? Icons.delete_outline
                       : Icons.remove,
                   color: theme.primaryColor,
@@ -498,9 +496,7 @@ class ModernProductCard extends ConsumerWidget {
             alignment: Alignment.center,
             constraints: const BoxConstraints(minWidth: 20),
             child: Text(
-              isWeighted
-                  ? quantity.toStringAsFixed(1)
-                  : quantity.toInt().toString(),
+              QuantityFormatter.formatValueOnly(quantity),
               style: TextStyle(
                 color: theme.primaryColor,
                 fontWeight: FontWeight.bold,

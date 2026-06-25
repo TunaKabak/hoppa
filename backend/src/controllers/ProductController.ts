@@ -35,7 +35,8 @@ export class ProductController {
 
       const { 
         name, description, price, discountPrice, stock, imageUrl, categoryId, categoryName,
-        barcode, brand, stockQuantity, weightOrVolume, preparationTime, hasDeposit, depositPrice
+        barcode, brand, stockQuantity, weightOrVolume, preparationTime, hasDeposit, depositPrice,
+        unit, minQuantity, stepSize
       } = req.body;
 
       // Smart Validation: Eğer dükkan MARKET kategorisindeyse ve barcode boşsa 400 hatası dön
@@ -71,6 +72,8 @@ export class ProductController {
       const parsedPrepTime = preparationTime !== null && preparationTime !== undefined && preparationTime !== "" ? parseInt(preparationTime.toString()) : null;
       const parsedDepositPrice = depositPrice !== null && depositPrice !== undefined && depositPrice !== "" ? parseFloat(depositPrice.toString()) : null;
       const parsedHasDeposit = hasDeposit === true || hasDeposit === "true";
+      const parsedMinQuantity = minQuantity !== null && minQuantity !== undefined && minQuantity !== "" ? parseFloat(minQuantity.toString()) : 1.0;
+      const parsedStepSize = stepSize !== null && stepSize !== undefined && stepSize !== "" ? parseFloat(stepSize.toString()) : 1.0;
 
       const product = await prisma.product.create({
         data: {
@@ -89,7 +92,10 @@ export class ProductController {
           weightOrVolume: weightOrVolume || null,
           preparationTime: parsedPrepTime,
           hasDeposit: parsedHasDeposit,
-          depositPrice: parsedDepositPrice
+          depositPrice: parsedDepositPrice,
+          unit: unit || "ADET",
+          minQuantity: parsedMinQuantity,
+          stepSize: parsedStepSize
         }
       });
 
@@ -115,7 +121,8 @@ export class ProductController {
 
       const { 
         name, description, price, discountPrice, stock, imageUrl, isActive, categoryId, categoryName,
-        barcode, brand, stockQuantity, weightOrVolume, preparationTime, hasDeposit, depositPrice
+        barcode, brand, stockQuantity, weightOrVolume, preparationTime, hasDeposit, depositPrice,
+        unit, minQuantity, stepSize
       } = req.body;
 
       // Smart Validation: Eğer dükkan MARKET kategorisindeyse ve barcode boşsa 400 hatası dön
@@ -155,6 +162,8 @@ export class ProductController {
       const parsedPrepTime = preparationTime !== null && preparationTime !== undefined && preparationTime !== "" ? parseInt(preparationTime.toString()) : null;
       const parsedDepositPrice = depositPrice !== null && depositPrice !== undefined && depositPrice !== "" ? parseFloat(depositPrice.toString()) : null;
       const parsedHasDeposit = hasDeposit === true || hasDeposit === "true";
+      const parsedMinQuantity = minQuantity !== null && minQuantity !== undefined && minQuantity !== "" ? parseFloat(minQuantity.toString()) : undefined;
+      const parsedStepSize = stepSize !== null && stepSize !== undefined && stepSize !== "" ? parseFloat(stepSize.toString()) : undefined;
 
       const updated = await prisma.product.update({
         where: { id: productId },
@@ -173,7 +182,10 @@ export class ProductController {
           weightOrVolume: weightOrVolume !== undefined ? (weightOrVolume || null) : undefined,
           preparationTime: preparationTime !== undefined ? parsedPrepTime : undefined,
           hasDeposit: hasDeposit !== undefined ? parsedHasDeposit : undefined,
-          depositPrice: depositPrice !== undefined ? parsedDepositPrice : undefined
+          depositPrice: depositPrice !== undefined ? parsedDepositPrice : undefined,
+          unit: unit !== undefined ? unit : undefined,
+          minQuantity: parsedMinQuantity,
+          stepSize: parsedStepSize
         }
       });
 

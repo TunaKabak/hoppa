@@ -8,9 +8,8 @@ import 'package:hoppa/apps/consumer/home/widgets/modern_product_card.dart';
 import 'package:hoppa/shared/models/campaign.dart';
 import 'package:hoppa/apps/consumer/address/delivery_provider.dart';
 import 'package:hoppa/apps/consumer/business/business_provider.dart';
-import 'package:hoppa/apps/consumer/cart/widgets/min_cart_amount_progress.dart';
-import 'package:hoppa/apps/consumer/cart/widgets/free_delivery_progress.dart';
-import 'package:hoppa/apps/consumer/services/customer_auth_service.dart';
+import 'package:hoppa/apps/consumer/cart/widgets/compact_delivery_status.dart';
+import 'package:hoppa/apps/consumer/cart/widgets/compact_checkout_bar.dart';
 import 'package:hoppa/apps/consumer/auth/consumer_login_page.dart';
 import 'package:core_auth/core_auth.dart';
 
@@ -22,7 +21,6 @@ class CartPage extends ConsumerStatefulWidget {
 }
 
 class _CartPageState extends ConsumerState<CartPage> {
-  bool _isExpanded = false;
   String _groupBy = 'none';
 
   void _handleClose(BuildContext context) {
@@ -48,7 +46,7 @@ class _CartPageState extends ConsumerState<CartPage> {
     bool hasFreeDeliveryCampaign = false;
     final campaignsAsync = ref.watch(cartCampaignsProvider);
     final activeCampaigns = campaignsAsync.value ?? [];
-    if (activeCampaigns.any((c) => c.type == "FREE_DELIVERY_FIRST_ORDERS")) {
+    if (activeCampaigns.any((c) => c.type.name.toUpperCase() == "FREE_DELIVERY_FIRST_ORDERS")) {
       hasFreeDeliveryCampaign = true; // Temporary optimistic UI logic
     }
 
@@ -103,16 +101,11 @@ class _CartPageState extends ConsumerState<CartPage> {
           ? _buildEmptyCart(context, colorScheme)
           : Column(
               children: [
-                if (requiredMinAmount > 0)
-                  MinCartAmountProgress(
-                    currentAmount: cartState.totalAmount,
-                    minAmount: requiredMinAmount,
-                  ),
-                if (selectedBusiness?.freeDeliveryThreshold != null && !hasFreeDeliveryCampaign)
-                  FreeDeliveryProgress(
-                    currentAmount: cartState.totalAmount,
-                    thresholdAmount: selectedBusiness!.freeDeliveryThreshold!,
-                  ),
+                CompactDeliveryStatus(
+                  currentCartTotal: cartState.totalAmount,
+                  minOrderLimit: requiredMinAmount,
+                  freeDeliveryLimit: hasFreeDeliveryCampaign ? 0.0 : (selectedBusiness?.freeDeliveryThreshold ?? 0.0),
+                ),
                 if (cartState.items.isNotEmpty)
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -195,224 +188,31 @@ class _CartPageState extends ConsumerState<CartPage> {
                       : _buildGroupedList(cartState, activeCampaigns, colorScheme),
                 ),
 
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 16,
-                    horizontal: 24,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(20),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 20,
-                        offset: const Offset(0, -5),
-                      ),
-                    ],
-                  ),
-                  child: SafeArea(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        AnimatedSize(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                          child: _isExpanded
-                              ? Column(
-                                  children: [
-                                    _summaryRow(
-                                      "Ara Toplam",
-                                      "${cartState.totalAmount.toStringAsFixed(2)} ₺",
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          "Teslimat Ücreti",
-                                          style: TextStyle(
-                                            color: Colors.grey[700],
-                                            fontSize: 16,
-                                          ),
-                                        ),
-                                        Row(
-                                          children: [
-                                            if (deliveryFee == 0) ...[
-                                              Text(
-                                                "${(selectedBusiness?.baseDeliveryFee ?? 30.0).toStringAsFixed(2)} ₺",
-                                                style: const TextStyle(
-                                                  color: Colors.grey,
-                                                  fontSize: 14,
-                                                  decoration: TextDecoration.lineThrough,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.green.shade100,
-                                                  borderRadius: BorderRadius.circular(4),
-                                                ),
-                                                child: Text(
-                                                  "Ücretsiz",
-                                                  style: TextStyle(color: Colors.green.shade800, fontSize: 12, fontWeight: FontWeight.bold),
-                                                ),
-                                              ),
-                                            ] else ...[
-                                              Text(
-                                                "${deliveryFee.toStringAsFixed(2)} ₺",
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 16,
-                                                ),
-                                              ),
-                                            ],
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                    const Padding(
-                                      padding: EdgeInsets.symmetric(
-                                        vertical: 16,
-                                      ),
-                                      child: Divider(),
-                                    ),
-                                  ],
-                                )
-                              : const SizedBox.shrink(),
+                CompactCheckoutBar(
+                  subTotal: cartState.totalAmount,
+                  deliveryFee: deliveryFee,
+                  total: finalTotal,
+                  canCheckout: canCheckout,
+                  onCheckout: () {
+                    final authState = ref.read(authControllerProvider);
+                    if (authState is! AuthAuthenticated) {
+                      Navigator.of(
+                        context,
+                        rootNavigator: true,
+                      ).push(
+                        MaterialPageRoute(
+                          builder: (context) => const LoginPage(),
                         ),
-
-                        GestureDetector(
-                          onTap: () =>
-                              setState(() => _isExpanded = !_isExpanded),
-                          behavior: HitTestBehavior.opaque,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  const Text(
-                                    "Genel Toplam",
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Icon(
-                                    _isExpanded
-                                        ? Icons.keyboard_arrow_down
-                                        : Icons.keyboard_arrow_up,
-                                    color: Colors.grey,
-                                    size: 24,
-                                  ),
-                                  if (!_isExpanded)
-                                    Padding(
-                                      padding: const EdgeInsets.only(left: 4.0),
-                                      child: Text(
-                                        "(Detay)",
-                                        style: TextStyle(
-                                          color: Colors.grey[400],
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                              Text(
-                                "${finalTotal.toStringAsFixed(2)} ₺",
-                                style: theme.textTheme.headlineSmall?.copyWith(
-                                  color: colorScheme.primary,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
+                      );
+                    } else {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const CheckoutPage(),
                         ),
-
-                        const SizedBox(
-                          height: 16,
-                        ),
-
-                        SizedBox(
-                          width: double.infinity,
-                          height: 48,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: canCheckout
-                                  ? colorScheme.primary
-                                  : Colors.grey,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 2,
-                            ),
-                            onPressed: canCheckout
-                                ? () {
-                                    final authState = ref.read(authControllerProvider);
-                                    if (authState is! AuthAuthenticated) {
-                                      Navigator.of(
-                                        context,
-                                        rootNavigator: true,
-                                      ).push(
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              const LoginPage(),
-                                        ),
-                                      );
-                                    } else {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              const CheckoutPage(),
-                                        ),
-                                      );
-                                    }
-                                  }
-                                : null,
-                            child: Text(
-                              canCheckout
-                                  ? "Sepeti Onayla"
-                                  : "Minimum Tutar Sağlanamadı",
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        if (!_isExpanded) ...[
-                          const SizedBox(
-                            height: 8,
-                          ),
-                          SizedBox(
-                            width: double.infinity,
-                            height: 40,
-                            child: TextButton(
-                              style: TextButton.styleFrom(
-                                foregroundColor: Colors.grey[600],
-                              ),
-                              onPressed: () => _handleClose(context),
-                              child: const Text(
-                                "Alışverişe Devam Et",
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
+                      );
+                    }
+                  },
                 ),
               ],
             ),
@@ -543,34 +343,6 @@ class _CartPageState extends ConsumerState<CartPage> {
     );
   }
 
-  Widget _summaryRow(
-    String title,
-    String value, {
-    bool isBold = false,
-    Color? color,
-  }) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            color: isBold ? Colors.black : Colors.grey,
-            fontSize: isBold ? 18 : 14,
-            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-        Text(
-          value,
-          style: TextStyle(
-            color: color ?? Colors.black,
-            fontSize: isBold ? 20 : 14,
-            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget _buildEmptyCart(BuildContext context, ColorScheme colorScheme) {
     return Center(

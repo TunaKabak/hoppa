@@ -404,12 +404,29 @@ export class OrderController {
         updatedPaymentStatus = "SUCCESS";
       }
 
+      let updateData: any = {
+        status: upperStatus,
+        ...(updatedPaymentStatus ? { paymentStatus: updatedPaymentStatus as PaymentStatus } : {})
+      };
+
+      if (upperStatus === "ON_THE_WAY") {
+        let courier = await prisma.courier.findFirst();
+        if (!courier) {
+          courier = await prisma.courier.create({
+            data: {
+              name: "Süleyman Kurye",
+              phoneNumber: "+905555555555",
+              vehiclePlate: "34 HO 9999",
+              isActive: true
+            }
+          });
+        }
+        updateData.courierId = courier.id;
+      }
+
       const updatedOrder = await prisma.order.update({
         where: { id: orderId },
-        data: {
-          status: upperStatus,
-          ...(updatedPaymentStatus ? { paymentStatus: updatedPaymentStatus as PaymentStatus } : {})
-        },
+        data: updateData,
         include: {
           consumer: { select: { name: true, surname: true, phone: true } },
           items: {

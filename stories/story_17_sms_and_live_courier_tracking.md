@@ -1,6 +1,6 @@
-Story 17 - Canlı SMS Entegrasyonu ve Gerçek Zamanlı Kurye Takip Altyapısı
+Story 17 - Canlı Twilio SMS Entegrasyonu ve Gerçek Zamanlı Kurye Takip Altyapısı
 
-Bu döküman, uygulamamızı sahadaki gerçek kuryeler ve gerçek kullanıcılarla buluşturmak için gereken SMS sağlayıcı entegrasyonu (Netgsm/Twilio vb.) ile gerçek zamanlı (Real-Time) kurye harita takip mekanizmasının teknik mimari planını içerir.
+Bu döküman, uygulamamızı sahadaki gerçek kuryeler ve gerçek kullanıcılarla buluşturmak için gereken Twilio SMS sağlayıcı entegrasyonu, IP bazlı OTP güvenlik duvarı (Rate Limiting) ile gerçek zamanlı (Real-Time) kurye harita takip mekanizmasının teknik mimari planını içerir.
 
 🛵 1. BÖLÜM: Canlı Kurye Takip Mimarisi (Real-Time Tracking)
 
@@ -68,42 +68,61 @@ final courierLocationStreamProvider = StreamProvider.family<CourierLocation, Str
 });
 
 
-💬 2. BÖLÜM: Canlı SMS Gateway Entegrasyonu
+💬 2. BÖLÜM: Twilio SMS Gateway Entegrasyonu (Adapter Pattern)
 
-OTP (Tek Kullanımlık Şifre) SMS'lerini canlıya almak için SOLID - Open/Closed prensibine uygun olarak bir SmsProvider interface'i kurduk. Bu sayede yarın sağlayıcıyı (Twilio, Netgsm, Verimor) değiştirmek tek satırlık bir iş olacaktır.
-
-A. SMS Sağlayıcı Tasarım Deseni (Adapter Pattern)
+OTP (Tek Kullanımlık Şifre) SMS'lerini canlıya almak için SOLID - Open/Closed ve Dependency Inversion prensiplerine uygun olarak bir ISmsProvider interface'i kurduk.
 
 // backend/src/providers/SmsProvider.ts
+
+import twilio from 'twilio';
 
 export interface ISmsProvider {
   sendOtp(phoneNumber: string, code: string): Promise<boolean>;
 }
 
-// Türkiye pazarı için Netgsm Entegrasyonu
-export class NetgsmSmsProvider implements ISmsProvider {
-  private apiUsername = process.env.NETGSM_USER;
-  private apiPassword = process.env.NETGSM_PASS;
-  private apiHeader = process.env.NETGSM_HEADER;
+/**
+ * Twilio Entegrasyonu (Adapter Pattern)
+ */
+export class TwilioSmsProvider implements ISmsProvider {
+  private client: twilio.Twilio;
+  private fromNumber: string;
+
+  constructor() {
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    this.fromNumber = process.env.TWILIO_FROM_NUMBER || '';
+
+    if (!accountSid || !authToken) {
+      console.warn("[TwilioSmsProvider] UYARI: Twilio credentials eksik. SMS gönderimi mock olarak çalışacaktır.");
+    }
+
+    this.client = twilio(accountSid, authToken);
+  }
 
   public async sendOtp(phoneNumber: string, code: string): Promise<boolean> {
     try {
-      // Netgsm API'sine HTTPS POST isteği atılarak SMS iletilir
-      const message = `Hoppa doğrulama kodunuz: ${code}. Bu kodu kimseyle paylaşmayınız.`;
-      // axios.post('https://api.netgsm.com.tr/sms/send/get', { ... })
-      console.log(`[Netgsm] SMS başarıyla gönderildi: ${phoneNumber}`);
+      const messageBody = `Hoppa doğrulama kodunuz: ${code}. Bu kodu kimseyle paylaşmayınız.`;
+      const formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+${phoneNumber}`;
+
+      const response = await this.client.messages.create({
+        body: messageBody,
+        from: this.fromNumber,
+        to: formattedPhone
+      });
+
+      console.log(`[Twilio] SMS başarıyla gönderildi. SID: ${response.sid}`);
       return true;
     } catch (error) {
-      console.error("[Netgsm] SMS gönderme hatası:", error);
+      console.error("[Twilio] SMS gönderme hatası:", error);
       return false;
     }
   }
 }
 
 
-B. API Güvenlik Duvarı: Rate Limiting (ÇOK KRİTİK!)
+🛡️ 3. BÖLÜM: API Güvenlik Duvarı - Rate Limiting (Kritik!)
 
-Kötü niyetli kişilerin SMS faturamızı kabartmasını engellemek için IP başına OTP istek limitini devreye sokuyoruz.
+Kötü niyetli botların ve kişilerin fahiş SMS faturaları çıkarmasını engellemek için IP başına OTP istek limiti getireceğiz.
 
 import rateLimit from 'express-rate-limit';
 
@@ -120,6 +139,19 @@ export const otpRateLimiter = rateLimit({
 });
 
 
+🔑 4. BÖLÜM: Çevresel Değişkenlerin (.env) Tanımlanması
+
+Backend üzerinde aşağıdaki değişkenlerin tanımlanması zorunludur:
+
+# SMS Sağlayıcı Ayarı ('MOCK' veya 'TWILIO')
+SMS_PROVIDER_MODE="TWILIO"
+
+# Twilio Bilgileri
+TWILIO_ACCOUNT_SID="ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+TWILIO_AUTH_TOKEN="your_twilio_auth_token_here"
+TWILIO_FROM_NUMBER="+1234567890"
+
+
 📢 Doğrulama Planı
 
 Database Migration:
@@ -129,3 +161,6 @@ cd backend && npx prisma db push && npx prisma generate
 
 Güvenlik Testi:
 Bir IP üzerinden üst üste 6 kez OTP isteği atılarak sunucunun 429 Too Many Requests hata kodunu döndürdüğü doğrulanacak.
+
+SMS İletim Testi:
+Cihazdan kendi numaranızla giriş yapıp telefonunuza Twilio üzerinden OTP kodunun ulaştığı test edilecek.

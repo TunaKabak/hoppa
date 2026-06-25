@@ -7,6 +7,9 @@ class Product {
   final String imageUrl;
   final bool isWeighted;
   final String description; // YENİ
+  final String unit; // YENİ: e.g. "KG", "ADET"
+  final double minQuantity; // YENİ: e.g. 0.5
+  final double stepSize; // YENİ: e.g. 0.25
 
   Product({
     required this.barcode,
@@ -17,6 +20,9 @@ class Product {
     required this.imageUrl,
     required this.isWeighted,
     this.description = '', // Varsayılan boş
+    this.unit = 'ADET',
+    this.minQuantity = 1.0,
+    this.stepSize = 1.0,
   });
 
   factory Product.fromMap(Map<String, dynamic> data) {
@@ -29,6 +35,9 @@ class Product {
       imageUrl: data['imageUrl'] ?? '',
       isWeighted: data['isWeighted'] ?? false,
       description: data['description'] ?? '',
+      unit: data['unit'] ?? 'ADET',
+      minQuantity: (data['minQuantity'] ?? (data['isWeighted'] == true ? 0.5 : 1.0)).toDouble(),
+      stepSize: (data['stepSize'] ?? (data['isWeighted'] == true ? 0.5 : 1.0)).toDouble(),
     );
   }
 
@@ -42,6 +51,9 @@ class Product {
       'imageUrl': imageUrl,
       'isWeighted': isWeighted,
       'description': description,
+      'unit': unit,
+      'minQuantity': minQuantity,
+      'stepSize': stepSize,
     };
   }
 }
