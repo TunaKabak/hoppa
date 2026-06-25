@@ -4,12 +4,14 @@ import { ConsumerShopController } from "../controllers/ConsumerShopController";
 import { OrderController } from "../controllers/OrderController";
 import { AddressController } from "../controllers/AddressController";
 import { FavoritesController } from "../controllers/FavoritesController";
+import { CategoryController } from "../controllers/CategoryController";
 
 const router = Router();
 const consumerShopController = new ConsumerShopController();
 const orderController = new OrderController();
 const addressController = new AddressController();
 const favoritesController = new FavoritesController();
+const categoryController = new CategoryController();
 
 // Consumer endpoints: Kimliği doğrulanmış tüm kullanıcılar (user, merchant vs. fark etmez) bu bilgileri çekebilir
 router.use(authMiddleware);
@@ -20,6 +22,9 @@ router.post("/favorites/products", (req, res) => favoritesController.getFavorite
 // Browse Shops and Products
 router.get("/shops", (req, res) => consumerShopController.getActiveShops(req, res));
 router.get("/shops/:shopId/products", (req, res) => consumerShopController.getShopProducts(req, res));
+
+// Category Operations
+router.get("/categories", (req, res) => categoryController.getCategories(req, res));
 
 // Order Operations
 router.post("/orders", (req, res) => orderController.createOrder(req, res));

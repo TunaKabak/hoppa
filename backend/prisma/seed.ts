@@ -158,11 +158,6 @@ async function main() {
   console.log("✅ Test Market Shop Created:", testMarketShop.name);
 
   // 7. SÜPERMARKET ALTINA ÜRÜNLERİ EKLE
-  // Çakışmayı/duplikasyonu önlemek için önce bu marketin ürünlerini temizleyelim
-  await prisma.product.deleteMany({
-    where: { shopId: testMarketShop.id }
-  });
-
   const marketProducts = [
     { name: "1 Litre Su", price: 10.0, stock: 100, description: "Doğal kaynak suyu", category: "Su & İçecek", subCategory: "Su" },
     { name: "Taze Ekmek", price: 15.0, stock: 50, description: "Günlük taze ekmek", category: "Fırın", subCategory: "Ekmek" },
@@ -181,19 +176,49 @@ async function main() {
       subCat = await prisma.category.create({ data: { name: p.subCategory, parentId: parentCat.id } });
     }
 
-    await prisma.product.create({
-      data: {
-        shopId: testMarketShop.id,
-        categoryId: subCat.id,
-        name: p.name,
-        price: p.price,
-        stock: p.stock,
-        description: p.description,
-        isActive: true,
-      }
+    const existingProduct = await prisma.product.findFirst({
+      where: { shopId: testMarketShop.id, name: p.name }
     });
+
+    if (!existingProduct) {
+      await prisma.product.create({
+        data: {
+          shopId: testMarketShop.id,
+          categoryId: subCat.id,
+          name: p.name,
+          price: p.price,
+          stock: p.stock,
+          description: p.description,
+          isActive: true,
+        }
+      });
+    }
   }
   console.log("✅ Market Products Seeded successfully.");
+
+  // 8. DEFAULT KURYEYİ OLUŞTUR
+  const defaultCourier = await prisma.courier.upsert({
+    where: { phoneNumber: "+905555555555" },
+    update: {},
+    create: {
+      name: "Süleyman Kurye",
+      phoneNumber: "+905555555555",
+      vehiclePlate: "34 HO 9999",
+      isActive: true,
+    },
+  });
+  console.log("✅ Default Courier Created:", defaultCourier.name);
+
+  // 9. SUPABASE REALTIME REPLİKASYONUNU AKTİF ET
+  try {
+    await prisma.$executeRawUnsafe(
+      'ALTER PUBLICATION supabase_realtime ADD TABLE "CourierLocation";'
+    );
+    console.log("✅ Supabase Realtime replication enabled for CourierLocation table.");
+  } catch (err: any) {
+    // Replikasyon zaten aktifse veya tablo yayında varsa hata yoksayılır
+    console.log("ℹ️ Supabase Realtime replication notice (likely already active):", err.message || err);
+  }
 }
 
 main()

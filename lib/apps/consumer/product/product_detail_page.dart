@@ -8,8 +8,8 @@ import 'package:hoppa/shared/core/services/campaign_service.dart'; // Campaign S
 import 'package:hoppa/shared/core/services/navigation_provider.dart'; // Navigation Provider
 import 'package:hoppa/apps/consumer/cart/widgets/cart_price_badge.dart'; // YENİ
 import 'package:provider/provider.dart' as p;
-import 'package:hoppa/apps/consumer/business/business_provider.dart';
 import 'package:hoppa/apps/consumer/repositories/consumer_shop_repository.dart';
+import 'package:hoppa/shared/core/utils/quantity_formatter.dart';
 
 class ProductDetailPage extends ConsumerStatefulWidget {
   final BusinessProduct businessProduct;
@@ -270,7 +270,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                           Padding(
                             padding: const EdgeInsets.only(bottom: 6),
                             child: Text(
-                              product.isWeighted ? '/ kg' : '/ adet',
+                              product.unit.toLowerCase() == 'adet' ? '/ adet' : '/ ${product.unit}',
                               style: GoogleFonts.inter(
                                 fontSize: 16,
                                 color: Colors.grey.shade600,
@@ -339,7 +339,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
     );
     final inCart = cartItemIndex != -1;
     final quantity = inCart ? cart.items[cartItemIndex].quantity : 0.0;
-    final isWeighted = widget.businessProduct.product.isWeighted;
+    final minQty = widget.businessProduct.product.minQuantity;
 
     if (inCart) {
       // SAYAÇ MODU (Separate Buttons like Home Page)
@@ -348,9 +348,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
         children: [
           // AZALT / SİL BUTONU
           _buildCounterButton(
-            icon:
-                (isWeighted && quantity <= 0.51) ||
-                    (!isWeighted && quantity <= 1.01)
+            icon: quantity <= minQty + 0.001
                 ? Icons.delete_outline
                 : Icons.remove,
             onTap: () {
@@ -374,9 +372,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                   ),
                 )
               : Text(
-                  quantity % 1 == 0
-                      ? quantity.toInt().toString()
-                      : quantity.toStringAsFixed(1),
+                  QuantityFormatter.format(quantity, widget.businessProduct.product.unit),
                   style: GoogleFonts.poppins(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,

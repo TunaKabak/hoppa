@@ -11,6 +11,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:core_auth/core_auth.dart';
 
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'apps/consumer/services/customer_auth_service.dart';
 import 'shared/core/services/language_provider.dart';
 import 'shared/core/theme/app_theme.dart';
@@ -40,6 +42,15 @@ void main() async {
   FlavorConfig(name: "consumer", variables: {"flavor": "consumer"});
 
   await Firebase.initializeApp();
+
+  try {
+    await Supabase.initialize(
+      url: dotenv.env['SUPABASE_URL'] ?? 'https://buikknlswbpregrsyjzh.supabase.co',
+      anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
+    );
+  } catch (e) {
+    print("Supabase initialization failed: $e");
+  }
 
   // Disable App Verification for Dev/QA Testing
   if (const String.fromEnvironment('flavor') == 'consumer' ||

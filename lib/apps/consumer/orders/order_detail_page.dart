@@ -10,6 +10,7 @@ import 'package:hoppa/shared/core/services/business_service.dart';
 import 'package:hoppa/shared/models/business.dart';
 import 'package:hoppa/shared/models/business_type.dart';
 import 'package:hoppa/shared/models/order_status.dart';
+import 'package:hoppa/apps/consumer/orders/order_tracking_page.dart';
 
 class OrderDetailPage extends ConsumerStatefulWidget {
   final model.Order? order;
@@ -209,6 +210,29 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
                         "Sipariş No: #${order.id.substring(0, 8).toUpperCase()}",
                         style: TextStyle(color: Colors.grey[500], fontSize: 12),
                       ),
+                      if (status == OrderStatus.onWay.value) ...[
+                        const SizedBox(height: 12),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => OrderTrackingPage(order: order),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.map_outlined),
+                          label: const Text("Kuryeyi Canlı Takip Et 🛵"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Theme.of(context).colorScheme.primary,
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size(double.infinity, 44),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

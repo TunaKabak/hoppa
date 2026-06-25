@@ -7,6 +7,7 @@ import 'package:hoppa/shared/models/business.dart';
 import 'package:hoppa/shared/models/address.dart';
 import 'package:hoppa/shared/core/utils/location_utils.dart';
 import 'package:hoppa/apps/consumer/repositories/consumer_shop_repository.dart';
+import 'package:hoppa/shared/core/utils/quantity_formatter.dart';
 
 class CartItem {
   final BusinessProduct businessProduct;
@@ -94,9 +95,16 @@ class CartNotifier extends StateNotifier<CartState> {
       (item) => item.businessProduct.id == product.id,
     );
 
-    double increment = product.product.isWeighted ? 0.5 : 1.0;
+    final step = product.product.stepSize;
+    final minQty = product.product.minQuantity;
     double currentQty = index >= 0 ? state.items[index].quantity : 0.0;
-    double newQty = currentQty + increment;
+    
+    double newQty;
+    if (currentQty <= 0.0) {
+      newQty = minQty;
+    } else {
+      newQty = QuantityFormatter.roundDouble(currentQty + step);
+    }
 
     if (newQty > product.stock) {
       throw Exception("Stok yetersiz!");
@@ -108,7 +116,7 @@ class CartNotifier extends StateNotifier<CartState> {
     } else {
       newItems.add(CartItem(
         businessProduct: product,
-        quantity: increment,
+        quantity: newQty,
       ));
     }
 
@@ -125,11 +133,14 @@ class CartNotifier extends StateNotifier<CartState> {
 
     if (index >= 0) {
       final item = state.items[index];
-      double decrement = item.businessProduct.product.isWeighted ? 0.5 : 1.0;
+      final step = item.businessProduct.product.stepSize;
+      final minQty = item.businessProduct.product.minQuantity;
 
       final newItems = List<CartItem>.from(state.items);
-      if (item.quantity > decrement + 0.01) {
-        newItems[index] = item.copyWith(quantity: item.quantity - decrement);
+      if (QuantityFormatter.roundDouble(item.quantity - step) >= minQty - 0.001) {
+        newItems[index] = item.copyWith(
+          quantity: QuantityFormatter.roundDouble(item.quantity - step),
+        );
       } else {
         newItems.removeAt(index);
       }

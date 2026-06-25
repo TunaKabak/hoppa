@@ -10,6 +10,7 @@ import 'package:hoppa/shared/core/utils/card_input_formatters.dart';
 import 'package:provider/provider.dart' as p;
 import 'package:hoppa/apps/consumer/address/delivery_provider.dart';
 import 'package:hoppa/apps/consumer/business/business_provider.dart';
+import 'package:hoppa/shared/core/utils/quantity_formatter.dart';
 
 class PaymentPage extends ConsumerStatefulWidget {
   final Address deliveryAddress;
@@ -88,7 +89,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
       final selectedBusiness = businessProvider.selectedBusiness;
       final activeCampaigns = ref.read(cartCampaignsProvider).value ?? [];
       
-      bool hasFreeDeliveryCampaign = activeCampaigns.any((c) => c.type == "FREE_DELIVERY_FIRST_ORDERS");
+      bool hasFreeDeliveryCampaign = activeCampaigns.any((c) => c.type.name.toUpperCase() == "FREE_DELIVERY_FIRST_ORDERS");
       
       double deliveryFee = selectedBusiness?.baseDeliveryFee ?? 30.0;
       if (selectedBusiness?.freeDeliveryThreshold != null && 
@@ -102,8 +103,6 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
       if (widget.isPickUp) {
         deliveryFee = 0.0;
       }
-
-      double finalTotal = cartState.totalAmount + deliveryFee;
 
       final deliveryProvider = p.Provider.of<DeliveryProvider>(context, listen: false);
       final userAddress = deliveryProvider.selectedAddress;
@@ -292,7 +291,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     final businessProvider = p.Provider.of<BusinessProvider>(context);
     final selectedBusiness = businessProvider.selectedBusiness;
     
-    bool hasFreeDeliveryCampaign = activeCampaigns.any((c) => c.type == "FREE_DELIVERY_FIRST_ORDERS");
+    bool hasFreeDeliveryCampaign = activeCampaigns.any((c) => c.type.name.toUpperCase() == "FREE_DELIVERY_FIRST_ORDERS");
     
     double deliveryFee = selectedBusiness?.baseDeliveryFee ?? 30.0;
     if (selectedBusiness?.freeDeliveryThreshold != null && 
@@ -554,9 +553,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                                         ),
                                       ),
                                       child: Text(
-                                        item.businessProduct.product.isWeighted
-                                            ? item.quantity.toStringAsFixed(1)
-                                            : "${item.quantity.toInt()}",
+                                        QuantityFormatter.formatValueOnly(item.quantity),
                                         style: TextStyle(
                                           color: kPrimaryColor,
                                           fontWeight: FontWeight.bold,

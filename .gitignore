@@ -19928,3 +19928,9 @@ analysis_output.txt
 .env.development.local
 .env.test.local
 .env.production.local
+backend/dist/controllers/CategoryController.js
+backend/dist/controllers/CourierController.js
+backend/dist/middlewares/RateLimiter.js
+backend/dist/providers/sms/SmsProviderFactory.js
+backend/dist/providers/sms/TwilioSmsProvider.js
+backend/dist/routes/courierRoutes.js

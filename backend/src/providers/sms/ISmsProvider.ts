@@ -1,3 +1,3 @@
 export interface ISmsProvider {
-  sendSms(phoneNumber: string, message: string): Promise<boolean>;
+  sendOtp(phoneNumber: string, code: string): Promise<boolean>;
 }

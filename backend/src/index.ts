@@ -27,6 +27,15 @@ if (process.env.TEST_PHONE_NUMBERS) {
 if (process.env.TEST_OTP_CODE) {
   process.env.TEST_OTP_CODE = process.env.TEST_OTP_CODE.replace(/^["']|["']$/g, "");
 }
+if (process.env.TWILIO_ACCOUNT_SID) {
+  process.env.TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID.replace(/^["']|["']$/g, "");
+}
+if (process.env.TWILIO_AUTH_TOKEN) {
+  process.env.TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN.replace(/^["']|["']$/g, "");
+}
+if (process.env.TWILIO_FROM_NUMBER) {
+  process.env.TWILIO_FROM_NUMBER = process.env.TWILIO_FROM_NUMBER.replace(/^["']|["']$/g, "");
+}
 
 import { AuthController } from "./controllers/AuthController";
 import { MerchantAuthController } from "./controllers/MerchantAuthController";
@@ -35,6 +44,8 @@ import consumerRoutes from "./routes/consumerRoutes";
 import adminRoutes from "./routes/adminRoutes";
 import mediaRoutes from "./routes/media.routes";
 import notificationRoutes from "./routes/notificationRoutes";
+import courierRoutes from "./routes/courierRoutes";
+import { otpRateLimiter } from "./middlewares/RateLimiter";
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -51,7 +62,7 @@ const authController = new AuthController();
 const merchantAuthController = new MerchantAuthController();
 
 // --- Consumer Auth Routes (OTP tabanlı) ---
-app.post("/api/auth/request-otp", (req, res) => authController.requestOtp(req, res));
+app.post("/api/auth/request-otp", otpRateLimiter, (req, res) => authController.requestOtp(req, res));
 app.post("/api/auth/verify-otp", (req, res) => authController.verifyOtp(req, res));
 app.get("/api/auth/check-phone/:phone", (req, res) => authController.checkPhoneExists(req, res));
 
@@ -66,6 +77,7 @@ app.use("/api/consumer", consumerRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/media", mediaRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/couriers", courierRoutes);
 
 app.get('/health', (req: Request, res: Response) => {
     res.status(200).json({ status: "OK", timestamp: new Date() });
