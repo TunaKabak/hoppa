@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:hoppa/shared/models/order.dart' as model;
 import 'package:hoppa/shared/models/courier_location.dart';
 
@@ -397,32 +398,50 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> with Tick
                         ),
                       ),
                       const SizedBox(width: 16),
-                      const Expanded(
+                      Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              "Süleyman Kurye",
-                              style: TextStyle(
+                              widget.order.courierName ?? "Kurye",
+                              style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.black87,
                               ),
                             ),
-                            SizedBox(height: 4),
+                            const SizedBox(height: 4),
                             Text(
-                              "Motorlu Kurye • 34 HO 9999",
-                              style: TextStyle(color: Colors.grey, fontSize: 13),
+                              widget.order.courierVehiclePlate != null && widget.order.courierVehiclePlate!.isNotEmpty
+                                  ? "Motorlu Kurye • ${widget.order.courierVehiclePlate}"
+                                  : "Motorlu Kurye",
+                              style: const TextStyle(color: Colors.grey, fontSize: 13),
                             ),
                           ],
                         ),
                       ),
                       IconButton.filledTonal(
-                        onPressed: () {
-                          // Call courier simulated
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Kurye ile bağlantı kuruluyor...")),
-                          );
+                        onPressed: () async {
+                          final phone = widget.order.courierPhone;
+                          if (phone != null && phone.isNotEmpty) {
+                            final Uri launchUri = Uri(
+                              scheme: 'tel',
+                              path: phone,
+                            );
+                            if (await canLaunchUrl(launchUri)) {
+                              await launchUrl(launchUri);
+                            } else {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text("Arama başlatılamadı: $phone")),
+                                );
+                              }
+                            }
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Kurye telefon numarası bulunamadı.")),
+                            );
+                          }
                         },
                         icon: const Icon(Icons.phone),
                         style: IconButton.styleFrom(

@@ -338,7 +338,13 @@ export class OrderController {
       const orders = await prisma.order.findMany({
         where: { consumerId },
         include: {
-          shop: { select: { name: true, imageUrl: true, type: true } },
+          shop: {
+            include: {
+              merchant: true
+            }
+          },
+          consumer: { select: { name: true, surname: true, phone: true } },
+          courier: true,
           items: {
             include: {
               product: { select: { name: true, imageUrl: true } }
@@ -375,7 +381,13 @@ export class OrderController {
       const orders = await prisma.order.findMany({
         where: { shopId: shop.id },
         include: {
+          shop: {
+            include: {
+              merchant: true
+            }
+          },
           consumer: { select: { name: true, surname: true, phone: true } },
+          courier: true,
           items: {
             include: {
               product: { select: { name: true, imageUrl: true } }
@@ -463,7 +475,13 @@ export class OrderController {
         where: { id: orderId },
         data: updateData,
         include: {
+          shop: {
+            include: {
+              merchant: true
+            }
+          },
           consumer: { select: { name: true, surname: true, phone: true } },
+          courier: true,
           items: {
             include: {
               product: { select: { name: true, imageUrl: true } }
