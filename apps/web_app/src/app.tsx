@@ -94,6 +94,25 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
         return () => clearInterval(interval);
     }, [simScreen]);
 
+    // Section scroll animations (Intersection Observer)
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    }
+                });
+            },
+            { threshold: 0.05 }
+        );
+        const targets = document.querySelectorAll('.scroll-animate');
+        targets.forEach((target) => observer.observe(target));
+        return () => {
+            targets.forEach((target) => observer.unobserve(target));
+        };
+    }, []);
+
     // Toast gösterme fonksiyonu
     const triggerToast = (msg: string) => {
         setToastMessage(msg);
@@ -137,7 +156,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-20">
                         {/* Logo */}
-                        <div className="flex items-center cursor-pointer" onClick={() => setSimScreen('splash')}>
+                        <div className="flex items-center cursor-pointer" onClick={() => { setSimScreen('splash'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
                             <img src="/logo-color.png" alt="Hoppa Logo" className="h-10 w-auto object-contain" />
                             <span className="text-xs font-semibold text-emerald-600 ml-2 bg-emerald-50 px-2 py-0.5 rounded-full">
                                 now.com
@@ -368,7 +387,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
             </section>
 
             {/* BENZERSİZ DEĞER ÖNERİSİ / ÖZELLİKLER */}
-            <section id="features" className="py-24 bg-white border-y border-slate-100">
+            <section id="features" className="py-24 bg-white border-y border-slate-100 scroll-animate">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
                     <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
@@ -421,7 +440,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
             </section>
 
             {/* NASIL ÇALIŞIR? */}
-            <section id="how-it-works" className="py-24 bg-slate-50">
+            <section id="how-it-works" className="py-24 bg-slate-50 scroll-animate">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
                     <div className="text-center max-w-2xl mx-auto space-y-4 mb-20">
@@ -475,7 +494,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
             </section>
 
             {/* INTERAKTIF SIMÜLATÖR BÖLÜMÜ (CANLI UYGULAMA DENEYİMİ) */}
-            <section id="interactive-demo" className="py-24 bg-gradient-to-br from-slate-900 to-slate-950 text-white relative overflow-hidden">
+            <section id="interactive-demo" className="py-24 bg-gradient-to-br from-slate-900 to-slate-950 text-white relative overflow-hidden scroll-animate">
 
                 {/* Dekoratif Işıklar */}
                 <div className="absolute -top-24 -left-24 w-96 h-96 bg-emerald-600/20 rounded-full blur-3xl"></div>
@@ -1304,7 +1323,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
             </section>
 
             {/* İŞ ORTAKLARI VE KURYELER İÇİN ÖZEL BAŞVURU SEKMESİ */}
-            <section id="partners" className="py-24 bg-white">
+            <section id="partners" className="py-24 bg-white scroll-animate">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
                     <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
@@ -1506,7 +1525,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
             </section>
 
             {/* İLETİŞİM & LOKAL DESTEK */}
-            <section id="contact" className="py-20 bg-slate-50 border-t border-slate-100">
+            <section id="contact" className="py-20 bg-slate-50 border-t border-slate-100 scroll-animate">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
 
@@ -1592,7 +1611,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
 
                         {/* Logo ve Hakkında */}
                         <div className="space-y-4 text-left">
-                            <div className="flex items-center">
+                            <div className="flex items-center cursor-pointer" onClick={() => { setSimScreen('splash'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
                                 <img src="/logo-color.png" alt="Hoppa Logo" className="h-10 w-auto object-contain brightness-0 invert" />
                             </div>
                             <p className="text-xs text-slate-400 leading-relaxed">
