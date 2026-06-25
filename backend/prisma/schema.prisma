@@ -258,6 +258,7 @@ model Order {
   
   courierId       String?
   courier         Courier?    @relation(fields: [courierId], references: [id])
+  estimatedDeliveryDuration Int?
 
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt

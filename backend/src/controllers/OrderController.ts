@@ -139,6 +139,7 @@ export class OrderController {
       // 5. Adres Çözümleme ve Snapshot Oluşturma
       let finalAddressId = addressId;
       let snapshotAddress = "";
+      let userAddressObj: any = null;
 
       if (finalAddressId) {
         // addressId gönderildiyse, adresi DB'den bul ve snapshot'ını oluştur
@@ -157,6 +158,7 @@ export class OrderController {
         snapshotAddress = (deliveryAddress && typeof deliveryAddress === "string")
           ? deliveryAddress
           : `${userAddress.title}: ${userAddress.fullAddress}${userAddress.district ? ' ' + userAddress.district : ''}${userAddress.city ? '/' + userAddress.city : ''}`;
+        userAddressObj = userAddress;
       } else if (deliveryAddress && typeof deliveryAddress === "string") {
         // Direkt metin olarak adres girildiyse, veritabanına Address olarak kaydet/bul ve snapshot'ı metin yap
         let existingAddress = await prisma.address.findFirst({
@@ -166,6 +168,7 @@ export class OrderController {
         if (existingAddress) {
           finalAddressId = existingAddress.id;
           snapshotAddress = `${existingAddress.title}: ${existingAddress.fullAddress}`;
+          userAddressObj = existingAddress;
         } else {
           const newAddress = await prisma.address.create({
             data: {
@@ -176,9 +179,40 @@ export class OrderController {
           });
           finalAddressId = newAddress.id;
           snapshotAddress = `Teslimat Adresi: ${deliveryAddress}`;
+          userAddressObj = newAddress;
         }
       } else {
         return res.status(400).json({ error: true, message: "Sipariş için geçerli bir teslimat adresi belirtilmelidir." });
+      }
+
+      // 5.5. Tahmini Teslimat Süresi Hesaplama (Null-Safe Haversine)
+      let estimatedDeliveryDuration = 30; // Varsayılan süre
+
+      if (
+        shop &&
+        shop.latitude != null &&
+        shop.longitude != null &&
+        userAddressObj &&
+        userAddressObj.latitude != null &&
+        userAddressObj.longitude != null
+      ) {
+        try {
+          const R = 6371; // Earth's radius in km
+          const dLat = (shop.latitude - userAddressObj.latitude) * Math.PI / 180;
+          const dLng = (shop.longitude - userAddressObj.longitude) * Math.PI / 180;
+          const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(userAddressObj.latitude * Math.PI / 180) *
+              Math.cos(shop.latitude * Math.PI / 180) *
+              Math.sin(dLng / 2) *
+              Math.sin(dLng / 2);
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+          const distance = R * c;
+          estimatedDeliveryDuration = 20 + Math.round(distance * 4);
+        } catch (err) {
+          console.error("Haversine distance calculation error:", err);
+          estimatedDeliveryDuration = 30; // Fallback
+        }
       }
 
       // 6. Prisma `$transaction` ile sipariş ve kalemleri kaydet
@@ -199,7 +233,8 @@ export class OrderController {
             status: "PENDING",
             customerNote: notes || null,
             paymentMethod: method,
-            paymentStatus: "PENDING"
+            paymentStatus: "PENDING",
+            estimatedDeliveryDuration: estimatedDeliveryDuration
           }
         });
 

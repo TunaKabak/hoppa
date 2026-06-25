@@ -36,21 +36,33 @@ void main() async {
   HttpOverrides.global = MyHttpOverrides();
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load environment variables
-  await dotenv.load(fileName: ".env");
+  // 1. Önce çevre değişkenlerini yükle
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    print("🚨 Hata: .env dosyası yüklenemedi! $e");
+  }
+
+  final supabaseUrl = dotenv.env['SUPABASE_URL'] ?? 'https://buikknlswbpregrsyjzh.supabase.co';
+  final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
+
+  if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
+    print("🚨 KRİTİK HATA: Supabase anahtarları .env içerisinde bulunamadı!");
+  }
+
+  // 2. Supabase istemcisini başlat
+  try {
+    await Supabase.initialize(
+      url: supabaseUrl,
+      anonKey: supabaseAnonKey,
+    );
+  } catch (e) {
+    print("🚨 Supabase initialization failed: $e");
+  }
 
   FlavorConfig(name: "consumer", variables: {"flavor": "consumer"});
 
   await Firebase.initializeApp();
-
-  try {
-    await Supabase.initialize(
-      url: dotenv.env['SUPABASE_URL'] ?? 'https://buikknlswbpregrsyjzh.supabase.co',
-      anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
-    );
-  } catch (e) {
-    print("Supabase initialization failed: $e");
-  }
 
   // Disable App Verification for Dev/QA Testing
   if (const String.fromEnvironment('flavor') == 'consumer' ||

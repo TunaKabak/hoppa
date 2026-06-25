@@ -6,26 +6,23 @@ import 'package:hoppa/apps/merchant/merchant_order_list_page.dart';
 
 class NotificationNavigationHelper {
   static void handleNotificationClick(Map<String, dynamic> data) {
-    final String? orderId = data['orderId'];
-    final String? type = data['type'];
+    final String? orderId = data['orderId']?.toString();
 
     if (orderId == null || orderId.isEmpty) return;
 
-    if (type == 'ORDER_STATUS') {
-      final flavor = FlavorConfig.instance.name;
-      if (flavor == 'consumer') {
-        navigatorKey.currentState?.push(
-          MaterialPageRoute(
-            builder: (context) => OrderDetailPage(orderId: orderId),
-          ),
-        );
-      } else if (flavor == 'merchant') {
-        navigatorKey.currentState?.push(
-          MaterialPageRoute(
-            builder: (context) => MerchantOrderListPage(orderId: orderId),
-          ),
-        );
-      }
+    final flavor = FlavorConfig.instance.name;
+    if (flavor == 'consumer') {
+      navigatorKey.currentState?.push(
+        MaterialPageRoute(
+          builder: (context) => OrderDetailPage(orderId: orderId),
+        ),
+      );
+    } else if (flavor == 'merchant') {
+      navigatorKey.currentState?.push(
+        MaterialPageRoute(
+          builder: (context) => MerchantOrderListPage(orderId: orderId),
+        ),
+      );
     }
   }
 }

@@ -133,13 +133,52 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> with Tick
           // MAP VIEW
           courierLocationAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, stack) => Center(
-              child: Text(
-                "Kurye bağlantısı bekleniyor...\n($err)",
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.grey),
-              ),
-            ),
+            error: (err, stack) {
+              print("Supabase Stream Hatası: $err");
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 220.0, left: 24.0, right: 24.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.location_off_outlined,
+                        size: 54,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        "Bağlantı Sorunu",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        "Kurye konumu şu anda canlı olarak alınamıyor. Bağlantı arka planda otomatik olarak yeniden deneniyor...",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          ref.invalidate(courierLocationStreamProvider(courierId));
+                        },
+                        icon: const Icon(Icons.refresh),
+                        label: const Text("Yeniden Dene"),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      )
+                    ],
+                  ),
+                ),
+              );
+            },
             data: (courierLocation) {
               final newLocation = LatLng(courierLocation.latitude, courierLocation.longitude);
               

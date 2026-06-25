@@ -33,19 +33,24 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
   void initState() {
     super.initState();
     _order = widget.order;
-    if (_order == null && widget.orderId != null) {
-      _fetchOrderDetails();
-    } else {
+    if (_order != null) {
       _fetchBusinessInfo();
     }
+    _fetchOrderDetails();
   }
 
   Future<void> _fetchOrderDetails() async {
-    setState(() => _isLoadingOrder = true);
+    final orderId = widget.orderId ?? _order?.id;
+    if (orderId == null) return;
+
+    if (_order == null) {
+      setState(() => _isLoadingOrder = true);
+    }
     try {
+      ref.invalidate(consumerOrdersProvider);
       final repository = ref.read(consumerOrderRepositoryProvider);
       final orders = await repository.getMyOrders();
-      final order = orders.firstWhere((o) => o.id == widget.orderId);
+      final order = orders.firstWhere((o) => o.id == orderId);
       if (mounted) {
         setState(() {
           _order = order;
