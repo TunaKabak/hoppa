@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:hoppa/shared/models/order.dart' as model;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hoppa/apps/consumer/repositories/consumer_order_repository.dart';
@@ -469,6 +470,71 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
                   ),
                   const SizedBox(height: 16),
                 ],
+
+                // Dinamik İrtibat Numarası
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.phone_outlined,
+                      size: 20,
+                      color: Colors.grey,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            order.deliveryMethod == 'pickup'
+                                ? "İrtibat Numarası (Dükkan)"
+                                : (order.courierPhone != null && order.courierPhone!.isNotEmpty
+                                    ? "İrtibat Numarası (Kurye)"
+                                    : "İrtibat Numarası (Müşteri)"),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            order.deliveryMethod == 'pickup'
+                                ? (_business?.phone ?? 'Belirtilmemiş')
+                                : (order.courierPhone != null && order.courierPhone!.isNotEmpty
+                                    ? order.courierPhone!
+                                    : (order.consumerPhone ?? 'Belirtilmemiş')),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if ((order.deliveryMethod == 'pickup' && _business?.phone.isNotEmpty == true) ||
+                        (order.deliveryMethod == 'delivery' && ((order.courierPhone != null && order.courierPhone!.isNotEmpty) || (order.consumerPhone != null && order.consumerPhone!.isNotEmpty))))
+                      IconButton(
+                        icon: const Icon(Icons.phone, color: Colors.green),
+                        onPressed: () async {
+                          final phone = order.deliveryMethod == 'pickup'
+                              ? _business?.phone
+                              : (order.courierPhone != null && order.courierPhone!.isNotEmpty
+                                  ? order.courierPhone
+                                  : order.consumerPhone);
+                          if (phone != null && phone.isNotEmpty) {
+                            final Uri launchUri = Uri(
+                              scheme: 'tel',
+                              path: phone,
+                            );
+                            if (await canLaunchUrl(launchUri)) {
+                              await launchUrl(launchUri);
+                            }
+                          }
+                        },
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
                 const SizedBox(height: 16),
 
                 // MİNİ HARİTA (OpenStreetMap)

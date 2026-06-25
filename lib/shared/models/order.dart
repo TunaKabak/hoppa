@@ -22,6 +22,10 @@ class Order {
   final String paymentMethod; // Payment Method
   final String? courierId; // Assigned courier's ID
   final int? estimatedDeliveryDuration;
+  final String? consumerPhone;
+  final String? courierPhone;
+  final String? courierName;
+  final String? courierVehiclePlate;
  
   Order({
     required this.id,
@@ -42,6 +46,10 @@ class Order {
     this.paymentMethod = 'CASH_ON_DELIVERY',
     this.courierId,
     this.estimatedDeliveryDuration,
+    this.consumerPhone,
+    this.courierPhone,
+    this.courierName,
+    this.courierVehiclePlate,
   });
 
   factory Order.fromMap(Map<String, dynamic> data, String id) {
@@ -50,6 +58,11 @@ class Order {
     String deliveryMethod = data['delivery_method'] ?? '';
     String orderNote = data['customerNote'] ?? data['order_note'] ?? '';
     bool dontRingBell = data['dont_ring_bell'] ?? false;
+
+    final consumerPhone = data['consumer'] != null ? data['consumer']['phone'] as String? : null;
+    final courierPhone = data['courier'] != null ? data['courier']['phoneNumber'] as String? : null;
+    final courierName = data['courier'] != null ? data['courier']['name'] as String? : null;
+    final courierVehiclePlate = data['courier'] != null ? data['courier']['vehiclePlate'] as String? : null;
 
     // Backward compatibility: Parse old format if new fields are empty
     if (deliveryMethod.isEmpty) {
@@ -136,6 +149,10 @@ class Order {
               : null),
       createdAt: parsedCreatedAt,
       items: parsedItems,
+      consumerPhone: consumerPhone,
+      courierPhone: courierPhone,
+      courierName: courierName,
+      courierVehiclePlate: courierVehiclePlate,
     );
   }
 
@@ -157,6 +174,13 @@ class Order {
       'estimated_delivery_duration': estimatedDeliveryDuration,
       'created_at': Timestamp.fromDate(createdAt),
       'items': items.map((item) => item.toMap()).toList(),
+      if (consumerPhone != null) 'consumer': {'phone': consumerPhone},
+      if (courierPhone != null || courierName != null || courierVehiclePlate != null)
+        'courier': {
+          'phoneNumber': courierPhone,
+          'name': courierName,
+          'vehiclePlate': courierVehiclePlate,
+        },
     };
   }
 }

@@ -239,7 +239,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
       MaterialPageRoute(
         builder: (context) => PaymentPage(
           deliveryAddress: finalAddress,
-          phoneNumber: _phoneController.text,
+          phoneNumber: _isPickUp ? selectedBusiness.phone : _phoneController.text,
           deliveryTime: deliveryTimeText,
           isPickUp: _isPickUp,
         ),
@@ -443,53 +443,59 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   // --- 3. TELEFON ---
                   _sectionTitle("İletişim", Icons.phone_outlined),
                   const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.grey.shade300, width: 1),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: kPrimaryColor.withAlpha(26),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Icon(Icons.phone, color: kPrimaryColor),
+                  Consumer<BusinessProvider>(
+                    builder: (context, businessProvider, child) {
+                      final shopPhone = businessProvider.selectedBusiness?.phone ?? '';
+                      final displayText = _isPickUp ? shopPhone : _phoneController.text;
+                      return Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.grey.shade300, width: 1),
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                "İletişim Numarası",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: kPrimaryColor.withAlpha(26),
+                                borderRadius: BorderRadius.circular(10),
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                _phoneController.text,
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 13,
-                                ),
+                              child: Icon(Icons.phone, color: kPrimaryColor),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    "İletişim Numarası",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    displayText.isNotEmpty ? displayText : 'Belirtilmemiş',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
+                            ),
+                            const Icon(
+                              Icons.lock_outline,
+                              color: Colors.grey,
+                              size: 20,
+                            ),
+                          ],
                         ),
-                        const Icon(
-                          Icons.lock_outline,
-                          color: Colors.grey,
-                          size: 20,
-                        ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
 
                   const SizedBox(height: 24),
