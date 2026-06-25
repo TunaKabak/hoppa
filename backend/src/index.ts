@@ -54,7 +54,23 @@ const port = process.env.PORT || 3000;
 app.use("/uploads", express.static(path.join(__dirname, "../public/uploads")));
 
 // Middleware
-app.use(cors());
+const allowedOrigins = [
+  'http://localhost:3000',                  // Lokal testler için
+  'https://www.hoppanow.com',               // Canlı Web UI ana adresi
+  'https://hoppanow.com'                    // www olmadan yönlendirme adresi
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Mobil uygulamalar (origin null/undefined gönderebilir) veya izin verilen domainler
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS Policy: Bu kök dizinden istek gönderilemez.'));
+    }
+  },
+  credentials: true
+}));
 app.use(express.json());
 
 // Controller Instances
