@@ -1,4 +1,10 @@
 {
+  "name": "hoppa-monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "backend"
+  ],
   "devDependencies": {
     "firebase-tools": "^13.16.0"
   },
