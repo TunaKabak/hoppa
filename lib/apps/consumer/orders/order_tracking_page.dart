@@ -36,7 +36,8 @@ class OrderTrackingPage extends ConsumerStatefulWidget {
 
 class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> with TickerProviderStateMixin {
   final MapController _mapController = MapController();
-  LatLng? _previousCourierLatLng;
+  LatLng? _oldPosition;
+  LatLng? _newPosition;
   LatLng? _currentCourierLatLng;
   double _currentBearing = 0.0;
   
@@ -44,6 +45,17 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> with Tick
   AnimationController? _movementController;
   Animation<double>? _latAnimation;
   Animation<double>? _lngAnimation;
+  Animation<double>? _bearingAnimation;
+
+  double _calculateShortestAngle(double from, double to) {
+    double difference = (to - from) % 360;
+    if (difference > 180) {
+      difference -= 360;
+    } else if (difference < -180) {
+      difference += 360;
+    }
+    return from + difference;
+  }
 
   @override
   void dispose() {
@@ -51,36 +63,61 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> with Tick
     super.dispose();
   }
 
-  void _animateCourierMovement(LatLng newLocation) {
+  void _animateCourierMovement(LatLng targetPosition, double targetBearing) {
     if (_currentCourierLatLng == null) {
       setState(() {
-        _currentCourierLatLng = newLocation;
+        _currentCourierLatLng = targetPosition;
+        _oldPosition = targetPosition;
+        _newPosition = targetPosition;
+        _currentBearing = targetBearing;
       });
       return;
     }
 
-    _previousCourierLatLng = _currentCourierLatLng;
-    
+    // 1. Kademeli Animasyon Kesintisi (Animation Interruption) Yönetimi
+    if (_movementController != null && _movementController!.isAnimating) {
+      _oldPosition = LatLng(
+        _latAnimation!.value,
+        _lngAnimation!.value,
+      );
+      if (_bearingAnimation != null) {
+        _currentBearing = _bearingAnimation!.value;
+      }
+    } else {
+      _oldPosition = _newPosition ?? targetPosition;
+    }
+
+    _newPosition = targetPosition;
+
+    // 2. Açı Sınır Geçişi (Angle Wrapping) Hesaplama
+    final double shortestTargetBearing = _calculateShortestAngle(_currentBearing, targetBearing);
+
     _movementController?.dispose();
     _movementController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
+      duration: const Duration(seconds: 3),
     );
 
     _latAnimation = Tween<double>(
-      begin: _previousCourierLatLng!.latitude,
-      end: newLocation.latitude,
+      begin: _oldPosition!.latitude,
+      end: _newPosition!.latitude,
     ).animate(CurvedAnimation(parent: _movementController!, curve: Curves.easeInOut));
 
     _lngAnimation = Tween<double>(
-      begin: _previousCourierLatLng!.longitude,
-      end: newLocation.longitude,
+      begin: _oldPosition!.longitude,
+      end: _newPosition!.longitude,
+    ).animate(CurvedAnimation(parent: _movementController!, curve: Curves.easeInOut));
+
+    _bearingAnimation = Tween<double>(
+      begin: _currentBearing,
+      end: shortestTargetBearing,
     ).animate(CurvedAnimation(parent: _movementController!, curve: Curves.easeInOut));
 
     _movementController!.addListener(() {
       if (mounted) {
         setState(() {
           _currentCourierLatLng = LatLng(_latAnimation!.value, _lngAnimation!.value);
+          _currentBearing = _bearingAnimation!.value % 360;
         });
       }
     });
@@ -185,11 +222,10 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> with Tick
               
               // Trigger smooth animation and map frame update on new coordinate
               if (_currentCourierLatLng == null || 
-                  _currentCourierLatLng!.latitude != newLocation.latitude ||
-                  _currentCourierLatLng!.longitude != newLocation.longitude) {
+                  _newPosition?.latitude != newLocation.latitude ||
+                  _newPosition?.longitude != newLocation.longitude) {
                 
-                _animateCourierMovement(newLocation);
-                _currentBearing = courierLocation.bearing;
+                _animateCourierMovement(newLocation, courierLocation.bearing);
                 _fitMapBounds(newLocation, destinationLatLng);
               }
 
@@ -219,17 +255,6 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> with Tick
                       TileLayer(
                         urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                         userAgentPackageName: 'com.hoppa.app',
-                      ),
-                      // Line connecting courier to destination
-                      PolylineLayer(
-                        polylines: [
-                          Polyline(
-                            points: [activeCourierLoc, destinationLatLng],
-                            strokeWidth: 4.0,
-                            color: theme.colorScheme.primary.withValues(alpha: 0.7),
-                            pattern: const StrokePattern.dotted(),
-                          ),
-                        ],
                       ),
                       // Markers
                       MarkerLayer(
