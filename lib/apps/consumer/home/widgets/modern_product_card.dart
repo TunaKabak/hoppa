@@ -174,7 +174,7 @@ class ModernProductCard extends ConsumerWidget {
                         children: [
                           if (discountedPrice != null)
                             Text(
-                              "${price.toStringAsFixed(2)} ₺",
+                              "${price.toStringAsFixed(2)} TL",
                               style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
@@ -183,7 +183,7 @@ class ModernProductCard extends ConsumerWidget {
                               ),
                             ),
                           Text(
-                            "${(discountedPrice ?? price).toStringAsFixed(2)} ₺",
+                            "${(discountedPrice ?? price).toStringAsFixed(2)} TL / ${product.unit}",
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -375,7 +375,7 @@ class ModernProductCard extends ConsumerWidget {
                       children: [
                         if (discountedPrice != null)
                           Text(
-                            "${price.toStringAsFixed(2)} ₺",
+                            "${price.toStringAsFixed(2)} TL",
                             style: const TextStyle(
                               color: Colors.grey,
                               fontSize: 12,
@@ -384,7 +384,7 @@ class ModernProductCard extends ConsumerWidget {
                             ),
                           ),
                         Text(
-                          "${(discountedPrice ?? price).toStringAsFixed(2)} ₺",
+                          "${(discountedPrice ?? price).toStringAsFixed(2)} TL / ${product.unit}",
                           style: TextStyle(
                             color: theme.primaryColor,
                             fontSize: 15, // Slightly smaller
@@ -496,7 +496,7 @@ class ModernProductCard extends ConsumerWidget {
             alignment: Alignment.center,
             constraints: const BoxConstraints(minWidth: 20),
             child: Text(
-              QuantityFormatter.formatValueOnly(quantity),
+              QuantityFormatter.formatValue(quantity),
               style: TextStyle(
                 color: theme.primaryColor,
                 fontWeight: FontWeight.bold,

@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-const catalogProducts = [
+const catalogProducts: any[] = [
   // --- SU & İÇECEK ---
   {
     barcode: "8690576029001",
@@ -346,15 +346,142 @@ const catalogProducts = [
   }
 ];
 
-async function main() {
-  console.log("🌱 Global Ürün Kataloğu tohumlanıyor...");
+const extraCategories = [
+  {
+    name: "Su & İçecek",
+    sub: "Gazlı İçecek",
+    brands: ["Coca-Cola", "Pepsi", "Fanta", "Sprite", "Yedigün"],
+    items: ["Kutu Cola", "Pet Şişe Cola", "Kutu Gazoz", "Pet Şişe Gazoz", "Mandalina Aromalı Gazoz"],
+    sizes: ["250ml", "330ml", "500ml", "1L", "1.5L", "2L", "2.5L"]
+  },
+  {
+    name: "Atıştırmalık",
+    sub: "Bisküvi & Kek",
+    brands: ["Ülker", "Eti", "Oreo", "Milka", "Nestle"],
+    items: ["Çikolatalı Gofret", "Kakaolu Bisküvi", "Kremalı Bisküvi", "Sütlü Çikolata", "Antep Fıstıklı Çikolata", "Kek", "Gofret"],
+    sizes: ["30g", "50g", "80g", "100g", "120g", "150g", "200g"]
+  },
+  {
+    name: "Temel Gıda",
+    sub: "Makarna",
+    brands: ["Filiz", "Barilla", "Nuhun Ankara", "Oba"],
+    items: ["Spaghetti", "Burgu Makarna", "Fiyonk Makarna", "Kelebek Makarna", "Erişte", "Arpa Şehriye"],
+    sizes: ["500g"]
+  },
+  {
+    name: "Temel Gıda",
+    sub: "Bakliyat",
+    brands: ["Reis", "Duru", "Tat"],
+    items: ["Kırmızı Mercimek", "Yeşil Mercimek", "Pilavlık Pirinç", "Nohut", "Kuru Fasulye", "Pilavlık Bulgur"],
+    sizes: ["1kg", "2kg"]
+  },
+  {
+    name: "Kişisel Bakım",
+    sub: "Şampuan",
+    brands: ["Elidor", "Pantene", "Head & Shoulders", "Clear", "Loreal"],
+    items: ["Saç Bakım Şampuanı", "Kepeğe Karşı Etkili Şampuan", "Hacim Verici Şampuan", "Saç Kremi"],
+    sizes: ["350ml", "400ml", "500ml", "600ml"]
+  },
+  {
+    name: "Temizlik",
+    sub: "Deterjan",
+    brands: ["Ariel", "Omo", "Alo", "Persil"],
+    items: ["Sıvı Deterjan", "Toz Deterjan", "Yumuşatıcı", "Leke Çıkarıcı"],
+    sizes: ["1.5L", "3L", "4kg", "6kg"]
+  },
+  {
+    name: "Meyve & Sebze",
+    sub: "Meyve",
+    brands: ["Bahçeden", "Yerli", "Antalya"],
+    items: ["Amasya Elması", "İthal Muz", "Portakal", "Mandalina", "Çilek", "Armut", "Karpuz", "Kavun", "Üzüm", "Şeftali", "Erik"],
+    sizes: ["1kg", "2kg", "500g"]
+  },
+  {
+    name: "Meyve & Sebze",
+    sub: "Sebze",
+    brands: ["Bahçeden", "Yerli", "Antalya"],
+    items: ["Tarla Domatesi", "Badem Salatalık", "Patates", "Kuru Soğan", "Sarımsak", "Çarliston Biber", "Kemer Patlıcan", "Sakız Kabak", "Ispanak", "Maydanoz", "Dereotu"],
+    sizes: ["1kg", "500g", "Bag"]
+  },
+  {
+    name: "Süt & Kahvaltılık",
+    sub: "Peynir",
+    brands: ["Sütaş", "Pınar", "Tahsildaroğlu", "İçim", "Ekici"],
+    items: ["Süzme Peynir", "Taze Kaşar", "Klasik Beyaz Peynir", "Labne", "Eski Kaşar", "Örgü Peyniri", "Dil Peyniri"],
+    sizes: ["200g", "400g", "500g", "600g", "1kg"]
+  },
+  {
+    name: "Atıştırmalık",
+    sub: "Cips",
+    brands: ["Lays", "Ruffles", "Doritos", "Pringles", "Patos"],
+    items: ["Klasik Cips", "Baharatlı Cips", "Peynirli Cips", "Yoğurtlu Cips", "Ketçaplı Cips"],
+    sizes: ["Mega Boy", "Aile Boyu", "Süper Boy", "Standart"]
+  }
+];
 
-  for (const item of catalogProducts) {
-    await prisma.globalProduct.upsert({
-      where: { barcode: item.barcode },
-      update: {},
-      create: item
-    });
+const generatedProducts: any[] = [];
+let barcodeCounter = 8690000000000;
+
+for (const cat of extraCategories) {
+  for (const brand of cat.brands) {
+    for (const item of cat.items) {
+      for (const size of cat.sizes) {
+        barcodeCounter++;
+        const barcode = barcodeCounter.toString();
+        const cleanName = `${brand} ${item} ${size}`;
+        let unit = "ADET";
+        let isWeighted = false;
+        let minQuantity = 1.0;
+        let stepSize = 1.0;
+
+        if (cat.name === "Meyve & Sebze") {
+          unit = "KG";
+          isWeighted = true;
+          minQuantity = 0.5;
+          stepSize = 0.25;
+        }
+
+        generatedProducts.push({
+          barcode,
+          brand,
+          name: cleanName,
+          category: cat.name,
+          subCategory: cat.sub,
+          imageUrl: `https://placehold.co/400x400/ffffff/000000?text=${encodeURIComponent(brand + "+" + item)}`,
+          unit,
+          minQuantity,
+          stepSize,
+          isWeighted,
+          description: `${brand} kalitesiyle özenle üretilmiş ${cleanName}.`
+        });
+      }
+    }
+  }
+}
+
+catalogProducts.push(...generatedProducts);
+
+async function main() {
+  console.log(`🌱 Global Ürün Kataloğu tohumlanıyor... Toplam ${catalogProducts.length} ürün.`);
+
+  // To speed up, we run in chunks of 50 parallel upserts
+  const chunkSize = 50;
+  for (let i = 0; i < catalogProducts.length; i += chunkSize) {
+    const chunk = catalogProducts.slice(i, i + chunkSize);
+    await Promise.all(
+      chunk.map((item) =>
+        prisma.globalProduct.upsert({
+          where: { barcode: item.barcode },
+          update: {
+            unit: item.unit,
+            minQuantity: item.minQuantity,
+            stepSize: item.stepSize
+          },
+          create: item
+        })
+      )
+    );
+    console.log(`   Seeded ${Math.min(i + chunkSize, catalogProducts.length)} / ${catalogProducts.length} products...`);
   }
 
   console.log("✅ Global Ürün Kataloğu başarıyla tohumlandı!");

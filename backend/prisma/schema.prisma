@@ -136,12 +136,15 @@ model Shop {
 // Global Ürün Kataloğu (GlobalProduct)
 model GlobalProduct {
   id          String    @id @default(uuid())
-  barcode     String    @unique
+  barcode     String?   @unique
   name        String
   brand       String
   category    String
   subCategory String?
   imageUrl    String
+  unit        String    @default("ADET")
+  minQuantity Float     @default(1.0)
+  stepSize    Float     @default(1.0)
   isWeighted  Boolean   @default(false)
   description String?
   createdAt   DateTime  @default(now())

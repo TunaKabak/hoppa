@@ -18,6 +18,9 @@ class MerchantProduct {
   final int? preparationTime;
   final bool? hasDeposit;
   final double? depositPrice;
+  final String unit;
+  final double minQuantity;
+  final double stepSize;
 
   MerchantProduct({
     required this.id,
@@ -37,6 +40,9 @@ class MerchantProduct {
     this.preparationTime,
     this.hasDeposit = false,
     this.depositPrice,
+    this.unit = "ADET",
+    this.minQuantity = 1.0,
+    this.stepSize = 1.0,
   });
 
   factory MerchantProduct.fromMap(Map<String, dynamic> map) {
@@ -58,6 +64,9 @@ class MerchantProduct {
       preparationTime: map['preparationTime'] != null ? int.tryParse(map['preparationTime'].toString()) : null,
       hasDeposit: map['hasDeposit'] ?? false,
       depositPrice: map['depositPrice'] != null ? double.tryParse(map['depositPrice'].toString()) : null,
+      unit: map['unit'] ?? "ADET",
+      minQuantity: map['minQuantity'] != null ? double.tryParse(map['minQuantity'].toString()) ?? 1.0 : 1.0,
+      stepSize: map['stepSize'] != null ? double.tryParse(map['stepSize'].toString()) ?? 1.0 : 1.0,
     );
   }
 
@@ -78,6 +87,9 @@ class MerchantProduct {
       'preparationTime': preparationTime,
       'hasDeposit': hasDeposit,
       'depositPrice': depositPrice,
+      'unit': unit,
+      'minQuantity': minQuantity,
+      'stepSize': stepSize,
     };
   }
 }
@@ -106,6 +118,9 @@ class CatalogProduct {
   final String imageUrl;
   final bool isWeighted;
   final String? description;
+  final String unit;
+  final double minQuantity;
+  final double stepSize;
 
   CatalogProduct({
     required this.id,
@@ -117,6 +132,9 @@ class CatalogProduct {
     required this.imageUrl,
     this.isWeighted = false,
     this.description,
+    this.unit = "ADET",
+    this.minQuantity = 1.0,
+    this.stepSize = 1.0,
   });
 
   factory CatalogProduct.fromMap(Map<String, dynamic> map) {
@@ -130,6 +148,9 @@ class CatalogProduct {
       imageUrl: map['imageUrl'] ?? '',
       isWeighted: map['isWeighted'] ?? false,
       description: map['description'],
+      unit: map['unit'] ?? "ADET",
+      minQuantity: map['minQuantity'] != null ? double.tryParse(map['minQuantity'].toString()) ?? 1.0 : 1.0,
+      stepSize: map['stepSize'] != null ? double.tryParse(map['stepSize'].toString()) ?? 1.0 : 1.0,
     );
   }
 }

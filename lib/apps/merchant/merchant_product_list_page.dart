@@ -58,6 +58,10 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
   final _preparationTimeController = TextEditingController();
   final _depositPriceController = TextEditingController();
   bool _hasDeposit = false;
+  String _selectedUnit = "ADET";
+  double _minQuantity = 1.0;
+  double _stepSize = 1.0;
+  final List<String> _units = ["ADET", "KG", "LITRE", "PAKET", "DEMET", "GR"];
 
   @override
   void initState() {
@@ -674,6 +678,11 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                                 ],
                               ),
                               // Tartılı Switch has been removed as the new model does not support it
+                              const SizedBox(width: 8),
+                              IconButton(
+                                icon: const Icon(Icons.edit, color: Colors.blue),
+                                onPressed: () => _showEditProductDialog(p),
+                              ),
                             ],
                           ),
                         ],
@@ -1187,6 +1196,120 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                 ],
 
                 const Divider(height: 32),
+                Text(
+                  "Miktar ve Satış Birimi Ayarları",
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+
+                // 1. Birim Seçici Dropdown
+                DropdownButtonFormField<String>(
+                  value: _selectedUnit,
+                  decoration: const InputDecoration(
+                    labelText: "Satış Birimi",
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.scale_outlined),
+                  ),
+                  items: _units.map((unit) {
+                    return DropdownMenuItem(value: unit, child: Text(unit));
+                  }).toList(),
+                  onChanged: (val) {
+                    setState(() {
+                      _selectedUnit = val!;
+                      // Birim değiştiğinde mantıklı varsayılanlar ata
+                      if (_selectedUnit == "KG") {
+                        _minQuantity = 0.5;
+                        _stepSize = 0.25;
+                      } else if (_selectedUnit == "LITRE") {
+                        _minQuantity = 1.0;
+                        _stepSize = 0.5;
+                      } else if (_selectedUnit == "ADET") {
+                        _minQuantity = 1.0;
+                        _stepSize = 1.0;
+                      }
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Eğer tartılı/küsuratlı ürün seçildiyse (KG/Litre/GR) ek ayarları göster
+                AnimatedCrossFade(
+                  firstChild: const SizedBox.shrink(),
+                  secondChild: Column(
+                    children: [
+                      // 2. Minimum Alım Miktarı Slider / Input
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              "Minimum Sipariş Miktarı:",
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          Chip(
+                            label: Text("$_minQuantity $_selectedUnit"),
+                            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                          ),
+                        ],
+                      ),
+                      Slider(
+                        value: _minQuantity,
+                        min: 0.1,
+                        max: 5.0,
+                        divisions: 49,
+                        label: _minQuantity.toString(),
+                        onChanged: (val) {
+                          setState(() {
+                            // Yuvarlama hassasiyeti koruma (stepSize'a uyumlu olması için)
+                            _minQuantity = double.parse(val.toStringAsFixed(2));
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 12),
+
+                      // 3. Artış Adımı (Step Size)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              "Miktar Artış Adımı (Step):",
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          Chip(
+                            label: Text("+$_stepSize $_selectedUnit"),
+                            backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<double>(
+                        value: _stepSize,
+                        decoration: const InputDecoration(
+                          labelText: "Artış Adımı",
+                          border: OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 0.1, child: Text("0.10 (Hassas Tartı)")),
+                          DropdownMenuItem(value: 0.25, child: Text("0.25 (Çeyrek Kilo)")),
+                          DropdownMenuItem(value: 0.5, child: Text("0.50 (Yarım Kilo)")),
+                          DropdownMenuItem(value: 1.0, child: Text("1.00 (Tam Katları)")),
+                        ],
+                        onChanged: (val) {
+                          setState(() {
+                            _stepSize = val!;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  crossFadeState: (_selectedUnit == "KG" || _selectedUnit == "LITRE" || _selectedUnit == "GR")
+                      ? CrossFadeState.showSecond
+                      : CrossFadeState.showFirst,
+                  duration: const Duration(milliseconds: 250),
+                ),
+
+                const Divider(height: 32),
                 const Text(
                   "Envanter Bilgileri",
                   style: TextStyle(fontWeight: FontWeight.bold),
@@ -1547,6 +1670,9 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
         'imageUrl': _imageUrlController.text.trim(),
         'isActive': true,
         'categoryName': _categoryController.text.trim(),
+        'unit': _selectedUnit,
+        'minQuantity': (_selectedUnit == "KG" || _selectedUnit == "LITRE" || _selectedUnit == "GR") ? _minQuantity : 1.0,
+        'stepSize': (_selectedUnit == "KG" || _selectedUnit == "LITRE" || _selectedUnit == "GR") ? _stepSize : 1.0,
       };
 
       if (shopType == 'RESTAURANT') {
@@ -1593,6 +1719,9 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
         _depositPriceController.clear();
         setState(() {
           _hasDeposit = false;
+          _selectedUnit = "ADET";
+          _minQuantity = 1.0;
+          _stepSize = 1.0;
         });
         _tabController.animateTo(0);
       }
@@ -1655,6 +1784,42 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
         ],
       ),
     );
+  }
+
+  void _showEditProductDialog(MerchantProduct p) async {
+    final shopAsync = ref.read(shopControllerProvider);
+    final shopType = shopAsync.value?.type ?? 'OTHER';
+
+    final payload = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (ctx) => _EditProductDialog(product: p, shopType: shopType),
+    );
+
+    if (payload != null) {
+      setState(() {
+        _isInventoryActionLoading = true;
+      });
+      try {
+        await ref.read(productControllerProvider.notifier).updateProduct(p.id, payload);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Ürün başarıyla güncellendi!"), backgroundColor: Colors.green),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Hata: $e"), backgroundColor: Colors.red),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isInventoryActionLoading = false;
+          });
+        }
+      }
+    }
   }
 }
 
@@ -1853,6 +2018,297 @@ class _MultiSelectFilterSheetState extends State<_MultiSelectFilterSheet> {
           ],
         );
       },
+    );
+  }
+}
+
+class _EditProductDialog extends StatefulWidget {
+  final MerchantProduct product;
+  final String shopType;
+
+  const _EditProductDialog({
+    Key? key,
+    required this.product,
+    required this.shopType,
+  }) : super(key: key);
+
+  @override
+  State<_EditProductDialog> createState() => _EditProductDialogState();
+}
+
+class _EditProductDialogState extends State<_EditProductDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late TextEditingController _nameController;
+  late TextEditingController _descController;
+  late TextEditingController _priceController;
+  late TextEditingController _stockController;
+  late TextEditingController _barcodeController;
+  late TextEditingController _brandController;
+  late TextEditingController _weightOrVolumeController;
+  late TextEditingController _prepTimeController;
+  late String _selectedUnit;
+  late double _minQuantity;
+  late double _stepSize;
+
+  final List<String> _units = ["ADET", "KG", "LITRE", "PAKET", "DEMET", "GR"];
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.product.name);
+    _descController = TextEditingController(text: widget.product.description ?? '');
+    _priceController = TextEditingController(text: widget.product.price.toString());
+    _stockController = TextEditingController(text: (widget.product.stock ?? 0).toString());
+    _barcodeController = TextEditingController(text: widget.product.barcode ?? '');
+    _brandController = TextEditingController(text: widget.product.brand ?? '');
+    _weightOrVolumeController = TextEditingController(text: widget.product.weightOrVolume ?? '');
+    _prepTimeController = TextEditingController(text: (widget.product.preparationTime ?? 0).toString());
+    _selectedUnit = widget.product.unit;
+    _minQuantity = widget.product.minQuantity;
+    _stepSize = widget.product.stepSize;
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descController.dispose();
+    _priceController.dispose();
+    _stockController.dispose();
+    _barcodeController.dispose();
+    _brandController.dispose();
+    _weightOrVolumeController.dispose();
+    _prepTimeController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isRestaurant = widget.shopType == 'RESTAURANT';
+    final isMarket = widget.shopType == 'MARKET';
+
+    return AlertDialog(
+      title: const Text("Ürünü Düzenle", style: TextStyle(fontWeight: FontWeight.bold)),
+      content: SizedBox(
+        width: MediaQuery.of(context).size.width * 0.9,
+        child: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: _nameController,
+                  decoration: const InputDecoration(labelText: "Ürün Adı", border: OutlineInputBorder()),
+                  validator: (v) => (v == null || v.isEmpty) ? "Zorunlu alan" : null,
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _descController,
+                  decoration: const InputDecoration(labelText: "Açıklama (Opsiyonel)", border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _priceController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: const InputDecoration(labelText: "Fiyat (₺)", border: OutlineInputBorder(), prefixText: "₺ "),
+                        validator: (v) {
+                          if (v == null || v.isEmpty) return "Zorunlu alan";
+                          if (double.tryParse(v) == null) return "Geçerli sayı girin";
+                          return null;
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _stockController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(labelText: "Stok", border: OutlineInputBorder()),
+                        validator: (v) {
+                          if (v == null || v.isEmpty) return "Zorunlu alan";
+                          if (int.tryParse(v) == null) return "Geçerli tam sayı girin";
+                          return null;
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (!isRestaurant) ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _barcodeController,
+                          decoration: InputDecoration(
+                            labelText: isMarket ? "Barkod (Zorunlu)" : "Barkod (Opsiyonel)",
+                            border: const OutlineInputBorder(),
+                          ),
+                          validator: (v) {
+                            if (isMarket && (v == null || v.isEmpty)) return "Zorunlu alan";
+                            return null;
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _brandController,
+                          decoration: InputDecoration(
+                            labelText: isMarket ? "Marka (Zorunlu)" : "Marka (Opsiyonel)",
+                            border: const OutlineInputBorder(),
+                          ),
+                          validator: (v) {
+                            if (isMarket && (v == null || v.isEmpty)) return "Zorunlu alan";
+                            return null;
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _weightOrVolumeController,
+                    decoration: const InputDecoration(labelText: "Ağırlık veya Hacim (Örn: 1.5L, 500g)", border: OutlineInputBorder()),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                if (isRestaurant) ...[
+                  TextFormField(
+                    controller: _prepTimeController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: "Hazırlanma Süresi (Dakika)", border: OutlineInputBorder(), suffixText: "dk"),
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return "Zorunlu";
+                      if (int.tryParse(v) == null) return "Sayı girin";
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                const Divider(),
+                Text("Miktar ve Satış Birimi Ayarları", style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  value: _selectedUnit,
+                  decoration: const InputDecoration(labelText: "Satış Birimi", border: OutlineInputBorder(), prefixIcon: Icon(Icons.scale_outlined)),
+                  items: _units.map((unit) => DropdownMenuItem(value: unit, child: Text(unit))).toList(),
+                  onChanged: (val) {
+                    setState(() {
+                      _selectedUnit = val!;
+                      if (_selectedUnit == "KG") {
+                        _minQuantity = 0.5;
+                        _stepSize = 0.25;
+                      } else if (_selectedUnit == "LITRE") {
+                        _minQuantity = 1.0;
+                        _stepSize = 0.5;
+                      } else if (_selectedUnit == "ADET") {
+                        _minQuantity = 1.0;
+                        _stepSize = 1.0;
+                      }
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
+                AnimatedCrossFade(
+                  firstChild: const SizedBox.shrink(),
+                  secondChild: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(child: Text("Minimum Sipariş Miktarı:", style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold))),
+                          Chip(
+                            label: Text("$_minQuantity $_selectedUnit", style: const TextStyle(fontSize: 12)),
+                            backgroundColor: theme.colorScheme.primaryContainer,
+                            padding: EdgeInsets.zero,
+                          ),
+                        ],
+                      ),
+                      Slider(
+                        value: _minQuantity,
+                        min: 0.1,
+                        max: 5.0,
+                        divisions: 49,
+                        label: _minQuantity.toString(),
+                        onChanged: (val) {
+                          setState(() {
+                            _minQuantity = double.parse(val.toStringAsFixed(2));
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(child: Text("Miktar Artış Adımı (Step):", style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold))),
+                          Chip(
+                            label: Text("+$_stepSize $_selectedUnit", style: const TextStyle(fontSize: 12)),
+                            backgroundColor: theme.colorScheme.secondaryContainer,
+                            padding: EdgeInsets.zero,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      DropdownButtonFormField<double>(
+                        value: _stepSize,
+                        decoration: const InputDecoration(labelText: "Artış Adımı", border: OutlineInputBorder()),
+                        items: const [
+                          DropdownMenuItem(value: 0.1, child: Text("0.10 (Hassas Tartı)")),
+                          DropdownMenuItem(value: 0.25, child: Text("0.25 (Çeyrek Kilo)")),
+                          DropdownMenuItem(value: 0.5, child: Text("0.50 (Yarım Kilo)")),
+                          DropdownMenuItem(value: 1.0, child: Text("1.00 (Tam Katları)")),
+                        ],
+                        onChanged: (val) {
+                          setState(() {
+                            _stepSize = val!;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  crossFadeState: (_selectedUnit == "KG" || _selectedUnit == "LITRE" || _selectedUnit == "GR")
+                      ? CrossFadeState.showSecond
+                      : CrossFadeState.showFirst,
+                  duration: const Duration(milliseconds: 250),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text("İptal")),
+        ElevatedButton(
+          onPressed: () {
+            if (!_formKey.currentState!.validate()) return;
+            final payload = <String, dynamic>{
+              'name': _nameController.text.trim(),
+              'description': _descController.text.trim(),
+              'price': double.tryParse(_priceController.text) ?? 0.0,
+              'stock': int.tryParse(_stockController.text) ?? 0,
+              'unit': _selectedUnit,
+              'minQuantity': (_selectedUnit == "KG" || _selectedUnit == "LITRE" || _selectedUnit == "GR") ? _minQuantity : 1.0,
+              'stepSize': (_selectedUnit == "KG" || _selectedUnit == "LITRE" || _selectedUnit == "GR") ? _stepSize : 1.0,
+            };
+
+            if (!isRestaurant) {
+              payload['barcode'] = _barcodeController.text.trim().isNotEmpty ? _barcodeController.text.trim() : null;
+              payload['brand'] = _brandController.text.trim().isNotEmpty ? _brandController.text.trim() : null;
+              payload['stockQuantity'] = int.tryParse(_stockController.text) ?? 0;
+              payload['weightOrVolume'] = _weightOrVolumeController.text.trim().isNotEmpty ? _weightOrVolumeController.text.trim() : null;
+            } else {
+              payload['preparationTime'] = int.tryParse(_prepTimeController.text) ?? 0;
+            }
+
+            Navigator.pop(context, payload);
+          },
+          child: const Text("Kaydet"),
+        ),
+      ],
     );
   }
 }
