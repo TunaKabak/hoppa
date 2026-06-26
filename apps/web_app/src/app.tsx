@@ -27,6 +27,7 @@ import {
     X,
     ExternalLink
 } from 'lucide-react';
+import { translations } from './translations';
 
 // Mock Veritabanı - Uygulama simülatörü ve sayfa için
 const CATEGORIES = [
@@ -49,6 +50,40 @@ const PRODUCTS = [
 
 export default function App({ initialTab = 'user' }: { initialTab?: string }) {
     // Tanıtım Sayfası State'leri
+    const [locale, setLocale] = useState<'tr' | 'en' | 'ru'>('tr');
+
+    useEffect(() => {
+        const saved = localStorage.getItem('hoppa_locale');
+        if (saved && (saved === 'tr' || saved === 'en' || saved === 'ru')) {
+            setLocale(saved);
+        }
+    }, []);
+
+    const changeLocale = (lang: 'tr' | 'en' | 'ru') => {
+        setLocale(lang);
+        localStorage.setItem('hoppa_locale', lang);
+    };
+
+    const t = (key: keyof typeof translations['tr']) => {
+        const activeTranslations = translations[locale] || translations['tr'];
+        return activeTranslations[key] || translations['tr'][key] || '';
+    };
+
+    const getCategoryTitle = (id: string) => {
+        const key = `category_${id}_title` as keyof typeof translations['tr'];
+        return t(key);
+    };
+
+    const getCategoryDesc = (id: string) => {
+        const key = `category_${id}_desc` as keyof typeof translations['tr'];
+        return t(key);
+    };
+
+    const getProductFieldName = (id: string, field: 'name' | 'brand' | 'desc') => {
+        const key = `product_${id}_${field}` as keyof typeof translations['tr'];
+        return t(key);
+    };
+
     const [activeTab, setActiveTab] = useState(initialTab); // user, partner, driver
     const [contactSubmitted, setContactSubmitted] = useState(false);
     const [partnerSubmitted, setPartnerSubmitted] = useState(false);
@@ -136,7 +171,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
             }
             const newQty = existing.qty + change;
             if (newQty <= 0) {
-                triggerToast(`${existing.name} sepetten çıkarıldı`);
+                triggerToast(`${getProductFieldName(id, 'name')} ${t('sim_toast_removed')}`);
                 return prev.filter(item => item.id !== id);
             }
             return prev.map(item => item.id === id ? { ...item, qty: newQty } : item);
@@ -165,21 +200,27 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
 
                         {/* Masaüstü Navigasyon */}
                         <nav className="hidden md:flex items-center space-x-8">
-                            <a href="#features" className="font-medium text-slate-600 hover:text-emerald-600 transition-colors">Özellikler</a>
-                            <a href="#how-it-works" className="font-medium text-slate-600 hover:text-emerald-600 transition-colors">Nasıl Çalışır?</a>
-                            <a href="#interactive-demo" className="font-medium text-slate-600 hover:text-emerald-600 transition-colors bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-sm animate-pulse">Uygulamayı Dene</a>
-                            <a href="#partners" onClick={() => setActiveTab('user')} className="font-medium text-slate-600 hover:text-emerald-600 transition-colors">İş Ortaklığı</a>
-                            <a href="#partners" onClick={() => setActiveTab('partner')} className="font-medium text-slate-600 hover:text-emerald-600 transition-colors">Kurye Ol</a>
+                            <a href="#features" className="font-medium text-slate-600 hover:text-emerald-600 transition-colors">{t('nav_features')}</a>
+                            <a href="#how-it-works" className="font-medium text-slate-600 hover:text-emerald-600 transition-colors">{t('nav_how_it_works')}</a>
+                            <a href="#interactive-demo" className="font-medium text-slate-600 hover:text-emerald-600 transition-colors bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-sm animate-pulse">{t('nav_try_app')}</a>
+                            <a href="#partners" onClick={() => setActiveTab('user')} className="font-medium text-slate-600 hover:text-emerald-600 transition-colors">{t('nav_partnerships')}</a>
+                            <a href="#partners" onClick={() => setActiveTab('partner')} className="font-medium text-slate-600 hover:text-emerald-600 transition-colors">{t('nav_courier')}</a>
                         </nav>
 
-                        {/* App Store / CTA */}
-                        <div className="hidden lg:flex items-center space-x-3">
+                        {/* App Store / CTA & Dil Seçici */}
+                        <div className="hidden lg:flex items-center space-x-4">
                             <a
                                 href="#interactive-demo"
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-full font-semibold transition-all duration-300 shadow-lg shadow-emerald-600/20 text-sm hover:scale-105 active:scale-95"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-full font-semibold transition-all duration-300 shadow-lg shadow-emerald-600/20 text-sm hover:scale-105 active:scale-95 animate-none"
                             >
-                                Hemen Sipariş Ver
+                                {t('nav_order_now')}
                             </a>
+
+                            <div className="flex items-center space-x-1 bg-slate-50 border border-slate-200 rounded-full px-1.5 py-1 text-xs font-bold text-slate-600">
+                                <button onClick={() => changeLocale('tr')} className={`px-2 py-0.5 rounded-full transition-colors ${locale === 'tr' ? 'bg-white text-emerald-600 shadow-sm' : 'hover:text-slate-900'}`}>TR</button>
+                                <button onClick={() => changeLocale('en')} className={`px-2 py-0.5 rounded-full transition-colors ${locale === 'en' ? 'bg-white text-emerald-600 shadow-sm' : 'hover:text-slate-900'}`}>EN</button>
+                                <button onClick={() => changeLocale('ru')} className={`px-2 py-0.5 rounded-full transition-colors ${locale === 'ru' ? 'bg-white text-emerald-600 shadow-sm' : 'hover:text-slate-900'}`}>RU</button>
+                            </div>
                         </div>
 
                         {/* Mobil Menü Butonu */}
@@ -202,21 +243,21 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                             onClick={() => setMobileMenuOpen(false)}
                             className="block font-medium py-2 text-slate-700 hover:text-emerald-600 transition-colors"
                         >
-                            Özellikler
+                            {t('nav_features')}
                         </a>
                         <a
                             href="#how-it-works"
                             onClick={() => setMobileMenuOpen(false)}
                             className="block font-medium py-2 text-slate-700 hover:text-emerald-600 transition-colors"
                         >
-                            Nasıl Çalışır?
+                            {t('nav_how_it_works')}
                         </a>
                         <a
                             href="#interactive-demo"
                             onClick={() => setMobileMenuOpen(false)}
                             className="block font-medium py-2 text-emerald-600 hover:text-emerald-700 font-bold transition-colors"
                         >
-                            Uygulamayı Dene (Canlı Simülatör)
+                            {t('nav_try_demo')}
                         </a>
                         <a
                             href="#partners"
@@ -226,7 +267,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                             }}
                             className="block font-medium py-2 text-slate-700 hover:text-emerald-600 transition-colors"
                         >
-                            İş Ortaklığı
+                            {t('nav_partnerships')}
                         </a>
                         <a
                             href="#partners"
@@ -236,7 +277,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                             }}
                             className="block font-medium py-2 text-slate-700 hover:text-emerald-600 transition-colors"
                         >
-                            Kurye Ol
+                            {t('nav_courier')}
                         </a>
                         <div className="pt-2">
                             <a
@@ -244,8 +285,16 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                 onClick={() => setMobileMenuOpen(false)}
                                 className="block w-full text-center bg-emerald-600 text-white py-3 rounded-xl font-bold"
                             >
-                                Simülatörü Başlat
+                                {t('nav_start_simulator')}
                             </a>
+                        </div>
+                        <div className="pt-3 border-t border-slate-100 flex justify-between items-center">
+                            <span className="text-[10px] text-slate-400 font-bold tracking-wider">LANG / DİL / ЯЗЫК</span>
+                            <div className="flex items-center space-x-0.5 bg-slate-50 border border-slate-200 rounded-full px-1 py-0.5 text-xs font-bold text-slate-600">
+                                <button onClick={() => { changeLocale('tr'); setMobileMenuOpen(false); }} className={`px-2 py-0.5 rounded-full transition-colors ${locale === 'tr' ? 'bg-white text-emerald-600 shadow-sm' : 'hover:text-slate-900'}`}>TR</button>
+                                <button onClick={() => { changeLocale('en'); setMobileMenuOpen(false); }} className={`px-2 py-0.5 rounded-full transition-colors ${locale === 'en' ? 'bg-white text-emerald-600 shadow-sm' : 'hover:text-slate-900'}`}>EN</button>
+                                <button onClick={() => { changeLocale('ru'); setMobileMenuOpen(false); }} className={`px-2 py-0.5 rounded-full transition-colors ${locale === 'ru' ? 'bg-white text-emerald-600 shadow-sm' : 'hover:text-slate-900'}`}>RU</button>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -265,31 +314,31 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                         <div className="lg:col-span-7 space-y-8 text-center lg:text-left">
                             <div className="inline-flex items-center space-x-2 bg-orange-50 border border-orange-100 text-orange-700 px-4 py-2 rounded-full text-xs sm:text-sm font-semibold tracking-wide">
                                 <Sparkles size={16} className="text-orange-500 animate-spin" style={{ animationDuration: '4s' }} />
-                                <span>Gazimağusa&apos;nın En Yeni, En Hızlı Pazaryeri Platformu!</span>
+                                <span>{t('hero_sparkles')}</span>
                             </div>
 
                             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 leading-tight">
-                                Siparişin <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-amber-600">En Kısa Yolu</span> <br className="hidden sm:inline" />
-                                Saniyeler İçinde Kapında.
+                                {t('hero_title_1')} <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-amber-600">{t('hero_title_2')}</span> <br className="hidden sm:inline" />
+                                {t('hero_title_3')}
                             </h1>
 
                             <p className="text-lg text-slate-600 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
-                                Hoppa ile mutfaktaki eksiklerden canının çektiği sıcak yemeğe, damacana sudan taze çiçeklere kadar her şey dakikalar içinde kapında. Canlı kurye takibiyle siparişinin nerede olduğunu anlık izle.
+                                {t('hero_description')}
                             </p>
 
                             {/* Hızlı İstatistikler */}
                             <div className="grid grid-cols-3 gap-4 py-2 max-w-md mx-auto lg:mx-0">
                                 <div className="p-3 bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-100 shadow-sm text-center">
                                     <div className="text-2xl font-bold text-emerald-600">25-45</div>
-                                    <div className="text-xs text-slate-500">Dakikada Teslimat</div>
+                                    <div className="text-xs text-slate-500">{t('hero_stat_delivery_title')}</div>
                                 </div>
                                 <div className="p-3 bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-100 shadow-sm text-center">
                                     <div className="text-2xl font-bold text-orange-500">100%</div>
-                                    <div className="text-xs text-slate-500">Güvenli Ödeme</div>
+                                    <div className="text-xs text-slate-500">{t('hero_stat_payment_title')}</div>
                                 </div>
                                 <div className="p-3 bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-100 shadow-sm text-center">
                                     <div className="text-2xl font-bold text-slate-800">4.8★</div>
-                                    <div className="text-xs text-slate-500">Kullanıcı Puanı</div>
+                                    <div className="text-xs text-slate-500">{t('hero_stat_rating_title')}</div>
                                 </div>
                             </div>
 
@@ -300,7 +349,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                     className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white px-8 py-4 rounded-2xl font-bold flex items-center justify-center space-x-3 shadow-xl transition-all duration-300 hover:-translate-y-1 active:translate-y-0"
                                 >
                                     <Smartphone size={20} />
-                                    <span>Şimdi Canlı Dene</span>
+                                    <span>{t('hero_btn_try_live')}</span>
                                 </a>
                                 <a
                                     href="#partners"
@@ -308,7 +357,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                     className="w-full sm:w-auto bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 px-8 py-4 rounded-2xl font-bold flex items-center justify-center space-x-2 transition-all duration-300 hover:border-slate-300"
                                 >
                                     <Store size={20} className="text-emerald-600" />
-                                    <span>İşletme Girişi</span>
+                                    <span>{t('hero_btn_business_login')}</span>
                                 </a>
                             </div>
 
@@ -316,11 +365,11 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                             <div className="flex flex-wrap justify-center lg:justify-start items-center gap-6 pt-4 text-xs font-semibold text-slate-500">
                                 <span className="flex items-center space-x-1.5">
                                     <ShieldCheck size={16} className="text-emerald-600" />
-                                    <span>Kredi Kartı veya Kapıda Ödeme</span>
+                                    <span>{t('hero_badge_payment')}</span>
                                 </span>
                                 <span className="flex items-center space-x-1.5">
                                     <Clock size={16} className="text-emerald-600" />
-                                    <span>7/24 Kesintisiz Destek</span>
+                                    <span>{t('hero_badge_support')}</span>
                                 </span>
                             </div>
                         </div>
@@ -339,11 +388,11 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                             <Truck size={20} />
                                         </div>
                                         <div>
-                                            <h4 className="font-bold text-slate-800 leading-none">Aktif Sipariş Takibi</h4>
-                                            <span className="text-xs text-slate-500">Şehir Süpermarket</span>
+                                            <h4 className="font-bold text-slate-800 leading-none">{t('active_tracking_title')}</h4>
+                                            <span className="text-xs text-slate-500">{t('active_tracking_store')}</span>
                                         </div>
                                     </div>
-                                    <span className="bg-orange-50 text-orange-700 px-2.5 py-1 rounded-full text-xs font-bold animate-pulse">Yolda</span>
+                                    <span className="bg-orange-50 text-orange-700 px-2.5 py-1 rounded-full text-xs font-bold animate-pulse">{t('active_tracking_status')}</span>
                                 </div>
 
                                 {/* Kurye Bilgisi */}
@@ -354,11 +403,11 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                 🛵
                                             </div>
                                             <div>
-                                                <div className="text-xs text-slate-400">Kuryeniz</div>
+                                                <div className="text-xs text-slate-400">{t('active_tracking_courier')}</div>
                                                 <div className="text-sm font-bold text-slate-800">Ahmet Y.</div>
                                             </div>
                                         </div>
-                                        <span className="text-emerald-600 text-xs font-bold bg-emerald-50 px-2 py-1 rounded-lg">5 Dk Sonra</span>
+                                        <span className="text-emerald-600 text-xs font-bold bg-emerald-50 px-2 py-1 rounded-lg">{t('active_tracking_time')}</span>
                                     </div>
 
                                     {/* Küçük Yol */}
@@ -367,8 +416,8 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                         <div className="absolute top-3.5 left-0 h-1 bg-emerald-500 rounded-full" style={{ width: '70%' }}></div>
                                         <div className="absolute top-1 right-1/4 text-xl transform -translate-x-1/2 animate-bounce">🛵</div>
                                         <div className="flex justify-between text-[10px] text-slate-400 font-semibold pt-1">
-                                            <span>Marketten Alındı</span>
-                                            <span>Kapınızda</span>
+                                            <span>{t('active_tracking_step_1')}</span>
+                                            <span>{t('active_tracking_step_2')}</span>
                                         </div>
                                     </div>
 
@@ -376,7 +425,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                         href="#interactive-demo"
                                         className="block w-full text-center bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-2xl text-sm shadow-md transition-all hover:shadow-lg"
                                     >
-                                        Canlı Deneyimi Başlat
+                                        {t('active_tracking_btn')}
                                     </a>
                                 </div>
                             </div>
@@ -391,12 +440,12 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
                     <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
-                        <h2 className="text-xs uppercase font-extrabold tracking-widest text-emerald-600">Neden Hoppa?</h2>
+                        <h2 className="text-xs uppercase font-extrabold tracking-widest text-emerald-600">{t('why_hoppa_label')}</h2>
                         <p className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-                            Alışveriş Alışkanlıklarınızı Baştan Yazıyoruz
+                            {t('why_hoppa_title')}
                         </p>
                         <p className="text-slate-500">
-                            Uygulamamızı geliştirmek için en ince ayrıntıları düşündük. İşte her siparişte hissedeceğiniz fark:
+                            {t('why_hoppa_description')}
                         </p>
                     </div>
 
@@ -407,9 +456,9 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                             <div className="w-14 h-14 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center text-2xl font-bold mb-6 transition-transform group-hover:scale-110">
                                 ⚡
                             </div>
-                            <h3 className="text-xl font-bold text-slate-900 mb-3">Siparişin En Kısa Yolu</h3>
+                            <h3 className="text-xl font-bold text-slate-900 mb-3">{t('why_hoppa_card1_title')}</h3>
                             <p className="text-slate-600 leading-relaxed">
-                                Gazimağusa genelinde kurduğumuz akıllı dağıtım ağı sayesinde siparişleriniz hiçbir gecikmeye uğramadan, doğrudan en yakın noktadan yola çıkar.
+                                {t('why_hoppa_card1_desc')}
                             </p>
                         </div>
 
@@ -418,9 +467,9 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                             <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-2xl font-bold mb-6 transition-transform group-hover:scale-110">
                                 📍
                             </div>
-                            <h3 className="text-xl font-bold text-slate-900 mb-3">Canlı Kurye Takibi</h3>
+                            <h3 className="text-xl font-bold text-slate-900 mb-3">{t('why_hoppa_card2_title')}</h3>
                             <p className="text-slate-600 leading-relaxed">
-                                "Kurye nerede kaldı?" endişesine son. Siparişinizin onaylandığı andan kapınıza ulaştığı ana kadar her hareketi haritada canlı ve şeffafça izleyin.
+                                {t('why_hoppa_card2_desc')}
                             </p>
                         </div>
 
@@ -429,9 +478,9 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                             <div className="w-14 h-14 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center text-2xl font-bold mb-6 transition-transform group-hover:scale-110">
                                 🛍️
                             </div>
-                            <h3 className="text-xl font-bold text-slate-900 mb-3">Yüzlerce Çeşit, Tek Sepet</h3>
+                            <h3 className="text-xl font-bold text-slate-900 mb-3">{t('why_hoppa_card3_title')}</h3>
                             <p className="text-slate-600 leading-relaxed">
-                                Market ihtiyaçlarınız, taze fırın ekmeği, damacana su veya akşam yemeği menüsü. Farklı kategorilerdeki her şeyi tek tıkla sepetinize ekleyin.
+                                {t('why_hoppa_card3_desc')}
                             </p>
                         </div>
 
@@ -444,9 +493,9 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
                     <div className="text-center max-w-2xl mx-auto space-y-4 mb-20">
-                        <h2 className="text-xs uppercase font-extrabold tracking-widest text-orange-600">Basit ve Etkili</h2>
-                        <p className="text-3xl sm:text-4xl font-extrabold text-slate-900">3 Adımda Kolay Sipariş</p>
-                        <p className="text-slate-500">Hoppa ile ihtiyacınıza ulaşmak işte bu kadar kolay ve zahmetsiz.</p>
+                        <h2 className="text-xs uppercase font-extrabold tracking-widest text-orange-600">{t('how_label')}</h2>
+                        <p className="text-3xl sm:text-4xl font-extrabold text-slate-900">{t('how_title')}</p>
+                        <p className="text-slate-500">{t('how_description')}</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-12 relative">
@@ -459,9 +508,9 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                 1
                             </div>
                             <div className="text-4xl pt-2">📱</div>
-                            <h4 className="font-extrabold text-lg text-slate-900">Kategorini Seç</h4>
+                            <h4 className="font-extrabold text-lg text-slate-900">{t('how_step1_title')}</h4>
                             <p className="text-sm text-slate-500">
-                                Market, restoran, su, çiçek veya kuruyemiş kategorilerinden dilediğini seçip ürünleri incele.
+                                {t('how_step1_desc')}
                             </p>
                         </div>
 
@@ -471,9 +520,9 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                 2
                             </div>
                             <div className="text-4xl pt-2">🛒</div>
-                            <h4 className="font-extrabold text-lg text-slate-900">Sepetini Doldur</h4>
+                            <h4 className="font-extrabold text-lg text-slate-900">{t('how_step2_title')}</h4>
                             <p className="text-sm text-slate-500">
-                                Güvenli ödeme altyapımızla ister kredi kartıyla online, ister kapıda nakit veya kartla siparişini tamamla.
+                                {t('how_step2_desc')}
                             </p>
                         </div>
 
@@ -483,9 +532,9 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                 3
                             </div>
                             <div className="text-4xl pt-2">🛵</div>
-                            <h4 className="font-extrabold text-lg text-slate-900">Canlı Takip Et</h4>
+                            <h4 className="font-extrabold text-lg text-slate-900">{t('how_step3_title')}</h4>
                             <p className="text-sm text-slate-500">
-                                Kuryenin çıkış anından kapına gelene kadarki yolculuğunu harita üzerinden heyecanla takip et.
+                                {t('how_step3_desc')}
                             </p>
                         </div>
 
@@ -507,51 +556,53 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                         {/* Sol Taraf: Açıklama ve Yönlendirme */}
                         <div className="lg:col-span-6 space-y-8 text-center lg:text-left">
                             <div className="inline-flex items-center space-x-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-4 py-1.5 rounded-full text-sm font-bold">
-                                <span>CANLI INTERAKTİF DEMO</span>
+                                <span>{t('demo_label')}</span>
                             </div>
 
                             <h2 className="text-4xl sm:text-5xl font-black tracking-tight leading-tight">
-                                Hoppa Uygulamasını <br />
-                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-amber-300">Şimdi Test Edin!</span>
+                                {t('demo_title').split(' ')[0]} <br />
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-amber-300">
+                                    {t('demo_title').substring(t('demo_title').indexOf(' ') + 1)}
+                                </span>
                             </h2>
 
                             <p className="text-slate-300 text-lg leading-relaxed">
-                                Sağdaki telefon simülatörünü kullanarak sipariş akışımızı birebir deneyimleyebilirsiniz. Kategorileri gezin, sepete ekleme yapın ve siparişi tamamlayarak "Kurye Canlı Takip" ekranının nasıl çalıştığını izleyin!
+                                {t('demo_desc')}
                             </p>
 
                             {/* Simülatör Kontrolleri */}
                             <div className="space-y-4 pt-4 hidden sm:block">
-                                <h4 className="font-bold text-slate-200">Hızlı Ekran Geçişleri</h4>
+                                <h4 className="font-bold text-slate-200">{t('demo_controls_title')}</h4>
                                 <div className="flex flex-wrap gap-2 justify-center lg:justify-start">
                                     <button
                                         onClick={() => setSimScreen('splash')}
                                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${simScreen === 'splash' ? 'bg-orange-500 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
                                     >
-                                        1. Başlangıç (Splash)
+                                        {t('demo_screen_1')}
                                     </button>
                                     <button
                                         onClick={() => setSimScreen('categories')}
                                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${simScreen === 'categories' ? 'bg-orange-500 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
                                     >
-                                        2. Kategoriler
+                                        {t('demo_screen_2')}
                                     </button>
                                     <button
                                         onClick={() => setSimScreen('store_detail')}
                                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${simScreen === 'store_detail' ? 'bg-orange-500 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
                                     >
-                                        3. Mağaza & Ürünler
+                                        {t('demo_screen_3')}
                                     </button>
                                     <button
                                         onClick={() => setSimScreen('checkout')}
                                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${simScreen === 'checkout' ? 'bg-orange-500 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
                                     >
-                                        4. Ödeme / Onay
+                                        {t('demo_screen_4')}
                                     </button>
                                     <button
                                         onClick={() => setSimScreen('order_status')}
                                         className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${simScreen === 'order_status' ? 'bg-orange-500 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
                                     >
-                                        5. Canlı Takip 🛵
+                                        {t('demo_screen_5')}
                                     </button>
                                 </div>
                             </div>
@@ -560,9 +611,9 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                             <div className="bg-slate-800/80 border border-slate-700/50 p-5 rounded-2xl flex items-start space-x-4 max-w-md mx-auto lg:mx-0">
                                 <div className="text-3xl">💡</div>
                                 <div className="text-left space-y-1">
-                                    <h5 className="font-bold text-sm text-slate-100">İpucu</h5>
+                                    <h5 className="font-bold text-sm text-slate-100">{t('demo_tip_title')}</h5>
                                     <p className="text-xs text-slate-400">
-                                        Ödeme ekranında kapıda nakit veya kart seçeneklerini değiştirebilir, kurye takip ekranında canlı simülasyonu izleyebilirsiniz.
+                                        {t('demo_tip_desc')}
                                     </p>
                                 </div>
                             </div>
@@ -600,7 +651,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                     <img src="/logo-square-orange.png" alt="Hoppa Logo" className="w-24 h-24 object-contain rounded-3xl shadow-md" />
                                                 </div>
                                                 <p className="text-orange-500 font-bold text-xs tracking-wider">
-                                                    Siparişin en kısa yolu.
+                                                    {t('sim_splash_tagline')}
                                                 </p>
                                             </div>
 
@@ -610,14 +661,14 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                     <div className="w-3/4 bg-slate-100 h-1.5 rounded-full mx-auto overflow-hidden relative">
                                                         <div className="absolute top-0 bottom-0 left-0 bg-emerald-600 w-2/3 rounded-full animate-pulse"></div>
                                                     </div>
-                                                    <span className="text-[10px] text-slate-400 block">Yükleniyor...</span>
+                                                    <span className="text-[10px] text-slate-400 block">{t('sim_splash_loading')}</span>
                                                 </div>
 
                                                 <button
                                                     onClick={() => setSimScreen('categories')}
                                                     className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-sm transition-all shadow-md shadow-emerald-600/10"
                                                 >
-                                                    Hızlı Giriş Yap
+                                                    {t('sim_splash_btn')}
                                                 </button>
                                             </div>
                                         </div>
@@ -644,12 +695,12 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                     <div className="w-6 h-6 rounded-full bg-orange-100 flex items-center justify-center text-xs">🍊</div>
                                                 )}
                                                 <span className="text-xs font-bold text-slate-800">
-                                                    {simScreen === 'categories' && 'Merhaba, Test User'}
-                                                    {simScreen === 'store_detail' && 'Şehir Süpermarket'}
-                                                    {simScreen === 'product_detail' && 'Ürün Detayı'}
-                                                    {simScreen === 'delivery_info' && 'Teslimat Bilgileri'}
-                                                    {simScreen === 'checkout' && 'Ödeme ve Onay'}
-                                                    {simScreen === 'order_status' && 'Sipariş Detayı'}
+                                                    {simScreen === 'categories' && t('sim_header_welcome')}
+                                                    {simScreen === 'store_detail' && t('sim_header_store')}
+                                                    {simScreen === 'product_detail' && t('sim_header_product_detail')}
+                                                    {simScreen === 'delivery_info' && t('sim_header_delivery_info')}
+                                                    {simScreen === 'checkout' && t('sim_header_checkout')}
+                                                    {simScreen === 'order_status' && t('sim_header_order_status')}
                                                 </span>
                                             </div>
 
@@ -659,7 +710,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                     <button
                                                         onClick={() => {
                                                             if (simCart.length > 0) setSimScreen('delivery_info');
-                                                            else triggerToast('Önce sepetinize ürün ekleyin!');
+                                                            else triggerToast(t('sim_toast_empty_cart'));
                                                         }}
                                                         className="relative p-1.5 rounded-full hover:bg-slate-100 text-slate-700"
                                                     >
@@ -686,8 +737,8 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                 <div className="flex items-center space-x-2">
                                                     <span className="text-emerald-600">📍</span>
                                                     <div className="text-left">
-                                                        <div className="text-[10px] text-slate-400 font-semibold leading-none">Teslimat Adresi</div>
-                                                        <span className="text-xs font-bold text-slate-700">Ev - Yeni Boğaziçi</span>
+                                                        <div className="text-[10px] text-slate-400 font-semibold leading-none">{t('sim_delivery_address')}</div>
+                                                        <span className="text-xs font-bold text-slate-700">{t('sim_address_home')}</span>
                                                     </div>
                                                 </div>
                                                 <span className="text-xs text-slate-400">▼</span>
@@ -695,35 +746,38 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
 
                                             {/* Başlık */}
                                             <div className="text-left">
-                                                <h4 className="text-sm font-bold text-slate-800">İşletme Kategorisi</h4>
+                                                <h4 className="text-sm font-bold text-slate-800">{t('sim_cat_heading')}</h4>
                                             </div>
 
                                             {/* Kategoriler Grid */}
                                             <div className="grid grid-cols-2 gap-3">
-                                                {CATEGORIES.map((cat) => (
-                                                    <div
-                                                        key={cat.id}
-                                                        onClick={() => cat.id === 'market' || cat.id === 'su' ? setSimScreen('store_detail') : triggerToast(`${cat.title} kategorisi şu an simülatörde kapalıdır.`)}
-                                                        className="bg-white p-3 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between items-start h-28 cursor-pointer relative hover:border-emerald-500/50 hover:shadow-md transition-all group"
-                                                    >
-                                                        {cat.badge && (
-                                                            <span className="absolute top-2 right-2 bg-orange-500 text-white text-[8px] px-1.5 py-0.5 rounded-full font-black">
-                                                                {cat.badge}
-                                                            </span>
-                                                        )}
-                                                        <div className="text-2xl">{cat.icon}</div>
-                                                        <div className="text-left">
-                                                            <div className="text-xs font-bold text-slate-800">{cat.title}</div>
-                                                            <div className="text-[8px] text-slate-400 line-clamp-1">{cat.desc}</div>
+                                                {CATEGORIES.map((cat) => {
+                                                    const badgeText = cat.badge === 'POPÜLER' ? (locale === 'tr' ? 'POPÜLER' : locale === 'en' ? 'POPULAR' : 'ПОПУЛЯРНО') : cat.badge === 'YENİ' ? (locale === 'tr' ? 'YENİ' : locale === 'en' ? 'NEW' : 'НОВОЕ') : cat.badge;
+                                                    return (
+                                                        <div
+                                                            key={cat.id}
+                                                            onClick={() => cat.id === 'market' || cat.id === 'su' ? setSimScreen('store_detail') : triggerToast(`${getCategoryTitle(cat.id)} ${t('sim_cat_inactive_toast')}`)}
+                                                            className="bg-white p-3 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between items-start h-28 cursor-pointer relative hover:border-emerald-500/50 hover:shadow-md transition-all group"
+                                                        >
+                                                            {cat.badge && (
+                                                                <span className="absolute top-2 right-2 bg-orange-500 text-white text-[8px] px-1.5 py-0.5 rounded-full font-black">
+                                                                    {badgeText}
+                                                                </span>
+                                                            )}
+                                                            <div className="text-2xl">{cat.icon}</div>
+                                                            <div className="text-left">
+                                                                <div className="text-xs font-bold text-slate-800">{getCategoryTitle(cat.id)}</div>
+                                                                <div className="text-[8px] text-slate-400 line-clamp-1">{getCategoryDesc(cat.id)}</div>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
 
                                             {/* Alt Bilgi Banner */}
                                             <div className="bg-gradient-to-r from-orange-500 to-amber-500 p-3 rounded-2xl text-white text-left space-y-1">
-                                                <div className="text-xs font-bold">%20 İlk Sipariş İndirimi!</div>
-                                                <p className="text-[9px] text-orange-50/80">Yeni üyelere özel tüm marketlerde geçerli indirim kodu: HOPPA20</p>
+                                                <div className="text-xs font-bold">{t('sim_banner_title')}</div>
+                                                <p className="text-[9px] text-orange-50/80">{t('sim_banner_desc')}</p>
                                             </div>
                                         </div>
                                     )}
@@ -751,23 +805,23 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                             {/* Mağaza Bilgileri */}
                                             <div className="p-4 bg-white border-b border-slate-100 text-left space-y-2">
                                                 <div className="flex items-center justify-between">
-                                                    <h4 className="text-sm font-extrabold text-slate-800">Şehir Süpermarket</h4>
-                                                    <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded">Açık</span>
+                                                    <h4 className="text-sm font-extrabold text-slate-800">{t('sim_header_store')}</h4>
+                                                    <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded">{t('sim_store_open')}</span>
                                                 </div>
-                                                <p className="text-[10px] text-slate-400">Market • Dörtyol, Yeni Boğaziçi, Gazimağusa</p>
+                                                <p className="text-[10px] text-slate-400">{t('sim_store_desc')}</p>
 
                                                 {/* Hızlı Detaylar */}
                                                 <div className="grid grid-cols-3 gap-1 pt-1 border-t border-slate-50 text-center">
                                                     <div className="py-1">
-                                                        <span className="text-[9px] text-slate-400 block">Min. Tutar</span>
+                                                        <span className="text-[9px] text-slate-400 block">{t('sim_store_min')}</span>
                                                         <span className="text-xs font-bold text-slate-700">100 ₺</span>
                                                     </div>
                                                     <div className="py-1 border-x border-slate-100">
-                                                        <span className="text-[9px] text-slate-400 block">Süre</span>
-                                                        <span className="text-xs font-bold text-slate-700">30-45 dk</span>
+                                                        <span className="text-[9px] text-slate-400 block">{t('sim_store_time')}</span>
+                                                        <span className="text-xs font-bold text-slate-700">{t('sim_store_time_val')}</span>
                                                     </div>
                                                     <div className="py-1">
-                                                        <span className="text-[9px] text-slate-400 block">Mesafe</span>
+                                                        <span className="text-[9px] text-slate-400 block">{t('sim_store_dist')}</span>
                                                         <span className="text-xs font-bold text-slate-700">0.0 km</span>
                                                     </div>
                                                 </div>
@@ -775,27 +829,29 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
 
                                             {/* Kategori Filtreleri */}
                                             <div className="px-4 py-2 flex space-x-1.5 overflow-x-auto bg-white border-b border-slate-50">
-                                                <span className="bg-emerald-600 text-white text-[10px] px-3 py-1 rounded-full font-bold whitespace-nowrap">Tümü</span>
-                                                <span className="bg-slate-100 text-slate-600 text-[10px] px-3 py-1 rounded-full font-medium whitespace-nowrap">Temel Gıda</span>
-                                                <span className="bg-slate-100 text-slate-600 text-[10px] px-3 py-1 rounded-full font-medium whitespace-nowrap">Meyve & Sebze</span>
-                                                <span className="bg-slate-100 text-slate-600 text-[10px] px-3 py-1 rounded-full font-medium whitespace-nowrap">Atıştırmalık</span>
+                                                <span className="bg-emerald-600 text-white text-[10px] px-3 py-1 rounded-full font-bold whitespace-nowrap">{t('sim_store_all')}</span>
+                                                <span className="bg-slate-100 text-slate-600 text-[10px] px-3 py-1 rounded-full font-medium whitespace-nowrap">{t('sim_store_cat1')}</span>
+                                                <span className="bg-slate-100 text-slate-600 text-[10px] px-3 py-1 rounded-full font-medium whitespace-nowrap">{t('sim_store_cat2')}</span>
+                                                <span className="bg-slate-100 text-slate-600 text-[10px] px-3 py-1 rounded-full font-medium whitespace-nowrap">{t('sim_store_cat3')}</span>
                                             </div>
 
                                             {/* Ürünler Grid */}
                                             <div className="p-3 grid grid-cols-2 gap-3">
                                                 {PRODUCTS.map((prod) => {
                                                     const inCartQty = getProductQty(prod.id);
+                                                    const productName = getProductFieldName(prod.id, 'name');
+                                                    const productBrand = getProductFieldName(prod.id, 'brand');
                                                     return (
                                                         <div
                                                             key={prod.id}
                                                             className="bg-white rounded-2xl border border-slate-100 p-2 shadow-sm flex flex-col justify-between cursor-pointer group"
                                                         >
                                                             <div onClick={() => { setSimProduct(prod); setSimScreen('product_detail'); }} className="relative h-24 bg-slate-100 rounded-xl overflow-hidden mb-2">
-                                                                <img src={prod.image} alt={prod.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                                                <img src={prod.image} alt={productName} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                                                             </div>
                                                             <div onClick={() => { setSimProduct(prod); setSimScreen('product_detail'); }} className="text-left mb-2">
-                                                                <div className="text-[9px] font-semibold text-slate-400">{prod.brand}</div>
-                                                                <h5 className="text-[11px] font-bold text-slate-800 line-clamp-1">{prod.name}</h5>
+                                                                <div className="text-[9px] font-semibold text-slate-400">{productBrand}</div>
+                                                                <h5 className="text-[11px] font-bold text-slate-800 line-clamp-1">{productName}</h5>
                                                                 <div className="text-xs font-extrabold text-emerald-600 mt-1">{prod.price.toFixed(2)} ₺</div>
                                                             </div>
 
@@ -821,11 +877,11 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                                     <button
                                                                         onClick={() => {
                                                                             updateCartQty(prod.id, 1);
-                                                                            triggerToast(`${prod.name} sepete eklendi`);
+                                                                            triggerToast(`${productName} ${t('sim_toast_added')}`);
                                                                         }}
                                                                         className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 rounded-xl text-[10px] transition-all flex items-center justify-center space-x-1"
                                                                     >
-                                                                        <span>Sepete Ekle</span>
+                                                                        <span>{t('sim_add_to_cart')}</span>
                                                                     </button>
                                                                 )}
                                                             </div>
@@ -838,14 +894,14 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                             {simCart.length > 0 && (
                                                 <div className="p-3 bg-white border-t border-slate-100 mt-auto sticky bottom-0 flex items-center justify-between shadow-lg">
                                                     <div className="text-left">
-                                                        <span className="text-[9px] text-slate-400 block font-semibold">Toplam</span>
+                                                        <span className="text-[9px] text-slate-400 block font-semibold">{t('sim_cart_total_lbl')}</span>
                                                         <span className="text-sm font-extrabold text-emerald-600">{cartTotal.toFixed(2)} ₺</span>
                                                     </div>
                                                     <button
                                                         onClick={() => setSimScreen('delivery_info')}
                                                         className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-6 py-2 rounded-xl text-xs flex items-center space-x-1.5 shadow-md shadow-orange-500/10 transition-all active:scale-95"
                                                     >
-                                                        <span>Siparişi Tamamla</span>
+                                                        <span>{t('sim_cart_btn_checkout')}</span>
                                                         <span>➔</span>
                                                     </button>
                                                 </div>
@@ -860,7 +916,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
 
                                             {/* Ürün Görseli */}
                                             <div className="relative h-48 bg-white rounded-2xl border border-slate-100 overflow-hidden flex items-center justify-center">
-                                                <img src={simProduct.image} alt={simProduct.name} className="w-full h-full object-cover" />
+                                                <img src={simProduct.image} alt={getProductFieldName(simProduct.id, 'name')} className="w-full h-full object-cover" />
                                                 <button
                                                     onClick={() => setSimScreen('store_detail')}
                                                     className="absolute top-2 left-2 w-8 h-8 rounded-full bg-white/90 backdrop-blur shadow-sm flex items-center justify-center text-slate-800"
@@ -872,16 +928,16 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                             {/* Ürün Künyesi */}
                                             <div className="text-left space-y-2">
                                                 <span className="bg-slate-100 text-slate-600 text-[9px] px-2 py-0.5 rounded-full font-bold">
-                                                    {simProduct.brand}
+                                                    {getProductFieldName(simProduct.id, 'brand')}
                                                 </span>
-                                                <h4 className="text-sm font-extrabold text-slate-800">{simProduct.name}</h4>
-                                                <div className="text-lg font-black text-emerald-600">{simProduct.price.toFixed(2)} ₺ <span className="text-[10px] text-slate-400 font-normal">/ adet</span></div>
+                                                <h4 className="text-sm font-extrabold text-slate-800">{getProductFieldName(simProduct.id, 'name')}</h4>
+                                                <div className="text-lg font-black text-emerald-600">{simProduct.price.toFixed(2)} ₺ <span className="text-[10px] text-slate-400 font-normal">{t('sim_product_unit')}</span></div>
                                             </div>
 
                                             {/* Ürün Açıklaması */}
                                             <div className="text-left space-y-1.5 border-t border-slate-100 pt-3">
-                                                <h5 className="text-xs font-bold text-slate-700">Ürün Açıklaması</h5>
-                                                <p className="text-[10px] text-slate-500 leading-relaxed">{simProduct.desc}</p>
+                                                <h5 className="text-xs font-bold text-slate-700">{t('sim_product_desc_lbl')}</h5>
+                                                <p className="text-[10px] text-slate-500 leading-relaxed">{getProductFieldName(simProduct.id, 'desc')}</p>
                                             </div>
 
                                             {/* Alt Sepet Kontrolü */}
@@ -906,12 +962,12 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                     onClick={() => {
                                                         if (getProductQty(simProduct.id) === 0) updateCartQty(simProduct.id, 1);
                                                         setSimScreen('store_detail');
-                                                        triggerToast('Sepetiniz güncellendi!');
+                                                        triggerToast(t('sim_toast_cart_updated'));
                                                     }}
                                                     className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-xl text-xs transition-all flex items-center space-x-2"
                                                 >
                                                     <ShoppingBag size={14} />
-                                                    <span>Sepete Ekle</span>
+                                                    <span>{t('sim_add_to_cart')}</span>
                                                 </button>
                                             </div>
 
@@ -925,20 +981,20 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                             <div className="space-y-2 text-left">
                                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1">
                                                     <span>🚚</span>
-                                                    <span>Teslimat Yöntemi</span>
+                                                    <span>{t('sim_delivery_method')}</span>
                                                 </span>
                                                 <div className="bg-slate-100 p-1 rounded-xl grid grid-cols-2 gap-1">
                                                     <button
                                                         onClick={() => setSimDeliveryMethod('eve_teslim')}
                                                         className={`py-2 rounded-lg text-xs font-bold transition-all ${simDeliveryMethod === 'eve_teslim' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'}`}
                                                     >
-                                                        Eve Teslim
+                                                        {t('sim_delivery_method_home')}
                                                     </button>
                                                     <button
                                                         onClick={() => setSimDeliveryMethod('gel_al')}
                                                         className={`py-2 rounded-lg text-xs font-bold transition-all ${simDeliveryMethod === 'gel_al' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'}`}
                                                     >
-                                                        Gel Al
+                                                        {t('sim_delivery_method_pickup')}
                                                     </button>
                                                 </div>
                                             </div>
@@ -947,7 +1003,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                             <div className="space-y-2 text-left">
                                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1">
                                                     <span>📍</span>
-                                                    <span>{simDeliveryMethod === 'eve_teslim' ? 'Teslimat Adresi' : 'Mağaza Adresi'}</span>
+                                                    <span>{simDeliveryMethod === 'eve_teslim' ? t('sim_delivery_address') : t('sim_store_address')}</span>
                                                 </span>
                                                 <div className="bg-white p-3 rounded-2xl border border-slate-100 shadow-sm flex items-start space-x-3">
                                                     <div className="bg-emerald-50 text-emerald-600 p-2 rounded-xl flex-shrink-0">
@@ -955,15 +1011,15 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                     </div>
                                                     <div className="space-y-0.5">
                                                         <div className="text-xs font-bold text-slate-800">
-                                                            {simDeliveryMethod === 'eve_teslim' ? 'Ev' : 'Şehir Süpermarket'}
+                                                            {simDeliveryMethod === 'eve_teslim' ? t('sim_address_home_val') : t('sim_header_store')}
                                                         </div>
                                                         <p className="text-[10px] text-slate-500 leading-tight">
-                                                            {simDeliveryMethod === 'eve_teslim' ? 'Yeni Boğaziçi, Gazimağusa' : 'Dörtyol, Yeni Boğaziçi, Gazimağusa'}
+                                                            {simDeliveryMethod === 'eve_teslim' ? t('contact_office_val') : t('sim_store_desc')}
                                                         </p>
                                                     </div>
                                                 </div>
                                                 <span className="text-[9px] text-slate-400 block leading-tight">
-                                                    {simDeliveryMethod === 'eve_teslim' ? 'Teslimat adresini değiştirmek için lütfen ana sayfaya dönünüz.' : 'Lütfen siparişinizi almak için mağaza adresine gidiniz.'}
+                                                    {simDeliveryMethod === 'eve_teslim' ? t('sim_delivery_home_warn') : t('sim_delivery_pickup_warn')}
                                                 </span>
                                             </div>
 
@@ -971,7 +1027,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                             <div className="space-y-2 text-left">
                                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1">
                                                     <span>📞</span>
-                                                    <span>İletişim</span>
+                                                    <span>{t('sim_contact_lbl')}</span>
                                                 </span>
                                                 <div className="bg-white p-3 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
                                                     <div className="flex items-center space-x-3">
@@ -979,7 +1035,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                             📞
                                                         </div>
                                                         <div>
-                                                            <div className="text-[10px] text-slate-400 font-semibold leading-none">İrtibat Numarası</div>
+                                                            <div className="text-[10px] text-slate-400 font-semibold leading-none">{t('sim_contact_phone_lbl')}</div>
                                                             <span className="text-xs font-bold text-slate-800">
                                                                 {simDeliveryMethod === 'eve_teslim' ? '0533 876 54 32' : '0533 123 45 67'}
                                                             </span>
@@ -993,20 +1049,20 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                             <div className="space-y-2 text-left">
                                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1">
                                                     <span>🕒</span>
-                                                    <span>{simDeliveryMethod === 'eve_teslim' ? 'Teslimat Zamanı' : 'Hazırlanma Zamanı'}</span>
+                                                    <span>{simDeliveryMethod === 'eve_teslim' ? t('sim_time_delivery') : t('sim_time_prepare')}</span>
                                                 </span>
                                                 <div className="bg-slate-100 p-1 rounded-xl grid grid-cols-2 gap-1">
                                                     <button
                                                         onClick={() => setSimDeliveryTime('hemen')}
                                                         className={`py-2 rounded-lg text-xs font-bold transition-all ${simDeliveryTime === 'hemen' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'}`}
                                                     >
-                                                        Hemen
+                                                        {t('sim_time_now')}
                                                     </button>
                                                     <button
                                                         onClick={() => setSimDeliveryTime('randevulu')}
                                                         className={`py-2 rounded-lg text-xs font-bold transition-all ${simDeliveryTime === 'randevulu' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'}`}
                                                     >
-                                                        Randevulu
+                                                        {t('sim_time_scheduled')}
                                                     </button>
                                                 </div>
                                             </div>
@@ -1016,20 +1072,20 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                 <span className="text-xl animate-bounce">🚀</span>
                                                 <div>
                                                     <div className="text-[10px] text-emerald-800 font-semibold leading-none">
-                                                        {simDeliveryMethod === 'eve_teslim' ? 'Tahmini Teslimat Süresi' : 'Tahmini Hazırlanma Süresi'}
+                                                        {simDeliveryMethod === 'eve_teslim' ? t('sim_eta_delivery_lbl') : t('sim_eta_prepare_lbl')}
                                                     </div>
                                                     <span className="text-xs font-bold text-emerald-700">
-                                                        {simDeliveryMethod === 'eve_teslim' ? '25 - 45 Dakika' : '15 - 20 Dakika'}
+                                                        {simDeliveryMethod === 'eve_teslim' ? t('sim_eta_delivery_val') : t('sim_eta_prepare_val')}
                                                     </span>
                                                 </div>
-                                             </div>
+                                            </div>
 
                                              {/* Ödemeye Geç Butonu */}
                                              <button
                                                  onClick={() => setSimScreen('checkout')}
                                                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-2xl text-xs tracking-wider uppercase shadow-lg shadow-emerald-600/10 transition-all active:scale-95 mt-auto"
                                              >
-                                                 Ödemeye Geç
+                                                 {t('sim_checkout_proceed')}
                                              </button>
                                          </div>
                                      )}
@@ -1040,12 +1096,12 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
 
                                             {/* Sipariş Notu Girişi */}
                                             <div className="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-sm text-left space-y-2">
-                                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Sipariş Notu</label>
+                                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">{t('sim_checkout_note_lbl')}</label>
                                                 <input
                                                     type="text"
                                                     value={simOrderNote}
                                                     onChange={(e) => setSimOrderNote(e.target.value)}
-                                                    placeholder="Ürünler poşetsiz olsun, kapıya asın vb..."
+                                                    placeholder={t('sim_checkout_note_placeholder')}
                                                     className="w-full bg-slate-50 border border-slate-100 rounded-xl p-2.5 text-xs text-slate-700 focus:outline-none focus:border-emerald-500"
                                                 />
                                             </div>
@@ -1053,19 +1109,19 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                             {/* Teslimat Zamanı Bilgisi */}
                                             <div className="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-sm text-left flex items-center justify-between">
                                                 <div>
-                                                    <span className="text-[9px] text-slate-400 block font-semibold">Teslimat Yöntemi</span>
+                                                    <span className="text-[9px] text-slate-400 block font-semibold">{t('sim_delivery_method')}</span>
                                                     <span className="text-xs font-extrabold text-slate-700">
-                                                        {simDeliveryMethod === 'eve_teslim' ? 'Eve Teslimat' : 'Gel Al'} ({simDeliveryTime === 'hemen' ? 'Hemen' : 'Randevulu'})
+                                                        {simDeliveryMethod === 'eve_teslim' ? t('sim_checkout_delivery_home') : t('sim_checkout_delivery_pickup')} ({simDeliveryTime === 'hemen' ? t('sim_time_now') : t('sim_time_scheduled')})
                                                     </span>
                                                 </div>
                                                 <span className="text-xs text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded">
-                                                    {simDeliveryMethod === 'eve_teslim' ? '25-45 Dk' : '15-20 Dk'}
+                                                    {simDeliveryMethod === 'eve_teslim' ? (locale === 'tr' ? '25-45 Dk' : locale === 'en' ? '25-45 Min' : '25-45 мин') : (locale === 'tr' ? '15-20 Dk' : locale === 'en' ? '15-20 Min' : '15-20 мин')}
                                                 </span>
                                             </div>
 
                                             {/* Ödeme Yöntemi Seçimi */}
                                             <div className="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-sm text-left space-y-3">
-                                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Ödeme Yöntemi</label>
+                                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">{t('sim_checkout_pay_method')}</label>
 
                                                 <div className="grid grid-cols-2 gap-2">
                                                     <button
@@ -1073,7 +1129,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                         className={`p-2.5 rounded-xl border text-center flex flex-col items-center justify-center space-y-1 transition-all ${simPaymentMethod === 'online_kart' ? 'border-emerald-500 bg-emerald-50/50 text-emerald-800 font-bold' : 'border-slate-100 text-slate-500 hover:bg-slate-50'}`}
                                                     >
                                                         <span className="text-sm">💳</span>
-                                                        <span className="text-[10px]">Kredi / Banka Kartı</span>
+                                                        <span className="text-[10px]">{t('sim_checkout_pay_card')}</span>
                                                     </button>
 
                                                     <button
@@ -1081,7 +1137,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                         className={`p-2.5 rounded-xl border text-center flex flex-col items-center justify-center space-y-1 transition-all ${simPaymentMethod === 'kapida_nakit' ? 'border-emerald-500 bg-emerald-50/50 text-emerald-800 font-bold' : 'border-slate-100 text-slate-500 hover:bg-slate-50'}`}
                                                     >
                                                         <span className="text-sm">💵</span>
-                                                        <span className="text-[10px]">Kapıda Ödeme</span>
+                                                        <span className="text-[10px]">{t('sim_checkout_pay_cash')}</span>
                                                     </button>
                                                 </div>
 
@@ -1089,10 +1145,10 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                 {simPaymentMethod === 'kapida_nakit' && (
                                                     <div className="pt-2 border-t border-slate-50 flex space-x-2">
                                                         <span className="bg-emerald-50 text-emerald-800 text-[9px] px-2.5 py-1 rounded-lg font-bold border border-emerald-200">
-                                                            💵 Kapıda Nakit
+                                                            {t('sim_checkout_pay_cash_val')}
                                                         </span>
                                                         <span className="bg-slate-50 text-slate-400 text-[9px] px-2.5 py-1 rounded-lg font-semibold cursor-not-allowed">
-                                                            💳 Kapıda Kredi Kartı
+                                                            {t('sim_checkout_pay_card_val')}
                                                         </span>
                                                     </div>
                                                 )}
@@ -1101,14 +1157,14 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                             {/* Sipariş Özeti */}
                                             <div className="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-sm text-left space-y-3">
                                                 <div className="flex justify-between items-center pb-2 border-b border-slate-50">
-                                                    <span className="text-xs font-bold text-slate-800">Sipariş Özeti</span>
-                                                    <span className="text-[10px] text-slate-400 font-semibold">{simCart.reduce((sum, item) => sum + item.qty, 0)} Ürün</span>
+                                                    <span className="text-xs font-bold text-slate-800">{t('sim_checkout_summary_title')}</span>
+                                                    <span className="text-[10px] text-slate-400 font-semibold">{simCart.reduce((sum, item) => sum + item.qty, 0)} {t('sim_checkout_items_count')}</span>
                                                 </div>
 
                                                 <div className="space-y-1.5 text-xs text-slate-600">
                                                     {simCart.map((item) => (
                                                         <div key={item.id} className="flex justify-between">
-                                                            <span>{item.qty}x {item.name}</span>
+                                                            <span>{item.qty}x {getProductFieldName(item.id, 'name')}</span>
                                                             <span>{(item.price * item.qty).toFixed(2)} ₺</span>
                                                         </div>
                                                     ))}
@@ -1116,15 +1172,15 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
 
                                                 <div className="pt-2 border-t border-slate-100 space-y-1 text-xs">
                                                     <div className="flex justify-between text-slate-500">
-                                                        <span>Ara Toplam</span>
+                                                        <span>{t('sim_checkout_subtotal')}</span>
                                                         <span>{cartSubtotal.toFixed(2)} ₺</span>
                                                     </div>
                                                     <div className="flex justify-between text-emerald-600 font-semibold">
-                                                        <span>Teslimat Ücreti</span>
-                                                        <span>Ücretsiz</span>
+                                                        <span>{t('sim_checkout_shipping')}</span>
+                                                        <span>{t('sim_checkout_shipping_free')}</span>
                                                     </div>
                                                     <div className="flex justify-between text-sm font-extrabold text-slate-800 pt-1.5">
-                                                        <span>GENEL TOPLAM</span>
+                                                        <span>{t('sim_checkout_total')}</span>
                                                         <span>{cartTotal.toFixed(2)} ₺</span>
                                                     </div>
                                                 </div>
@@ -1135,7 +1191,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                 onClick={() => setSimScreen('order_status')}
                                                 className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-2xl text-xs tracking-wider uppercase shadow-lg shadow-emerald-600/10 transition-all active:scale-95"
                                             >
-                                                Siparişi Tamamla
+                                                {t('sim_cart_btn_checkout')}
                                             </button>
 
                                         </div>
@@ -1147,7 +1203,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
 
                                             {/* Sipariş Durum Timeline'ı */}
                                             <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm text-left space-y-4">
-                                                <h5 className="text-xs font-bold text-slate-800 leading-none">Sipariş Durumu</h5>
+                                                <h5 className="text-xs font-bold text-slate-800 leading-none">{t('sim_status_title')}</h5>
 
                                                 {/* Timeline Çizgisi */}
                                                 <div className="relative pt-2 pb-1">
@@ -1166,7 +1222,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                             <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold ${orderStep >= 0 ? 'bg-emerald-500 text-white' : 'bg-slate-200'}`}>
                                                                 {orderStep >= 0 ? '✓' : '1'}
                                                             </span>
-                                                            <span className="text-[8px] mt-1 font-bold text-slate-600">Onay</span>
+                                                            <span className="text-[8px] mt-1 font-bold text-slate-600">{t('sim_status_step0')}</span>
                                                         </div>
 
                                                         {/* Hazırlanıyor */}
@@ -1174,7 +1230,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                             <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold ${orderStep >= 1 ? 'bg-emerald-500 text-white' : 'bg-slate-200'}`}>
                                                                 {orderStep >= 1 ? '✓' : '2'}
                                                             </span>
-                                                            <span className="text-[8px] mt-1 font-bold text-slate-600">Hazırlanıyor</span>
+                                                            <span className="text-[8px] mt-1 font-bold text-slate-600">{t('sim_status_step1')}</span>
                                                         </div>
 
                                                         {/* Yolda */}
@@ -1182,7 +1238,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                             <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold ${orderStep >= 2 ? 'bg-emerald-500 text-white' : 'bg-slate-200'}`}>
                                                                 {orderStep >= 2 ? '✓' : '3'}
                                                             </span>
-                                                            <span className="text-[8px] mt-1 font-bold text-slate-600">Yolda</span>
+                                                            <span className="text-[8px] mt-1 font-bold text-slate-600">{t('sim_status_step2')}</span>
                                                         </div>
 
                                                         {/* Teslim Edildi */}
@@ -1190,7 +1246,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                             <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold ${orderStep >= 3 ? 'bg-emerald-500 text-white' : 'bg-slate-200'}`}>
                                                                 {orderStep >= 3 ? '✓' : '4'}
                                                             </span>
-                                                            <span className="text-[8px] mt-1 font-bold text-slate-600">Teslimat</span>
+                                                            <span className="text-[8px] mt-1 font-bold text-slate-600">{t('sim_status_step3')}</span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1198,19 +1254,19 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                 {/* Sipariş Tarihi / ID */}
                                                 <div className="text-center pt-2 border-t border-slate-50 space-y-1">
                                                     <div className="text-[9px] text-slate-400">25 Jun 2026, 17:43</div>
-                                                    <div className="text-[10px] font-bold text-slate-700">Sipariş No: #FD6FE83B</div>
+                                                    <div className="text-[10px] font-bold text-slate-700">{t('sim_status_no')}: #FD6FE83B</div>
                                                 </div>
 
                                                 {/* Takip / Yol Tarifi Butonu */}
                                                 {simDeliveryMethod === 'eve_teslim' ? (
                                                     <div className="bg-emerald-600 text-white p-3.5 rounded-xl text-center font-bold text-xs flex items-center justify-center space-x-2 relative overflow-hidden shadow-md shadow-emerald-600/10">
                                                         <span className="animate-bounce">🛵</span>
-                                                        <span>Kuryeyi Canlı Takip Et</span>
+                                                        <span>{t('sim_status_track_btn')}</span>
                                                     </div>
                                                 ) : (
                                                     <div className="bg-orange-500 text-white p-3.5 rounded-xl text-center font-bold text-xs flex items-center justify-center space-x-2 relative overflow-hidden shadow-md shadow-orange-500/10">
                                                         <span>📍</span>
-                                                        <span>Mağaza Yol Tarifi Al</span>
+                                                        <span>{t('sim_status_directions_btn')}</span>
                                                     </div>
                                                 )}
                                             </div>
@@ -1230,7 +1286,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                 <div className="absolute top-8 left-10 bg-white p-1.5 rounded-xl border border-slate-300 shadow-sm z-10 text-center">
                                                     <span className="text-sm">{simDeliveryMethod === 'eve_teslim' ? '🏬' : '🏠'}</span>
                                                     <span className="text-[7px] block font-black text-slate-700">
-                                                        {simDeliveryMethod === 'eve_teslim' ? 'MARKET' : 'EVİNİZ'}
+                                                        {simDeliveryMethod === 'eve_teslim' ? t('sim_map_market') : t('sim_map_home')}
                                                     </span>
                                                 </div>
 
@@ -1238,7 +1294,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                 <div className="absolute bottom-8 right-10 bg-emerald-50 p-1.5 rounded-xl border border-emerald-300 shadow-sm z-10 text-center">
                                                     <span className="text-sm">{simDeliveryMethod === 'eve_teslim' ? '🏠' : '🏬'}</span>
                                                     <span className="text-[7px] block font-black text-emerald-700">
-                                                        {simDeliveryMethod === 'eve_teslim' ? 'EVİNİZ' : 'MAĞAZA'}
+                                                        {simDeliveryMethod === 'eve_teslim' ? t('sim_map_home') : t('sim_map_pickup')}
                                                     </span>
                                                 </div>
 
@@ -1256,22 +1312,22 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                 {/* Canlı Bilgilendirme Kutucuğu */}
                                                 <div className="absolute bottom-2 left-2 right-2 bg-white/90 backdrop-blur-sm p-1.5 rounded-lg border border-slate-200/50 text-[9px] font-bold text-slate-800 text-center">
                                                     {simDeliveryMethod === 'eve_teslim' ? (
-                                                        orderStep === 3 ? "🎉 Siparişiniz Teslim Edildi! Teşekkürler." : "🛵 Ahmet Y. siparişinizle yola çıktı, size yaklaşıyor!"
+                                                        orderStep === 3 ? t('sim_map_alert_delivery_done') : t('sim_map_alert_delivery_road')
                                                     ) : (
-                                                        orderStep === 3 ? "🎉 Siparişiniz Hazırlandı, Teslim Alındı! Teşekkürler." : "⏳ Siparişiniz hazırlanıyor, yola çıkmak üzere hazırlanabilirsiniz!"
+                                                        orderStep === 3 ? t('sim_map_alert_pickup_done') : t('sim_map_alert_pickup_prep')
                                                     )}
                                                 </div>
                                             </div>
 
                                             {/* Sipariş İçeriği Özeti */}
                                             <div className="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-sm text-left space-y-2">
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Sipariş İçeriği</span>
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">{t('sim_status_items_lbl')}</span>
                                                 <div className="space-y-2">
                                                     {simCart.map((item) => (
                                                         <div key={item.id} className="flex justify-between text-xs">
                                                             <span className="text-slate-600 font-medium">
                                                                 <span className="text-orange-500 font-bold bg-orange-50 px-1.5 py-0.5 rounded mr-1.5 text-[9px]">{item.qty}x</span>
-                                                                {item.name}
+                                                                {getProductFieldName(item.id, 'name')}
                                                             </span>
                                                             <span className="font-extrabold text-slate-800">{item.price.toFixed(2)} ₺</span>
                                                         </div>
@@ -1283,13 +1339,13 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                             <div className="bg-white p-3.5 rounded-2xl border border-slate-100 shadow-sm text-left space-y-3">
                                                 {simOrderNote && (
                                                     <div className="bg-yellow-50/50 p-2.5 rounded-xl border border-yellow-100">
-                                                        <span className="text-[9px] text-yellow-800 font-bold uppercase block">Sipariş Notunuz</span>
+                                                        <span className="text-[9px] text-yellow-800 font-bold uppercase block">{t('sim_status_note_lbl')}</span>
                                                         <p className="text-[10px] text-slate-600 italic">&quot;{simOrderNote}&quot;</p>
                                                     </div>
                                                 )}
 
                                                 <div className="flex justify-between items-center pt-2 border-t border-slate-100">
-                                                    <span className="text-xs font-bold text-slate-500">Ödenen Tutar:</span>
+                                                    <span className="text-xs font-bold text-slate-500">{t('sim_status_paid')}</span>
                                                     <span className="text-sm font-extrabold text-orange-600">{cartTotal.toFixed(2)} ₺</span>
                                                 </div>
                                             </div>
@@ -1302,7 +1358,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                 }}
                                                 className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl text-[11px] transition-all"
                                             >
-                                                Yeni Sipariş Deneyimi Başlat
+                                                {t('sim_status_reset')}
                                             </button>
 
                                         </div>
@@ -1327,10 +1383,10 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
                     <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
-                        <h2 className="text-xs uppercase font-extrabold tracking-widest text-emerald-600">Birlikte Büyüyelim</h2>
-                        <p className="text-3xl sm:text-4xl font-extrabold text-slate-900">Hoppa Ekosistemine Katılın</p>
+                        <h2 className="text-xs uppercase font-extrabold tracking-widest text-emerald-600">{t('partners_label')}</h2>
+                        <p className="text-3xl sm:text-4xl font-extrabold text-slate-900">{t('partners_title')}</p>
                         <p className="text-slate-500">
-                            İster işletmenizin satışlarını katlayın, ister ekibimizin bir parçası olarak kazanç elde edin.
+                            {t('partners_desc')}
                         </p>
                     </div>
 
@@ -1341,13 +1397,13 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                 onClick={() => setActiveTab('user')}
                                 className={`px-6 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${activeTab === 'user' ? 'bg-emerald-600 text-white shadow' : 'text-slate-600 hover:text-slate-950'}`}
                             >
-                                İşletme Ortağı Ol
+                                {t('partners_tab_merchant')}
                             </button>
                             <button
                                 onClick={() => setActiveTab('partner')}
                                 className={`px-6 py-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${activeTab === 'partner' ? 'bg-emerald-600 text-white shadow' : 'text-slate-600 hover:text-slate-950'}`}
                             >
-                                Kurye Olarak Başvur
+                                {t('partners_tab_courier')}
                             </button>
                         </div>
                     </div>
@@ -1359,27 +1415,27 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                             <>
                                 <div className="lg:col-span-6 space-y-6 text-left">
                                     <div className="bg-emerald-50 text-emerald-800 p-3 rounded-2xl inline-block font-bold text-xs">
-                                        KOBİ & RESTORANLAR İÇİN
+                                        {t('partners_merchant_tag')}
                                     </div>
                                     <h3 className="text-2xl sm:text-3xl font-black text-slate-900 leading-tight">
-                                        Hoppa Mağazası Olun, Müşteri Portföyünüzü Katlayın
+                                        {t('partners_merchant_title')}
                                     </h3>
                                     <p className="text-slate-600">
-                                        Süpermarket, kasap, manav, restoran veya su bayisi olmanız fark etmez. Hoppa ile tüm Gazimağusa genelindeki dijital müşterilere anında ulaşın. Kolay panel yönetimiyle menülerinizi, fiyatlarınızı düzenleyin ve siparişleri takip edin.
+                                        {t('partners_merchant_desc')}
                                     </p>
 
                                     <div className="space-y-3.5 pt-2">
                                         <div className="flex items-start space-x-3 text-sm text-slate-700">
                                             <span className="text-emerald-600 font-bold">✓</span>
-                                            <span>Düşük komisyon oranları ve hızlı ödeme periyotları</span>
+                                            <span>{t('partners_merchant_bullet1')}</span>
                                         </div>
                                         <div className="flex items-start space-x-3 text-sm text-slate-700">
                                             <span className="text-emerald-600 font-bold">✓</span>
-                                            <span>Hoppa kurye ağıyla veya kendi kuryenizle teslimat yapma özgürlüğü</span>
+                                            <span>{t('partners_merchant_bullet2')}</span>
                                         </div>
                                         <div className="flex items-start space-x-3 text-sm text-slate-700">
                                             <span className="text-emerald-600 font-bold">✓</span>
-                                            <span>Mağazanıza özel dijital reklam ve pazarlama desteği</span>
+                                            <span>{t('partners_merchant_bullet3')}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1391,44 +1447,44 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                 <div className="w-16 h-16 bg-emerald-100 text-emerald-800 rounded-full flex items-center justify-center text-2xl mx-auto">
                                                     ✓
                                                 </div>
-                                                <h4 className="text-xl font-bold text-slate-800">Başvurunuz Alındı!</h4>
+                                                <h4 className="text-xl font-bold text-slate-800">{t('partners_merchant_success_title')}</h4>
                                                 <p className="text-sm text-slate-500">
-                                                    Uzman ekibimiz 24 saat içinde sizinle iletişime geçerek iş ortaklığı sürecini başlatacaktır.
+                                                    {t('partners_merchant_success_desc')}
                                                 </p>
                                             </div>
                                         ) : (
                                             <form onSubmit={(e) => { e.preventDefault(); setPartnerSubmitted(true); }} className="space-y-4">
-                                                <h4 className="font-extrabold text-lg text-slate-900 mb-2">Başvuru Formu</h4>
+                                                <h4 className="font-extrabold text-lg text-slate-900 mb-2">{t('partners_merchant_form_title')}</h4>
 
                                                 <div>
-                                                    <label className="text-xs font-bold text-slate-500 mb-1.5 block">İşletme Adı</label>
-                                                    <input required type="text" placeholder="Örn: Şehir Süpermarket" className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600" />
+                                                    <label className="text-xs font-bold text-slate-500 mb-1.5 block">{t('partners_merchant_form_store')}</label>
+                                                    <input required type="text" placeholder={t('partners_merchant_form_store_placeholder')} className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600" />
                                                 </div>
 
                                                 <div className="grid grid-cols-2 gap-4">
                                                     <div>
-                                                        <label className="text-xs font-bold text-slate-500 mb-1.5 block">Yetkili Adı Soyadı</label>
-                                                        <input required type="text" placeholder="Örn: Ali Yılmaz" className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600" />
+                                                        <label className="text-xs font-bold text-slate-500 mb-1.5 block">{t('partners_merchant_form_name')}</label>
+                                                        <input required type="text" placeholder={t('partners_merchant_form_name_placeholder')} className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600" />
                                                     </div>
                                                     <div>
-                                                        <label className="text-xs font-bold text-slate-500 mb-1.5 block">Telefon Numarası</label>
-                                                        <input required type="tel" placeholder="Örn: 0533..." className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600" />
+                                                        <label className="text-xs font-bold text-slate-500 mb-1.5 block">{t('partners_merchant_form_phone')}</label>
+                                                        <input required type="tel" placeholder={t('partners_merchant_form_phone_placeholder')} className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600" />
                                                     </div>
                                                 </div>
 
                                                 <div>
-                                                    <label className="text-xs font-bold text-slate-500 mb-1.5 block">Kategori</label>
+                                                    <label className="text-xs font-bold text-slate-500 mb-1.5 block">{t('partners_merchant_form_cat')}</label>
                                                     <select className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600">
-                                                        <option>Süpermarket / Bakkal</option>
-                                                        <option>Restoran / Cafe</option>
-                                                        <option>Su Bayisi</option>
-                                                        <option>Kuruyemiş / Tatlı</option>
-                                                        <option>Diğer</option>
+                                                        <option>{t('partners_merchant_form_cat1')}</option>
+                                                        <option>{t('partners_merchant_form_cat2')}</option>
+                                                        <option>{t('partners_merchant_form_cat3')}</option>
+                                                        <option>{t('partners_merchant_form_cat4')}</option>
+                                                        <option>{t('partners_merchant_form_cat5')}</option>
                                                     </select>
                                                 </div>
 
                                                 <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl text-sm shadow-md transition-all">
-                                                    İş Ortaklığı Başvurusunu Tamamla
+                                                    {t('partners_merchant_form_btn')}
                                                 </button>
                                             </form>
                                         )}
@@ -1439,27 +1495,27 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                             <>
                                 <div className="lg:col-span-6 space-y-6 text-left">
                                     <div className="bg-orange-50 text-orange-800 p-3 rounded-2xl inline-block font-bold text-xs">
-                                        KURYELER İÇİN
+                                        {t('partners_courier_tag')}
                                     </div>
                                     <h3 className="text-2xl sm:text-3xl font-black text-slate-900 leading-tight">
-                                        Kendi Saatlerini Seç, Hoppa ile Kazanç Elde Et!
+                                        {t('partners_courier_title')}
                                     </h3>
                                     <p className="text-slate-600">
-                                        Özgürce çalışmak ve Gazimağusa sokaklarında güvenli sürüş yaparken gelir elde etmek ister misiniz? Hoppa ile tam zamanlı, yarı zamanlı veya sadece haftalık programınıza göre kuryelik yapabilirsiniz.
+                                        {t('partners_courier_desc')}
                                     </p>
 
                                     <div className="space-y-3.5 pt-2">
                                         <div className="flex items-start space-x-3 text-sm text-slate-700">
                                             <span className="text-orange-500 font-bold">✓</span>
-                                            <span>Haftalık düzenli, yüksek kazanç garantisi</span>
+                                            <span>{t('partners_courier_bullet1')}</span>
                                         </div>
                                         <div className="flex items-start space-x-3 text-sm text-slate-700">
                                             <span className="text-orange-500 font-bold">✓</span>
-                                            <span>Esnek çalışma saatleri ve kurye destek sigortası</span>
+                                            <span>{t('partners_courier_bullet2')}</span>
                                         </div>
                                         <div className="flex items-start space-x-3 text-sm text-slate-700">
                                             <span className="text-orange-500 font-bold">✓</span>
-                                            <span>Akıllı yönlendirme algoritmamızla minimum sürüş, maksimum sipariş</span>
+                                            <span>{t('partners_courier_bullet3')}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1471,46 +1527,46 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                 <div className="w-16 h-16 bg-emerald-100 text-emerald-800 rounded-full flex items-center justify-center text-2xl mx-auto">
                                                     ✓
                                                 </div>
-                                                <h4 className="text-xl font-bold text-slate-800">Başvurunuz Alındı!</h4>
+                                                <h4 className="text-xl font-bold text-slate-800">{t('partners_courier_success_title')}</h4>
                                                 <p className="text-sm text-slate-500">
-                                                    Kurye operasyon ekibimiz başvurunuzu değerlendirerek sizinle en kısa sürede iletişime geçecektir.
+                                                    {t('partners_courier_success_desc')}
                                                 </p>
                                             </div>
                                         ) : (
                                             <form onSubmit={(e) => { e.preventDefault(); setCourierSubmitted(true); }} className="space-y-4">
-                                                <h4 className="font-extrabold text-lg text-slate-900 mb-2">Kurye Başvuru Formu</h4>
+                                                <h4 className="font-extrabold text-lg text-slate-900 mb-2">{t('partners_courier_form_title')}</h4>
 
                                                 <div className="grid grid-cols-2 gap-4">
                                                     <div>
-                                                        <label className="text-xs font-bold text-slate-500 mb-1.5 block">Adınız Soyadınız</label>
-                                                        <input required type="text" placeholder="Örn: Can Demir" className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600" />
+                                                        <label className="text-xs font-bold text-slate-500 mb-1.5 block">{t('partners_courier_form_name')}</label>
+                                                        <input required type="text" placeholder={t('partners_courier_form_name_placeholder')} className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600" />
                                                     </div>
                                                     <div>
-                                                        <label className="text-xs font-bold text-slate-500 mb-1.5 block">Telefon Numaranız</label>
-                                                        <input required type="tel" placeholder="Örn: 0533..." className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600" />
+                                                        <label className="text-xs font-bold text-slate-500 mb-1.5 block">{t('partners_courier_form_phone')}</label>
+                                                        <input required type="tel" placeholder={t('partners_courier_form_phone_placeholder')} className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600" />
                                                     </div>
                                                 </div>
 
                                                 <div>
-                                                    <label className="text-xs font-bold text-slate-500 mb-1.5 block">Araç Tipi</label>
+                                                    <label className="text-xs font-bold text-slate-500 mb-1.5 block">{t('partners_courier_form_vehicle')}</label>
                                                     <select className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600">
-                                                        <option>Motosiklet (Kendi Aracım)</option>
-                                                        <option>Araba (Kendi Aracım)</option>
-                                                        <option>Araç İstiyorum (Şirket Motosikleti)</option>
+                                                        <option>{t('partners_courier_form_vehicle1')}</option>
+                                                        <option>{t('partners_courier_form_vehicle2')}</option>
+                                                        <option>{t('partners_courier_form_vehicle3')}</option>
                                                     </select>
                                                 </div>
 
                                                 <div>
-                                                    <label className="text-xs font-bold text-slate-500 mb-1.5 block">Ehliyet Durumu</label>
+                                                    <label className="text-xs font-bold text-slate-500 mb-1.5 block">{t('partners_courier_form_license')}</label>
                                                     <select className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600">
-                                                        <option>Motosiklet Ehliyetim Var</option>
-                                                        <option>B Sınıfı Ehliyetim Var</option>
-                                                        <option>Yok / Almayı Düşünüyorum</option>
+                                                        <option>{t('partners_courier_form_license1')}</option>
+                                                        <option>{t('partners_courier_form_license2')}</option>
+                                                        <option>{t('partners_courier_form_license3')}</option>
                                                     </select>
                                                 </div>
 
                                                 <button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-xl text-sm shadow-md transition-all">
-                                                    Kurye Başvurusunu Gönder
+                                                    {t('partners_courier_form_btn')}
                                                 </button>
                                             </form>
                                         )}
@@ -1531,11 +1587,11 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
 
                         <div className="text-left space-y-6">
                             <h3 className="text-3xl font-extrabold text-slate-900">
-                                Sorularınız mı Var? <br />
-                                Müşteri Hizmetlerimizle İletişime Geçin
+                                {t('contact_title_1')} <br />
+                                {t('contact_title_2')}
                             </h3>
                             <p className="text-slate-600 leading-relaxed">
-                                Kuzey Kıbrıs genelinde yerel ve dinamik bir destek ekibiyle çalışıyoruz. Siparişleriniz, üyelikleriniz veya partnerlik süreçlerinizle ilgili her an bize yazabilir ya da arayabilirsiniz.
+                                {t('contact_desc')}
                             </p>
 
                             <div className="space-y-4 pt-2">
@@ -1544,7 +1600,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                         <Phone size={20} />
                                     </div>
                                     <div>
-                                        <span className="text-xs text-slate-400 block font-semibold">Müşteri Destek Hattı</span>
+                                        <span className="text-xs text-slate-400 block font-semibold">{t('contact_phone_lbl')}</span>
                                         <a href="tel:05338765432" className="text-sm font-bold text-slate-800 hover:text-emerald-600">0533 876 54 32</a>
                                     </div>
                                 </div>
@@ -1554,8 +1610,8 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                         <MapPin size={20} />
                                     </div>
                                     <div>
-                                        <span className="text-xs text-slate-400 block font-semibold">Ofis Adresi</span>
-                                        <span className="text-sm font-bold text-slate-800">Yeni Boğaziçi, Gazimağusa / KKTC</span>
+                                        <span className="text-xs text-slate-400 block font-semibold">{t('contact_office_lbl')}</span>
+                                        <span className="text-sm font-bold text-slate-800">{t('contact_office_val')}</span>
                                     </div>
                                 </div>
                             </div>
@@ -1568,32 +1624,32 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                     <div className="w-16 h-16 bg-emerald-100 text-emerald-800 rounded-full flex items-center justify-center text-2xl mx-auto">
                                         ✓
                                     </div>
-                                    <h4 className="text-xl font-bold text-slate-800">Mesajınız Gönderildi!</h4>
+                                    <h4 className="text-xl font-bold text-slate-800">{t('contact_success_title')}</h4>
                                     <p className="text-sm text-slate-500">
-                                        Ekibimiz en geç birkaç saat içerisinde verdiğiniz iletişim adresinden size geri dönüş sağlayacaktır.
+                                        {t('contact_success_desc')}
                                     </p>
                                 </div>
                             ) : (
                                 <form onSubmit={(e) => { e.preventDefault(); setContactSubmitted(true); }} className="space-y-4">
-                                    <h4 className="font-extrabold text-lg text-slate-900 mb-2">Hızlı Mesaj Gönder</h4>
+                                    <h4 className="font-extrabold text-lg text-slate-900 mb-2">{t('contact_form_title')}</h4>
 
                                     <div>
-                                        <label className="text-xs font-bold text-slate-500 mb-1.5 block">Adınız Soyadınız</label>
-                                        <input required type="text" placeholder="Örn: Ahmet Can" className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600" />
+                                        <label className="text-xs font-bold text-slate-500 mb-1.5 block">{t('contact_form_name')}</label>
+                                        <input required type="text" placeholder={t('contact_form_name_placeholder')} className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600" />
                                     </div>
 
                                     <div>
-                                        <label className="text-xs font-bold text-slate-500 mb-1.5 block">E-Posta Adresiniz</label>
-                                        <input required type="email" placeholder="Örn: ahmet@example.com" className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600" />
+                                        <label className="text-xs font-bold text-slate-500 mb-1.5 block">{t('contact_form_email')}</label>
+                                        <input required type="email" placeholder={t('contact_form_email_placeholder')} className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600" />
                                     </div>
 
                                     <div>
-                                        <label className="text-xs font-bold text-slate-500 mb-1.5 block">Mesajınız</label>
-                                        <textarea required rows={4} placeholder="Nasıl yardımcı olabiliriz?" className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600"></textarea>
+                                        <label className="text-xs font-bold text-slate-500 mb-1.5 block">{t('contact_form_msg')}</label>
+                                        <textarea required rows={4} placeholder={t('contact_form_msg_placeholder')} className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600"></textarea>
                                     </div>
 
                                     <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl text-sm shadow-md transition-all">
-                                        Gönder
+                                        {t('contact_form_btn')}
                                     </button>
                                 </form>
                             )}
@@ -1615,47 +1671,47 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                 <img src="/logo-color.png" alt="Hoppa Logo" className="h-10 w-auto object-contain brightness-0 invert" />
                             </div>
                             <p className="text-xs text-slate-400 leading-relaxed">
-                                Gazimağusa&apos;nın her noktasına süper hızlı, güvenli ve canlı takip sistemli sipariş ulaştıran yerel dijital pazaryeri platformunuz.
+                                {t('footer_desc')}
                             </p>
                         </div>
 
                         {/* Hızlı Linkler */}
                         <div className="text-left space-y-3">
-                            <h4 className="text-xs font-extrabold uppercase tracking-widest text-slate-400">Kurumsal</h4>
+                            <h4 className="text-xs font-extrabold uppercase tracking-widest text-slate-400">{t('footer_corporate')}</h4>
                             <ul className="space-y-2 text-xs text-slate-300">
-                                <li><a href="#features" className="hover:text-emerald-400 transition-colors">Biz Kimiz?</a></li>
-                                <li><a href="#partners" onClick={() => setActiveTab('user')} className="hover:text-emerald-400 transition-colors">Mağaza İş Ortaklığı</a></li>
-                                <li><a href="#partners" onClick={() => setActiveTab('partner')} className="hover:text-emerald-400 transition-colors">Kuryelik Başvurusu</a></li>
-                                <li><a href="#contact" className="hover:text-emerald-400 transition-colors">Kullanıcı Sözleşmesi</a></li>
+                                <li><a href="#features" className="hover:text-emerald-400 transition-colors">{t('footer_link_who')}</a></li>
+                                <li><a href="#partners" onClick={() => setActiveTab('user')} className="hover:text-emerald-400 transition-colors">{t('footer_link_merchant')}</a></li>
+                                <li><a href="#partners" onClick={() => setActiveTab('partner')} className="hover:text-emerald-400 transition-colors">{t('footer_link_courier')}</a></li>
+                                <li><a href="#contact" className="hover:text-emerald-400 transition-colors">{t('footer_link_terms')}</a></li>
                             </ul>
                         </div>
 
                         {/* İletişim Bilgileri */}
                         <div className="text-left space-y-3">
-                            <h4 className="text-xs font-extrabold uppercase tracking-widest text-slate-400">İletişim</h4>
+                            <h4 className="text-xs font-extrabold uppercase tracking-widest text-slate-400">{t('footer_contact')}</h4>
                             <ul className="space-y-2 text-xs text-slate-300">
-                                <li>Destek: support@hoppanow.com</li>
-                                <li>Halkla İlişkiler: pr@hoppanow.com</li>
-                                <li>Telefon: +90 533 876 54 32</li>
-                                <li>Adres: Yeni Boğaziçi, Gazimağusa, KKTC</li>
+                                <li>{t('footer_contact_support')}</li>
+                                <li>{t('footer_contact_pr')}</li>
+                                <li>{t('footer_contact_phone')}</li>
+                                <li>{t('footer_contact_addr')}</li>
                             </ul>
                         </div>
 
                         {/* Mobil Mağazalar */}
                         <div className="text-left space-y-3">
-                            <h4 className="text-xs font-extrabold uppercase tracking-widest text-slate-400">Uygulamayı İndir</h4>
+                            <h4 className="text-xs font-extrabold uppercase tracking-widest text-slate-400">{t('footer_download')}</h4>
                             <div className="space-y-2">
                                 <a
                                     href="#interactive-demo"
                                     className="bg-slate-800 hover:bg-slate-750 text-white text-[10px] px-4 py-2.5 rounded-xl font-bold flex items-center justify-center space-x-2 border border-slate-700"
                                 >
-                                    <span>App Store&apos;dan İndir</span>
+                                    <span>{t('footer_download_ios')}</span>
                                 </a>
                                 <a
                                     href="#interactive-demo"
                                     className="bg-slate-800 hover:bg-slate-750 text-white text-[10px] px-4 py-2.5 rounded-xl font-bold flex items-center justify-center space-x-2 border border-slate-700"
                                 >
-                                    <span>Google Play&apos;den Alın</span>
+                                    <span>{t('footer_download_android')}</span>
                                 </a>
                             </div>
                         </div>
@@ -1663,11 +1719,11 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                     </div>
 
                     <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 space-y-4 sm:space-y-0">
-                        <span>© 2026 Hoppa (hoppanow.com). Tüm Hakları Saklıdır.</span>
+                        <span>{t('footer_rights')}</span>
                         <div className="flex space-x-4">
-                            <a href="#privacy" className="hover:text-slate-200 transition-colors">Gizlilik Politikası</a>
-                            <a href="#data-protection" className="hover:text-slate-200 transition-colors">KVKK Aydınlatma Metni</a>
-                            <a href="#cookie-policy" className="hover:text-slate-200 transition-colors">Çerez Politikası</a>
+                            <a href="#privacy" className="hover:text-slate-200 transition-colors">{t('footer_link_privacy')}</a>
+                            <a href="#data-protection" className="hover:text-slate-200 transition-colors">{t('footer_link_kvkk')}</a>
+                            <a href="#cookie-policy" className="hover:text-slate-200 transition-colors">{t('footer_link_cookie')}</a>
                         </div>
                     </div>
 
