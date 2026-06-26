@@ -75,6 +75,13 @@ export class ProductController {
       const parsedMinQuantity = minQuantity !== null && minQuantity !== undefined && minQuantity !== "" ? parseFloat(minQuantity.toString()) : 1.0;
       const parsedStepSize = stepSize !== null && stepSize !== undefined && stepSize !== "" ? parseFloat(stepSize.toString()) : 1.0;
 
+      if (parsedMinQuantity <= 0 || parsedStepSize <= 0) {
+        return res.status(400).json({
+          error: true,
+          message: "Minimum miktar ve artış adımı sıfırdan büyük olmalıdır."
+        });
+      }
+
       const product = await prisma.product.create({
         data: {
           shopId: shop.id,
@@ -164,6 +171,13 @@ export class ProductController {
       const parsedHasDeposit = hasDeposit === true || hasDeposit === "true";
       const parsedMinQuantity = minQuantity !== null && minQuantity !== undefined && minQuantity !== "" ? parseFloat(minQuantity.toString()) : undefined;
       const parsedStepSize = stepSize !== null && stepSize !== undefined && stepSize !== "" ? parseFloat(stepSize.toString()) : undefined;
+
+      if ((parsedMinQuantity !== undefined && parsedMinQuantity <= 0) || (parsedStepSize !== undefined && parsedStepSize <= 0)) {
+        return res.status(400).json({
+          error: true,
+          message: "Minimum miktar ve artış adımı sıfırdan büyük olmalıdır."
+        });
+      }
 
       const updated = await prisma.product.update({
         where: { id: productId },
@@ -331,7 +345,10 @@ export class ProductController {
             stock: parsedStock,
             isActive: true,
             imageUrl: globalProduct.imageUrl,
-            categoryId: category.id
+            categoryId: category.id,
+            unit: globalProduct.unit,
+            minQuantity: globalProduct.minQuantity,
+            stepSize: globalProduct.stepSize
           }
         });
       } else {
@@ -344,7 +361,10 @@ export class ProductController {
             price,
             stock: parsedStock,
             imageUrl: globalProduct.imageUrl,
-            isActive: true
+            isActive: true,
+            unit: globalProduct.unit,
+            minQuantity: globalProduct.minQuantity,
+            stepSize: globalProduct.stepSize
           }
         });
       }
@@ -407,7 +427,10 @@ export class ProductController {
               stock: parsedStock,
               isActive: true,
               imageUrl: globalProduct.imageUrl,
-              categoryId: category.id
+              categoryId: category.id,
+              unit: globalProduct.unit,
+              minQuantity: globalProduct.minQuantity,
+              stepSize: globalProduct.stepSize
             }
           });
         } else {
@@ -420,7 +443,10 @@ export class ProductController {
               price,
               stock: parsedStock,
               imageUrl: globalProduct.imageUrl,
-              isActive: true
+              isActive: true,
+              unit: globalProduct.unit,
+              minQuantity: globalProduct.minQuantity,
+              stepSize: globalProduct.stepSize
             }
           });
         }

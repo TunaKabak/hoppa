@@ -176,6 +176,9 @@ class ProductController extends AsyncNotifier<List<MerchantProduct>> {
               preparationTime: p.preparationTime,
               hasDeposit: p.hasDeposit,
               depositPrice: p.depositPrice,
+              unit: p.unit,
+              minQuantity: p.minQuantity,
+              stepSize: p.stepSize,
             );
           }
           return p;
