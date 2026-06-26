@@ -553,7 +553,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                                         ),
                                       ),
                                       child: Text(
-                                        QuantityFormatter.formatValueOnly(item.quantity),
+                                        QuantityFormatter.formatValue(item.quantity),
                                         style: TextStyle(
                                           color: kPrimaryColor,
                                           fontWeight: FontWeight.bold,

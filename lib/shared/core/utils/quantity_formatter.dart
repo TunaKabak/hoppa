@@ -17,9 +17,15 @@ class QuantityFormatter {
     return "${rounded.toStringAsFixed(2)} $unit";
   }
 
-  /// Format quantity as a value only, avoiding floating point weirdness.
+  /// Format quantity as a value only, avoiding floating point precision issues.
   /// Example: "1.5", "2"
   static String formatValueOnly(double qty) {
+    return formatValue(qty);
+  }
+
+  /// Format quantity as a value only, avoiding floating point precision issues.
+  /// Example: "1.5", "2"
+  static String formatValue(double qty) {
     final rounded = roundDouble(qty);
     if (rounded == rounded.roundToDouble()) {
       return rounded.toInt().toString();

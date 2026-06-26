@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class DeliveryProvider extends ChangeNotifier {
   Address? _selectedAddress;
+  String? _userId;
 
   DeliveryProvider() {
     _loadAddress();
@@ -15,9 +16,21 @@ class DeliveryProvider extends ChangeNotifier {
 
   bool get hasAddress => _selectedAddress != null;
 
+  String get _storageKey {
+    final cleanId = _userId ?? 'guest';
+    return 'selected_address_$cleanId';
+  }
+
+  Future<void> updateUserId(String? newUserId) async {
+    final cleanId = newUserId ?? 'guest';
+    if (_userId == cleanId) return;
+    _userId = cleanId;
+    await _loadAddress();
+  }
+
   Future<void> _loadAddress() async {
     final prefs = await SharedPreferences.getInstance();
-    final addressJson = prefs.getString('selected_address');
+    final addressJson = prefs.getString(_storageKey);
     if (addressJson != null) {
       try {
         final Map<String, dynamic> data = jsonDecode(addressJson);
@@ -25,8 +38,12 @@ class DeliveryProvider extends ChangeNotifier {
         _selectedAddress = Address.fromMap(data, id);
         notifyListeners();
       } catch (e) {
-        // Hata durumunda adres atanmaz
+        _selectedAddress = null;
+        notifyListeners();
       }
+    } else {
+      _selectedAddress = null;
+      notifyListeners();
     }
   }
 
@@ -39,7 +56,7 @@ class DeliveryProvider extends ChangeNotifier {
     final addressMap = address.toMap();
     // fromMap metodunun doğru çalışması için ID'yi de JSON içine koyalım
     addressMap['id'] = address.id;
-    await prefs.setString('selected_address', jsonEncode(addressMap));
+    await prefs.setString(_storageKey, jsonEncode(addressMap));
   }
 
   // Sipariş sonrası veya çıkışta temizlemek için
@@ -48,6 +65,6 @@ class DeliveryProvider extends ChangeNotifier {
     notifyListeners();
     
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('selected_address');
+    await prefs.remove(_storageKey);
   }
 }
