@@ -10,7 +10,7 @@ const catalogProducts: any[] = [
     name: "Doğal Kaynak Suyu 5L",
     category: "Su & İçecek",
     subCategory: "Su",
-    imageUrl: "https://placehold.co/400x400/e3f2fd/0277bd?text=Erikli+5L",
+    imageUrl: "https://images.migrosone.com/sanalmarket/product/01011505/erikli-dogal-kaynak-suyu-5-l-a4d1d9-1650x1650.jpg",
     isWeighted: false,
     description: "Erikli eşsiz lezzetiyle doğal kaynak suyu."
   },
@@ -20,7 +20,7 @@ const catalogProducts: any[] = [
     name: "Su 1.5L",
     category: "Su & İçecek",
     subCategory: "Su",
-    imageUrl: "https://placehold.co/400x400/e3f2fd/0277bd?text=Erikli+1.5L",
+    imageUrl: "https://images.migrosone.com/sanalmarket/product/01010045/erikli-su-15-l-c8e9b6-1650x1650.jpg",
     isWeighted: false,
     description: "Günlük su ihtiyacınız için pratik 1.5 litrelik pet şişe su."
   },
@@ -40,7 +40,7 @@ const catalogProducts: any[] = [
     name: "Zero Sugar 1L",
     category: "Su & İçecek",
     subCategory: "Gazlı İçecek",
-    imageUrl: "https://www.alphamega.com.cy/Files/Images/Products/781315.jpg",
+    imageUrl: "https://images.migrosone.com/sanalmarket/product/08011210/coca-cola-zero-sugar-1-l-cfb1ad-1650x1650.jpg",
     isWeighted: false,
     description: "Şekersiz efsane lezzet."
   },
@@ -50,7 +50,7 @@ const catalogProducts: any[] = [
     name: "Portakal 2.5L",
     category: "Su & İçecek",
     subCategory: "Gazlı İçecek",
-    imageUrl: "https://placehold.co/400x400/ff9800/ffffff?text=Fanta",
+    imageUrl: "https://images.migrosone.com/sanalmarket/product/08011403/fanta-portakal-arovali-gazli-icecek-25-l-25f0bf-1650x1650.jpg",
     isWeighted: false,
     description: "Portakal aromalı gazlı içecek."
   },
@@ -60,7 +60,7 @@ const catalogProducts: any[] = [
     name: "Gazoz 2.5L",
     category: "Su & İçecek",
     subCategory: "Gazlı İçecek",
-    imageUrl: "https://placehold.co/400x400/4caf50/ffffff?text=Sprite",
+    imageUrl: "https://images.migrosone.com/sanalmarket/product/08011603/sprite-gazoz-25-l-50a80e-1650x1650.jpg",
     isWeighted: false,
     description: "Limon ve misket limonu aromalı ferahlatıcı gazoz."
   },
@@ -80,7 +80,7 @@ const catalogProducts: any[] = [
     name: "Enerji İçeceği 250ml",
     category: "Su & İçecek",
     subCategory: "Enerji",
-    imageUrl: "https://placehold.co/400x400/1a237e/ffeb3b?text=RedBull",
+    imageUrl: "https://images.migrosone.com/sanalmarket/product/08050000/red-bull-energy-drink-250-ml-4a0bcf-1650x1650.jpg",
     isWeighted: false,
     description: "Zihni ve bedeni canlandırır."
   },
@@ -102,7 +102,7 @@ const catalogProducts: any[] = [
     name: "Muz (İthal) kg",
     category: "Meyve & Sebze",
     subCategory: "Meyve",
-    imageUrl: "https://placehold.co/400x400/fff176/000000?text=Muz",
+    imageUrl: "https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=500&auto=format&fit=crop",
     isWeighted: true,
     description: "Taze ve lezzetli ithal muz."
   },
@@ -112,7 +112,7 @@ const catalogProducts: any[] = [
     name: "Elma (Starking) kg",
     category: "Meyve & Sebze",
     subCategory: "Meyve",
-    imageUrl: "https://placehold.co/400x400/ef5350/ffffff?text=Elma",
+    imageUrl: "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=500&auto=format&fit=crop",
     isWeighted: true,
     description: "Kırmızı, kütür kütür Starking elma."
   },
@@ -122,7 +122,7 @@ const catalogProducts: any[] = [
     name: "Domates (Salkım) kg",
     category: "Meyve & Sebze",
     subCategory: "Sebze",
-    imageUrl: "https://placehold.co/400x400/f44336/ffffff?text=Domates",
+    imageUrl: "https://images.unsplash.com/photo-1595855759920-86582396756a?w=500&auto=format&fit=crop",
     isWeighted: true,
     description: "Dalından taze salkım domates."
   },
@@ -132,7 +132,7 @@ const catalogProducts: any[] = [
     name: "Salatalık (Çengel) kg",
     category: "Meyve & Sebze",
     subCategory: "Sebze",
-    imageUrl: "https://placehold.co/400x400/66bb6a/ffffff?text=Salatalik",
+    imageUrl: "https://images.unsplash.com/photo-1449300079323-02e209d9d3a6?w=500&auto=format&fit=crop",
     isWeighted: true,
     description: "Taptaze, çıtır Çengelköy salatalığı."
   },
@@ -152,7 +152,7 @@ const catalogProducts: any[] = [
     name: "Kuru Soğan kg",
     category: "Meyve & Sebze",
     subCategory: "Sebze",
-    imageUrl: "https://placehold.co/400x400/ffe0b2/e65100?text=Sogan",
+    imageUrl: "https://images.unsplash.com/photo-1508747703725-719ae257c84a?w=500&auto=format&fit=crop",
     isWeighted: true,
     description: "Yemeklerin vazgeçilmezi taze kuru soğan."
   },
@@ -164,7 +164,7 @@ const catalogProducts: any[] = [
     name: "Klasik Patates Cipsi (Mega Boy)",
     category: "Atıştırmalık",
     subCategory: "Cips",
-    imageUrl: "https://placehold.co/400x400/fff176/000000?text=Lays",
+    imageUrl: "https://images.migrosone.com/sanalmarket/product/05081515/lays-klasik-patates-cipsi-super-boy-107-g-5b4d1c-1650x1650.jpg",
     isWeighted: false,
     description: "Klasik tuzlu çıtır patates cipsi."
   },
@@ -174,7 +174,7 @@ const catalogProducts: any[] = [
     name: "Peynir Soğan (Mega)",
     category: "Atıştırmalık",
     subCategory: "Cips",
-    imageUrl: "https://placehold.co/400x400/2196f3/ffffff?text=Ruffles",
+    imageUrl: "https://images.migrosone.com/sanalmarket/product/05081702/ruffles-peynir-sogan-arovali-patates-cipsi-super-boy-107-g-ef6b52-1650x1650.jpg",
     isWeighted: false,
     description: "Tırtıklı peynir ve soğan aromalı patates cipsi."
   },
@@ -184,7 +184,7 @@ const catalogProducts: any[] = [
     name: "Nacho Peynirli (Süper)",
     category: "Atıştırmalık",
     subCategory: "Cips",
-    imageUrl: "https://placehold.co/400x400/ff5722/ffffff?text=Doritos",
+    imageUrl: "https://images.migrosone.com/sanalmarket/product/05081600/doritos-nacho-peynirli-misi-cipsi-super-boy-113-g-de1f4c-1650x1650.jpg",
     isWeighted: false,
     description: "Bol peynir aromalı çıtır üçgen mısır cipsi."
   },
@@ -194,7 +194,7 @@ const catalogProducts: any[] = [
     name: "Çikolatalı Gofret 5'li Paket",
     category: "Atıştırmalık",
     subCategory: "Çikolata & Gofret",
-    imageUrl: "https://placehold.co/400x400/d32f2f/ffffff?text=Ulker+Gofret",
+    imageUrl: "https://images.migrosone.com/sanalmarket/product/07044030/ulker-cikolatali-gofret-36-g-7cc2ce-1650x1650.jpg",
     isWeighted: false,
     description: "Ülker Çikolatalı Gofret sevmeyen var mı?"
   },
@@ -204,7 +204,7 @@ const catalogProducts: any[] = [
     name: "Karam Gurme Bitter",
     category: "Atıştırmalık",
     subCategory: "Çikolata & Gofret",
-    imageUrl: "https://placehold.co/400x400/212121/ffffff?text=Karam",
+    imageUrl: "https://images.migrosone.com/sanalmarket/product/07040188/eti-karam-gurme-bitter-cikolatali-gofret-50-g-a7c81d-1650x1650.jpg",
     isWeighted: false,
     description: "Bitter çikolata ve çikolatalı kremanın muazzam gurme uyumu."
   },
@@ -214,7 +214,7 @@ const catalogProducts: any[] = [
     name: "Kremalı Bisküvi",
     category: "Atıştırmalık",
     subCategory: "Bisküvi & Kek",
-    imageUrl: "https://placehold.co/400x400/01579b/ffffff?text=Oreo",
+    imageUrl: "https://images.migrosone.com/sanalmarket/product/07050011/oreo-kremali-biskuvi-110-g-1e66c7-1650x1650.jpg",
     isWeighted: false,
     description: "Süte bandırarak yenebilecek eşsiz kakaolu bisküvi."
   },
@@ -246,7 +246,7 @@ const catalogProducts: any[] = [
     name: "Simit (Susamlı)",
     category: "Fırın",
     subCategory: "Unlu Mamül",
-    imageUrl: "https://placehold.co/400x400/8d6e63/ffffff?text=Simit",
+    imageUrl: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=500&auto=format&fit=crop",
     isWeighted: false,
     description: "Gevrek susamlı sokak simidi."
   },
@@ -258,7 +258,7 @@ const catalogProducts: any[] = [
     name: "Ayçiçek Yağı 1L",
     category: "Temel Gıda",
     subCategory: "Sıvı Yağ",
-    imageUrl: "https://lazbakkal.ca/cdn/shop/products/Yudum-Sunflower-Oil-1-L-East-Market.jpg?v=1667155217",
+    imageUrl: "https://images.migrosone.com/sanalmarket/product/04050100/yudum-aycicek-yagi-1-l-8c7602-1650x1650.jpg",
     isWeighted: false,
     description: "Kızartmalar ve yemekler için hafif ayçiçek yağı."
   },
@@ -268,7 +268,7 @@ const catalogProducts: any[] = [
     name: "Baldo Pirinç 1kg",
     category: "Temel Gıda",
     subCategory: "Bakliyat",
-    imageUrl: "https://placehold.co/400x400/e0e0e0/000000?text=Yayla+Pirinc",
+    imageUrl: "https://images.migrosone.com/sanalmarket/product/01030018/yayla-baldo-pirinc-1-kg-4235e1-1650x1650.jpg",
     isWeighted: false,
     description: "Tane tane pilavlar için Yayla Baldo Pirinç."
   },
@@ -278,7 +278,7 @@ const catalogProducts: any[] = [
     name: "Burgu Makarna 500g",
     category: "Temel Gıda",
     subCategory: "Makarna",
-    imageUrl: "https://placehold.co/400x400/1976d2/ffffff?text=Barilla",
+    imageUrl: "https://images.migrosone.com/sanalmarket/product/04010103/barilla-burgu-makarna-fusilli-500-g-72b63f-1650x1650.jpg",
     isWeighted: false,
     description: "Durum buğdayından İtalyan kalitesinde Barilla Makarna."
   },
@@ -288,7 +288,7 @@ const catalogProducts: any[] = [
     name: "Domates Salçası 830g",
     category: "Temel Gıda",
     subCategory: "Salça & Sos",
-    imageUrl: "https://placehold.co/400x400/b71c1c/ffffff?text=Tat+Salca",
+    imageUrl: "https://images.migrosone.com/sanalmarket/product/04250005/tat-domates-salcasi-830-g-2da7ff-1650x1650.jpg",
     isWeighted: false,
     description: "Yemeklerinize renk ve lezzet katan taze domates salçası."
   },
@@ -298,7 +298,7 @@ const catalogProducts: any[] = [
     name: "Rize Turist Çayı 1kg",
     category: "Temel Gıda",
     subCategory: "Çay & Kahve",
-    imageUrl: "https://placehold.co/400x400/ffeb3b/b71c1c?text=Caykur",
+    imageUrl: "https://images.migrosone.com/sanalmarket/product/03010118/caykur-rize-turist-cayi-1000-g-8a5e55-1650x1650.jpg",
     isWeighted: false,
     description: "Demli ve kokulu gerçek Rize turist çayı."
   },
@@ -308,7 +308,7 @@ const catalogProducts: any[] = [
     name: "Un 1kg",
     category: "Temel Gıda",
     subCategory: "Un & İrmik",
-    imageUrl: "https://placehold.co/400x400/fff9c4/000000?text=Soke+Un",
+    imageUrl: "https://images.migrosone.com/sanalmarket/product/04110000/soke-bugday-unu-1-kg-88e404-1650x1650.jpg",
     isWeighted: false,
     description: "Börek, poğaça ve kekler için kaliteli Söke Un."
   },
@@ -320,7 +320,7 @@ const catalogProducts: any[] = [
     name: "Pastörize Süt 1L",
     category: "Süt & Kahvaltılık",
     subCategory: "Süt",
-    imageUrl: "https://placehold.co/400x400/e3f2fd/0d47a1?text=Koop+Sut",
+    imageUrl: "https://images.migrosone.com/sanalmarket/product/11010010/sutas-tam-yagli-sut-1-l-90abed-1650x1650.jpg",
     isWeighted: false,
     description: "Doğal lezzeti korunmuş günlük pastörize süt."
   },
@@ -330,7 +330,7 @@ const catalogProducts: any[] = [
     name: "Hellim Peyniri 250g",
     category: "Süt & Kahvaltılık",
     subCategory: "Peynir",
-    imageUrl: "https://placehold.co/400x400/fff9c4/fbc02d?text=Hellim",
+    imageUrl: "https://images.migrosone.com/sanalmarket/product/10040713/koop-hellim-peyniri-250-g-783dfa-1650x1650.jpg",
     isWeighted: true,
     description: "Kıbrıs'ın tescilli enfes kızartmalık hellim peyniri."
   },
@@ -340,7 +340,7 @@ const catalogProducts: any[] = [
     name: "Taze Kaşar 400g",
     category: "Süt & Kahvaltılık",
     subCategory: "Peynir",
-    imageUrl: "https://placehold.co/400x400/fff176/f57f17?text=Icim+Kasar",
+    imageUrl: "https://images.migrosone.com/sanalmarket/product/10050212/icim-kasar-peyniri-400-g-2092f6-1650x1650.jpg",
     isWeighted: false,
     description: "Tostların ve yemeklerin vazgeçilmezi İçim Kaşar."
   }

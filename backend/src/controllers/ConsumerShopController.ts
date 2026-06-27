@@ -4,7 +4,7 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 export class ConsumerShopController {
-  
+
   // Tüketiciler için sadece AKTİF dükkanları getirir (mesafe filtresi ve onaylı satıcı kontrolü ile)
   async getActiveShops(req: Request, res: Response) {
     try {
@@ -12,7 +12,7 @@ export class ConsumerShopController {
 
       // Sadece onaylanmış (ACTIVE) satıcıların aktif (isActive: true) dükkanlarını getir
       const shops = await prisma.shop.findMany({
-        where: { 
+        where: {
           merchant: {
             status: "ACTIVE" // represents isApproved: true
           }
@@ -39,9 +39,9 @@ export class ConsumerShopController {
             const R = 6371; // Earth's radius in km
             const dLat = (shop.latitude - userLat) * Math.PI / 180;
             const dLng = (shop.longitude - userLng) * Math.PI / 180;
-            const a = 
+            const a =
               Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-              Math.cos(userLat * Math.PI / 180) * Math.cos(shop.latitude * Math.PI / 180) * 
+              Math.cos(userLat * Math.PI / 180) * Math.cos(shop.latitude * Math.PI / 180) *
               Math.sin(dLng / 2) * Math.sin(dLng / 2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
             const distance = R * c;
@@ -68,8 +68,8 @@ export class ConsumerShopController {
       const shopId = req.params.shopId as string;
 
       const shop = await prisma.shop.findFirst({
-        where: { 
-          id: shopId, 
+        where: {
+          id: shopId,
           merchant: {
             status: "ACTIVE"
           }
@@ -119,6 +119,10 @@ export class ConsumerShopController {
           ...p,
           category: catObj
         };
+      }).filter(p => {
+        const trackStock = p.trackStock ?? false;
+        const stockQuantity = p.stockQuantity ?? 0;
+        return (trackStock === false) || (stockQuantity > 0);
       });
 
       return res.status(200).json({ error: false, data: enrichedProducts });

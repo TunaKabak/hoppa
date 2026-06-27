@@ -187,6 +187,9 @@ model Product {
   unit            String      @default("ADET") // ADET, KG, LITRE, PORSIYON, GR
   minQuantity     Float       @default(1.0)    // Manav için örn: 0.5 (kg)
   stepSize        Float       @default(1.0)    // Manav için örn: 0.25 (kg)
+  
+  // Stoksuz/Sınırsız Satış Desteği
+  trackStock      Boolean     @default(false)  // Varsayılan false: Stok adedi takip edilmez, hep "Stokta" kabul edilir.
 
   // Polymorphic / Dynamic Fields
   barcode         String?

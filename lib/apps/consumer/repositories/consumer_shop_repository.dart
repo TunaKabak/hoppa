@@ -76,23 +76,31 @@ class ConsumerShopRepository {
         print("DEBUG CATEGORY: null");
       }
 
+      final trackStock = json['trackStock'] as bool? ?? false;
+      final stockQuantity = json['stockQuantity'] as int? ?? 0;
+
       final productMap = {
-        'barcode': id,
+        'barcode': json['barcode'] ?? id,
         'name': name,
-        'brand': 'Hoppa',
+        'brand': json['brand'] ?? 'Hoppa',
         'category': categoryName,
         'subCategory': subCategoryName,
         'imageUrl': validImageUrl,
-        'isWeighted': false,
+        'isWeighted': json['unit'] == 'KG' || json['unit'] == 'LITRE' || json['unit'] == 'GR' || (json['isWeighted'] == true),
         'description': description,
+        'unit': json['unit'] ?? 'ADET',
+        'minQuantity': json['minQuantity'] != null ? double.tryParse(json['minQuantity'].toString()) : null,
+        'stepSize': json['stepSize'] != null ? double.tryParse(json['stepSize'].toString()) : null,
       };
 
       final map = {
         'businessId': shopId,
-        'productBarcode': id,
+        'productBarcode': json['barcode'] ?? id,
         'price': price,
         'stock': stock,
         'isAvailable': isActive,
+        'trackStock': trackStock,
+        'stockQuantity': stockQuantity,
         'product_details': productMap,
       };
 
@@ -140,23 +148,31 @@ class ConsumerShopRepository {
         }
       }
 
+      final trackStock = productJson['trackStock'] as bool? ?? false;
+      final stockQuantity = productJson['stockQuantity'] as int? ?? 0;
+
       final productMap = {
-        'barcode': id,
+        'barcode': productJson['barcode'] ?? id,
         'name': name,
         'brand': productJson['brand'] ?? 'Hoppa',
         'category': categoryName,
         'subCategory': subCategoryName,
         'imageUrl': validImageUrl,
-        'isWeighted': false,
+        'isWeighted': productJson['unit'] == 'KG' || productJson['unit'] == 'LITRE' || productJson['unit'] == 'GR' || (productJson['isWeighted'] == true),
         'description': description,
+        'unit': productJson['unit'] ?? 'ADET',
+        'minQuantity': productJson['minQuantity'] != null ? double.tryParse(productJson['minQuantity'].toString()) : null,
+        'stepSize': productJson['stepSize'] != null ? double.tryParse(productJson['stepSize'].toString()) : null,
       };
 
       final map = {
         'businessId': shopId,
-        'productBarcode': id,
+        'productBarcode': productJson['barcode'] ?? id,
         'price': price,
         'stock': stock,
         'isAvailable': isActive,
+        'trackStock': trackStock,
+        'stockQuantity': stockQuantity,
         'product_details': productMap,
       };
 

@@ -36,7 +36,7 @@ export class ProductController {
       const { 
         name, description, price, discountPrice, stock, imageUrl, categoryId, categoryName,
         barcode, brand, stockQuantity, weightOrVolume, preparationTime, hasDeposit, depositPrice,
-        unit, minQuantity, stepSize
+        unit, minQuantity, stepSize, trackStock
       } = req.body;
 
       // Smart Validation: Eğer dükkan MARKET kategorisindeyse ve barcode boşsa 400 hatası dön
@@ -67,8 +67,9 @@ export class ProductController {
         resolvedCategoryId = category.id;
       }
 
-      const parsedStock = stock !== null && stock !== undefined && stock !== "" ? parseInt(stock.toString()) : null;
-      const parsedStockQty = stockQuantity !== null && stockQuantity !== undefined && stockQuantity !== "" ? parseInt(stockQuantity.toString()) : (parsedStock || 0);
+      const parsedTrackStock = trackStock === true || trackStock === "true";
+      const parsedStock = parsedTrackStock ? (stock !== null && stock !== undefined && stock !== "" ? parseInt(stock.toString()) : null) : null;
+      const parsedStockQty = parsedTrackStock ? (stockQuantity !== null && stockQuantity !== undefined && stockQuantity !== "" ? parseInt(stockQuantity.toString()) : (parsedStock || 0)) : 0;
       const parsedPrepTime = preparationTime !== null && preparationTime !== undefined && preparationTime !== "" ? parseInt(preparationTime.toString()) : null;
       const parsedDepositPrice = depositPrice !== null && depositPrice !== undefined && depositPrice !== "" ? parseFloat(depositPrice.toString()) : null;
       const parsedHasDeposit = hasDeposit === true || hasDeposit === "true";
@@ -102,7 +103,8 @@ export class ProductController {
           depositPrice: parsedDepositPrice,
           unit: unit || "ADET",
           minQuantity: parsedMinQuantity,
-          stepSize: parsedStepSize
+          stepSize: parsedStepSize,
+          trackStock: parsedTrackStock
         }
       });
 
@@ -129,7 +131,7 @@ export class ProductController {
       const { 
         name, description, price, discountPrice, stock, imageUrl, isActive, categoryId, categoryName,
         barcode, brand, stockQuantity, weightOrVolume, preparationTime, hasDeposit, depositPrice,
-        unit, minQuantity, stepSize
+        unit, minQuantity, stepSize, trackStock
       } = req.body;
 
       // Smart Validation: Eğer dükkan MARKET kategorisindeyse ve barcode boşsa 400 hatası dön
@@ -164,8 +166,14 @@ export class ProductController {
         resolvedCategoryId = category.id;
       }
 
-      const parsedStock = stock !== null && stock !== undefined && stock !== "" ? parseInt(stock.toString()) : null;
-      const parsedStockQty = stockQuantity !== null && stockQuantity !== undefined && stockQuantity !== "" ? parseInt(stockQuantity.toString()) : (parsedStock || 0);
+      const parsedTrackStock = trackStock !== undefined ? (trackStock === true || trackStock === "true") : undefined;
+      const parsedStock = parsedTrackStock !== undefined
+        ? (parsedTrackStock ? (stock !== null && stock !== undefined && stock !== "" ? parseInt(stock.toString()) : null) : null)
+        : (stock !== undefined ? (stock !== null && stock !== "" ? parseInt(stock.toString()) : null) : undefined);
+
+      const parsedStockQty = parsedTrackStock !== undefined
+        ? (parsedTrackStock ? (stockQuantity !== null && stockQuantity !== undefined && stockQuantity !== "" ? parseInt(stockQuantity.toString()) : (parsedStock || 0)) : 0)
+        : (stockQuantity !== undefined ? (stockQuantity !== null && stockQuantity !== "" ? parseInt(stockQuantity.toString()) : undefined) : undefined);
       const parsedPrepTime = preparationTime !== null && preparationTime !== undefined && preparationTime !== "" ? parseInt(preparationTime.toString()) : null;
       const parsedDepositPrice = depositPrice !== null && depositPrice !== undefined && depositPrice !== "" ? parseFloat(depositPrice.toString()) : null;
       const parsedHasDeposit = hasDeposit === true || hasDeposit === "true";
@@ -192,14 +200,15 @@ export class ProductController {
           categoryId: resolvedCategoryId !== undefined ? resolvedCategoryId : undefined,
           barcode: barcode !== undefined ? (barcode || null) : undefined,
           brand: brand !== undefined ? (brand || null) : undefined,
-          stockQuantity: stockQuantity !== undefined ? parsedStockQty : undefined,
+          stockQuantity: parsedStockQty,
           weightOrVolume: weightOrVolume !== undefined ? (weightOrVolume || null) : undefined,
           preparationTime: preparationTime !== undefined ? parsedPrepTime : undefined,
           hasDeposit: hasDeposit !== undefined ? parsedHasDeposit : undefined,
           depositPrice: depositPrice !== undefined ? parsedDepositPrice : undefined,
           unit: unit !== undefined ? unit : undefined,
           minQuantity: parsedMinQuantity,
-          stepSize: parsedStepSize
+          stepSize: parsedStepSize,
+          trackStock: parsedTrackStock
         }
       });
 
@@ -305,7 +314,7 @@ export class ProductController {
       const merchantId = req.user?.id;
       if (!merchantId) return res.status(401).json({ error: true, message: "Yetkisiz erişim" });
 
-      const { barcode, price, stock } = req.body;
+      const { barcode, price, stock, trackStock } = req.body;
       if (!barcode || price === undefined) {
         return res.status(400).json({ error: true, message: "Barkod ve fiyat alanları zorunludur." });
       }
@@ -326,7 +335,9 @@ export class ProductController {
         });
       }
 
-      const parsedStock = stock !== null && stock !== undefined && stock !== "" ? parseInt(stock.toString()) : null;
+      const parsedTrackStock = trackStock === true || trackStock === "true" ? true : false; // Defaults to false
+      const parsedStock = parsedTrackStock ? (stock !== null && stock !== undefined && stock !== "" ? parseInt(stock.toString()) : null) : null;
+      const parsedStockQty = parsedTrackStock ? (parsedStock || 0) : 0;
 
       // Bu dükkanda aynı isimli ürün zaten var mı?
       const existingProduct = await prisma.product.findFirst({
@@ -343,6 +354,8 @@ export class ProductController {
           data: {
             price,
             stock: parsedStock,
+            stockQuantity: parsedStockQty,
+            trackStock: parsedTrackStock,
             isActive: true,
             imageUrl: globalProduct.imageUrl,
             categoryId: category.id,
@@ -360,6 +373,8 @@ export class ProductController {
             description: `${globalProduct.brand} • ${globalProduct.subCategory || ""}`,
             price,
             stock: parsedStock,
+            stockQuantity: parsedStockQty,
+            trackStock: parsedTrackStock,
             imageUrl: globalProduct.imageUrl,
             isActive: true,
             unit: globalProduct.unit,
@@ -392,7 +407,7 @@ export class ProductController {
       const results = [];
 
       for (const item of items) {
-        const { barcode, price, stock } = item;
+        const { barcode, price, stock, trackStock } = item;
         if (!barcode || price === undefined) continue;
 
         const globalProduct = await prisma.globalProduct.findUnique({ where: { barcode } });
@@ -408,7 +423,9 @@ export class ProductController {
           });
         }
 
-        const parsedStock = stock !== null && stock !== undefined && stock !== "" ? parseInt(stock.toString()) : null;
+        const parsedTrackStock = trackStock === true || trackStock === "true" ? true : false; // Defaults to false
+        const parsedStock = parsedTrackStock ? (stock !== null && stock !== undefined && stock !== "" ? parseInt(stock.toString()) : null) : null;
+        const parsedStockQty = parsedTrackStock ? (parsedStock || 0) : 0;
 
         // Aynı isimli ürün zaten var mı?
         const existingProduct = await prisma.product.findFirst({
@@ -425,6 +442,8 @@ export class ProductController {
             data: {
               price,
               stock: parsedStock,
+              stockQuantity: parsedStockQty,
+              trackStock: parsedTrackStock,
               isActive: true,
               imageUrl: globalProduct.imageUrl,
               categoryId: category.id,
@@ -442,6 +461,8 @@ export class ProductController {
               description: `${globalProduct.brand} • ${globalProduct.subCategory || ""}`,
               price,
               stock: parsedStock,
+              stockQuantity: parsedStockQty,
+              trackStock: parsedTrackStock,
               imageUrl: globalProduct.imageUrl,
               isActive: true,
               unit: globalProduct.unit,

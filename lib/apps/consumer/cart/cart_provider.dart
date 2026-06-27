@@ -106,7 +106,7 @@ class CartNotifier extends StateNotifier<CartState> {
       newQty = QuantityFormatter.roundDouble(currentQty + step);
     }
 
-    if (newQty > product.stock) {
+    if (product.trackStock && newQty > product.stock) {
       throw Exception("Stok yetersiz!");
     }
 

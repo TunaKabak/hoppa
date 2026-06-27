@@ -7,8 +7,9 @@ class BusinessProduct {
   final double price;
   final double stock;
   final bool isAvailable; // YENİ: Ürün satışa açık mı?
-  final Product
-  product; // Global ürün detaylarını içinde taşır (Performans için)
+  final bool trackStock; // YENİ: Stok takibi var mı?
+  final int stockQuantity; // YENİ: Stok miktarı
+  final Product product; // Global ürün detaylarını içinde taşır (Performans için)
 
   BusinessProduct({
     required this.id,
@@ -17,18 +18,23 @@ class BusinessProduct {
     required this.price,
     required this.stock,
     this.isAvailable = true,
+    this.trackStock = false,
+    this.stockQuantity = 0,
     required this.product,
   });
 
   factory BusinessProduct.fromMap(Map<String, dynamic> data, String id) {
+    final trackStock = data['trackStock'] as bool? ?? false;
+    final stockQuantity = data['stockQuantity'] as int? ?? 0;
     return BusinessProduct(
       id: id,
       businessId: data['businessId'] ?? '',
       productBarcode: data['productBarcode'] ?? '',
       price: (data['price'] ?? 0.0).toDouble(),
-      stock: (data['stock'] ?? 0.0).toDouble(),
+      stock: trackStock ? stockQuantity.toDouble() : 9999.0,
       isAvailable: data['isAvailable'] ?? true,
-      // Ürün detayları map içinde 'details' objesi olarak saklanırsa:
+      trackStock: trackStock,
+      stockQuantity: stockQuantity,
       product: Product.fromMap(data['product_details'] ?? {}),
     );
   }
@@ -41,6 +47,8 @@ class BusinessProduct {
       'price': price,
       'stock': stock,
       'isAvailable': isAvailable,
+      'trackStock': trackStock,
+      'stockQuantity': stockQuantity,
       'product_details': product.toMap(),
     };
   }

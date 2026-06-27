@@ -101,11 +101,11 @@ class ProductController extends AsyncNotifier<List<MerchantProduct>> {
     }
   }
 
-  Future<void> addProductFromCatalog(String barcode, double price, int? stock) async {
+  Future<void> addProductFromCatalog(String barcode, double price, int? stock, bool trackStock) async {
     state = const AsyncLoading();
     try {
       final repo = ref.read(merchantProductRepositoryProvider);
-      await repo.addFromCatalog(barcode, price, stock);
+      await repo.addFromCatalog(barcode, price, stock, trackStock);
       state = AsyncData(await _fetchProducts());
     } catch (e, st) {
       state = AsyncError(e, st);
@@ -179,6 +179,7 @@ class ProductController extends AsyncNotifier<List<MerchantProduct>> {
               unit: p.unit,
               minQuantity: p.minQuantity,
               stepSize: p.stepSize,
+              trackStock: p.trackStock,
             );
           }
           return p;

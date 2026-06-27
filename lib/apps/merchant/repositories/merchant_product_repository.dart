@@ -21,6 +21,7 @@ class MerchantProduct {
   final String unit;
   final double minQuantity;
   final double stepSize;
+  final bool trackStock; // YENİ
 
   MerchantProduct({
     required this.id,
@@ -43,6 +44,7 @@ class MerchantProduct {
     this.unit = "ADET",
     this.minQuantity = 1.0,
     this.stepSize = 1.0,
+    this.trackStock = false,
   });
 
   factory MerchantProduct.fromMap(Map<String, dynamic> map) {
@@ -67,6 +69,7 @@ class MerchantProduct {
       unit: map['unit'] ?? "ADET",
       minQuantity: map['minQuantity'] != null ? double.tryParse(map['minQuantity'].toString()) ?? 1.0 : 1.0,
       stepSize: map['stepSize'] != null ? double.tryParse(map['stepSize'].toString()) ?? 1.0 : 1.0,
+      trackStock: map['trackStock'] as bool? ?? false,
     );
   }
 
@@ -90,6 +93,7 @@ class MerchantProduct {
       'unit': unit,
       'minQuantity': minQuantity,
       'stepSize': stepSize,
+      'trackStock': trackStock,
     };
   }
 }
@@ -209,13 +213,14 @@ class MerchantProductRepository {
   }
 
   // Katalogdan dükkan envanterine tekil ürün kopyalar
-  Future<void> addFromCatalog(String barcode, double price, int? stock) async {
+  Future<void> addFromCatalog(String barcode, double price, int? stock, bool trackStock) async {
     await _apiClient.post(
       '/api/merchant/products/catalog/add',
       body: {
         'barcode': barcode,
         'price': price,
         'stock': stock,
+        'trackStock': trackStock,
       },
     );
   }
