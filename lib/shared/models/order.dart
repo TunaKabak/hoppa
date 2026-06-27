@@ -17,6 +17,7 @@ class Order {
   final String deliveryMethod; // 'delivery' or 'pickup'
   final String orderNote; // User's order note
   final bool dontRingBell; // Doorbell preference
+  final bool leaveAtDoor; // Kapıya bırak preference
   final double addressLatitude; // Delivery address latitude
   final double addressLongitude; // Delivery address longitude
   final String paymentMethod; // Payment Method
@@ -41,6 +42,7 @@ class Order {
     this.deliveryMethod = 'delivery', // Default to delivery
     this.orderNote = '',
     this.dontRingBell = false,
+    this.leaveAtDoor = false,
     this.addressLatitude = 0.0,
     this.addressLongitude = 0.0,
     this.paymentMethod = 'CASH_ON_DELIVERY',
@@ -57,7 +59,8 @@ class Order {
     String userAddress = data['deliveryAddress'] ?? data['user_address'] ?? '';
     String deliveryMethod = data['delivery_method'] ?? '';
     String orderNote = data['customerNote'] ?? data['order_note'] ?? '';
-    bool dontRingBell = data['dont_ring_bell'] ?? false;
+    bool dontRingBell = data['dontRingBell'] ?? data['dont_ring_bell'] ?? false;
+    bool leaveAtDoor = data['leaveAtDoor'] ?? data['leave_at_door'] ?? false;
 
     final consumerPhone = data['consumer'] != null ? data['consumer']['phone'] as String? : null;
     final courierPhone = data['courier'] != null ? data['courier']['phoneNumber'] as String? : null;
@@ -138,6 +141,7 @@ class Order {
       deliveryMethod: deliveryMethod,
       orderNote: orderNote,
       dontRingBell: dontRingBell,
+      leaveAtDoor: leaveAtDoor,
       addressLatitude: data['address_latitude'] != null ? (data['address_latitude'] as num).toDouble() : 0.0,
       addressLongitude: data['address_longitude'] != null ? (data['address_longitude'] as num).toDouble() : 0.0,
       paymentMethod: data['paymentMethod'] ?? data['payment_method'] ?? 'CASH_ON_DELIVERY',
@@ -168,6 +172,7 @@ class Order {
       'delivery_method': deliveryMethod,
       'order_note': orderNote,
       'dont_ring_bell': dontRingBell,
+      'leave_at_door': leaveAtDoor,
       'address_latitude': addressLatitude,
       'address_longitude': addressLongitude,
       'courier_id': courierId,

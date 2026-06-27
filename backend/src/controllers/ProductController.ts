@@ -3,6 +3,30 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+function formatProduct(product: any) {
+  if (!product) return null;
+  return {
+    ...product,
+    unit: product.unit ? product.unit.code : "ADET",
+    brand: product.brand ? product.brand.name : null,
+    imageUrl: product.imageUrl || product.globalProduct?.imageUrl || "/images/default-product.png",
+    category: product.subCategory ? {
+      id: product.subCategory.id,
+      name: product.subCategory.name,
+      parent: product.category ? {
+        id: product.category.id,
+        name: product.category.name,
+        shopType: product.category.shopType
+      } : null
+    } : (product.category ? {
+      id: product.category.id,
+      name: product.category.name,
+      parent: null
+    } : null),
+    categoryId: product.subCategory ? product.subCategory.id : product.categoryId
+  };
+}
+
 export class ProductController {
   
   // Sadece satıcının kendi ürünlerini getirir
@@ -16,10 +40,18 @@ export class ProductController {
 
       const products = await prisma.product.findMany({
         where: { shopId: shop.id },
+        include: {
+          category: true,
+          subCategory: true,
+          unit: true,
+          brand: true,
+          globalProduct: true
+        },
         orderBy: { createdAt: 'desc' }
       });
 
-      return res.status(200).json({ error: false, data: products });
+      const formatted = products.map(formatProduct);
+      return res.status(200).json({ error: false, data: formatted });
     } catch (error: any) {
       return res.status(500).json({ error: true, message: error.message });
     }
@@ -44,27 +76,80 @@ export class ProductController {
         return res.status(400).json({ error: true, message: "Market ürünleri için barkod zorunludur." });
       }
 
+      // Unit Id bul veya oluştur
+      let unitObj = await prisma.unit.findUnique({ where: { code: unit || "ADET" } });
+      if (!unitObj) {
+        unitObj = await prisma.unit.create({
+          data: { code: unit || "ADET", nameTr: unit || "Adet", nameEn: unit || "Pieces" }
+        });
+      }
+      const unitId = unitObj.id;
+
+      // Brand bul veya oluştur
+      let brandId = null;
+      if (brand && brand.trim() !== "") {
+        let brandObj = await prisma.brand.findUnique({ where: { name: brand.trim() } });
+        if (!brandObj) {
+          brandObj = await prisma.brand.create({ data: { name: brand.trim() } });
+        }
+        brandId = brandObj.id;
+      }
+
+      // Kategori ve Alt Kategori Çözümleme
       let resolvedCategoryId = categoryId;
+      let resolvedSubCategoryId = null;
+
       if (categoryName && categoryName.trim() !== "") {
-        let category = await prisma.category.findFirst({
-          where: { name: { equals: categoryName.trim(), mode: "insensitive" } }
+        let category = await prisma.category.findUnique({
+          where: { name: categoryName.trim() }
         });
         if (!category) {
           category = await prisma.category.create({
-            data: { name: categoryName.trim() }
+            data: { name: categoryName.trim(), shopType: shop.type }
           });
         }
         resolvedCategoryId = category.id;
       } else if (categoryId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(categoryId)) {
-        let category = await prisma.category.findFirst({
-          where: { name: { equals: categoryId.trim(), mode: "insensitive" } }
+        let category = await prisma.category.findUnique({
+          where: { name: categoryId.trim() }
         });
         if (!category) {
           category = await prisma.category.create({
-            data: { name: categoryId.trim() }
+            data: { name: categoryId.trim(), shopType: shop.type }
           });
         }
         resolvedCategoryId = category.id;
+      } else if (categoryId) {
+        const sub = await prisma.subCategory.findUnique({ where: { id: categoryId } });
+        if (sub) {
+          resolvedSubCategoryId = sub.id;
+          resolvedCategoryId = sub.categoryId;
+        } else {
+          const cat = await prisma.category.findUnique({ where: { id: categoryId } });
+          if (cat) {
+            resolvedCategoryId = cat.id;
+          }
+        }
+      }
+
+      if (!resolvedCategoryId) {
+        let defaultCat = await prisma.category.findUnique({ where: { name: "Diğer" } });
+        if (!defaultCat) {
+          defaultCat = await prisma.category.create({ data: { name: "Diğer", shopType: shop.type } });
+        }
+        resolvedCategoryId = defaultCat.id;
+      }
+
+      // Eşleşen globalProduct var mı?
+      let resolvedGlobalProductId = null;
+      if (barcode && barcode.trim() !== "") {
+        const gp = await prisma.globalProduct.findUnique({ where: { barcode: barcode.trim() } });
+        if (gp) {
+          resolvedGlobalProductId = gp.id;
+          if (!resolvedSubCategoryId) resolvedSubCategoryId = gp.subCategoryId;
+          if (!resolvedCategoryId) resolvedCategoryId = gp.categoryId;
+          if (!brandId) brandId = gp.brandId;
+        }
       }
 
       const parsedTrackStock = trackStock === true || trackStock === "true";
@@ -92,23 +177,32 @@ export class ProductController {
           discountPrice,
           stock: parsedStock,
           imageUrl,
-          categoryId: resolvedCategoryId || null,
+          categoryId: resolvedCategoryId,
+          subCategoryId: resolvedSubCategoryId,
+          unitId,
+          brandId,
+          globalProductId: resolvedGlobalProductId,
           isActive: true,
           barcode: barcode || null,
-          brand: brand || null,
           stockQuantity: parsedStockQty,
           weightOrVolume: weightOrVolume || null,
           preparationTime: parsedPrepTime,
           hasDeposit: parsedHasDeposit,
           depositPrice: parsedDepositPrice,
-          unit: unit || "ADET",
           minQuantity: parsedMinQuantity,
           stepSize: parsedStepSize,
           trackStock: parsedTrackStock
+        },
+        include: {
+          category: true,
+          subCategory: true,
+          unit: true,
+          brand: true,
+          globalProduct: true
         }
       });
 
-      return res.status(201).json({ error: false, data: product });
+      return res.status(201).json({ error: false, data: formatProduct(product) });
     } catch (error: any) {
       return res.status(500).json({ error: true, message: error.message });
     }
@@ -139,31 +233,100 @@ export class ProductController {
         return res.status(400).json({ error: true, message: "Market ürünleri için barkod zorunludur." });
       }
 
-      let resolvedCategoryId = categoryId;
+      // Unit Id bul veya oluştur
+      let unitId = existingProduct.unitId;
+      if (unit !== undefined) {
+        let unitObj = await prisma.unit.findUnique({ where: { code: unit || "ADET" } });
+        if (!unitObj) {
+          unitObj = await prisma.unit.create({
+            data: { code: unit || "ADET", nameTr: unit || "Adet", nameEn: unit || "Pieces" }
+          });
+        }
+        unitId = unitObj.id;
+      }
+
+      // Brand bul veya oluştur
+      let brandId = existingProduct.brandId;
+      if (brand !== undefined) {
+        if (brand && brand.trim() !== "") {
+          let brandObj = await prisma.brand.findUnique({ where: { name: brand.trim() } });
+          if (!brandObj) {
+            brandObj = await prisma.brand.create({ data: { name: brand.trim() } });
+          }
+          brandId = brandObj.id;
+        } else {
+          brandId = null;
+        }
+      }
+
+      // Kategori ve Alt Kategori Çözümleme
+      let resolvedCategoryId = existingProduct.categoryId;
+      let resolvedSubCategoryId = existingProduct.subCategoryId;
+
       if (categoryName !== undefined) {
         if (categoryName && categoryName.trim() !== "") {
-          let category = await prisma.category.findFirst({
-            where: { name: { equals: categoryName.trim(), mode: "insensitive" } }
+          let category = await prisma.category.findUnique({
+            where: { name: categoryName.trim() }
           });
           if (!category) {
             category = await prisma.category.create({
-              data: { name: categoryName.trim() }
+              data: { name: categoryName.trim(), shopType: shop.type }
             });
           }
           resolvedCategoryId = category.id;
+          resolvedSubCategoryId = null;
         } else {
-          resolvedCategoryId = null;
+          // If explicitly set to empty categoryName, fallback to default
+          let defaultCat = await prisma.category.findUnique({ where: { name: "Diğer" } });
+          if (!defaultCat) {
+            defaultCat = await prisma.category.create({ data: { name: "Diğer", shopType: shop.type } });
+          }
+          resolvedCategoryId = defaultCat.id;
+          resolvedSubCategoryId = null;
         }
-      } else if (categoryId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(categoryId)) {
-        let category = await prisma.category.findFirst({
-          where: { name: { equals: categoryId.trim(), mode: "insensitive" } }
-        });
-        if (!category) {
-          category = await prisma.category.create({
-            data: { name: categoryId.trim() }
+      } else if (categoryId !== undefined) {
+        if (categoryId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(categoryId)) {
+          let category = await prisma.category.findUnique({
+            where: { name: categoryId.trim() }
           });
+          if (!category) {
+            category = await prisma.category.create({
+              data: { name: categoryId.trim(), shopType: shop.type }
+            });
+          }
+          resolvedCategoryId = category.id;
+          resolvedSubCategoryId = null;
+        } else if (categoryId) {
+          const sub = await prisma.subCategory.findUnique({ where: { id: categoryId } });
+          if (sub) {
+            resolvedSubCategoryId = sub.id;
+            resolvedCategoryId = sub.categoryId;
+          } else {
+            const cat = await prisma.category.findUnique({ where: { id: categoryId } });
+            if (cat) {
+              resolvedCategoryId = cat.id;
+              resolvedSubCategoryId = null;
+            }
+          }
         }
-        resolvedCategoryId = category.id;
+      }
+
+      // Eşleşen globalProduct var mı?
+      let resolvedGlobalProductId = existingProduct.globalProductId;
+      if (barcode !== undefined) {
+        if (barcode && barcode.trim() !== "") {
+          const gp = await prisma.globalProduct.findUnique({ where: { barcode: barcode.trim() } });
+          if (gp) {
+            resolvedGlobalProductId = gp.id;
+            if (!resolvedSubCategoryId) resolvedSubCategoryId = gp.subCategoryId;
+            resolvedCategoryId = gp.categoryId;
+            if (!brandId) brandId = gp.brandId;
+          } else {
+            resolvedGlobalProductId = null;
+          }
+        } else {
+          resolvedGlobalProductId = null;
+        }
       }
 
       const parsedTrackStock = trackStock !== undefined ? (trackStock === true || trackStock === "true") : undefined;
@@ -197,22 +360,31 @@ export class ProductController {
           stock: parsedStock, 
           imageUrl, 
           isActive, 
-          categoryId: resolvedCategoryId !== undefined ? resolvedCategoryId : undefined,
+          categoryId: resolvedCategoryId,
+          subCategoryId: resolvedSubCategoryId,
+          unitId,
+          brandId,
+          globalProductId: resolvedGlobalProductId,
           barcode: barcode !== undefined ? (barcode || null) : undefined,
-          brand: brand !== undefined ? (brand || null) : undefined,
           stockQuantity: parsedStockQty,
           weightOrVolume: weightOrVolume !== undefined ? (weightOrVolume || null) : undefined,
           preparationTime: preparationTime !== undefined ? parsedPrepTime : undefined,
           hasDeposit: hasDeposit !== undefined ? parsedHasDeposit : undefined,
           depositPrice: depositPrice !== undefined ? parsedDepositPrice : undefined,
-          unit: unit !== undefined ? unit : undefined,
           minQuantity: parsedMinQuantity,
           stepSize: parsedStepSize,
           trackStock: parsedTrackStock
+        },
+        include: {
+          category: true,
+          subCategory: true,
+          unit: true,
+          brand: true,
+          globalProduct: true
         }
       });
 
-      return res.status(200).json({ error: false, data: updated });
+      return res.status(200).json({ error: false, data: formatProduct(updated) });
     } catch (error: any) {
       return res.status(500).json({ error: true, message: error.message });
     }
@@ -234,10 +406,17 @@ export class ProductController {
       // Soft delete: isActive = false
       const deleted = await prisma.product.update({
         where: { id: productId },
-        data: { isActive: false }
+        data: { isActive: false },
+        include: {
+          category: true,
+          subCategory: true,
+          unit: true,
+          brand: true,
+          globalProduct: true
+        }
       });
 
-      return res.status(200).json({ error: false, message: "Ürün başarıyla pasife alındı (Soft delete)", data: deleted });
+      return res.status(200).json({ error: false, message: "Ürün başarıyla pasife alındı (Soft delete)", data: formatProduct(deleted) });
     } catch (error: any) {
       return res.status(500).json({ error: true, message: error.message });
     }
@@ -246,19 +425,15 @@ export class ProductController {
   // Katalogdaki tüm benzersiz kategori ve markaları çeker
   async getCatalogFilters(req: Request, res: Response) {
     try {
-      const products = await prisma.globalProduct.findMany({
-        select: {
-          category: true,
-          brand: true
-        }
-      });
-
-      const categories = Array.from(new Set(products.map(p => p.category))).sort();
-      const brands = Array.from(new Set(products.map(p => p.brand))).sort();
+      const categories = await prisma.category.findMany({ select: { name: true } });
+      const brands = await prisma.brand.findMany({ select: { name: true } });
 
       return res.status(200).json({
         error: false,
-        data: { categories, brands }
+        data: {
+          categories: categories.map(c => c.name).sort(),
+          brands: brands.map(b => b.name).sort()
+        }
       });
     } catch (error: any) {
       return res.status(500).json({ error: true, message: error.message });
@@ -279,30 +454,44 @@ export class ProductController {
       if (q) {
         whereClause.OR = [
           { name: { contains: q, mode: "insensitive" } },
-          { brand: { contains: q, mode: "insensitive" } },
+          { brand: { name: { contains: q, mode: "insensitive" } } },
           { barcode: { contains: q, mode: "insensitive" } },
-          { category: { contains: q, mode: "insensitive" } }
+          { category: { name: { contains: q, mode: "insensitive" } } }
         ];
       }
 
       if (category) {
-        whereClause.category = { equals: category, mode: "insensitive" };
+        whereClause.category = { name: { equals: category, mode: "insensitive" } };
       }
 
       if (brand) {
-        whereClause.brand = { equals: brand, mode: "insensitive" };
+        whereClause.brand = { name: { equals: brand, mode: "insensitive" } };
       }
 
       const skip = (page - 1) * limit;
 
       const results = await prisma.globalProduct.findMany({
         where: whereClause,
+        include: {
+          category: true,
+          subCategory: true,
+          unit: true,
+          brand: true
+        },
         orderBy: { name: "asc" },
         skip,
         take: limit,
       });
 
-      return res.status(200).json({ error: false, data: results });
+      const formatted = results.map(gp => ({
+        ...gp,
+        unit: gp.unit ? gp.unit.code : "ADET",
+        brand: gp.brand ? gp.brand.name : "Yerli Üretim",
+        category: gp.category ? gp.category.name : "",
+        subCategory: gp.subCategory ? gp.subCategory.name : null
+      }));
+
+      return res.status(200).json({ error: false, data: formatted });
     } catch (error: any) {
       return res.status(500).json({ error: true, message: error.message });
     }
@@ -325,17 +514,7 @@ export class ProductController {
       const globalProduct = await prisma.globalProduct.findUnique({ where: { barcode } });
       if (!globalProduct) return res.status(404).json({ error: true, message: "Katalogda bu barkodlu ürün bulunamadı." });
 
-      // Kategori kontrolü
-      let category = await prisma.category.findFirst({
-        where: { name: { equals: globalProduct.category, mode: "insensitive" } }
-      });
-      if (!category) {
-        category = await prisma.category.create({
-          data: { name: globalProduct.category }
-        });
-      }
-
-      const parsedTrackStock = trackStock === true || trackStock === "true" ? true : false; // Defaults to false
+      const parsedTrackStock = trackStock === true || trackStock === "true" ? true : false;
       const parsedStock = parsedTrackStock ? (stock !== null && stock !== undefined && stock !== "" ? parseInt(stock.toString()) : null) : null;
       const parsedStockQty = parsedTrackStock ? (parsedStock || 0) : 0;
 
@@ -358,33 +537,53 @@ export class ProductController {
             trackStock: parsedTrackStock,
             isActive: true,
             imageUrl: globalProduct.imageUrl,
-            categoryId: category.id,
-            unit: globalProduct.unit,
+            globalProductId: globalProduct.id,
+            categoryId: globalProduct.categoryId,
+            subCategoryId: globalProduct.subCategoryId,
+            unitId: globalProduct.unitId,
+            brandId: globalProduct.brandId,
             minQuantity: globalProduct.minQuantity,
             stepSize: globalProduct.stepSize
+          },
+          include: {
+            category: true,
+            subCategory: true,
+            unit: true,
+            brand: true,
+            globalProduct: true
           }
         });
       } else {
         savedProduct = await prisma.product.create({
           data: {
             shopId: shop.id,
-            categoryId: category.id,
+            globalProductId: globalProduct.id,
+            categoryId: globalProduct.categoryId,
+            subCategoryId: globalProduct.subCategoryId,
+            unitId: globalProduct.unitId,
+            brandId: globalProduct.brandId,
             name: globalProduct.name,
-            description: `${globalProduct.brand} • ${globalProduct.subCategory || ""}`,
+            description: globalProduct.name,
             price,
             stock: parsedStock,
             stockQuantity: parsedStockQty,
             trackStock: parsedTrackStock,
             imageUrl: globalProduct.imageUrl,
             isActive: true,
-            unit: globalProduct.unit,
             minQuantity: globalProduct.minQuantity,
             stepSize: globalProduct.stepSize
+          },
+          include: {
+            category: true,
+            subCategory: true,
+            unit: true,
+            brand: true,
+            globalProduct: true
           }
         });
       }
 
-      return res.status(200).json({ error: false, message: "Ürün başarıyla envanterinize eklendi.", data: savedProduct });
+      return res.status(200).json({ error: false, message: "Ürün başarıyla envanterinize eklendi.", data: formatProduct(savedProduct) });
     } catch (error: any) {
       return res.status(500).json({ error: true, message: error.message });
     }
@@ -396,7 +595,7 @@ export class ProductController {
       const merchantId = req.user?.id;
       if (!merchantId) return res.status(401).json({ error: true, message: "Yetkisiz erişim" });
 
-      const { items } = req.body; // Array<{ barcode: string, price: number, stock?: number | null }>
+      const { items } = req.body;
       if (!items || !Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ error: true, message: "Geçerli ürün listesi gönderilmelidir." });
       }
@@ -413,21 +612,10 @@ export class ProductController {
         const globalProduct = await prisma.globalProduct.findUnique({ where: { barcode } });
         if (!globalProduct) continue;
 
-        // Kategori kontrolü
-        let category = await prisma.category.findFirst({
-          where: { name: { equals: globalProduct.category, mode: "insensitive" } }
-        });
-        if (!category) {
-          category = await prisma.category.create({
-            data: { name: globalProduct.category }
-          });
-        }
-
-        const parsedTrackStock = trackStock === true || trackStock === "true" ? true : false; // Defaults to false
+        const parsedTrackStock = trackStock === true || trackStock === "true" ? true : false;
         const parsedStock = parsedTrackStock ? (stock !== null && stock !== undefined && stock !== "" ? parseInt(stock.toString()) : null) : null;
         const parsedStockQty = parsedTrackStock ? (parsedStock || 0) : 0;
 
-        // Aynı isimli ürün zaten var mı?
         const existingProduct = await prisma.product.findFirst({
           where: {
             shopId: shop.id,
@@ -446,32 +634,52 @@ export class ProductController {
               trackStock: parsedTrackStock,
               isActive: true,
               imageUrl: globalProduct.imageUrl,
-              categoryId: category.id,
-              unit: globalProduct.unit,
+              globalProductId: globalProduct.id,
+              categoryId: globalProduct.categoryId,
+              subCategoryId: globalProduct.subCategoryId,
+              unitId: globalProduct.unitId,
+              brandId: globalProduct.brandId,
               minQuantity: globalProduct.minQuantity,
               stepSize: globalProduct.stepSize
+            },
+            include: {
+              category: true,
+              subCategory: true,
+              unit: true,
+              brand: true,
+              globalProduct: true
             }
           });
         } else {
           savedProduct = await prisma.product.create({
             data: {
               shopId: shop.id,
-              categoryId: category.id,
+              globalProductId: globalProduct.id,
+              categoryId: globalProduct.categoryId,
+              subCategoryId: globalProduct.subCategoryId,
+              unitId: globalProduct.unitId,
+              brandId: globalProduct.brandId,
               name: globalProduct.name,
-              description: `${globalProduct.brand} • ${globalProduct.subCategory || ""}`,
+              description: globalProduct.name,
               price,
               stock: parsedStock,
               stockQuantity: parsedStockQty,
               trackStock: parsedTrackStock,
               imageUrl: globalProduct.imageUrl,
               isActive: true,
-              unit: globalProduct.unit,
               minQuantity: globalProduct.minQuantity,
               stepSize: globalProduct.stepSize
+            },
+            include: {
+              category: true,
+              subCategory: true,
+              unit: true,
+              brand: true,
+              globalProduct: true
             }
           });
         }
-        results.push(savedProduct);
+        results.push(formatProduct(savedProduct));
       }
 
       return res.status(200).json({

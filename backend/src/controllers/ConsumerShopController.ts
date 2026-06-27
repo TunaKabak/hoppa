@@ -3,6 +3,30 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+function formatProduct(product: any) {
+  if (!product) return null;
+  return {
+    ...product,
+    unit: product.unit ? product.unit.code : "ADET",
+    brand: product.brand ? product.brand.name : null,
+    imageUrl: product.imageUrl || product.globalProduct?.imageUrl || "/images/default-product.png",
+    category: product.subCategory ? {
+      id: product.subCategory.id,
+      name: product.subCategory.name,
+      parent: product.category ? {
+        id: product.category.id,
+        name: product.category.name,
+        shopType: product.category.shopType
+      } : null
+    } : (product.category ? {
+      id: product.category.id,
+      name: product.category.name,
+      parent: null
+    } : null),
+    categoryId: product.subCategory ? product.subCategory.id : product.categoryId
+  };
+}
+
 export class ConsumerShopController {
 
   // Tüketiciler için sadece AKTİF dükkanları getirir (mesafe filtresi ve onaylı satıcı kontrolü ile)
@@ -86,48 +110,83 @@ export class ConsumerShopController {
           isActive: true
         },
         include: {
-          category: {
-            include: {
-              parent: true
-            }
-          }
+          category: true,
+          subCategory: true,
+          unit: true,
+          brand: true,
+          globalProduct: true
         },
         orderBy: { createdAt: 'desc' }
       });
 
-      // Enrich with GlobalProduct categories if category is missing
-      const barcodes = products.map(p => p.barcode).filter(Boolean) as string[];
-      let globalProducts: any[] = [];
-      if (barcodes.length > 0) {
-        globalProducts = await prisma.globalProduct.findMany({
-          where: { barcode: { in: barcodes } }
+      const enrichedProducts = products
+        .map(formatProduct)
+        .filter((p: any) => {
+          const trackStock = p.trackStock ?? false;
+          const stockQuantity = p.stockQuantity ?? 0;
+          return (trackStock === false) || (stockQuantity > 0);
         });
-      }
-
-      const enrichedProducts = products.map(p => {
-        let catObj = p.category as any;
-        if (!catObj && p.barcode) {
-          const gp = globalProducts.find(g => g.barcode === p.barcode);
-          if (gp) {
-            catObj = {
-              name: gp.subCategory || gp.category,
-              parent: gp.subCategory ? { name: gp.category } : null
-            };
-          }
-        }
-        return {
-          ...p,
-          category: catObj
-        };
-      }).filter(p => {
-        const trackStock = p.trackStock ?? false;
-        const stockQuantity = p.stockQuantity ?? 0;
-        return (trackStock === false) || (stockQuantity > 0);
-      });
 
       return res.status(200).json({ error: false, data: enrichedProducts });
     } catch (error: any) {
       return res.status(500).json({ error: true, message: error.message });
+    }
+  }
+
+  // Sadece seçili dükkana (shopId) ait aktif olarak satılan ürünlerin bağlı olduğu kategori ve alt kategorileri dinamik olarak getirir
+  async getShopActiveCategories(req: Request, res: Response) {
+    try {
+      const shopId = req.params.shopId as string;
+
+      const categories = await prisma.category.findMany({
+        where: {
+          products: {
+            some: { 
+              shopId: shopId,
+              isActive: true
+            }
+          }
+        },
+        include: {
+          subCategories: {
+            where: {
+              products: { 
+                some: { 
+                  shopId: shopId,
+                  isActive: true
+                } 
+              }
+            }
+          }
+        },
+        orderBy: { name: "asc" }
+      });
+
+      // Map new 3NF SubCategory relation to old children list format for client backward compatibility
+      const formatted = (categories as any[]).map(cat => ({
+        id: cat.id,
+        name: cat.name,
+        shopType: cat.shopType,
+        iconName: cat.iconUrl, // client maps iconUrl as iconName fallback
+        iconUrl: cat.iconUrl,
+        parent: null,
+        children: (cat.subCategories || []).map((sub: any) => ({
+          id: sub.id,
+          name: sub.name,
+          categoryId: sub.categoryId,
+          parent: {
+            id: cat.id,
+            name: cat.name,
+            shopType: cat.shopType
+          },
+          children: []
+        }))
+      }));
+
+      return res.status(200).json({ error: false, data: formatted });
+    } catch (error: any) {
+      console.error("Dinamik kategori çekme hatası:", error);
+      return res.status(500).json({ error: true, message: "Kategoriler getirilirken hata oluştu." });
     }
   }
 }

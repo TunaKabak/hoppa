@@ -133,48 +133,81 @@ model Shop {
   updatedAt        DateTime  @updatedAt
 }
 
-// Global Ürün Kataloğu (GlobalProduct)
-model GlobalProduct {
-  id          String    @id @default(uuid())
-  barcode     String?   @unique
-  name        String
-  brand       String
-  category    String
-  subCategory String?
-  imageUrl    String
-  unit        String    @default("ADET")
-  minQuantity Float     @default(1.0)
-  stepSize    Float     @default(1.0)
-  isWeighted  Boolean   @default(false)
-  description String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@index([name])
+// 1. Birimler Tablosu (Localization Destekli)
+model Unit {
+  id             String          @id @default(uuid())
+  code           String          @unique // Örn: "ADET", "KG", "LITRE", "PAKET"
+  nameTr         String          // Örn: "Adet"
+  nameEn         String          // Örn: "Pieces"
+  globalProducts GlobalProduct[]
+  products       Product[]
 }
 
-// Ürün Kategorisi (Hiyerarşik Alt/Üst Kategori Desteğiyle)
+// 2. Ana Kategoriler
 model Category {
-  id          String     @id @default(uuid())
-  name        String
-  parentId    String?
-  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children    Category[] @relation("CategoryHierarchy")
-  
-  shopType    ShopType?
-  products    Product[]
-  
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id             String          @id @default(uuid())
+  name           String          @unique // Örn: "Atıştırmalık", "Sebze & Meyve", "Süt Ürünleri"
+  shopType       String          @default("MARKET") // RESTAURANT, MARKET, GREENGROCER, BUTCHER
+  iconUrl        String?         // Kategori ikonu
+  subCategories  SubCategory[]
+  globalProducts GlobalProduct[]
+  products       Product[]
 }
 
-// Dükkana Ait Ürünler (Product)
+// 3. Alt Kategoriler
+model SubCategory {
+  id             String          @id @default(uuid())
+  name           String          // Örn: "Cips", "Çikolata", "Gazlı İçecekler"
+  categoryId     String
+  category       Category        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  globalProducts GlobalProduct[]
+  products       Product[]
+
+  @@unique([name, categoryId])
+}
+
+// 4. Markalar Tablosu
+model Brand {
+  id             String          @id @default(uuid())
+  name           String          @unique // Örn: "Coca-Cola", "Ülker", "Eti", "Koop"
+  logoUrl        String?         
+  globalProducts GlobalProduct[]
+  products       Product[]
+}
+
+// 5. Global Ürün Kütüphanesi (Master Catalog)
+model GlobalProduct {
+  id             String          @id @default(uuid())
+  barcode        String?         @unique
+  name           String
+  imageUrl       String          // Gerçek beyaz arka planlı stüdyo görseli URL'si
+  minQuantity    Float           @default(1.0)
+  stepSize       Float           @default(1.0)
+  
+  // İlişkiler (Normalizasyon)
+  unitId         String
+  unit           Unit            @relation(fields: [unitId], references: [id])
+  brandId        String?
+  brand          Brand?          @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  categoryId     String
+  category       Category        @relation(fields: [categoryId], references: [id])
+  subCategoryId  String?
+  subCategory    SubCategory?    @relation(fields: [subCategoryId], references: [id])
+
+  // Alt/Çocuk dükkan ürünleri ilişkisi
+  childProducts  Product[]
+
+  @@index([unitId])
+  @@index([brandId])
+  @@index([categoryId])
+  @@index([subCategoryId])
+}
+
+// 6. Satıştaki Aktif Dükkan Ürünleri
 model Product {
   id              String      @id @default(uuid())
   shopId          String
-  shop            Shop        @relation(fields: [shopId], references: [id])
-  categoryId      String?
-  category        Category?   @relation(fields: [categoryId], references: [id])
+  shop            Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
   
   name            String
   description     String?
@@ -184,26 +217,45 @@ model Product {
   imageUrl        String?
   isActive        Boolean     @default(true)
   
-  unit            String      @default("ADET") // ADET, KG, LITRE, PORSIYON, GR
-  minQuantity     Float       @default(1.0)    // Manav için örn: 0.5 (kg)
-  stepSize        Float       @default(1.0)    // Manav için örn: 0.25 (kg)
+  minQuantity     Float       @default(1.0)
+  stepSize        Float       @default(1.0)
   
   // Stoksuz/Sınırsız Satış Desteği
   trackStock      Boolean     @default(false)  // Varsayılan false: Stok adedi takip edilmez, hep "Stokta" kabul edilir.
 
   // Polymorphic / Dynamic Fields
   barcode         String?
-  brand           String?
   stockQuantity   Int?        @default(0)
   weightOrVolume  String?
   preparationTime Int?
   hasDeposit      Boolean?    @default(false)
   depositPrice    Float?
 
+  // Master kütüphane bağlantısı (Inheritance)
+  globalProductId String?
+  globalProduct   GlobalProduct? @relation(fields: [globalProductId], references: [id], onDelete: SetNull)
+
+  // İlişkiler (Sorgu performansları ve bağımsız özel ürünler için)
+  unitId         String
+  unit           Unit            @relation(fields: [unitId], references: [id])
+  brandId        String?
+  brand          Brand?          @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  categoryId     String
+  category       Category        @relation(fields: [categoryId], references: [id])
+  subCategoryId  String?
+  subCategory    SubCategory?    @relation(fields: [subCategoryId], references: [id])
+
   orderItems      OrderItem[]
 
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
+
+  @@index([shopId])
+  @@index([globalProductId])
+  @@index([unitId])
+  @@index([brandId])
+  @@index([categoryId])
+  @@index([subCategoryId])
 }
 
 // Tüketici Adresi
@@ -265,6 +317,9 @@ model Order {
   courierId       String?
   courier         Courier?    @relation(fields: [courierId], references: [id])
   estimatedDeliveryDuration Int?
+
+  dontRingBell    Boolean     @default(false)
+  leaveAtDoor     Boolean     @default(false)
 
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt

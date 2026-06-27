@@ -40,9 +40,10 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
   
   String _cardLogo = '';
 
-  String _paymentMethod = 'cash_on_delivery';
+  String _paymentMethod = 'online_payment';
   bool _isLoading = false;
   bool _dontRingBell = false;
+  bool _leaveAtDoor = false;
 
   final Color kPrimaryColor = const Color(0xFF00A651);
   final Color kSecondaryColor = const Color(0xFFFF6B00);
@@ -167,6 +168,8 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
         'notes': orderNote,
         'paymentMethod': _paymentMethod.toUpperCase(),
         if (cardDetails != null) 'cardDetails': cardDetails,
+        'dontRingBell': _dontRingBell,
+        'leaveAtDoor': _leaveAtDoor,
       };
 
       final result = await orderRepo.createOrder(orderData);
@@ -352,31 +355,62 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                   ),
 
                   if (!widget.isPickUp) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
+                    const SizedBox(height: 16),
+                    Card(
+                      elevation: 0,
+                      color: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(color: Colors.grey.shade200, width: 1.5),
                       ),
-                      child: SwitchListTile(
-                        title: const Text(
-                          "Zili Çalma",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.delivery_dining_outlined, color: Colors.grey, size: 20),
+                                SizedBox(width: 8),
+                                Text(
+                                  "Teslimat Tercihleri",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            SwitchListTile(
+                              value: _leaveAtDoor,
+                              title: const Text("Kapıya Bırak", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                              subtitle: const Text("Sipariş kapınıza bırakılır, temassız teslim edilir.", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                              secondary: Icon(Icons.door_front_door_outlined, color: _leaveAtDoor ? kPrimaryColor : Colors.grey),
+                              activeColor: kPrimaryColor,
+                              onChanged: (bool value) {
+                                setState(() {
+                                  _leaveAtDoor = value;
+                                });
+                              },
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                            const Divider(height: 1),
+                            SwitchListTile(
+                              value: _dontRingBell,
+                              title: const Text("Zili Çalma", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                              subtitle: const Text("Zil çalınmaz; kapı hafifçe vurulur veya telefonla aranır.", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                              secondary: Icon(Icons.notifications_off_outlined, color: _dontRingBell ? kPrimaryColor : Colors.grey),
+                              activeColor: kPrimaryColor,
+                              onChanged: (bool value) {
+                                setState(() {
+                                  _dontRingBell = value;
+                                });
+                              },
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ],
                         ),
-                        subtitle: const Text(
-                          "Kurye kapıya geldiğinde sizi arayarak haber verir.",
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                        secondary: Icon(
-                          Icons.notifications_off_outlined,
-                          color: _dontRingBell ? kPrimaryColor : Colors.grey,
-                        ),
-                        activeThumbColor: kPrimaryColor,
-                        value: _dontRingBell,
-                        onChanged: (val) => setState(() => _dontRingBell = val),
                       ),
                     ),
                   ],
