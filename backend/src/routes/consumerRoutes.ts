@@ -22,6 +22,7 @@ router.post("/favorites/products", (req, res) => favoritesController.getFavorite
 // Browse Shops and Products
 router.get("/shops", (req, res) => consumerShopController.getActiveShops(req, res));
 router.get("/shops/:shopId/products", (req, res) => consumerShopController.getShopProducts(req, res));
+router.get("/shops/:shopId/categories", (req, res) => consumerShopController.getShopActiveCategories(req, res));
 
 // Category Operations
 router.get("/categories", (req, res) => categoryController.getCategories(req, res));

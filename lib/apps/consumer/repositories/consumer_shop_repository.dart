@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:hoppa/shared/models/business.dart';
 import 'package:hoppa/shared/models/business_product.dart';
+import 'package:hoppa/shared/models/shop_category_data.dart';
 
 class ConsumerShopRepository {
   final ApiClient _apiClient;
@@ -206,6 +207,26 @@ final consumerShopsProvider = FutureProvider<List<Business>>((ref) async {
 
 final shopProductsProvider = FutureProvider.family<List<BusinessProduct>, String>((ref, shopId) async {
   return ref.watch(consumerShopRepositoryProvider).getShopProducts(shopId);
+});
+
+final shopCategoriesProvider = FutureProvider.family<List<ShopCategoryData>, String>((ref, shopId) async {
+  final repo = ref.watch(consumerShopRepositoryProvider);
+  final response = await repo._apiClient.get('/api/consumer/shops/$shopId/categories');
+  final data = response['data'] as List<dynamic>?;
+  if (data == null) return [];
+  
+  return data.map((c) {
+    final catMap = Map<String, dynamic>.from(c);
+    final subList = catMap['children'] as List<dynamic>? ?? [];
+    final subNames = ['Tümü'] + subList.map((s) => s['name'] as String).toList();
+    
+    return ShopCategoryData(
+      id: catMap['id'] as String? ?? '',
+      name: catMap['name'] as String? ?? '',
+      iconName: catMap['iconName'] as String? ?? 'shopping_basket',
+      subCategories: subNames,
+    );
+  }).toList();
 });
 
 // Catalog Filtering, Sorting and Searching State Providers

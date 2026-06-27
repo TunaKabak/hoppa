@@ -11,6 +11,7 @@ import 'package:hoppa/apps/consumer/home/widgets/modern_product_card.dart';
 import 'package:hoppa/apps/consumer/orders/widgets/active_order_card.dart';
 import 'package:hoppa/apps/consumer/product/product_detail_page.dart';
 import 'package:hoppa/apps/consumer/repositories/consumer_shop_repository.dart';
+import 'package:hoppa/shared/models/shop_category_data.dart';
 
 
 class HomePage extends ConsumerStatefulWidget {
@@ -195,28 +196,12 @@ class _HomePageState extends ConsumerState<HomePage>
   }
 
   void _onCategorySelected(int index, String categoryName) {
-    final businessProvider = p.Provider.of<BusinessProvider>(
-      context,
-      listen: false,
-    );
-    final isFlorist = businessProvider.selectedBusiness?.type.label == 'Çiçek';
-
-    if (isFlorist) {
-      if (categoryName == 'Tümü') {
-        ref.read(selectedCatalogSubCategoryProvider.notifier).state = 'Tümü';
-      } else {
-        ref.read(selectedCatalogSubCategoryProvider.notifier).state = categoryName;
-      }
-      ref.read(selectedCatalogCategoryProvider.notifier).state = 'Çiçek';
-    } else {
-      ref.read(selectedCatalogCategoryProvider.notifier).state = categoryName;
-      ref.read(selectedCatalogSubCategoryProvider.notifier).state = 'Tümü';
-    }
+    ref.read(selectedCatalogCategoryProvider.notifier).state = categoryName;
+    ref.read(selectedCatalogSubCategoryProvider.notifier).state = 'Tümü';
 
     _scrollToCenter(_categoryScrollController, index, 83.0);
 
-    // Çiçekçide alt kategori barı gösterilmeyecek, o yüzden scroll reset'e gerek yok
-    if (!isFlorist && _subCategoryScrollController.hasClients) {
+    if (_subCategoryScrollController.hasClients) {
       _subCategoryScrollController.jumpTo(0);
     }
   }
@@ -276,21 +261,37 @@ class _HomePageState extends ConsumerState<HomePage>
     // 3. İŞLETME SEÇİLDİYSE -> ÜRÜN LİSTESİ (MEVCUT HOME)
     final selectedBusiness = businessProvider.selectedBusiness!;
     final productsAsync = ref.watch(filteredShopProductsProvider(selectedBusiness.id));
-    final theme = Theme.of(context);
+    final categoriesAsync = ref.watch(shopCategoriesProvider(selectedBusiness.id));
 
-    final selectedCategory = ref.watch(selectedCatalogCategoryProvider);
-    final selectedSubCategory = ref.watch(selectedCatalogSubCategoryProvider);
-    final selectedSortOption = ref.watch(selectedCatalogSortOptionProvider);
+    return categoriesAsync.when(
+      loading: () => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      error: (err, stack) => Scaffold(
+        body: Center(child: Text("Kategoriler yüklenirken hata oluştu: $err")),
+      ),
+      data: (shopCategories) {
+        final theme = Theme.of(context);
 
-    List<String> currentSubCategories =
-        _subCategoriesMap[selectedCategory] ?? [];
+        final selectedCategory = ref.watch(selectedCatalogCategoryProvider);
+        final selectedSubCategory = ref.watch(selectedCatalogSubCategoryProvider);
+        final selectedSortOption = ref.watch(selectedCatalogSortOptionProvider);
 
-    if (_subCategoryKeys.length != currentSubCategories.length) {
-      _subCategoryKeys = List.generate(
-        currentSubCategories.length,
-        (_) => GlobalKey(),
-      );
-    }
+        List<String> currentSubCategories = [];
+        if (selectedCategory != 'Tümü') {
+          final matchingCat = shopCategories.firstWhere(
+            (c) => c.name == selectedCategory,
+            orElse: () => ShopCategoryData(id: '', name: '', iconName: '', subCategories: []),
+          );
+          currentSubCategories = matchingCat.subCategories;
+        }
+
+        if (_subCategoryKeys.length != currentSubCategories.length) {
+          _subCategoryKeys = List.generate(
+            currentSubCategories.length,
+            (_) => GlobalKey(),
+          );
+        }
 
     // Klavye dışına tıklayınca kapat
     return GestureDetector(
@@ -527,18 +528,15 @@ class _HomePageState extends ConsumerState<HomePage>
                   // Dinamik Kategori Listesi
                   Builder(
                     builder: (context) {
-                      final String typeLabel = selectedBusiness.type.label;
-                      
-                      final List<Map<String, dynamic>> categories;
-                      if (typeLabel == 'Çiçek') {
-                        categories = _floristCategories;
-                      } else if (typeLabel == 'Market') {
-                        categories = _marketCategories;
-                      } else {
-                        // Fallback logic for other types (Kasap, Su vb.)
-                        categories = [
-                          {'name': 'Tümü', 'icon': Icons.grid_view}
-                        ];
+                      final List<Map<String, dynamic>> categories = [
+                        {'name': 'Tümü', 'icon': Icons.grid_view}
+                      ];
+
+                      for (final cat in shopCategories) {
+                        categories.add({
+                          'name': cat.name,
+                          'icon': _getCategoryIcon(cat.iconName),
+                        });
                       }
 
                       return SizedBox(
@@ -552,23 +550,7 @@ class _HomePageState extends ConsumerState<HomePage>
                             final cat = categories[index];
                             final catName = cat['name'] as String;
 
-                            bool isSelected;
-                            if (typeLabel == 'Çiçek') {
-                              // Çiçekçide: Tümü ise subCategory'nin Tümü olması,
-                              // Diğerlerinde subCategory'nin eşleşmesi
-                              if (catName == 'Tümü') {
-                                isSelected =
-                                    selectedSubCategory ==
-                                    'Tümü';
-                              } else {
-                                isSelected =
-                                    selectedSubCategory ==
-                                    catName;
-                              }
-                            } else {
-                              isSelected =
-                                  catName == selectedCategory;
-                            }
+                            final isSelected = catName == selectedCategory;
 
                             return _buildCategoryItem(cat, isSelected, index);
                           },
@@ -577,9 +559,8 @@ class _HomePageState extends ConsumerState<HomePage>
                     },
                   ),
 
-                  // Alt kategoriler sadece Market modunda gösterilecek
-                  if (currentSubCategories.isNotEmpty &&
-                      businessProvider.selectedBusiness?.type.label != 'Çiçek')
+                  // Alt kategoriler
+                  if (currentSubCategories.isNotEmpty)
                     Container(
                       height: 40,
                       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -801,6 +782,8 @@ class _HomePageState extends ConsumerState<HomePage>
         ),
       ),
     );
+      },
+    );
   }
 
   // --- Widget Helpers ---
@@ -891,5 +874,46 @@ class _HomePageState extends ConsumerState<HomePage>
         ),
       ),
     );
+  }
+
+  IconData _getCategoryIcon(String name) {
+    switch (name.toLowerCase()) {
+      case 'water_drop':
+      case 'su & i̇çecek':
+      case 'su':
+        return Icons.water_drop;
+      case 'apple':
+      case 'meyve & sebze':
+        return Icons.apple;
+      case 'cookie':
+      case 'atıştırmalık':
+        return Icons.cookie;
+      case 'breakfast_dining':
+      case 'fırın':
+        return Icons.breakfast_dining;
+      case 'rice_bowl':
+      case 'temel gıda':
+        return Icons.rice_bowl;
+      case 'egg_alt':
+      case 'egg':
+      case 'süt & kahvaltılık':
+        return Icons.egg_alt;
+      case 'cleaning_services':
+      case 'temizlik':
+        return Icons.cleaning_services;
+      case 'local_florist':
+      case 'flower':
+      case 'çiçek':
+        return Icons.local_florist;
+      case 'grass':
+        return Icons.grass;
+      case 'redeem':
+        return Icons.redeem;
+      case 'circle_outlined':
+        return Icons.circle_outlined;
+      case 'shopping_basket':
+      default:
+        return Icons.shopping_basket;
+    }
   }
 }

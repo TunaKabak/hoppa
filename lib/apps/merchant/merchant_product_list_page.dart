@@ -1540,37 +1540,40 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                         trackStock,
                       );
 
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Ürün envanterinize başarıyla eklendi!"),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                  // Animate back to Inventory tab
-                  _tabController.animateTo(0);
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text("Ürün eklenirken hata oluştu: $e"),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              } finally {
-                if (mounted) {
-                  setState(() {
-                    _isCatalogLoading = false;
-                  });
-                }
-              }
-            },
-            child: const Text("Envantere Ekle"),
-          ),
-        ],
-      ),
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Ürün envanterinize başarıyla eklendi!"),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                        // Animate back to Inventory tab
+                        _tabController.animateTo(0);
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text("Ürün eklenirken hata oluştu: $e"),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    } finally {
+                      if (mounted) {
+                        setState(() {
+                          _isCatalogLoading = false;
+                        });
+                      }
+                    }
+                  },
+                  child: const Text("Envantere Ekle"),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
@@ -2086,6 +2089,7 @@ class _EditProductDialogState extends State<_EditProductDialog> {
   late TextEditingController _brandController;
   late TextEditingController _weightOrVolumeController;
   late TextEditingController _prepTimeController;
+  late String _selectedUnit;
   late double _minQuantity;
   late double _stepSize;
   late bool _trackStock;

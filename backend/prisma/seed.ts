@@ -164,16 +164,21 @@ async function main() {
     { name: "Günlük Süt", price: 45.0, stock: 30, description: "Pastörize günlük süt", category: "Süt & Kahvaltılık", subCategory: "Süt" },
   ];
 
+  let unitAdet = await prisma.unit.findUnique({ where: { code: "ADET" } });
+  if (!unitAdet) {
+    unitAdet = await prisma.unit.create({ data: { code: "ADET", nameTr: "Adet", nameEn: "Pieces" } });
+  }
+
   for (const p of marketProducts) {
     // Kategori/Alt kategori bul veya oluştur
-    let parentCat = await prisma.category.findFirst({ where: { name: p.category } });
+    let parentCat = await prisma.category.findUnique({ where: { name: p.category } });
     if (!parentCat) {
-      parentCat = await prisma.category.create({ data: { name: p.category } });
+      parentCat = await prisma.category.create({ data: { name: p.category, shopType: "MARKET" } });
     }
     
-    let subCat = await prisma.category.findFirst({ where: { name: p.subCategory, parentId: parentCat.id } });
+    let subCat = await prisma.subCategory.findFirst({ where: { name: p.subCategory, categoryId: parentCat.id } });
     if (!subCat) {
-      subCat = await prisma.category.create({ data: { name: p.subCategory, parentId: parentCat.id } });
+      subCat = await prisma.subCategory.create({ data: { name: p.subCategory, categoryId: parentCat.id } });
     }
 
     const existingProduct = await prisma.product.findFirst({
@@ -184,7 +189,9 @@ async function main() {
       await prisma.product.create({
         data: {
           shopId: testMarketShop.id,
-          categoryId: subCat.id,
+          categoryId: parentCat.id,
+          subCategoryId: subCat.id,
+          unitId: unitAdet.id,
           name: p.name,
           price: p.price,
           stock: p.stock,

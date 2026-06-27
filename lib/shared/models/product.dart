@@ -30,16 +30,32 @@ class Product {
     final defaultMinQty = isWeighted ? 0.5 : 1.0;
     final defaultStep = isWeighted ? 0.5 : 1.0;
 
+    // 1. Görsel Fallback Zinciri (Local -> Global -> Placeholder)
+    final String? localImage = data['imageUrl'] as String?;
+    final String? globalImage = data['globalProduct'] != null 
+        ? data['globalProduct']['imageUrl'] as String? 
+        : null;
+
+    // 2. Birim Tip Güvenliği Kontrolü (String veya Map gelebilir)
+    String parsedUnit = "ADET";
+    if (data['unit'] != null) {
+      if (data['unit'] is Map) {
+        parsedUnit = (data['unit']['code'] as String?) ?? "ADET";
+      } else {
+        parsedUnit = data['unit'] as String;
+      }
+    }
+
     return Product(
       barcode: data['barcode'] ?? '',
       name: data['name'] ?? '',
       brand: data['brand'] ?? '',
       category: data['category'] ?? '',
       subCategory: data['subCategory'] ?? '',
-      imageUrl: data['imageUrl'] ?? '',
+      imageUrl: localImage ?? globalImage ?? "https://placehold.co/150",
       isWeighted: isWeighted,
       description: data['description'] ?? '',
-      unit: data['unit'] ?? 'ADET',
+      unit: parsedUnit,
       minQuantity: data['minQuantity'] != null
           ? (double.tryParse(data['minQuantity'].toString()) ?? defaultMinQty)
           : defaultMinQty,

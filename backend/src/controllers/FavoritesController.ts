@@ -3,6 +3,30 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+function formatProduct(product: any) {
+  if (!product) return null;
+  return {
+    ...product,
+    unit: product.unit ? product.unit.code : "ADET",
+    brand: product.brand ? product.brand.name : null,
+    imageUrl: product.imageUrl || product.globalProduct?.imageUrl || "/images/default-product.png",
+    category: product.subCategory ? {
+      id: product.subCategory.id,
+      name: product.subCategory.name,
+      parent: product.category ? {
+        id: product.category.id,
+        name: product.category.name,
+        shopType: product.category.shopType
+      } : null
+    } : (product.category ? {
+      id: product.category.id,
+      name: product.category.name,
+      parent: null
+    } : null),
+    categoryId: product.subCategory ? product.subCategory.id : product.categoryId
+  };
+}
+
 export class FavoritesController {
   
   // Tüketici tarafından gönderilen favori ürün ID'lerine göre Prisma'dan ürünleri ve dükkan uygunluğunu çeker
@@ -14,7 +38,7 @@ export class FavoritesController {
         return res.status(200).json({ error: false, data: [] });
       }
 
-      // Ürünleri shop, merchant ve category bilgileriyle birlikte çek
+      // Ürünleri shop, merchant ve ilişkisel kategori/unit/brand bilgileriyle birlikte çek
       const products = await prisma.product.findMany({
         where: {
           id: { in: productIds }
@@ -25,46 +49,21 @@ export class FavoritesController {
               merchant: true
             }
           },
-          category: {
-            include: {
-              parent: true
-            }
-          }
+          category: true,
+          subCategory: true,
+          unit: true,
+          brand: true,
+          globalProduct: true
         }
       });
 
-      // Enrich with GlobalProduct categories if category is missing
-      const barcodes = products.map(p => p.barcode).filter(Boolean) as string[];
-      let globalProducts: any[] = [];
-      if (barcodes.length > 0) {
-        globalProducts = await prisma.globalProduct.findMany({
-          where: { barcode: { in: barcodes } }
-        });
-      }
-
       const results = products.map(p => {
-        // Kategori düzenlemesi (ConsumerShopController'daki mantık)
-        let catObj = p.category as any;
-        if (!catObj && p.barcode) {
-          const gp = globalProducts.find(g => g.barcode === p.barcode);
-          if (gp) {
-            catObj = {
-              name: gp.subCategory || gp.category,
-              parent: gp.subCategory ? { name: gp.category } : null
-            };
-          }
-        }
-
         // Tüketici tarafına gönderilirken 'isAvailable' hesaplanmalı
         // Dükkan açık mı? isActive=true ve merchant status=ACTIVE olmalı.
-        // Ayrıca mesai saatleri içinde mi diye de bakılabilir, şimdilik aktiflik yeterli.
-        const isAvailable = p.shop && p.shop.isActive && p.shop.merchant.status === "ACTIVE";
+        const isAvailable = !!(p.shop && p.shop.isActive && p.shop.merchant.status === "ACTIVE");
 
         return {
-          product: {
-            ...p,
-            category: catObj
-          },
+          product: formatProduct(p),
           isAvailable
         };
       });

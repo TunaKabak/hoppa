@@ -17,7 +17,7 @@ export class OrderController {
         return res.status(401).json({ error: true, message: "Kullanıcı bilgisi eksik veya yetkisiz." });
       }
 
-      const { shopId, items, deliveryAddress, addressId, notes, paymentMethod, cardDetails } = req.body;
+      const { shopId, items, deliveryAddress, addressId, notes, paymentMethod, cardDetails, dontRingBell, leaveAtDoor } = req.body;
 
       if (!shopId) {
         return res.status(400).json({ error: true, message: "Dükkan bilgisi (shopId) zorunludur." });
@@ -234,7 +234,9 @@ export class OrderController {
             customerNote: notes || null,
             paymentMethod: method,
             paymentStatus: "PENDING",
-            estimatedDeliveryDuration: estimatedDeliveryDuration
+            estimatedDeliveryDuration: estimatedDeliveryDuration,
+            dontRingBell: dontRingBell === true || dontRingBell === "true",
+            leaveAtDoor: leaveAtDoor === true || leaveAtDoor === "true"
           }
         });
 

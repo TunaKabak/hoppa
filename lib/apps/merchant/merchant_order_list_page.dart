@@ -226,6 +226,7 @@ class _MerchantOrderListPageState extends ConsumerState<MerchantOrderListPage> {
     model.Order order,
     WidgetRef ref,
   ) {
+    final theme = Theme.of(context);
     final status = order.status;
     final items = order.items;
 
@@ -350,6 +351,14 @@ class _MerchantOrderListPageState extends ConsumerState<MerchantOrderListPage> {
                     ),
                   ],
                 ),
+                if (order.dontRingBell || order.leaveAtDoor) ...[
+                  const SizedBox(height: 8),
+                  _buildDeliveryPreferenceBadges(
+                    dontRingBell: order.dontRingBell,
+                    leaveAtDoor: order.leaveAtDoor,
+                    theme: theme,
+                  ),
+                ],
                 if (order.orderNote.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   Container(
@@ -403,6 +412,71 @@ class _MerchantOrderListPageState extends ConsumerState<MerchantOrderListPage> {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDeliveryPreferenceBadges({
+    required bool dontRingBell,
+    required bool leaveAtDoor,
+    required ThemeData theme,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        children: [
+          if (leaveAtDoor) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.blue.shade300, width: 1.5),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.door_front_door, size: 16, color: Colors.blue.shade800),
+                  const SizedBox(width: 6),
+                  Text(
+                    "KAPIYA BIRAK 🚪",
+                    style: TextStyle(
+                      color: Colors.blue.shade900, 
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+          if (dontRingBell) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.orange.shade300, width: 1.5),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.notifications_off, size: 16, color: Colors.orange.shade800),
+                  const SizedBox(width: 6),
+                  Text(
+                    "ZİLİ ÇALMA 🔕",
+                    style: TextStyle(
+                      color: Colors.orange.shade900, 
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
