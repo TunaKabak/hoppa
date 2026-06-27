@@ -61,6 +61,7 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
   String _selectedUnit = "ADET";
   double _minQuantity = 1.0;
   double _stepSize = 1.0;
+  bool _initialTrackStock = false;
   final List<String> _units = ["ADET", "KG", "LITRE", "PAKET", "DEMET", "GR"];
 
   @override
@@ -614,32 +615,32 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                                       ),
                                       // Stock Edit Chip
                                       InkWell(
-                                        onTap: () => _showInlineEditDialog(
+                                        onTap: p.trackStock ? () => _showInlineEditDialog(
                                           p,
                                           type: 'stock',
                                           currentValue: (p.stock ?? 0).toDouble(),
                                           title: "Stoğu Güncelle",
                                           suffix: "Adet",
-                                        ),
+                                        ) : null,
                                         child: Container(
                                           padding: const EdgeInsets.symmetric(
                                             horizontal: 8,
                                             vertical: 4,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: Colors.orange[50],
+                                            color: p.trackStock ? Colors.orange[50] : Colors.green[50],
                                             borderRadius: BorderRadius.circular(
                                               6,
                                             ),
                                             border: Border.all(
-                                              color: Colors.orange[200]!,
+                                              color: p.trackStock ? Colors.orange[200]! : Colors.green[200]!,
                                             ),
                                           ),
                                           child: Text(
-                                            "Stok: ${p.stock}",
+                                            p.trackStock ? "Stok: ${p.stock}" : "Stok: Sınırsız",
                                             style: TextStyle(
                                               fontWeight: FontWeight.bold,
-                                              color: Colors.orange[800],
+                                              color: p.trackStock ? Colors.orange[800] : Colors.green[800],
                                               fontSize: 13,
                                             ),
                                           ),
@@ -1314,7 +1315,19 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                   "Envanter Bilgileri",
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
+                SwitchListTile(
+                  title: const Text("Stok Takip Et"),
+                  subtitle: const Text("Aktif edilmezse ürün sınırsız stokta görünür."),
+                  value: _initialTrackStock,
+                  contentPadding: EdgeInsets.zero,
+                  onChanged: (val) {
+                    setState(() {
+                      _initialTrackStock = val;
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
                 Row(
                   children: [
                     Expanded(
@@ -1333,22 +1346,26 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                         },
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _initialStockController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: "Stok Adedi",
-                          border: OutlineInputBorder(),
+                    if (_initialTrackStock) ...[
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _initialStockController,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: "Stok Adedi",
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (v) {
+                            if (_initialTrackStock) {
+                              if (v == null || v.isEmpty) return "Zorunlu alan";
+                              if (int.tryParse(v) == null) return "Geçerli bir tam sayı girin.";
+                            }
+                            return null;
+                          },
                         ),
-                        validator: (v) {
-                          if (v == null || v.isEmpty) return "Zorunlu alan";
-                          if (int.tryParse(v) == null) return "Geçerli bir tam sayı girin.";
-                          return null;
-                        },
                       ),
-                    ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 24),
@@ -1430,77 +1447,98 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
 
   void _showAddInventoryDialog(CatalogProduct product) {
     final priceController = TextEditingController();
-    final stockController = TextEditingController();
+    final stockController = TextEditingController(text: "0");
     final dialogFormKey = GlobalKey<FormState>();
+    bool trackStock = false;
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          "Katalogdan Ürün Ekle\n${product.name}",
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-        content: Form(
-          key: dialogFormKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: priceController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(
-                  labelText: "Satış Fiyatı (₺)",
-                  border: OutlineInputBorder(),
-                  prefixText: "₺ ",
-                ),
-                validator: (val) {
-                  if (val == null || val.isEmpty) return "Fiyat girmelisiniz.";
-                  if (double.tryParse(val) == null) return "Geçerli bir sayı girin.";
-                  return null;
-                },
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return AlertDialog(
+              title: Text(
+                "Katalogdan Ürün Ekle\n${product.name}",
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: stockController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: "Stok Miktarı (Adet)",
-                  border: OutlineInputBorder(),
+              content: Form(
+                key: dialogFormKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: priceController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(
+                        labelText: "Satış Fiyatı (₺)",
+                        border: OutlineInputBorder(),
+                        prefixText: "₺ ",
+                      ),
+                      validator: (val) {
+                        if (val == null || val.isEmpty) return "Fiyat girmelisiniz.";
+                        if (double.tryParse(val) == null) return "Geçerli bir sayı girin.";
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    SwitchListTile(
+                      title: const Text("Stok Takip Et"),
+                      subtitle: const Text("Aktif edilmezse ürün sınırsız stokta görünür."),
+                      value: trackStock,
+                      contentPadding: EdgeInsets.zero,
+                      onChanged: (val) {
+                        setDialogState(() {
+                          trackStock = val;
+                        });
+                      },
+                    ),
+                    if (trackStock) ...[
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: stockController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: "Stok Miktarı (Adet)",
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (val) {
+                          if (trackStock) {
+                            if (val == null || val.isEmpty) return "Stok girmelisiniz.";
+                            if (int.tryParse(val) == null) return "Geçerli bir tam sayı girin.";
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
+                  ],
                 ),
-                validator: (val) {
-                  if (val == null || val.isEmpty) return "Stok girmelisiniz.";
-                  if (int.tryParse(val) == null) return "Geçerli bir tam sayı girin.";
-                  return null;
-                },
               ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text("İptal"),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (!dialogFormKey.currentState!.validate()) return;
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text("İptal"),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (!dialogFormKey.currentState!.validate()) return;
 
-              final price = double.parse(priceController.text);
-              final stock = int.parse(stockController.text);
+                    final price = double.parse(priceController.text);
+                    final stock = trackStock ? int.parse(stockController.text) : null;
 
-              Navigator.pop(ctx); // Close dialog
+                    Navigator.pop(ctx); // Close dialog
 
-              // Show loading indicator
-              setState(() {
-                _isCatalogLoading = true;
-              });
+                    // Show loading indicator
+                    setState(() {
+                      _isCatalogLoading = true;
+                    });
 
-              try {
-                await ref.read(productControllerProvider.notifier).addProductFromCatalog(
-                  product.barcode,
-                  price,
-                  stock,
-                );
+                    try {
+                      await ref.read(productControllerProvider.notifier).addProductFromCatalog(
+                        product.barcode,
+                        price,
+                        stock,
+                        trackStock,
+                      );
 
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -1666,7 +1704,8 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
             ? _descController.text.trim()
             : "${_brandController.text.trim()} • ${_categoryController.text.trim()}",
         'price': double.tryParse(_initialPriceController.text) ?? 0.0,
-        'stock': int.tryParse(_initialStockController.text) ?? 0,
+        'stock': _initialTrackStock ? (int.tryParse(_initialStockController.text) ?? 0) : null,
+        'trackStock': _initialTrackStock,
         'imageUrl': _imageUrlController.text.trim(),
         'isActive': true,
         'categoryName': _categoryController.text.trim(),
@@ -1680,12 +1719,12 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
       } else if (shopType == 'MARKET') {
         payload['barcode'] = _barcodeController.text.trim();
         payload['brand'] = _brandController.text.trim();
-        payload['stockQuantity'] = int.tryParse(_initialStockController.text) ?? 0;
+        payload['stockQuantity'] = _initialTrackStock ? (int.tryParse(_initialStockController.text) ?? 0) : 0;
         payload['weightOrVolume'] = _weightOrVolumeController.text.trim().isNotEmpty ? _weightOrVolumeController.text.trim() : null;
       } else if (shopType == 'WATER') {
         payload['barcode'] = _barcodeController.text.trim().isNotEmpty ? _barcodeController.text.trim() : null;
         payload['brand'] = _brandController.text.trim().isNotEmpty ? _brandController.text.trim() : null;
-        payload['stockQuantity'] = int.tryParse(_initialStockController.text) ?? 0;
+        payload['stockQuantity'] = _initialTrackStock ? (int.tryParse(_initialStockController.text) ?? 0) : 0;
         payload['weightOrVolume'] = _weightOrVolumeController.text.trim().isNotEmpty ? _weightOrVolumeController.text.trim() : null;
         payload['hasDeposit'] = _hasDeposit;
         if (_hasDeposit) {
@@ -1694,7 +1733,7 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
       } else {
         payload['barcode'] = _barcodeController.text.trim().isNotEmpty ? _barcodeController.text.trim() : null;
         payload['brand'] = _brandController.text.trim().isNotEmpty ? _brandController.text.trim() : null;
-        payload['stockQuantity'] = int.tryParse(_initialStockController.text) ?? 0;
+        payload['stockQuantity'] = _initialTrackStock ? (int.tryParse(_initialStockController.text) ?? 0) : 0;
         payload['weightOrVolume'] = _weightOrVolumeController.text.trim().isNotEmpty ? _weightOrVolumeController.text.trim() : null;
       }
 
@@ -1722,6 +1761,7 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
           _selectedUnit = "ADET";
           _minQuantity = 1.0;
           _stepSize = 1.0;
+          _initialTrackStock = false;
         });
         _tabController.animateTo(0);
       }
@@ -2046,9 +2086,9 @@ class _EditProductDialogState extends State<_EditProductDialog> {
   late TextEditingController _brandController;
   late TextEditingController _weightOrVolumeController;
   late TextEditingController _prepTimeController;
-  late String _selectedUnit;
   late double _minQuantity;
   late double _stepSize;
+  late bool _trackStock;
 
   final List<String> _units = ["ADET", "KG", "LITRE", "PAKET", "DEMET", "GR"];
 
@@ -2066,6 +2106,7 @@ class _EditProductDialogState extends State<_EditProductDialog> {
     _selectedUnit = widget.product.unit;
     _minQuantity = widget.product.minQuantity;
     _stepSize = widget.product.stepSize;
+    _trackStock = widget.product.trackStock;
   }
 
   @override
@@ -2109,6 +2150,18 @@ class _EditProductDialogState extends State<_EditProductDialog> {
                   decoration: const InputDecoration(labelText: "Açıklama (Opsiyonel)", border: OutlineInputBorder()),
                 ),
                 const SizedBox(height: 12),
+                SwitchListTile(
+                  title: const Text("Stok Takip Et"),
+                  subtitle: const Text("Aktif edilmezse ürün sınırsız stokta görünür."),
+                  value: _trackStock,
+                  contentPadding: EdgeInsets.zero,
+                  onChanged: (val) {
+                    setState(() {
+                      _trackStock = val;
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
                 Row(
                   children: [
                     Expanded(
@@ -2123,19 +2176,23 @@ class _EditProductDialogState extends State<_EditProductDialog> {
                         },
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _stockController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: "Stok", border: OutlineInputBorder()),
-                        validator: (v) {
-                          if (v == null || v.isEmpty) return "Zorunlu alan";
-                          if (int.tryParse(v) == null) return "Geçerli tam sayı girin";
-                          return null;
-                        },
+                    if (_trackStock) ...[
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _stockController,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(labelText: "Stok", border: OutlineInputBorder()),
+                          validator: (v) {
+                            if (_trackStock) {
+                              if (v == null || v.isEmpty) return "Zorunlu alan";
+                              if (int.tryParse(v) == null) return "Geçerli tam sayı girin";
+                            }
+                            return null;
+                          },
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -2289,7 +2346,8 @@ class _EditProductDialogState extends State<_EditProductDialog> {
               'name': _nameController.text.trim(),
               'description': _descController.text.trim(),
               'price': double.tryParse(_priceController.text) ?? 0.0,
-              'stock': int.tryParse(_stockController.text) ?? 0,
+              'stock': _trackStock ? (int.tryParse(_stockController.text) ?? 0) : null,
+              'trackStock': _trackStock,
               'unit': _selectedUnit,
               'minQuantity': (_selectedUnit == "KG" || _selectedUnit == "LITRE" || _selectedUnit == "GR") ? _minQuantity : 1.0,
               'stepSize': (_selectedUnit == "KG" || _selectedUnit == "LITRE" || _selectedUnit == "GR") ? _stepSize : 1.0,
@@ -2298,7 +2356,7 @@ class _EditProductDialogState extends State<_EditProductDialog> {
             if (!isRestaurant) {
               payload['barcode'] = _barcodeController.text.trim().isNotEmpty ? _barcodeController.text.trim() : null;
               payload['brand'] = _brandController.text.trim().isNotEmpty ? _brandController.text.trim() : null;
-              payload['stockQuantity'] = int.tryParse(_stockController.text) ?? 0;
+              payload['stockQuantity'] = _trackStock ? (int.tryParse(_stockController.text) ?? 0) : 0;
               payload['weightOrVolume'] = _weightOrVolumeController.text.trim().isNotEmpty ? _weightOrVolumeController.text.trim() : null;
             } else {
               payload['preparationTime'] = int.tryParse(_prepTimeController.text) ?? 0;

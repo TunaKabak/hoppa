@@ -26,6 +26,10 @@ class Product {
   });
 
   factory Product.fromMap(Map<String, dynamic> data) {
+    final isWeighted = data['isWeighted'] ?? false;
+    final defaultMinQty = isWeighted ? 0.5 : 1.0;
+    final defaultStep = isWeighted ? 0.5 : 1.0;
+
     return Product(
       barcode: data['barcode'] ?? '',
       name: data['name'] ?? '',
@@ -33,11 +37,15 @@ class Product {
       category: data['category'] ?? '',
       subCategory: data['subCategory'] ?? '',
       imageUrl: data['imageUrl'] ?? '',
-      isWeighted: data['isWeighted'] ?? false,
+      isWeighted: isWeighted,
       description: data['description'] ?? '',
       unit: data['unit'] ?? 'ADET',
-      minQuantity: (data['minQuantity'] ?? (data['isWeighted'] == true ? 0.5 : 1.0)).toDouble(),
-      stepSize: (data['stepSize'] ?? (data['isWeighted'] == true ? 0.5 : 1.0)).toDouble(),
+      minQuantity: data['minQuantity'] != null
+          ? (double.tryParse(data['minQuantity'].toString()) ?? defaultMinQty)
+          : defaultMinQty,
+      stepSize: data['stepSize'] != null
+          ? (double.tryParse(data['stepSize'].toString()) ?? defaultStep)
+          : defaultStep,
     );
   }
 
