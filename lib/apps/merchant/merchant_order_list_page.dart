@@ -226,6 +226,7 @@ class _MerchantOrderListPageState extends ConsumerState<MerchantOrderListPage> {
     model.Order order,
     WidgetRef ref,
   ) {
+    final theme = Theme.of(context);
     final status = order.status;
     final items = order.items;
 
