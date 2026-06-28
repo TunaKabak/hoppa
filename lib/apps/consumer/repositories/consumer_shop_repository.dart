@@ -110,79 +110,95 @@ class ConsumerShopRepository {
   }
 
   Future<List<Map<String, dynamic>>> getFavoriteProducts(List<String> productIds) async {
-    if (productIds.isEmpty) return [];
-    
-    final response = await _apiClient.post('/api/consumer/favorites/products', body: {
-      'productIds': productIds
-    });
-    
-    final data = response['data'] as List<dynamic>?;
-    if (data == null) return [];
-    
-    return data.map((item) {
-      final productJson = item['product'];
-      final isAvailable = item['isAvailable'] as bool? ?? false;
+    try {
+      final response = await _apiClient.get('/api/consumer/favorites/products');
       
-      final id = productJson['id'] as String? ?? '';
-      final shopId = productJson['shopId'] as String? ?? '';
-      final name = productJson['name'] as String? ?? '';
-      final description = productJson['description'] as String? ?? '';
-      final price = productJson['price'] != null ? double.tryParse(productJson['price'].toString()) ?? 0.0 : 0.0;
-      final stock = productJson['stock'] != null ? (int.tryParse(productJson['stock'].toString()) ?? 0).toDouble() : 0.0;
-      final isActive = productJson['isActive'] as bool? ?? true;
+      final data = response['data'] as List<dynamic>?;
+      if (data == null) return [];
       
-      final imageUrl = productJson['imageUrl'] as String? ?? '';
-      final validImageUrl = _isValidImageUrl(imageUrl)
-          ? imageUrl
-          : 'https://via.placeholder.com/150';
-
-      String categoryName = 'Genel';
-      String subCategoryName = 'Tümü';
-
-      if (productJson['category'] != null) {
-        final cat = productJson['category'];
-        if (cat['parent'] != null) {
-          categoryName = cat['parent']['name'] as String? ?? 'Genel';
-          subCategoryName = cat['name'] as String? ?? 'Tümü';
-        } else {
-          categoryName = cat['name'] as String? ?? 'Genel';
+      return data.map((item) {
+        final productJson = item['product'] ?? item;
+        final isAvailable = item['isAvailable'] as bool? ?? false;
+        
+        final id = productJson['id'] as String? ?? '';
+        final shopId = productJson['shopId'] as String? ?? '';
+        final name = productJson['name'] as String? ?? '';
+        final description = productJson['description'] as String? ?? '';
+        
+        double price = 0.0;
+        if (productJson['price'] != null) {
+          price = double.tryParse(productJson['price'].toString()) ?? 0.0;
         }
-      }
 
-      final trackStock = productJson['trackStock'] as bool? ?? false;
-      final stockQuantity = productJson['stockQuantity'] as int? ?? 0;
+        double stock = 0.0;
+        if (productJson['stock'] != null) {
+          stock = (int.tryParse(productJson['stock'].toString()) ?? 0).toDouble();
+        }
 
-      final productMap = {
-        'barcode': productJson['barcode'] ?? id,
-        'name': name,
-        'brand': productJson['brand'] ?? 'Hoppa',
-        'category': categoryName,
-        'subCategory': subCategoryName,
-        'imageUrl': validImageUrl,
-        'isWeighted': productJson['unit'] == 'KG' || productJson['unit'] == 'LITRE' || productJson['unit'] == 'GR' || (productJson['isWeighted'] == true),
-        'description': description,
-        'unit': productJson['unit'] ?? 'ADET',
-        'minQuantity': productJson['minQuantity'] != null ? double.tryParse(productJson['minQuantity'].toString()) : null,
-        'stepSize': productJson['stepSize'] != null ? double.tryParse(productJson['stepSize'].toString()) : null,
-      };
+        final isActive = productJson['isActive'] as bool? ?? true;
+        
+        final imageUrl = productJson['imageUrl'] as String? ?? '';
+        final validImageUrl = _isValidImageUrl(imageUrl)
+            ? imageUrl
+            : 'https://via.placeholder.com/150';
 
-      final map = {
-        'businessId': shopId,
-        'productBarcode': productJson['barcode'] ?? id,
-        'price': price,
-        'stock': stock,
-        'isAvailable': isActive,
-        'trackStock': trackStock,
-        'stockQuantity': stockQuantity,
-        'product_details': productMap,
-      };
+        String categoryName = 'Genel';
+        String subCategoryName = 'Tümü';
 
-      final bp = BusinessProduct.fromMap(map, id);
-      return {
-        'product': bp,
-        'isAvailable': isAvailable,
-      };
-    }).toList();
+        if (productJson['category'] != null) {
+          final cat = productJson['category'];
+          categoryName = cat is Map ? (cat['name'] as String? ?? 'Genel') : cat.toString();
+        }
+        if (productJson['subCategory'] != null) {
+          final sub = productJson['subCategory'];
+          subCategoryName = sub is Map ? (sub['name'] as String? ?? 'Tümü') : sub.toString();
+        }
+
+        final trackStock = productJson['trackStock'] as bool? ?? false;
+        final stockQuantity = productJson['stockQuantity'] as int? ?? 0;
+
+        final unitVal = productJson['unit'];
+        final unitCode = unitVal is Map ? (unitVal['code'] as String? ?? 'ADET') : (unitVal as String? ?? 'ADET');
+        final isWeighted = unitCode == 'KG' || unitCode == 'LITRE' || unitCode == 'GR' || (productJson['isWeighted'] == true);
+
+        final brandVal = productJson['brand'];
+        final brandName = brandVal is Map ? (brandVal['name'] as String? ?? 'Hoppa') : (brandVal as String? ?? 'Hoppa');
+
+        final productMap = {
+          'barcode': productJson['barcode'] ?? id,
+          'name': name,
+          'brand': brandName,
+          'category': categoryName,
+          'subCategory': subCategoryName,
+          'imageUrl': validImageUrl,
+          'isWeighted': isWeighted,
+          'description': description,
+          'unit': unitCode,
+          'minQuantity': productJson['minQuantity'] != null ? double.tryParse(productJson['minQuantity'].toString()) : null,
+          'stepSize': productJson['stepSize'] != null ? double.tryParse(productJson['stepSize'].toString()) : null,
+        };
+
+        final map = {
+          'businessId': shopId,
+          'productBarcode': productJson['barcode'] ?? id,
+          'price': price,
+          'stock': trackStock ? stockQuantity.toDouble() : stock,
+          'isAvailable': isActive,
+          'trackStock': trackStock,
+          'stockQuantity': stockQuantity,
+          'product_details': productMap,
+        };
+
+        final bp = BusinessProduct.fromMap(map, id);
+        return {
+          'product': bp,
+          'isAvailable': isAvailable,
+        };
+      }).toList();
+    } catch (e) {
+      print("Favori ürünleri çekme hatası (Flutter): $e");
+      return [];
+    }
   }
 }
 
