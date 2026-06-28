@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hoppa/apps/consumer/cart/cart_provider.dart';
@@ -354,7 +355,33 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
             onTap: () {
               _handleCartAction(() async {
                 await Future.delayed(const Duration(milliseconds: 200));
+                final isRemoving = quantity <= minQty + 0.001;
                 ref.read(cartProvider.notifier).removeFromCart(widget.businessProduct.id);
+                HapticFeedback.lightImpact();
+                if (isRemoving && mounted) {
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Row(
+                        children: [
+                          const Icon(Icons.delete_outline, color: Colors.white),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              "${widget.businessProduct.product.name} sepetten çıkarıldı",
+                            ),
+                          ),
+                        ],
+                      ),
+                      backgroundColor: Colors.grey.shade600,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                }
               });
             },
           ),
@@ -388,6 +415,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                 await Future.delayed(const Duration(milliseconds: 200));
                 try {
                   ref.read(cartProvider.notifier).addToCart(widget.businessProduct);
+                  HapticFeedback.lightImpact();
                 } catch (e) {
                   final msg = e.toString();
                   if (msg.contains("Farklı bir dükkandan") || msg.contains("sepeti temizlemelisiniz")) {
@@ -415,27 +443,31 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                   _handleCartAction(() async {
                     try {
                       ref.read(cartProvider.notifier).addToCart(widget.businessProduct);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Row(
-                            children: [
-                              const Icon(Icons.check_circle, color: Colors.white),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  "${widget.businessProduct.product.name} sepete eklendi",
+                      HapticFeedback.lightImpact();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Row(
+                              children: [
+                                const Icon(Icons.check_circle, color: Colors.white),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    "${widget.businessProduct.product.name} sepete eklendi",
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
+                            backgroundColor: const Color(0xFF81C784),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            duration: const Duration(seconds: 2),
                           ),
-                          backgroundColor: const Color(0xFF81C784),
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          duration: const Duration(seconds: 2),
-                        ),
-                      );
+                        );
+                      }
                     } catch (e) {
                       final msg = e.toString();
                       if (msg.contains("Farklı bir dükkandan") || msg.contains("sepeti temizlemelisiniz")) {

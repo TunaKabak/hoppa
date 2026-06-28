@@ -24,15 +24,18 @@ export class CategoryController {
         name: cat.name,
         shopType: cat.shopType,
         iconUrl: cat.iconUrl,
+        imageUrl: cat.imageUrl,
         parent: null,
         children: cat.subCategories.map(sub => ({
           id: sub.id,
           name: sub.name,
           categoryId: sub.categoryId,
+          imageUrl: sub.imageUrl,
           parent: {
             id: cat.id,
             name: cat.name,
-            shopType: cat.shopType
+            shopType: cat.shopType,
+            imageUrl: cat.imageUrl
           },
           children: []
         }))

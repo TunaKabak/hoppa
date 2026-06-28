@@ -149,6 +149,7 @@ model Category {
   name           String          @unique // Örn: "Atıştırmalık", "Sebze & Meyve", "Süt Ürünleri"
   shopType       String          @default("MARKET") // RESTAURANT, MARKET, GREENGROCER, BUTCHER
   iconUrl        String?         // Kategori ikonu
+  imageUrl       String?         // Ana kategori resmi (Örn: Yuvarlak ikonik meyve sepeti resmi)
   subCategories  SubCategory[]
   globalProducts GlobalProduct[]
   products       Product[]
@@ -158,6 +159,7 @@ model Category {
 model SubCategory {
   id             String          @id @default(uuid())
   name           String          // Örn: "Cips", "Çikolata", "Gazlı İçecekler"
+  imageUrl       String?         // Alt kategori resmi
   categoryId     String
   category       Category        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   globalProducts GlobalProduct[]
