@@ -17,7 +17,9 @@ const categoryController = new CategoryController();
 router.use(authMiddleware);
 
 // Favorites Operations
+router.get("/favorites/products", (req, res) => favoritesController.getFavoriteProducts(req, res));
 router.post("/favorites/products", (req, res) => favoritesController.getFavoriteProducts(req, res));
+router.post("/favorites/products/toggle", (req, res) => favoritesController.toggleFavoriteProduct(req, res));
 
 // Browse Shops and Products
 router.get("/shops", (req, res) => consumerShopController.getActiveShops(req, res));

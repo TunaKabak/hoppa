@@ -33,7 +33,10 @@ model User {
   addresses    Address[]
   orders       Order[]
   deviceTokens DeviceToken[]
+  favoriteProducts FavoriteProduct[]
+  favoriteShops    FavoriteShop[]
 }
+
 
 // Merchant (satıcı) hesap durumu
 enum MerchantStatus {
@@ -128,6 +131,7 @@ model Shop {
   
   products         Product[]
   orders           Order[]
+  favoriteShops    FavoriteShop[]
 
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
@@ -248,6 +252,7 @@ model Product {
   subCategory    SubCategory?    @relation(fields: [subCategoryId], references: [id])
 
   orderItems      OrderItem[]
+  favoriteProducts FavoriteProduct[]
 
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
@@ -447,3 +452,32 @@ model CourierLocation {
 
   @@index([courierId])
 }
+
+// 1. Favori Ürünler Tablosu (Kullanıcı bazlı ürün hızlı erişimi)
+model FavoriteProduct {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@index([productId])
+}
+
+// 2. Favori İşletmeler Tablosu (Kullanıcı bazlı dükkan hızlı erişimi)
+model FavoriteShop {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, shopId])
+  @@index([userId])
+  @@index([shopId])
+}
+
