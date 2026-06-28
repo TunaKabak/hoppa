@@ -351,7 +351,8 @@ export class OrderController {
             include: {
               product: { select: { name: true, imageUrl: true } }
             }
-          }
+          },
+          review: true
         },
         orderBy: { createdAt: "desc" }
       });
@@ -394,7 +395,8 @@ export class OrderController {
             include: {
               product: { select: { name: true, imageUrl: true } }
             }
-          }
+          },
+          review: true
         },
         orderBy: { createdAt: "desc" }
       });

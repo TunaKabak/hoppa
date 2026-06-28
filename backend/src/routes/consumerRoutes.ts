@@ -5,6 +5,8 @@ import { OrderController } from "../controllers/OrderController";
 import { AddressController } from "../controllers/AddressController";
 import { FavoritesController } from "../controllers/FavoritesController";
 import { CategoryController } from "../controllers/CategoryController";
+import { ReviewController } from "../controllers/ReviewController";
+import { SupportController } from "../controllers/SupportController";
 
 const router = Router();
 const consumerShopController = new ConsumerShopController();
@@ -39,6 +41,13 @@ router.get("/addresses", (req, res) => addressController.getAddresses(req, res))
 router.post("/addresses", (req, res) => addressController.createAddress(req, res));
 router.put("/addresses/:id", (req, res) => addressController.updateAddress(req, res));
 router.delete("/addresses/:id", (req, res) => addressController.deleteAddress(req, res));
+
+// Review Operations
+router.post("/reviews", (req, res) => ReviewController.createReview(req, res));
+router.get("/shops/:shopId/reviews", (req, res) => ReviewController.getShopReviews(req, res));
+
+// Hoppa Assistant Chat
+router.post("/support/chat", (req, res) => SupportController.chatWithAssistant(req, res));
 
 export default router;
 
