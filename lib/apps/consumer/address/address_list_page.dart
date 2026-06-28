@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hoppa/apps/consumer/repositories/address_repository.dart';
 import 'package:hoppa/shared/models/address.dart';
 import 'package:hoppa/apps/consumer/address/add_address_page.dart';
+import 'package:provider/provider.dart' as p;
+import 'package:hoppa/apps/consumer/address/delivery_provider.dart';
 
 class AddressListPage extends ConsumerWidget {
   final bool isSelectionMode;
@@ -18,6 +20,8 @@ class AddressListPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final deliveryProvider = p.Provider.of<DeliveryProvider>(context, listen: true);
+    final selectedAddress = deliveryProvider.selectedAddress;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -70,18 +74,27 @@ class AddressListPage extends ConsumerWidget {
                   itemCount: addresses.length,
                   itemBuilder: (context, index) {
                     final address = addresses[index];
+                    final isSelected = selectedAddress?.id == address.id;
                     return Card(
-                      elevation: 0,
-                      color: theme.cardTheme.color,
+                      elevation: isSelected ? 2 : 0,
+                      shadowColor: isSelected ? theme.primaryColor.withValues(alpha: 0.1) : Colors.transparent,
+                      color: isSelected
+                          ? theme.primaryColor.withValues(alpha: 0.12)
+                          : theme.cardTheme.color,
                       margin: const EdgeInsets.only(bottom: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(color: theme.dividerColor),
+                        side: BorderSide(
+                          color: isSelected ? theme.primaryColor : (theme.dividerColor ?? Colors.grey.shade200),
+                          width: isSelected ? 2.5 : 1.0,
+                        ),
                       ),
                       child: ListTile(
                         contentPadding: const EdgeInsets.all(12),
                         leading: CircleAvatar(
-                          backgroundColor: theme.primaryColor.withValues(alpha: 0.1),
+                          backgroundColor: isSelected
+                              ? theme.primaryColor.withValues(alpha: 0.2)
+                              : theme.primaryColor.withValues(alpha: 0.1),
                           child: Icon(
                             _getIconForTitle(address.title),
                             color: theme.primaryColor,
@@ -91,23 +104,30 @@ class AddressListPage extends ConsumerWidget {
                           address.title,
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
+                            color: isSelected ? theme.primaryColor : null,
                           ),
                         ),
                         subtitle: Text(
                           "${address.city}, ${address.district}\n${address.fullDetails}",
                           style: TextStyle(
-                            color: Colors.grey.shade600,
+                            color: isSelected ? Colors.grey.shade800 : Colors.grey.shade600,
                             fontSize: 13,
                           ),
                         ),
                         trailing: isSelectionMode
-                            ? const Icon(
-                                Icons.check_circle_outline,
-                                color: Colors.grey,
+                            ? Icon(
+                                isSelected ? Icons.check_circle_rounded : Icons.check_circle_outline,
+                                color: isSelected ? theme.primaryColor : Colors.grey,
+                                size: 26,
                               )
                             : Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
+                                  if (isSelected)
+                                    Padding(
+                                      padding: const EdgeInsets.only(right: 8.0),
+                                      child: Icon(Icons.check_circle_rounded, color: theme.primaryColor, size: 24),
+                                    ),
                                   IconButton(
                                     icon: const Icon(
                                       Icons.edit,

@@ -33,7 +33,7 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
   final TextEditingController _catalogSearchController = TextEditingController();
   List<CatalogProduct> _catalogSearchResults = [];
   bool _isCatalogLoading = false;
-  final Set<String> _selectedCatalogBarcodes = {};
+  final Set<String> _selectedCatalogProductIds = {};
   CatalogFilters? _catalogFilters;
   String? _inventoryFilter = 'not_in';
 
@@ -158,7 +158,7 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
       ),
       bottomNavigationBar: _tabController.index == 0 && _selectedInventoryIds.isNotEmpty
           ? _buildBulkActionBar()
-          : _tabController.index == 1 && _selectedCatalogBarcodes.isNotEmpty
+          : _tabController.index == 1 && _selectedCatalogProductIds.isNotEmpty
               ? _buildCatalogBulkActionBar()
               : null,
     );
@@ -183,7 +183,7 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
             : Row(
                 children: [
                   Text(
-                    "${_selectedCatalogBarcodes.length} seçildi",
+                    "${_selectedCatalogProductIds.length} seçildi",
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const Spacer(),
@@ -851,7 +851,7 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                       );
                     }
                     final product = _catalogSearchResults[index];
-                    final isSelected = _selectedCatalogBarcodes.contains(product.barcode);
+                    final isSelected = _selectedCatalogProductIds.contains(product.id);
 
                     return Card(
                       elevation: 2,
@@ -866,9 +866,9 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                         onTap: () {
                           setState(() {
                             if (isSelected) {
-                              _selectedCatalogBarcodes.remove(product.barcode);
+                              _selectedCatalogProductIds.remove(product.id);
                             } else {
-                              _selectedCatalogBarcodes.add(product.barcode);
+                              _selectedCatalogProductIds.add(product.id);
                             }
                           });
                         },
@@ -883,9 +883,9 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                                 onChanged: (val) {
                                   setState(() {
                                     if (val == true) {
-                                      _selectedCatalogBarcodes.add(product.barcode);
+                                      _selectedCatalogProductIds.add(product.id);
                                     } else {
-                                      _selectedCatalogBarcodes.remove(product.barcode);
+                                      _selectedCatalogProductIds.remove(product.id);
                                     }
                                   });
                                 },
@@ -1586,7 +1586,7 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(
-          "Toplu Ürün Ekle\n${_selectedCatalogBarcodes.length} ürün seçildi",
+          "Toplu Ürün Ekle\n${_selectedCatalogProductIds.length} ürün seçildi",
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         content: Form(
@@ -1645,10 +1645,13 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
 
               try {
                 final repo = ref.read(merchantProductRepositoryProvider);
-                final items = _selectedCatalogBarcodes.map((barcode) => {
-                  'barcode': barcode,
-                  'price': price,
-                  'stock': stock ?? 0,
+                final items = _selectedCatalogProductIds.map((id) {
+                  final prod = _catalogSearchResults.firstWhere((p) => p.id == id);
+                  return {
+                    'barcode': prod.barcode,
+                    'price': price,
+                    'stock': stock ?? 0,
+                  };
                 }).toList();
                 
                 await repo.bulkAddFromCatalog(items);
@@ -1661,7 +1664,7 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                     ),
                   );
                   setState(() {
-                    _selectedCatalogBarcodes.clear();
+                    _selectedCatalogProductIds.clear();
                   });
                   // Refresh inventory list
                   ref.refresh(productControllerProvider);
