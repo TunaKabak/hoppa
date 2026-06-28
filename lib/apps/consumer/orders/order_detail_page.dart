@@ -12,6 +12,7 @@ import 'package:hoppa/shared/models/business.dart';
 import 'package:hoppa/shared/models/business_type.dart';
 import 'package:hoppa/shared/models/order_status.dart';
 import 'package:hoppa/apps/consumer/orders/order_tracking_page.dart';
+import 'package:hoppa/apps/consumer/orders/widgets/rate_order_dialog.dart';
 
 class OrderDetailPage extends ConsumerStatefulWidget {
   final model.Order? order;
@@ -29,6 +30,7 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
   bool _isLoadingBusiness = true;
   model.Order? _order;
   bool _isLoadingOrder = false;
+  bool _hasPromptedRating = false;
 
   @override
   void initState() {
@@ -36,6 +38,11 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
     _order = widget.order;
     if (_order != null) {
       _fetchBusinessInfo();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_order != null) {
+          _checkAndShowRatingDialog(_order!);
+        }
+      });
     }
     _fetchOrderDetails();
   }
@@ -58,6 +65,7 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
           _isLoadingOrder = false;
         });
         _fetchBusinessInfo();
+        _checkAndShowRatingDialog(order);
       }
     } catch (e) {
       if (mounted) {
@@ -84,6 +92,21 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
       setState(() {
         _business = business;
         _isLoadingBusiness = false;
+      });
+    }
+  }
+
+  void _checkAndShowRatingDialog(model.Order order) {
+    if (order.status == 'delivered' && 
+        order.review == null && 
+        !_hasPromptedRating) {
+      _hasPromptedRating = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showDialog(
+          context: context,
+          barrierDismissible: true,
+          builder: (context) => RateOrderDialog(order: order),
+        );
       });
     }
   }

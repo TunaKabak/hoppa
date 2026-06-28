@@ -9,6 +9,7 @@ import 'package:hoppa/apps/consumer/orders/order_history_page.dart';
 import 'package:hoppa/apps/consumer/auth/consumer_login_page.dart';
 import 'package:hoppa/apps/consumer/favorites/favorites_page.dart';
 import 'package:hoppa/apps/consumer/cart/cart_provider.dart';
+import 'package:hoppa/apps/consumer/profile/support_chat_page.dart';
 import 'package:hoppa/shared/core/services/database_seeder.dart';
 
 class ProfilePage extends ConsumerWidget {
@@ -303,7 +304,14 @@ class ProfilePage extends ConsumerWidget {
               context,
               icon: Icons.headset_mic_outlined,
               title: t.translate('live_support'),
-              onTap: () {},
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SupportChatPage(),
+                  ),
+                );
+              },
             ),
 
             const SizedBox(height: 40),

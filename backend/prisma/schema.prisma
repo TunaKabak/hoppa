@@ -35,6 +35,7 @@ model User {
   deviceTokens DeviceToken[]
   favoriteProducts FavoriteProduct[]
   favoriteShops    FavoriteShop[]
+  reviews          Review[]
 }
 
 
@@ -132,6 +133,9 @@ model Shop {
   products         Product[]
   orders           Order[]
   favoriteShops    FavoriteShop[]
+  averageRating    Float     @default(5.0) // Cache alan: Puan ortalaması
+  reviewCount      Int       @default(0)   // Cache alan: Toplam yorum sayısı
+  reviews          Review[]
 
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
@@ -327,6 +331,7 @@ model Order {
 
   dontRingBell    Boolean     @default(false)
   leaveAtDoor     Boolean     @default(false)
+  review          Review?
 
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
@@ -479,5 +484,22 @@ model FavoriteShop {
   @@unique([userId, shopId])
   @@index([userId])
   @@index([shopId])
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  rating    Int
+  comment   String?  @db.VarChar(500)
+  createdAt DateTime @default(now())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  orderId   String   @unique
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([shopId])
+  @@index([userId])
 }
 
