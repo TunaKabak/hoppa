@@ -151,32 +151,26 @@ model Unit {
   products       Product[]
 }
 
-// 2. Ana Kategoriler
+// 2. Birleştirilmiş Tekil İlişkisel Kategori Tablosu (Self-Referential - Adjacency List Tree)
 model Category {
-  id             String          @id @default(uuid())
-  name           String          @unique // Örn: "Atıştırmalık", "Sebze & Meyve", "Süt Ürünleri"
+  id             String          @id // Migros JSON ID'si string olarak tutulacaktır
+  name           String
   shopType       String          @default("MARKET") // RESTAURANT, MARKET, GREENGROCER, BUTCHER
-  iconUrl        String?         // Kategori ikonu
-  imageUrl       String?         // Ana kategori resmi (Örn: Yuvarlak ikonik meyve sepeti resmi)
-  subCategories  SubCategory[]
-  globalProducts GlobalProduct[]
-  products       Product[]
-}
+  imageUrl       String?         // Migros CDN stüdyo görselleri
+  color          String?         // Kategori kart rengi (Örn: #FFE8E1)
+  
+  // Kendi kendine ilişki (Self-Referential Relation)
+  parentId       String?
+  parent         Category?       @relation("CategoryToCategory", fields: [parentId], references: [id], onDelete: Cascade)
+  children       Category[]      @relation("CategoryToCategory")
 
-// 3. Alt Kategoriler
-model SubCategory {
-  id             String          @id @default(uuid())
-  name           String          // Örn: "Cips", "Çikolata", "Gazlı İçecekler"
-  imageUrl       String?         // Alt kategori resmi
-  categoryId     String
-  category       Category        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   globalProducts GlobalProduct[]
   products       Product[]
 
-  @@unique([name, categoryId])
+  @@index([parentId])
 }
 
-// 4. Markalar Tablosu
+// 3. Markalar Tablosu
 model Brand {
   id             String          @id @default(uuid())
   name           String          @unique // Örn: "Coca-Cola", "Ülker", "Eti", "Koop"
@@ -185,7 +179,7 @@ model Brand {
   products       Product[]
 }
 
-// 5. Global Ürün Kütüphanesi (Master Catalog)
+// 4. Global Ürün Kütüphanesi (Master Catalog)
 model GlobalProduct {
   id             String          @id @default(uuid())
   barcode        String?         @unique
@@ -201,8 +195,6 @@ model GlobalProduct {
   brand          Brand?          @relation(fields: [brandId], references: [id], onDelete: SetNull)
   categoryId     String
   category       Category        @relation(fields: [categoryId], references: [id])
-  subCategoryId  String?
-  subCategory    SubCategory?    @relation(fields: [subCategoryId], references: [id])
 
   // Alt/Çocuk dükkan ürünleri ilişkisi
   childProducts  Product[]
@@ -210,10 +202,9 @@ model GlobalProduct {
   @@index([unitId])
   @@index([brandId])
   @@index([categoryId])
-  @@index([subCategoryId])
 }
 
-// 6. Satıştaki Aktif Dükkan Ürünleri
+// 5. Satıştaki Aktif Dükkan Ürünleri
 model Product {
   id              String      @id @default(uuid())
   shopId          String
@@ -252,8 +243,6 @@ model Product {
   brand          Brand?          @relation(fields: [brandId], references: [id], onDelete: SetNull)
   categoryId     String
   category       Category        @relation(fields: [categoryId], references: [id])
-  subCategoryId  String?
-  subCategory    SubCategory?    @relation(fields: [subCategoryId], references: [id])
 
   orderItems      OrderItem[]
   favoriteProducts FavoriteProduct[]
@@ -266,7 +255,6 @@ model Product {
   @@index([unitId])
   @@index([brandId])
   @@index([categoryId])
-  @@index([subCategoryId])
 }
 
 // Tüketici Adresi

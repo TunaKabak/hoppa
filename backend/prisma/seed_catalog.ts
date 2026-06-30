@@ -1,14 +1,142 @@
 import { PrismaClient } from '@prisma/client';
+import * as fs from 'fs';
+import * as path from 'path';
+
 const prisma = new PrismaClient();
+
+const EXCLUDED_CATEGORY_IDS = [
+  20000000072311, // Tüm İndirimli Ürünler
+  20000000073584, // Yaşam & Beslenme Tarzı
+  20000000072310, // Sadece Migros'ta
+  20000000072420, // Migroskop
+  20000000074746, // Migros Ekstra
+  20000000074861, // Yaz İhtiyaçları
+  20000000074872, // Kupaya Özel
+];
+
+const isPromotionalCategory = (name: string): boolean => {
+  const n = name.toLowerCase();
+  return n.includes("kampanya") || 
+         n.includes("indirimli") || 
+         n.includes("fırsat") || 
+         n.includes("migroskop") || 
+         n.includes("sadece migros") || 
+         n.includes("kupaya özel") || 
+         n.includes("ekstra") || 
+         n.includes("sponsorlu");
+};
+
+function determineShopType(name: string): string {
+  const n = name.toLowerCase();
+  if (n.includes("sebze") || n.includes("meyve") || n.includes("manav")) {
+    return "GREENGROCER";
+  }
+  if (n.includes("et, tavuk, balık") || n.includes("kasap") || n.includes("kırmızı et") || n.includes("beyaz et")) {
+    return "BUTCHER";
+  }
+  if (n.includes("restoran") || n.includes("hazır yemek") || n.includes("fırın") || n.includes("unlu mamül")) {
+    return "RESTAURANT";
+  }
+  return "MARKET";
+}
+
+interface CollectedCategory {
+  id: string;
+  name: string;
+  shopType: string;
+  imageUrl: string | null;
+  color: string | null;
+  parentId: string | null;
+  depth: number;
+}
+
+const collected: CollectedCategory[] = [];
+
+function collectCategoriesRecursive(
+  cat: any, 
+  parentId: string | null = null, 
+  inheritedShopType: string | null = null,
+  depth: number = 1
+) {
+  if (EXCLUDED_CATEGORY_IDS.includes(cat.id)) return;
+  if (isPromotionalCategory(cat.name)) return;
+
+  let imageUrl: string | null = null;
+  if (cat.images && cat.images.length > 0 && cat.images[0].urls) {
+    imageUrl = cat.images[0].urls.x3 || cat.images[0].urls.x2 || cat.images[0].urls.x1 || null;
+  }
+
+  const currentShopType = inheritedShopType || determineShopType(cat.name);
+
+  collected.push({
+    id: cat.id.toString(),
+    name: cat.name,
+    shopType: currentShopType,
+    imageUrl: imageUrl,
+    color: cat.color || null,
+    parentId: parentId,
+    depth: depth
+  });
+
+  if (cat.children && cat.children.length > 0) {
+    for (const child of cat.children) {
+      collectCategoriesRecursive(child, cat.id.toString(), currentShopType, depth + 1);
+    }
+  }
+}
+
+async function findCategoryByName(names: string[]): Promise<string> {
+  for (const name of names) {
+    const cat = await prisma.category.findFirst({
+      where: { name: { equals: name, mode: 'insensitive' } }
+    });
+    if (cat) return cat.id;
+  }
+  // Fallback to any category
+  const anyCat = await prisma.category.findFirst();
+  return anyCat?.id || "default";
+}
 
 async function main() {
   console.log("🌱 İlişkisel katalog temizliği başlatılıyor...");
   await prisma.globalProduct.deleteMany({});
   await prisma.product.deleteMany({});
-  await prisma.subCategory.deleteMany({});
   await prisma.category.deleteMany({});
   await prisma.brand.deleteMany({});
   await prisma.unit.deleteMany({});
+
+  console.log("📂 Migros JSON kategorileri okunuyor...");
+  const jsonPath = path.join(__dirname, 'migros-category.json');
+  const rawData = fs.readFileSync(jsonPath, 'utf-8');
+  const parsed = JSON.parse(rawData);
+  const categoriesList = parsed?.data?.categories || [];
+
+  console.log(`🥦 ${categoriesList.length} adet kök kategori listesi toplanıyor...`);
+  for (const rootCat of categoriesList) {
+    collectCategoriesRecursive(rootCat);
+  }
+
+  const maxDepth = Math.max(...collected.map(c => c.depth), 1);
+  console.log(`Maksimum kategori derinliği: ${maxDepth}. Toplam toplanan kategori sayısı: ${collected.length}`);
+
+  for (let d = 1; d <= maxDepth; d++) {
+    const levelCategories = collected.filter(c => c.depth === d);
+    if (levelCategories.length > 0) {
+      console.log(`Derinlik ${d} seviyesindeki ${levelCategories.length} kategori toplu ekleniyor...`);
+      const dataToInsert = levelCategories.map(c => ({
+        id: c.id,
+        name: c.name,
+        shopType: c.shopType,
+        imageUrl: c.imageUrl,
+        color: c.color,
+        parentId: c.parentId
+      }));
+      await prisma.category.createMany({
+        data: dataToInsert,
+        skipDuplicates: true
+      });
+    }
+  }
 
   console.log("📐 Birimler oluşturuluyor...");
   const unitAdet = await prisma.unit.create({ data: { code: "ADET", nameTr: "Adet", nameEn: "Pieces" } });
@@ -24,117 +152,26 @@ async function main() {
   const brandDamla = await prisma.brand.create({ data: { name: "Damla" } });
   const brandYerli = await prisma.brand.create({ data: { name: "Yerli Üretim" } });
 
-  console.log("🥦 Kategoriler ve Alt Kategoriler oluşturuluyor...");
-  // MARKET KATEGORİLERİ
-  const catIcecek = await prisma.category.create({ 
-    data: { 
-      name: "İçecek", 
-      shopType: "MARKET",
-      imageUrl: "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=500&q=80"
-    } 
-  });
-  const subGazli = await prisma.subCategory.create({ 
-    data: { 
-      name: "Gazlı İçecekler", 
-      categoryId: catIcecek.id,
-      imageUrl: "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=500&q=80"
-    } 
-  });
-  const subSu = await prisma.subCategory.create({ 
-    data: { 
-      name: "Su & Maden Suyu", 
-      categoryId: catIcecek.id,
-      imageUrl: "https://images.deliveryhero.io/image/fd-tr/Products/1110101.jpg"
-    } 
-  });
+  console.log("🔥 Global Ürünler dinamik kategorilerle tohumlanıyor...");
 
-  const catAtistirma = await prisma.category.create({ 
-    data: { 
-      name: "Atıştırmalık", 
-      shopType: "MARKET",
-      imageUrl: "https://images.unsplash.com/photo-1599490659213-e2b9527bd087?auto=format&fit=crop&w=500&q=80"
-    } 
-  });
-  const subGofret = await prisma.subCategory.create({ 
-    data: { 
-      name: "Bisküvi & Gofret", 
-      categoryId: catAtistirma.id,
-      imageUrl: "https://images.deliveryhero.io/image/fd-tr/Products/1111024.jpg"
-    } 
-  });
-  const subKek = await prisma.subCategory.create({ 
-    data: { 
-      name: "Kek & Turta", 
-      categoryId: catAtistirma.id,
-      imageUrl: "https://images.deliveryhero.io/image/fd-tr/Products/1111450.jpg"
-    } 
-  });
+  // Dinamik kategori eşleştirmeleri
+  const catIcecekId = await findCategoryByName(["Kola", "Gazlı İçecek", "İçecekler", "İçecek"]);
+  const catSuId = await findCategoryByName(["Su", "Su, Maden Suyu", "İçecek"]);
+  const catGofretId = await findCategoryByName(["Bisküvi, Kek, Gofret", "Bisküvi & Gofret", "Bisküvi", "Atıştırmalık"]);
+  const catKekId = await findCategoryByName(["Kek", "Bisküvi, Kek, Gofret", "Atıştırmalık"]);
+  const catSutId = await findCategoryByName(["Süt", "Uzun Ömürlü Süt", "Süt Ürünleri"]);
+  const catPeynirId = await findCategoryByName(["Peynir", "Beyaz Peynir", "Süt Ürünleri"]);
+  const catSebzeId = await findCategoryByName(["Patates, Soğan, Sarımsak", "Sebze", "Meyve, Sebze"]);
+  const catMeyveId = await findCategoryByName(["Meyve", "Meyve, Sebze"]);
 
-  const catSut = await prisma.category.create({ 
-    data: { 
-      name: "Süt Ürünleri", 
-      shopType: "MARKET",
-      imageUrl: "https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=500&q=80"
-    } 
-  });
-  const subSut = await prisma.subCategory.create({ 
-    data: { 
-      name: "Sütler", 
-      categoryId: catSut.id,
-      imageUrl: "https://images.deliveryhero.io/image/fd-tr/Products/1113002.jpg"
-    } 
-  });
-  const subPeynir = await prisma.subCategory.create({ 
-    data: { 
-      name: "Peynir", 
-      categoryId: catSut.id,
-      imageUrl: "https://images.deliveryhero.io/image/fd-tr/Products/1113050.jpg"
-    } 
-  });
-
-  // MANAV KATEGORİLERİ (GREENGROCER)
-  const catSebze = await prisma.category.create({ 
-    data: { 
-      name: "Taze Sebze", 
-      shopType: "GREENGROCER",
-      imageUrl: "https://images.unsplash.com/photo-1566385101042-1a0aca02964c?auto=format&fit=crop&w=500&q=80"
-    } 
-  });
-  const subPatates = await prisma.subCategory.create({ 
-    data: { 
-      name: "Patates & Soğan", 
-      categoryId: catSebze.id,
-      imageUrl: "https://images.unsplash.com/photo-1518977676601-b53f82aba655?auto=format&fit=crop&w=500&q=80"
-    } 
-  });
-  
-  const catMeyve = await prisma.category.create({ 
-    data: { 
-      name: "Taze Meyve", 
-      shopType: "GREENGROCER",
-      imageUrl: "https://images.unsplash.com/photo-1619546813926-a78fa6372cd2?auto=format&fit=crop&w=500&q=80"
-    } 
-  });
-  const subNarenciye = await prisma.subCategory.create({ 
-    data: { 
-      name: "Narenciye", 
-      categoryId: catMeyve.id,
-      imageUrl: "https://images.unsplash.com/photo-1611080626919-7cf5a9dbab5b?auto=format&fit=crop&w=500&q=80"
-    } 
-  });
-
-  console.log("🔥 Global Ürünler gerçek CDN resimleri ve ilişkileriyle tohumlanıyor...");
-  
   const globalProducts = [
-    // İÇECEKLER
     {
       barcode: "8690574001001",
       name: "Coca-Cola 1L Original",
       imageUrl: "https://images.deliveryhero.io/image/fd-tr/Products/1110059.jpg",
       unitId: unitAdet.id,
       brandId: brandCocaCola.id,
-      categoryId: catIcecek.id,
-      subCategoryId: subGazli.id,
+      categoryId: catIcecekId,
     },
     {
       barcode: "8690928000135",
@@ -142,8 +179,7 @@ async function main() {
       imageUrl: "https://images.deliveryhero.io/image/fd-tr/Products/1110201.jpg",
       unitId: unitAdet.id,
       brandId: brandYerli.id,
-      categoryId: catIcecek.id,
-      subCategoryId: subSu.id,
+      categoryId: catSuId,
     },
     {
       barcode: "8690804407137",
@@ -151,18 +187,15 @@ async function main() {
       imageUrl: "https://images.deliveryhero.io/image/fd-tr/Products/1110101.jpg",
       unitId: unitAdet.id,
       brandId: brandDamla.id,
-      categoryId: catIcecek.id,
-      subCategoryId: subSu.id,
+      categoryId: catSuId,
     },
-    // ATIŞTIRMALIKLAR
     {
       barcode: "8690504037544",
       name: "Ülker Çikolatalı Gofret 36g",
       imageUrl: "https://images.deliveryhero.io/image/fd-tr/Products/1111024.jpg",
       unitId: unitAdet.id,
       brandId: brandUlker.id,
-      categoryId: catAtistirma.id,
-      subCategoryId: subGofret.id,
+      categoryId: catGofretId,
     },
     {
       barcode: "8690526012352",
@@ -170,8 +203,7 @@ async function main() {
       imageUrl: "https://images.deliveryhero.io/image/fd-tr/Products/1111450.jpg",
       unitId: unitAdet.id,
       brandId: brandEti.id,
-      categoryId: catAtistirma.id,
-      subCategoryId: subKek.id,
+      categoryId: catKekId,
     },
     {
       barcode: "8692261010188",
@@ -179,18 +211,15 @@ async function main() {
       imageUrl: "https://images.deliveryhero.io/image/fd-tr/Products/1111102.jpg",
       unitId: unitAdet.id,
       brandId: brandEti.id,
-      categoryId: catAtistirma.id,
-      subCategoryId: subGofret.id,
+      categoryId: catGofretId,
     },
-    // SÜT ÜRÜNLERİ
     {
       barcode: "8690901002002",
       name: "Sütaş Tam Yağlı Süt 1L UHT",
       imageUrl: "https://images.deliveryhero.io/image/fd-tr/Products/1113002.jpg",
       unitId: unitLitre.id,
       brandId: brandSutas.id,
-      categoryId: catSut.id,
-      subCategoryId: subSut.id,
+      categoryId: catSutId,
     },
     {
       barcode: "8690901113050",
@@ -198,10 +227,8 @@ async function main() {
       imageUrl: "https://images.deliveryhero.io/image/fd-tr/Products/1113050.jpg",
       unitId: unitAdet.id,
       brandId: brandSutas.id,
-      categoryId: catSut.id,
-      subCategoryId: subPeynir.id,
+      categoryId: catPeynirId,
     },
-    // MANAV (TARTILI ÜRÜNLER - ONDALIKLI BİRİM DESTEKLİ)
     {
       barcode: null,
       name: "Taze Patates",
@@ -210,8 +237,7 @@ async function main() {
       minQuantity: 0.5,
       stepSize: 0.25,
       brandId: brandYerli.id,
-      categoryId: catSebze.id,
-      subCategoryId: subPatates.id,
+      categoryId: catSebzeId,
     },
     {
       barcode: null,
@@ -221,8 +247,7 @@ async function main() {
       minQuantity: 0.5,
       stepSize: 0.25,
       brandId: brandYerli.id,
-      categoryId: catSebze.id,
-      subCategoryId: subPatates.id,
+      categoryId: catSebzeId,
     },
     {
       barcode: null,
@@ -232,8 +257,7 @@ async function main() {
       minQuantity: 0.5,
       stepSize: 0.25,
       brandId: brandYerli.id,
-      categoryId: catMeyve.id,
-      subCategoryId: subNarenciye.id,
+      categoryId: catMeyveId,
     }
   ];
 

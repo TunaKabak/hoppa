@@ -11,25 +11,26 @@ export class CategoryController {
       const categories = await prisma.category.findMany({
         where: {
           shopType: shopType ? (shopType as string) : undefined,
+          parentId: null, // Only root categories
         },
         include: {
-          subCategories: true,
+          children: true,
         },
         orderBy: { name: "asc" },
       });
 
-      // Map new 3NF SubCategory relation to old children list format for client backward compatibility
+      // Map self-referential children relation to old format for client backward compatibility
       const formatted = categories.map(cat => ({
         id: cat.id,
         name: cat.name,
         shopType: cat.shopType,
-        iconUrl: cat.iconUrl,
+        iconUrl: cat.imageUrl,
         imageUrl: cat.imageUrl,
         parent: null,
-        children: cat.subCategories.map(sub => ({
+        children: (cat.children || []).map(sub => ({
           id: sub.id,
           name: sub.name,
-          categoryId: sub.categoryId,
+          categoryId: sub.parentId,
           imageUrl: sub.imageUrl,
           parent: {
             id: cat.id,

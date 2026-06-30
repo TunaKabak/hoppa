@@ -11,6 +11,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:core_auth/core_auth.dart';
+import 'package:core_network/core_network.dart';
 import 'shared/core/services/language_provider.dart';
 import 'shared/core/l10n/app_localizations.dart';
 import 'shared/core/theme/app_theme.dart';
@@ -36,7 +37,17 @@ void main() async {
   }
 
   await initializeDateFormatting('tr_TR', null);
-  runApp(const riverpod.ProviderScope(child: MerchantApp()));
+
+  final localIp = dotenv.env['LOCAL_IP'] ?? '127.0.0.1';
+  final apiBaseUrl = dotenv.env['API_URL'] ?? 'http://$localIp:3000';
+  print("🔌 Connecting to Backend API: $apiBaseUrl");
+
+  runApp(riverpod.ProviderScope(
+    overrides: [
+      apiClientProvider.overrideWithValue(ApiClient(baseUrl: apiBaseUrl)),
+    ],
+    child: const MerchantApp(),
+  ));
 }
 
 class MerchantApp extends riverpod.ConsumerStatefulWidget {

@@ -5,25 +5,24 @@ const prisma = new PrismaClient();
 
 function formatProduct(product: any) {
   if (!product) return null;
+  const cat = product.category;
+  const parent = cat?.parent;
+  
   return {
     ...product,
     unit: product.unit ? product.unit.code : "ADET",
     brand: product.brand ? product.brand.name : null,
     imageUrl: product.imageUrl || product.globalProduct?.imageUrl || "/images/default-product.png",
-    category: product.subCategory ? {
-      id: product.subCategory.id,
-      name: product.subCategory.name,
-      parent: product.category ? {
-        id: product.category.id,
-        name: product.category.name,
-        shopType: product.category.shopType
+    category: cat ? {
+      id: cat.id,
+      name: cat.name,
+      parent: parent ? {
+        id: parent.id,
+        name: parent.name,
+        shopType: parent.shopType
       } : null
-    } : (product.category ? {
-      id: product.category.id,
-      name: product.category.name,
-      parent: null
-    } : null),
-    categoryId: product.subCategory ? product.subCategory.id : product.categoryId
+    } : null,
+    categoryId: cat ? cat.id : null
   };
 }
 
@@ -110,8 +109,11 @@ export class ConsumerShopController {
           isActive: true
         },
         include: {
-          category: true,
-          subCategory: true,
+          category: {
+            include: {
+              parent: true
+            }
+          },
           unit: true,
           brand: true,
           globalProduct: true
@@ -140,15 +142,32 @@ export class ConsumerShopController {
 
       const categories = await prisma.category.findMany({
         where: {
-          products: {
-            some: { 
-              shopId: shopId,
-              isActive: true
+          parentId: null, // Only root categories
+          OR: [
+            {
+              products: {
+                some: { 
+                  shopId: shopId,
+                  isActive: true
+                }
+              }
+            },
+            {
+              children: {
+                some: {
+                  products: {
+                    some: { 
+                      shopId: shopId,
+                      isActive: true
+                    }
+                  }
+                }
+              }
             }
-          }
+          ]
         },
         include: {
-          subCategories: {
+          children: {
             where: {
               products: { 
                 some: { 
@@ -162,22 +181,27 @@ export class ConsumerShopController {
         orderBy: { name: "asc" }
       });
 
-      // Map new 3NF SubCategory relation to old children list format for client backward compatibility
+      // Map new 3NF self-referential Category relation to old children list format for client backward compatibility
       const formatted = (categories as any[]).map(cat => ({
         id: cat.id,
         name: cat.name,
         shopType: cat.shopType,
-        iconName: cat.iconUrl, // client maps iconUrl as iconName fallback
-        iconUrl: cat.iconUrl,
+        iconName: cat.imageUrl, 
+        iconUrl: cat.imageUrl,
+        imageUrl: cat.imageUrl,
+        color: cat.color,
         parent: null,
-        children: (cat.subCategories || []).map((sub: any) => ({
+        children: (cat.children || []).map((sub: any) => ({
           id: sub.id,
           name: sub.name,
-          categoryId: sub.categoryId,
+          categoryId: sub.parentId,
+          imageUrl: sub.imageUrl,
+          color: sub.color,
           parent: {
             id: cat.id,
             name: cat.name,
-            shopType: cat.shopType
+            shopType: cat.shopType,
+            imageUrl: cat.imageUrl
           },
           children: []
         }))
