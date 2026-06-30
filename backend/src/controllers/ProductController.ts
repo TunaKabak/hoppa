@@ -5,25 +5,24 @@ const prisma = new PrismaClient();
 
 function formatProduct(product: any) {
   if (!product) return null;
+  const cat = product.category;
+  const parent = cat?.parent;
+  
   return {
     ...product,
     unit: product.unit ? product.unit.code : "ADET",
     brand: product.brand ? product.brand.name : null,
     imageUrl: product.imageUrl || product.globalProduct?.imageUrl || "/images/default-product.png",
-    category: product.subCategory ? {
-      id: product.subCategory.id,
-      name: product.subCategory.name,
-      parent: product.category ? {
-        id: product.category.id,
-        name: product.category.name,
-        shopType: product.category.shopType
+    category: cat ? {
+      id: cat.id,
+      name: cat.name,
+      parent: parent ? {
+        id: parent.id,
+        name: parent.name,
+        shopType: parent.shopType
       } : null
-    } : (product.category ? {
-      id: product.category.id,
-      name: product.category.name,
-      parent: null
-    } : null),
-    categoryId: product.subCategory ? product.subCategory.id : product.categoryId
+    } : null,
+    categoryId: cat ? cat.id : null
   };
 }
 
@@ -41,8 +40,9 @@ export class ProductController {
       const products = await prisma.product.findMany({
         where: { shopId: shop.id },
         include: {
-          category: true,
-          subCategory: true,
+          category: {
+            include: { parent: true }
+          },
           unit: true,
           brand: true,
           globalProduct: true
@@ -95,47 +95,56 @@ export class ProductController {
         brandId = brandObj.id;
       }
 
-      // Kategori ve Alt Kategori Çözümleme
+      // Kategori Çözümleme
       let resolvedCategoryId = categoryId;
-      let resolvedSubCategoryId = null;
 
       if (categoryName && categoryName.trim() !== "") {
-        let category = await prisma.category.findUnique({
-          where: { name: categoryName.trim() }
+        let category = await prisma.category.findFirst({
+          where: { name: categoryName.trim(), shopType: shop.type }
         });
         if (!category) {
           category = await prisma.category.create({
-            data: { name: categoryName.trim(), shopType: shop.type }
+            data: { 
+              id: require('crypto').randomUUID(),
+              name: categoryName.trim(), 
+              shopType: shop.type 
+            }
           });
         }
         resolvedCategoryId = category.id;
       } else if (categoryId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(categoryId)) {
-        let category = await prisma.category.findUnique({
-          where: { name: categoryId.trim() }
+        let category = await prisma.category.findFirst({
+          where: { name: categoryId.trim(), shopType: shop.type }
         });
         if (!category) {
           category = await prisma.category.create({
-            data: { name: categoryId.trim(), shopType: shop.type }
+            data: { 
+              id: require('crypto').randomUUID(),
+              name: categoryId.trim(), 
+              shopType: shop.type 
+            }
           });
         }
         resolvedCategoryId = category.id;
       } else if (categoryId) {
-        const sub = await prisma.subCategory.findUnique({ where: { id: categoryId } });
-        if (sub) {
-          resolvedSubCategoryId = sub.id;
-          resolvedCategoryId = sub.categoryId;
-        } else {
-          const cat = await prisma.category.findUnique({ where: { id: categoryId } });
-          if (cat) {
-            resolvedCategoryId = cat.id;
-          }
+        const cat = await prisma.category.findUnique({ where: { id: categoryId } });
+        if (cat) {
+          resolvedCategoryId = cat.id;
         }
       }
 
       if (!resolvedCategoryId) {
-        let defaultCat = await prisma.category.findUnique({ where: { name: "Diğer" } });
+        let defaultCat = await prisma.category.findFirst({ 
+          where: { name: "Diğer", shopType: shop.type } 
+        });
         if (!defaultCat) {
-          defaultCat = await prisma.category.create({ data: { name: "Diğer", shopType: shop.type } });
+          defaultCat = await prisma.category.create({ 
+            data: { 
+              id: require('crypto').randomUUID(),
+              name: "Diğer", 
+              shopType: shop.type 
+            } 
+          });
         }
         resolvedCategoryId = defaultCat.id;
       }
@@ -146,7 +155,6 @@ export class ProductController {
         const gp = await prisma.globalProduct.findUnique({ where: { barcode: barcode.trim() } });
         if (gp) {
           resolvedGlobalProductId = gp.id;
-          if (!resolvedSubCategoryId) resolvedSubCategoryId = gp.subCategoryId;
           if (!resolvedCategoryId) resolvedCategoryId = gp.categoryId;
           if (!brandId) brandId = gp.brandId;
         }
@@ -178,7 +186,6 @@ export class ProductController {
           stock: parsedStock,
           imageUrl,
           categoryId: resolvedCategoryId,
-          subCategoryId: resolvedSubCategoryId,
           unitId,
           brandId,
           globalProductId: resolvedGlobalProductId,
@@ -194,8 +201,9 @@ export class ProductController {
           trackStock: parsedTrackStock
         },
         include: {
-          category: true,
-          subCategory: true,
+          category: {
+            include: { parent: true }
+          },
           unit: true,
           brand: true,
           globalProduct: true
@@ -259,54 +267,59 @@ export class ProductController {
         }
       }
 
-      // Kategori ve Alt Kategori Çözümleme
+      // Kategori Çözümleme
       let resolvedCategoryId = existingProduct.categoryId;
-      let resolvedSubCategoryId = existingProduct.subCategoryId;
 
       if (categoryName !== undefined) {
         if (categoryName && categoryName.trim() !== "") {
-          let category = await prisma.category.findUnique({
-            where: { name: categoryName.trim() }
+          let category = await prisma.category.findFirst({
+            where: { name: categoryName.trim(), shopType: shop.type }
           });
           if (!category) {
             category = await prisma.category.create({
-              data: { name: categoryName.trim(), shopType: shop.type }
+              data: { 
+                id: require('crypto').randomUUID(),
+                name: categoryName.trim(), 
+                shopType: shop.type 
+              }
             });
           }
           resolvedCategoryId = category.id;
-          resolvedSubCategoryId = null;
         } else {
           // If explicitly set to empty categoryName, fallback to default
-          let defaultCat = await prisma.category.findUnique({ where: { name: "Diğer" } });
+          let defaultCat = await prisma.category.findFirst({ 
+            where: { name: "Diğer", shopType: shop.type } 
+          });
           if (!defaultCat) {
-            defaultCat = await prisma.category.create({ data: { name: "Diğer", shopType: shop.type } });
+            defaultCat = await prisma.category.create({ 
+              data: { 
+                id: require('crypto').randomUUID(),
+                name: "Diğer", 
+                shopType: shop.type 
+              } 
+            });
           }
           resolvedCategoryId = defaultCat.id;
-          resolvedSubCategoryId = null;
         }
       } else if (categoryId !== undefined) {
         if (categoryId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(categoryId)) {
-          let category = await prisma.category.findUnique({
-            where: { name: categoryId.trim() }
+          let category = await prisma.category.findFirst({
+            where: { name: categoryId.trim(), shopType: shop.type }
           });
           if (!category) {
             category = await prisma.category.create({
-              data: { name: categoryId.trim(), shopType: shop.type }
+              data: { 
+                id: require('crypto').randomUUID(),
+                name: categoryId.trim(), 
+                shopType: shop.type 
+              }
             });
           }
           resolvedCategoryId = category.id;
-          resolvedSubCategoryId = null;
         } else if (categoryId) {
-          const sub = await prisma.subCategory.findUnique({ where: { id: categoryId } });
-          if (sub) {
-            resolvedSubCategoryId = sub.id;
-            resolvedCategoryId = sub.categoryId;
-          } else {
-            const cat = await prisma.category.findUnique({ where: { id: categoryId } });
-            if (cat) {
-              resolvedCategoryId = cat.id;
-              resolvedSubCategoryId = null;
-            }
+          const cat = await prisma.category.findUnique({ where: { id: categoryId } });
+          if (cat) {
+            resolvedCategoryId = cat.id;
           }
         }
       }
@@ -318,7 +331,6 @@ export class ProductController {
           const gp = await prisma.globalProduct.findUnique({ where: { barcode: barcode.trim() } });
           if (gp) {
             resolvedGlobalProductId = gp.id;
-            if (!resolvedSubCategoryId) resolvedSubCategoryId = gp.subCategoryId;
             resolvedCategoryId = gp.categoryId;
             if (!brandId) brandId = gp.brandId;
           } else {
@@ -361,7 +373,6 @@ export class ProductController {
           imageUrl, 
           isActive, 
           categoryId: resolvedCategoryId,
-          subCategoryId: resolvedSubCategoryId,
           unitId,
           brandId,
           globalProductId: resolvedGlobalProductId,
@@ -376,8 +387,9 @@ export class ProductController {
           trackStock: parsedTrackStock
         },
         include: {
-          category: true,
-          subCategory: true,
+          category: {
+            include: { parent: true }
+          },
           unit: true,
           brand: true,
           globalProduct: true
@@ -408,8 +420,9 @@ export class ProductController {
         where: { id: productId },
         data: { isActive: false },
         include: {
-          category: true,
-          subCategory: true,
+          category: {
+            include: { parent: true }
+          },
           unit: true,
           brand: true,
           globalProduct: true
@@ -473,8 +486,9 @@ export class ProductController {
       const results = await prisma.globalProduct.findMany({
         where: whereClause,
         include: {
-          category: true,
-          subCategory: true,
+          category: {
+            include: { parent: true }
+          },
           unit: true,
           brand: true
         },
@@ -483,13 +497,17 @@ export class ProductController {
         take: limit,
       });
 
-      const formatted = results.map(gp => ({
-        ...gp,
-        unit: gp.unit ? gp.unit.code : "ADET",
-        brand: gp.brand ? gp.brand.name : "Yerli Üretim",
-        category: gp.category ? gp.category.name : "",
-        subCategory: gp.subCategory ? gp.subCategory.name : null
-      }));
+      const formatted = results.map(gp => {
+        const cat = gp.category;
+        const parent = cat?.parent;
+        return {
+          ...gp,
+          unit: gp.unit ? gp.unit.code : "ADET",
+          brand: gp.brand ? gp.brand.name : "Yerli Üretim",
+          category: parent ? parent.name : (cat ? cat.name : ""),
+          subCategory: parent ? cat.name : null
+        };
+      });
 
       return res.status(200).json({ error: false, data: formatted });
     } catch (error: any) {
@@ -539,15 +557,15 @@ export class ProductController {
             imageUrl: globalProduct.imageUrl,
             globalProductId: globalProduct.id,
             categoryId: globalProduct.categoryId,
-            subCategoryId: globalProduct.subCategoryId,
             unitId: globalProduct.unitId,
             brandId: globalProduct.brandId,
             minQuantity: globalProduct.minQuantity,
             stepSize: globalProduct.stepSize
           },
           include: {
-            category: true,
-            subCategory: true,
+            category: {
+              include: { parent: true }
+            },
             unit: true,
             brand: true,
             globalProduct: true
@@ -559,7 +577,6 @@ export class ProductController {
             shopId: shop.id,
             globalProductId: globalProduct.id,
             categoryId: globalProduct.categoryId,
-            subCategoryId: globalProduct.subCategoryId,
             unitId: globalProduct.unitId,
             brandId: globalProduct.brandId,
             name: globalProduct.name,
@@ -574,8 +591,9 @@ export class ProductController {
             stepSize: globalProduct.stepSize
           },
           include: {
-            category: true,
-            subCategory: true,
+            category: {
+              include: { parent: true }
+            },
             unit: true,
             brand: true,
             globalProduct: true
@@ -636,15 +654,15 @@ export class ProductController {
               imageUrl: globalProduct.imageUrl,
               globalProductId: globalProduct.id,
               categoryId: globalProduct.categoryId,
-              subCategoryId: globalProduct.subCategoryId,
               unitId: globalProduct.unitId,
               brandId: globalProduct.brandId,
               minQuantity: globalProduct.minQuantity,
               stepSize: globalProduct.stepSize
             },
             include: {
-              category: true,
-              subCategory: true,
+              category: {
+                include: { parent: true }
+              },
               unit: true,
               brand: true,
               globalProduct: true
@@ -656,7 +674,6 @@ export class ProductController {
               shopId: shop.id,
               globalProductId: globalProduct.id,
               categoryId: globalProduct.categoryId,
-              subCategoryId: globalProduct.subCategoryId,
               unitId: globalProduct.unitId,
               brandId: globalProduct.brandId,
               name: globalProduct.name,
@@ -671,8 +688,9 @@ export class ProductController {
               stepSize: globalProduct.stepSize
             },
             include: {
-              category: true,
-              subCategory: true,
+              category: {
+                include: { parent: true }
+              },
               unit: true,
               brand: true,
               globalProduct: true

@@ -49,6 +49,14 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
   final Color kSecondaryColor = const Color(0xFFFF6B00);
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.isPickUp) {
+      _paymentMethod = 'online_payment';
+    }
+  }
+
+  @override
   void dispose() {
     _noteController.dispose();
     _cardNumberController.dispose();
@@ -435,8 +443,9 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                         child: _buildPaymentOption(
                           title: widget.isPickUp ? 'Mağazada Ödeme' : 'Kapıda Ödeme',
                           icon: widget.isPickUp ? Icons.store_outlined : Icons.local_shipping_outlined,
-                          isSelected: _paymentMethod != 'online_payment',
-                          onTap: () {
+                          isSelected: _paymentMethod != 'online_payment' && !widget.isPickUp,
+                          isDisabled: widget.isPickUp,
+                          onTap: widget.isPickUp ? null : () {
                             setState(() {
                               if (_paymentMethod == 'online_payment') {
                                 _paymentMethod = 'cash_on_delivery';
@@ -885,40 +894,45 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     required String title,
     required IconData icon,
     required bool isSelected,
-    required VoidCallback onTap,
+    required VoidCallback? onTap,
     bool isSubOption = false,
+    bool isDisabled = false,
   }) {
+    final active = isSelected && !isDisabled;
     return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(vertical: isSubOption ? 12 : 20, horizontal: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? kPrimaryColor.withValues(alpha: isSubOption ? 0.08 : 0.05) : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? kPrimaryColor : Colors.grey.shade200,
-            width: isSelected ? 2 : 1,
+      onTap: isDisabled ? null : onTap,
+      child: Opacity(
+        opacity: isDisabled ? 0.5 : 1.0,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: EdgeInsets.symmetric(vertical: isSubOption ? 12 : 20, horizontal: 12),
+          decoration: BoxDecoration(
+            color: active ? kPrimaryColor.withValues(alpha: isSubOption ? 0.08 : 0.05) : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: active ? kPrimaryColor : Colors.grey.shade200,
+              width: active ? 2 : 1,
+            ),
           ),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? kPrimaryColor : Colors.grey,
-              size: isSubOption ? 24 : 32,
-            ),
-            SizedBox(height: isSubOption ? 6 : 8),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: isSelected ? kPrimaryColor : Colors.grey[700],
-                fontSize: isSubOption ? 13 : 14,
+          child: Column(
+            children: [
+              Icon(
+                icon,
+                color: active ? kPrimaryColor : Colors.grey,
+                size: isSubOption ? 24 : 32,
               ),
-            ),
-          ],
+              SizedBox(height: isSubOption ? 6 : 8),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: active ? kPrimaryColor : Colors.grey[700],
+                  fontSize: isSubOption ? 13 : 14,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -5,25 +5,24 @@ const prisma = new PrismaClient();
 
 function formatProduct(product: any) {
   if (!product) return null;
+  const cat = product.category;
+  const parent = cat?.parent;
+  
   return {
     ...product,
     unit: product.unit ? product.unit.code : "ADET",
     brand: product.brand ? product.brand.name : null,
     imageUrl: product.imageUrl || product.globalProduct?.imageUrl || "/images/default-product.png",
-    category: product.subCategory ? {
-      id: product.subCategory.id,
-      name: product.subCategory.name,
-      parent: product.category ? {
-        id: product.category.id,
-        name: product.category.name,
-        shopType: product.category.shopType
+    category: cat ? {
+      id: cat.id,
+      name: cat.name,
+      parent: parent ? {
+        id: parent.id,
+        name: parent.name,
+        shopType: parent.shopType
       } : null
-    } : (product.category ? {
-      id: product.category.id,
-      name: product.category.name,
-      parent: null
-    } : null),
-    categoryId: product.subCategory ? product.subCategory.id : product.categoryId
+    } : null,
+    categoryId: cat ? cat.id : null
   };
 }
 
@@ -46,8 +45,9 @@ export class FavoritesController {
             include: {
               unit: true,
               brand: true,
-              category: true,
-              subCategory: true,
+              category: {
+                include: { parent: true }
+              },
               globalProduct: true,
               shop: {
                 include: {
@@ -66,8 +66,9 @@ export class FavoritesController {
               include: {
                 unit: true,
                 brand: true,
-                category: true,
-                subCategory: true,
+                category: {
+                  include: { parent: true }
+                },
                 globalProduct: true,
                 shop: {
                   include: {
