@@ -74,9 +74,9 @@ class _MainLayoutPageState extends ConsumerState<MainLayoutPage> {
     // Seçili sekmeyi belirle
     int currentIndex = navProvider.currentIndex;
 
-    // Alt menüyü göster/gizle: Ana Sayfa (0) ve Kategori Seçilmemişse GİZLE.
+    // Alt menüyü göster/gizle: Ana Sayfa (0) ve Kategori/İşletme Seçilmemişse GİZLE.
     bool showBottomBar =
-        !(currentIndex == 0 && businessProvider.selectedCategory == null);
+        !(currentIndex == 0 && businessProvider.selectedBusiness == null);
 
     // FAB Tıklanınca yapılacak işlem (Hoppa! - Ana Kategoriye Dön)
     void onFabPressed() {

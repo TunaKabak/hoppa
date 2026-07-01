@@ -1,4 +1,5 @@
 import 'package:core_network/core_network.dart';
+import 'package:hoppa/shared/models/business_category.dart';
 
 class PendingMerchant {
   final String id;
@@ -50,5 +51,50 @@ class SuperAdminRepository {
       body['revisionMessage'] = revisionMessage;
     }
     await _apiClient.put('/api/admin/merchants/$id/status', body: body);
+  }
+
+  Future<List<BusinessCategory>> adminGetBusinessCategories() async {
+    final response = await _apiClient.get('/api/admin/business-categories');
+    final data = response['data'] as List?;
+    if (data == null) return [];
+    return data.map((e) => BusinessCategory.fromJson(Map<String, dynamic>.from(e))).toList();
+  }
+
+  Future<BusinessCategory> adminCreateBusinessCategory(BusinessCategory category) async {
+    final response = await _apiClient.post(
+      '/api/admin/business-categories',
+      body: {
+        'name': category.name,
+        'icon': category.icon,
+        'color': category.color,
+        'badge': category.badge,
+        'avgDeliveryTime': category.avgDeliveryTime,
+        'subtitle': category.subtitle,
+        'isActive': category.isActive,
+        'order': category.order,
+      },
+    );
+    return BusinessCategory.fromJson(Map<String, dynamic>.from(response['data']));
+  }
+
+  Future<BusinessCategory> adminUpdateBusinessCategory(BusinessCategory category) async {
+    final response = await _apiClient.put(
+      '/api/admin/business-categories/${category.id}',
+      body: {
+        'name': category.name,
+        'icon': category.icon,
+        'color': category.color,
+        'badge': category.badge,
+        'avgDeliveryTime': category.avgDeliveryTime,
+        'subtitle': category.subtitle,
+        'isActive': category.isActive,
+        'order': category.order,
+      },
+    );
+    return BusinessCategory.fromJson(Map<String, dynamic>.from(response['data']));
+  }
+
+  Future<void> adminDeleteBusinessCategory(String id) async {
+    await _apiClient.delete('/api/admin/business-categories/$id');
   }
 }

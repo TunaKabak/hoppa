@@ -503,3 +503,17 @@ model Review {
   @@index([userId])
 }
 
+model BusinessCategory {
+  id              String   @id @default(uuid())
+  name            String   @unique
+  icon            String   // e.g., "shopping_basket", "restaurant"
+  color           String   // Hex code, e.g., "#00A651"
+  badge           String?  // e.g., "popular", "new"
+  avgDeliveryTime String?  // e.g., "20-30 dk"
+  subtitle        String?  // e.g., "Market alışverişi"
+  isActive        Boolean  @default(true)
+  order           Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+

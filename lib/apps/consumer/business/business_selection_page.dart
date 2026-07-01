@@ -6,6 +6,7 @@ import 'package:hoppa/shared/models/business.dart';
 import 'package:hoppa/apps/consumer/address/delivery_provider.dart';
 import 'package:hoppa/apps/consumer/address/address_list_page.dart';
 import 'package:hoppa/apps/consumer/repositories/consumer_shop_repository.dart';
+import 'package:hoppa/apps/consumer/home/widgets/account_bottom_sheet.dart';
 import 'package:latlong2/latlong.dart'; // Mesafe hesaplama için
 
 class BusinessSelectionPage extends ConsumerWidget {
@@ -48,6 +49,29 @@ class BusinessSelectionPage extends ConsumerWidget {
             ).clearCategory();
           },
         ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: Center(
+              child: GestureDetector(
+                onTap: () => AccountBottomSheet.show(context),
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: const Icon(
+                    Icons.person_outline,
+                    color: kPrimaryColor,
+                    size: 20,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
       body: p.Consumer<DeliveryProvider>(
         builder: (context, deliveryProvider, child) {
