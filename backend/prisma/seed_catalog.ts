@@ -142,10 +142,17 @@ async function main() {
       merchant = await prisma.merchant.create({
         data: {
           email: "market@test.com",
-          passwordHash: "mock_hash",
+          passwordHash: "$2b$12$RZJvTlB0q5OLVyLpWDTv0OUya.vTMqQoQ56r5u7GfGSoWuKKP4X6e",
           businessName: "Test Süpermarket",
           status: "ACTIVE",
           role: "merchant",
+        }
+      });
+    } else if (merchant.passwordHash === "mock_hash") {
+      merchant = await prisma.merchant.update({
+        where: { id: merchant.id },
+        data: {
+          passwordHash: "$2b$12$RZJvTlB0q5OLVyLpWDTv0OUya.vTMqQoQ56r5u7GfGSoWuKKP4X6e"
         }
       });
     }

@@ -82,6 +82,7 @@ async function main() {
     update: {
       status: "ACTIVE",
       phone: "+905551111111",
+      passwordHash: passwordHash,
     },
     create: {
       email: "merchant@test.com",
@@ -163,6 +164,7 @@ async function main() {
     update: {
       status: "ACTIVE",
       phone: "+905552222222",
+      passwordHash: passwordHash,
     },
     create: {
       email: "market@test.com",
