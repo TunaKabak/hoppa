@@ -16,14 +16,14 @@ const EXCLUDED_CATEGORY_IDS = [
 
 const isPromotionalCategory = (name: string): boolean => {
   const n = name.toLowerCase();
-  return n.includes("kampanya") || 
-         n.includes("indirimli") || 
-         n.includes("fırsat") || 
-         n.includes("migroskop") || 
-         n.includes("sadece migros") || 
-         n.includes("kupaya özel") || 
-         n.includes("ekstra") || 
-         n.includes("sponsorlu");
+  return n.includes("kampanya") ||
+    n.includes("indirimli") ||
+    n.includes("fırsat") ||
+    n.includes("migroskop") ||
+    n.includes("sadece migros") ||
+    n.includes("kupaya özel") ||
+    n.includes("ekstra") ||
+    n.includes("sponsorlu");
 };
 
 function determineShopType(name: string): string {
@@ -53,8 +53,8 @@ interface CollectedCategory {
 const collected: CollectedCategory[] = [];
 
 function collectCategoriesRecursive(
-  cat: any, 
-  parentId: string | null = null, 
+  cat: any,
+  parentId: string | null = null,
   inheritedShopType: string | null = null,
   depth: number = 1
 ) {
@@ -85,25 +85,14 @@ function collectCategoriesRecursive(
   }
 }
 
-async function findCategoryByName(names: string[]): Promise<string> {
-  for (const name of names) {
-    const cat = await prisma.category.findFirst({
-      where: { name: { equals: name, mode: 'insensitive' } }
-    });
-    if (cat) return cat.id;
-  }
-  // Fallback to any category
-  const anyCat = await prisma.category.findFirst();
-  return anyCat?.id || "default";
-}
-
 async function main() {
   console.log("🌱 İlişkisel katalog temizliği başlatılıyor...");
-  await prisma.globalProduct.deleteMany({});
   await prisma.product.deleteMany({});
+  await prisma.globalProduct.deleteMany({});
   await prisma.category.deleteMany({});
   await prisma.brand.deleteMany({});
   await prisma.unit.deleteMany({});
+  await prisma.campaign.deleteMany({});
 
   console.log("📂 Migros JSON kategorileri okunuyor...");
   const jsonPath = path.join(__dirname, 'migros-category.json');
@@ -144,128 +133,220 @@ async function main() {
   const unitLitre = await prisma.unit.create({ data: { code: "LITRE", nameTr: "Litre", nameEn: "Liters" } });
   const unitPaket = await prisma.unit.create({ data: { code: "PAKET", nameTr: "Paket", nameEn: "Pack" } });
 
-  console.log("📦 Markalar oluşturuluyor...");
-  const brandCocaCola = await prisma.brand.create({ data: { name: "Coca-Cola" } });
-  const brandUlker = await prisma.brand.create({ data: { name: "Ülker" } });
-  const brandEti = await prisma.brand.create({ data: { name: "Eti" } });
-  const brandSutas = await prisma.brand.create({ data: { name: "Sütaş" } });
-  const brandDamla = await prisma.brand.create({ data: { name: "Damla" } });
-  const brandYerli = await prisma.brand.create({ data: { name: "Yerli Üretim" } });
-
-  console.log("🔥 Global Ürünler dinamik kategorilerle tohumlanıyor...");
-
-  // Dinamik kategori eşleştirmeleri
-  const catIcecekId = await findCategoryByName(["Kola", "Gazlı İçecek", "İçecekler", "İçecek"]);
-  const catSuId = await findCategoryByName(["Su", "Su, Maden Suyu", "İçecek"]);
-  const catGofretId = await findCategoryByName(["Bisküvi, Kek, Gofret", "Bisküvi & Gofret", "Bisküvi", "Atıştırmalık"]);
-  const catKekId = await findCategoryByName(["Kek", "Bisküvi, Kek, Gofret", "Atıştırmalık"]);
-  const catSutId = await findCategoryByName(["Süt", "Uzun Ömürlü Süt", "Süt Ürünleri"]);
-  const catPeynirId = await findCategoryByName(["Peynir", "Beyaz Peynir", "Süt Ürünleri"]);
-  const catSebzeId = await findCategoryByName(["Patates, Soğan, Sarımsak", "Sebze", "Meyve, Sebze"]);
-  const catMeyveId = await findCategoryByName(["Meyve", "Meyve, Sebze"]);
-
-  const globalProducts = [
-    {
-      barcode: "8690574001001",
-      name: "Coca-Cola 1L Original",
-      imageUrl: "https://images.deliveryhero.io/image/fd-tr/Products/1110059.jpg",
-      unitId: unitAdet.id,
-      brandId: brandCocaCola.id,
-      categoryId: catIcecekId,
-    },
-    {
-      barcode: "8690928000135",
-      name: "Beypazarı Doğal Maden Suyu 200ml",
-      imageUrl: "https://images.deliveryhero.io/image/fd-tr/Products/1110201.jpg",
-      unitId: unitAdet.id,
-      brandId: brandYerli.id,
-      categoryId: catSuId,
-    },
-    {
-      barcode: "8690804407137",
-      name: "Damla Damacana Su 19L",
-      imageUrl: "https://images.deliveryhero.io/image/fd-tr/Products/1110101.jpg",
-      unitId: unitAdet.id,
-      brandId: brandDamla.id,
-      categoryId: catSuId,
-    },
-    {
-      barcode: "8690504037544",
-      name: "Ülker Çikolatalı Gofret 36g",
-      imageUrl: "https://images.deliveryhero.io/image/fd-tr/Products/1111024.jpg",
-      unitId: unitAdet.id,
-      brandId: brandUlker.id,
-      categoryId: catGofretId,
-    },
-    {
-      barcode: "8690526012352",
-      name: "Eti Popkek Muzlu 60g",
-      imageUrl: "https://images.deliveryhero.io/image/fd-tr/Products/1111450.jpg",
-      unitId: unitAdet.id,
-      brandId: brandEti.id,
-      categoryId: catKekId,
-    },
-    {
-      barcode: "8692261010188",
-      name: "Eti Crax Sade Çubuk 120g",
-      imageUrl: "https://images.deliveryhero.io/image/fd-tr/Products/1111102.jpg",
-      unitId: unitAdet.id,
-      brandId: brandEti.id,
-      categoryId: catGofretId,
-    },
-    {
-      barcode: "8690901002002",
-      name: "Sütaş Tam Yağlı Süt 1L UHT",
-      imageUrl: "https://images.deliveryhero.io/image/fd-tr/Products/1113002.jpg",
-      unitId: unitLitre.id,
-      brandId: brandSutas.id,
-      categoryId: catSutId,
-    },
-    {
-      barcode: "8690901113050",
-      name: "Sütaş Süzme Peynir 500g",
-      imageUrl: "https://images.deliveryhero.io/image/fd-tr/Products/1113050.jpg",
-      unitId: unitAdet.id,
-      brandId: brandSutas.id,
-      categoryId: catPeynirId,
-    },
-    {
-      barcode: null,
-      name: "Taze Patates",
-      imageUrl: "https://images.unsplash.com/photo-1518977676601-b53f82aba655?auto=format&fit=crop&w=500&q=80",
-      unitId: unitKg.id,
-      minQuantity: 0.5,
-      stepSize: 0.25,
-      brandId: brandYerli.id,
-      categoryId: catSebzeId,
-    },
-    {
-      barcode: null,
-      name: "Kırmızı Salkım Domates",
-      imageUrl: "https://images.unsplash.com/photo-1595855759920-86582396756a?auto=format&fit=crop&w=500&q=80",
-      unitId: unitKg.id,
-      minQuantity: 0.5,
-      stepSize: 0.25,
-      brandId: brandYerli.id,
-      categoryId: catSebzeId,
-    },
-    {
-      barcode: null,
-      name: "Yerli İthal Muz",
-      imageUrl: "https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?auto=format&fit=crop&w=500&q=80",
-      unitId: unitKg.id,
-      minQuantity: 0.5,
-      stepSize: 0.25,
-      brandId: brandYerli.id,
-      categoryId: catMeyveId,
+  // Bul veya oluştur market dükkanı
+  let marketShop = await prisma.shop.findFirst({ where: { type: "MARKET" } });
+  if (!marketShop) {
+    // Merchant bul veya oluştur
+    let merchant = await prisma.merchant.findFirst({ where: { email: "market@test.com" } });
+    if (!merchant) {
+      merchant = await prisma.merchant.create({
+        data: {
+          email: "market@test.com",
+          passwordHash: "mock_hash",
+          businessName: "Test Süpermarket",
+          status: "ACTIVE",
+          role: "merchant",
+        }
+      });
     }
-  ];
-
-  for (const prod of globalProducts) {
-    await prisma.globalProduct.create({ data: prod });
+    marketShop = await prisma.shop.create({
+      data: {
+        merchantId: merchant.id,
+        name: "Test Süpermarket",
+        description: "E2E testleri için market dükkanı",
+        isActive: true,
+        type: "MARKET",
+        minOrderAmount: 100.0,
+      }
+    });
   }
 
-  console.log("✅ Tebrikler! İlişkisel Katalog, Birimler ve Gerçek Resimler Başarıyla Yüklendi.");
+  console.log(`🏪 Ürünler '${marketShop.name}' dükkanına bağlanacak.`);
+
+  // Ürün JSON dosyalarını oku
+  const productFiles = ['migros-search-product.json', 'migros-search-product-ekmek.json'];
+  const allProducts: any[] = [];
+
+  for (const filename of productFiles) {
+    const prodPath = path.join(__dirname, filename);
+    if (fs.existsSync(prodPath)) {
+      console.log(`📖 Ürün dosyası okunuyor: ${filename}`);
+      const rawProdData = fs.readFileSync(prodPath, 'utf8');
+      const parsedProds = JSON.parse(rawProdData);
+      const list = parsedProds.data?.products || [];
+      allProducts.push(...list);
+    }
+  }
+
+  console.log(`📦 Toplam ${allProducts.length} adet Migros ürünü tohumlanıyor...`);
+
+  for (const item of allProducts) {
+    // 1. Marka
+    const brandName = item.brand || "Diğer";
+    const brand = await prisma.brand.upsert({
+      where: { name: brandName },
+      update: {},
+      create: { name: brandName }
+    });
+
+    // 2. Kategori Eşleme
+    let dbCategory = await prisma.category.findFirst({
+      where: { name: { contains: item.category, mode: 'insensitive' } }
+    });
+
+    if (!dbCategory) {
+      // Varsayılan bir kategori seç
+      dbCategory = await prisma.category.findFirst({ where: { shopType: "MARKET" } });
+      if (!dbCategory) {
+        dbCategory = await prisma.category.create({
+          data: {
+            id: require('crypto').randomUUID(),
+            name: item.category || "Diğer",
+            shopType: "MARKET"
+          }
+        });
+      }
+    }
+
+    // 3. Birim ve Ondalıklı Miktar Kuralları
+    const nameLower = item.name.toLowerCase();
+    let unitId = unitAdet.id;
+    let minQuantity = 1.0;
+    let stepSize = 1.0;
+
+    if (item.unit === "KILOGRAM" || nameLower.includes(" kg") || nameLower.includes(" g ") || nameLower.endsWith(" g") || dbCategory.shopType === "GREENGROCER" || dbCategory.shopType === "BUTCHER") {
+      unitId = unitKg.id;
+      minQuantity = 0.5;
+      stepSize = 0.25;
+    } else if (item.unit === "LITER" || nameLower.includes(" litre") || nameLower.includes(" l ") || nameLower.endsWith(" l") || nameLower.includes(" ml")) {
+      unitId = unitLitre.id;
+      minQuantity = 1.0;
+      stepSize = 1.0;
+    } else if (nameLower.includes("paket") || nameLower.includes("adet")) {
+      unitId = unitPaket.id;
+    }
+
+    const imageUrl = item.images?.PRODUCT_HD || item.images?.PRODUCT_DETAIL || "https://placehold.co/300";
+
+    // 4. GlobalProduct Upsert
+    const globalProduct = await prisma.globalProduct.upsert({
+      where: { sku: item.sku },
+      update: {
+        name: item.name,
+        prettyName: item.pretty_name,
+        imageUrl: imageUrl,
+        regularPrice: item.regular_price,
+        shownPrice: item.shown_price,
+        discountRate: item.discount_rate,
+      },
+      create: {
+        barcode: item.id.toString(),
+        sku: item.sku,
+        name: item.name,
+        prettyName: item.pretty_name,
+        imageUrl: imageUrl,
+        description: item.name, // Detay açıklaması olarak ismini kullanıyoruz
+        minQuantity: minQuantity,
+        stepSize: stepSize,
+        regularPrice: item.regular_price,
+        shownPrice: item.shown_price,
+        discountRate: item.discount_rate,
+        unitId: unitId,
+        brandId: brand.id,
+        categoryId: dbCategory.id,
+      }
+    });
+
+    // 5. Product (Local Override)
+    await prisma.product.create({
+      data: {
+        shopId: marketShop.id,
+        name: item.name,
+        description: item.name,
+        regularPrice: item.regular_price || item.shown_price || 0.0,
+        price: item.shown_price || 0.0,
+        discountRate: item.discount_rate || 0,
+        imageUrl: imageUrl,
+        minQuantity: minQuantity,
+        stepSize: stepSize,
+        trackStock: false,
+        stockQuantity: 100,
+        globalProductId: globalProduct.id,
+        unitId: unitId,
+        brandId: brand.id,
+        categoryId: dbCategory.id,
+        isActive: true,
+      }
+    });
+  }
+
+  // Seeding campaigns and shop visuals
+  await seedCampaignsAndShopVisuals();
+
+  console.log("✅ Tohumlama tamamlandı!");
+}
+
+async function seedCampaignsAndShopVisuals() {
+  console.log("📢 Kampanyalar ve Dükkan görsel detayları tohumlanıyor...");
+
+  // 1. Dükkanları güncelle (Mock dükkanlarımıza gerçek logo ve kapak atıyoruz)
+  await prisma.shop.updateMany({
+    where: { name: { contains: "Süpermarket" } },
+    data: {
+      logoUrl: "https://images.migrosone.com/sanalmarket/category/list/72310/migros-580baf.png",
+      coverUrl: "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80",
+      averageRating: 4.8,
+      reviewCount: 142
+    }
+  });
+
+  await prisma.shop.updateMany({
+    where: { name: { contains: "Manav" } },
+    data: {
+      logoUrl: "https://images.migrosone.com/sanalmarket/category/list/2/meyve-f77b42.png",
+      coverUrl: "https://images.unsplash.com/photo-1610348725531-843dff14682c?auto=format&fit=crop&w=1200&q=80",
+      averageRating: 4.9,
+      reviewCount: 89
+    }
+  });
+
+  // 2. get_campaigns.json dosyasını oku ve veritabanına kaydet
+  const campaignJsonPath = path.join(__dirname, 'get_campaigns.json');
+  if (fs.existsSync(campaignJsonPath)) {
+    const rawData = fs.readFileSync(campaignJsonPath, 'utf8');
+    const parsed = JSON.parse(rawData);
+    const campaigns = parsed.data?.campaigns || [];
+
+    for (const item of campaigns) {
+      // Listeden ilk geçerli resmi al
+      let imageUrl = "https://placehold.co/600x300";
+      if (item.imageUrls && item.imageUrls.length > 0 && item.imageUrls[0].urls) {
+        imageUrl = item.imageUrls[0].urls.CAMPAIGN_LIST || imageUrl;
+      }
+
+      await prisma.campaign.upsert({
+        where: { id: item.id.toString() },
+        update: {
+          title: item.name,
+          description: item.description || "",
+          imageUrl: imageUrl,
+          prettyName: item.prettyName,
+          finishDate: item.finishDate ? new Date(item.finishDate) : null,
+        },
+        create: {
+          id: item.id.toString(),
+          title: item.name,
+          description: item.description || "",
+          imageUrl: imageUrl,
+          prettyName: item.prettyName,
+          finishDate: item.finishDate ? new Date(item.finishDate) : null,
+          type: "SYSTEM",
+          isActive: true
+        }
+      });
+    }
+    console.log(`✅ ${campaigns.length} adet kampanya başarıyla aktarıldı.`);
+  }
 }
 
 main()

@@ -32,71 +32,42 @@ export class FavoritesController {
   public async getFavoriteProducts(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.user!.id;
-      let products: any[] = [];
 
-      // Eğer POST ile productIds dizisi gönderildiyse geriye dönük uyumluluk için oradan çek
-      if (req.method === "POST" && req.body.productIds && Array.isArray(req.body.productIds)) {
-        const { productIds } = req.body;
-        if (productIds.length > 0) {
-          products = await prisma.product.findMany({
-            where: {
-              id: { in: productIds }
-            },
+      const favoriteRecords = await prisma.favoriteProduct.findMany({
+        where: { userId },
+        include: {
+          product: {
             include: {
               unit: true,
               brand: true,
-              category: {
-                include: { parent: true }
-              },
-              globalProduct: true,
-              shop: {
-                include: {
-                  merchant: true
-                }
-              }
-            }
-          });
-        }
-      } else {
-        // Aksi takdirde kullanıcının 3NF ilişkisel tablodaki favorilerini çek
-        const favoriteRecords = await prisma.favoriteProduct.findMany({
-          where: { userId },
-          include: {
-            product: {
-              include: {
-                unit: true,
-                brand: true,
-                category: {
-                  include: { parent: true }
-                },
-                globalProduct: true,
-                shop: {
-                  include: {
-                    merchant: true
-                  }
-                }
-              }
+              category: true,
+              globalProduct: true, // Görsel fallback için master ürün dahil edilmelidir!
             }
           }
-        });
-        products = favoriteRecords.map(fav => fav.product).filter(Boolean);
-      }
+        }
+      });
 
-      const results = products.map(p => {
-        // Tüketici tarafına gönderilirken 'isAvailable' hesaplanmalı
-        // Dükkan açık mı? isActive=true ve merchant status=ACTIVE olmalı.
-        const isAvailable = !!(p.shop && p.shop.isActive && p.shop.merchant?.status === "ACTIVE");
-
+      const products = favoriteRecords.map(fav => {
+        const prod = fav.product;
         return {
-          product: formatProduct(p),
-          isAvailable
+          id: prod.id,
+          name: prod.name,
+          price: prod.price,
+          regularPrice: prod.regularPrice,
+          discountRate: prod.discountRate,
+          // Görsel fallback kuralı:
+          imageUrl: prod.imageUrl || prod.globalProduct?.imageUrl || "/images/default-product.png",
+          unit: prod.unit, // İlişkisel birim nesnesi
+          minQuantity: prod.minQuantity,
+          stepSize: prod.stepSize,
+          shopId: prod.shopId,
         };
       });
 
-      res.status(200).json({ error: false, data: results });
-    } catch (error: any) {
+      res.status(200).json({ error: false, data: products });
+    } catch (error) {
       console.error("Favori ürünler çekilemedi:", error);
-      res.status(500).json({ error: true, message: error.message || "Favori ürünler listelenirken hata oluştu." });
+      res.status(500).json({ error: true, message: "İşlem sırasında bir hata oluştu." });
     }
   }
 

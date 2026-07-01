@@ -14,6 +14,8 @@ class Category {
   final String avgDeliveryTime;
   final String? subtitle;
   final DateTime? createdAt;
+  final String? parentId;
+  final List<Category> children;
 
   Category({
     required this.id,
@@ -29,9 +31,17 @@ class Category {
     this.avgDeliveryTime = '20-30 dk',
     this.subtitle,
     this.createdAt,
+    this.parentId,
+    this.children = const [],
   });
 
   factory Category.fromMap(Map<String, dynamic> map, String id) {
+    var rawChildren = map['children'] as List<dynamic>? ?? [];
+    List<Category> parsedChildren = rawChildren.map((item) {
+      final itemMap = Map<String, dynamic>.from(item as Map);
+      return Category.fromMap(itemMap, itemMap['id']?.toString() ?? '');
+    }).toList();
+
     return Category(
       id: id,
       name: map['name'] as String? ?? '',
@@ -45,7 +55,11 @@ class Category {
       businessCount: map['businessCount'] as int? ?? 0,
       avgDeliveryTime: map['avgDeliveryTime'] as String? ?? '20-30 dk',
       subtitle: map['subtitle'] as String?,
-      createdAt: (map['createdAt'] as Timestamp?)?.toDate(),
+      createdAt: map['createdAt'] is Timestamp 
+          ? (map['createdAt'] as Timestamp).toDate() 
+          : null,
+      parentId: map['parentId'] as String?,
+      children: parsedChildren,
     );
   }
 
@@ -71,6 +85,8 @@ class Category {
       'avgDeliveryTime': avgDeliveryTime,
       'subtitle': subtitle,
       'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : null,
+      'parentId': parentId,
+      'children': children.map((c) => c.toMap()).toList(),
     };
   }
 
@@ -88,6 +104,8 @@ class Category {
     String? avgDeliveryTime,
     String? subtitle,
     DateTime? createdAt,
+    String? parentId,
+    List<Category>? children,
   }) {
     return Category(
       id: id ?? this.id,
@@ -103,6 +121,8 @@ class Category {
       avgDeliveryTime: avgDeliveryTime ?? this.avgDeliveryTime,
       subtitle: subtitle ?? this.subtitle,
       createdAt: createdAt ?? this.createdAt,
+      parentId: parentId ?? this.parentId,
+      children: children ?? this.children,
     );
   }
 }

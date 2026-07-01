@@ -10,6 +10,11 @@ class Product {
   final String unit; // YENİ: e.g. "KG", "ADET"
   final double minQuantity; // YENİ: e.g. 0.5
   final double stepSize; // YENİ: e.g. 0.25
+  final double? regularPrice; // YENİ
+  final double? shownPrice; // YENİ
+  final int discountRate; // YENİ
+  final String? sku; // YENİ
+  final String? prettyName; // YENİ
 
   Product({
     required this.barcode,
@@ -23,6 +28,11 @@ class Product {
     this.unit = 'ADET',
     this.minQuantity = 1.0,
     this.stepSize = 1.0,
+    this.regularPrice,
+    this.shownPrice,
+    this.discountRate = 0,
+    this.sku,
+    this.prettyName,
   });
 
   factory Product.fromMap(Map<String, dynamic> data) {
@@ -62,6 +72,11 @@ class Product {
       stepSize: data['stepSize'] != null
           ? (double.tryParse(data['stepSize'].toString()) ?? defaultStep)
           : defaultStep,
+      regularPrice: data['regularPrice'] != null ? double.tryParse(data['regularPrice'].toString()) : null,
+      shownPrice: data['shownPrice'] != null ? double.tryParse(data['shownPrice'].toString()) : null,
+      discountRate: data['discountRate'] as int? ?? 0,
+      sku: data['sku'] as String?,
+      prettyName: data['prettyName'] as String?,
     );
   }
 
@@ -78,6 +93,11 @@ class Product {
       'unit': unit,
       'minQuantity': minQuantity,
       'stepSize': stepSize,
+      'regularPrice': regularPrice,
+      'shownPrice': shownPrice,
+      'discountRate': discountRate,
+      'sku': sku,
+      'prettyName': prettyName,
     };
   }
 }

@@ -112,6 +112,8 @@ model Shop {
   isActive         Boolean   @default(false) // Dükkan açık/kapalı veya aktif/pasif mi
   imageUrl         String?   // Dükkan logosu
   headerImageUrl   String?   // Dükkan kapak resmi
+  logoUrl          String?   // Dükkan yuvarlak logosu (Örn: Migros Turuncu M)
+  coverUrl         String?   // Dükkan üst kapak resmi (Örn: Taze meyve/sebze reyonu)
   type             ShopType  @default(OTHER)
   
   // Lokasyon ve Mesafe
@@ -181,23 +183,31 @@ model Brand {
 
 // 4. Global Ürün Kütüphanesi (Master Catalog)
 model GlobalProduct {
-  id             String          @id @default(uuid())
-  barcode        String?         @unique
-  name           String
-  imageUrl       String          // Gerçek beyaz arka planlı stüdyo görseli URL'si
-  minQuantity    Float           @default(1.0)
-  stepSize       Float           @default(1.0)
+  id              String          @id @default(uuid())
+  barcode         String?         @unique
+  sku             String?         @unique // Migros SKU kodu (Örn: "05040812")
+  name            String
+  prettyName      String?         // URL ve SEO dostu isim (Örn: "sma-optipro-probiyotik-p-4ceaac")
+  imageUrl        String          // Profesyonel stüdyo resmi
+  description     String?         @db.Text // HTML formatlı zengin ürün açıklamaları
+  minQuantity     Float           @default(1.0)
+  stepSize        Float           @default(1.0)
   
+  // Fiyatlandırma ve İndirim Mimarisi (Katalog Standartı)
+  regularPrice    Decimal?        @db.Decimal(10, 2) // Normal satış fiyatı
+  shownPrice      Decimal?        @db.Decimal(10, 2) // İndirimli/Yansıyan fiyat
+  discountRate    Int             @default(0)        // İndirim oranı (Örn: 25 -> %25 indirim)
+
   // İlişkiler (Normalizasyon)
-  unitId         String
-  unit           Unit            @relation(fields: [unitId], references: [id])
-  brandId        String?
-  brand          Brand?          @relation(fields: [brandId], references: [id], onDelete: SetNull)
-  categoryId     String
-  category       Category        @relation(fields: [categoryId], references: [id])
+  unitId          String
+  unit            Unit            @relation(fields: [unitId], references: [id])
+  brandId         String?
+  brand           Brand?          @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  categoryId      String
+  category        Category        @relation(fields: [categoryId], references: [id])
 
   // Alt/Çocuk dükkan ürünleri ilişkisi
-  childProducts  Product[]
+  childProducts   Product[]
 
   @@index([unitId])
   @@index([brandId])
@@ -212,9 +222,12 @@ model Product {
   
   name            String
   description     String?
-  price           Decimal     @db.Decimal(10, 2)
-  discountPrice   Decimal?    @db.Decimal(10, 2) // İndirimli fiyat - üstü çizili fiyat mantığı
-  stock           Int?        @default(0)
+  
+  // Dükkan seviyesinde indirim desteği
+  regularPrice    Decimal     @db.Decimal(10, 2) // Üstü çizili fiyat (Normal fiyat)
+  price           Decimal     @db.Decimal(10, 2) // 🚨 shownPrice: Müşterinin ödeyeceği aktif fiyat
+  discountRate    Int         @default(0)        // Dükkan özel indirim yüzdesi
+  
   imageUrl        String?
   isActive        Boolean     @default(true)
   
@@ -397,15 +410,16 @@ model PaymentTransaction {
 // ------------------------------------------------------------------
 
 model Campaign {
-  id              String       @id @default(uuid())
-  title           String
-  description     String
-  type            CampaignType @default(FREE_DELIVERY_FIRST_ORDERS)
-  isActive        Boolean      @default(true)
-  maxUsesPerUser  Int          @default(5)
-  startDate       DateTime?
-  endDate         DateTime?
-  createdAt       DateTime     @default(now())
+  id              String          @id @default(uuid())
+  title           String          
+  description     String          @db.Text
+  prettyName      String?         // SEO dostu kampanya ismi
+  imageUrl        String          // Anasayfadaki geniş banner görseli
+  type            String          @default("SYSTEM") // SYSTEM, FREE_DELIVERY, PERCENTAGE_DISCOUNT
+  isActive        Boolean         @default(true)
+  maxUsesPerUser  Int             @default(5)
+  finishDate      DateTime?       // Milisaniye timestamp'ten parse edilecek bitiş tarihi
+  createdAt       DateTime        @default(now())
 }
 
 // Cihaz Bildirim Token'ları (FCM vb. için)

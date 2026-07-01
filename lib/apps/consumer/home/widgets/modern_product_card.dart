@@ -50,11 +50,26 @@ class ModernProductCard extends ConsumerWidget {
       quantity = cart.items[cartItemIndex].quantity;
     }
 
-    double price = businessProduct.price;
-    double? discountedPrice;
+    final double regularPrice = businessProduct.regularPrice;
+    final double price = businessProduct.price;
+    final int discountRate = businessProduct.discountRate;
+
+    double activePrice = price;
+    double? oldPrice;
+    int activeDiscountRate = discountRate;
+
+    if (discountRate > 0) {
+      oldPrice = regularPrice;
+      activePrice = price;
+    }
 
     if (campaign != null) {
-      discountedPrice = campaign!.calculateDiscountedPrice(price);
+      final campaignPrice = campaign!.calculateDiscountedPrice(price);
+      if (campaignPrice < activePrice) {
+        oldPrice = price;
+        activePrice = campaignPrice;
+        activeDiscountRate = (((price - campaignPrice) / price) * 100).round();
+      }
     }
 
     // --- LIST VIEW LAYOUT ---
@@ -105,28 +120,29 @@ class ModernProductCard extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  if (discountedPrice != null)
+                  if (activeDiscountRate > 0)
                     Positioned(
                       top: 0,
                       left: 0,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 6,
-                          vertical: 2,
+                          vertical: 4,
                         ),
                         decoration: const BoxDecoration(
-                          color: Colors.red,
+                          color: Colors.redAccent,
                           borderRadius: BorderRadius.only(
                             topLeft: Radius.circular(8),
                             bottomRight: Radius.circular(8),
                           ),
                         ),
-                        child: const Text(
-                          'İndirim',
-                          style: TextStyle(
+                        child: Text(
+                          '%$activeDiscountRate İNDİRİM',
+                          style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5,
                           ),
                         ),
                       ),
@@ -172,9 +188,9 @@ class ModernProductCard extends ConsumerWidget {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (discountedPrice != null)
+                          if (oldPrice != null)
                             Text(
-                              "${price.toStringAsFixed(2)} TL",
+                              "${oldPrice.toStringAsFixed(2)} TL",
                               style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
@@ -183,11 +199,11 @@ class ModernProductCard extends ConsumerWidget {
                               ),
                             ),
                           Text(
-                            "${(discountedPrice ?? price).toStringAsFixed(2)} TL / ${product.unit}",
+                            "${activePrice.toStringAsFixed(2)} TL / ${product.unit}",
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: theme.primaryColor,
+                              color: oldPrice != null ? Colors.red : theme.primaryColor,
                             ),
                           ),
                         ],
@@ -282,28 +298,29 @@ class ModernProductCard extends ConsumerWidget {
                           ),
                   ),
                 ),
-                if (discountedPrice != null)
+                if (activeDiscountRate > 0)
                   Positioned(
                     top: 0,
                     left: 0,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
-                        vertical: 4,
+                        vertical: 6,
                       ),
                       decoration: const BoxDecoration(
-                        color: Colors.red,
+                        color: Colors.redAccent,
                         borderRadius: BorderRadius.only(
                           topLeft: Radius.circular(16),
                           bottomRight: Radius.circular(12),
                         ),
                       ),
-                      child: const Text(
-                        'İndirim',
-                        style: TextStyle(
+                      child: Text(
+                        '%$activeDiscountRate İNDİRİM',
+                        style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.5,
                         ),
                       ),
                     ),
@@ -373,21 +390,21 @@ class ModernProductCard extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (discountedPrice != null)
+                        if (oldPrice != null)
                           Text(
-                            "${price.toStringAsFixed(2)} TL",
+                            "${oldPrice.toStringAsFixed(2)} TL",
                             style: const TextStyle(
                               color: Colors.grey,
-                              fontSize: 12,
+                              fontSize: 11,
                               fontWeight: FontWeight.bold,
                               decoration: TextDecoration.lineThrough,
                             ),
                           ),
                         Text(
-                          "${(discountedPrice ?? price).toStringAsFixed(2)} TL / ${product.unit}",
+                          "${activePrice.toStringAsFixed(2)} TL / ${product.unit}",
                           style: TextStyle(
-                            color: theme.primaryColor,
-                            fontSize: 15, // Slightly smaller
+                            color: oldPrice != null ? Colors.red : theme.primaryColor,
+                            fontSize: 15,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
