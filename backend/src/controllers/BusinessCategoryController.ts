@@ -68,7 +68,7 @@ export class BusinessCategoryController {
   // Admin-facing: Update category details or status
   async adminUpdateBusinessCategory(req: Request, res: Response) {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
       const { name, icon, color, badge, avgDeliveryTime, subtitle, isActive, order } = req.body;
 
       const category = await prisma.businessCategory.findUnique({
@@ -110,7 +110,7 @@ export class BusinessCategoryController {
   // Admin-facing: Delete category
   async adminDeleteBusinessCategory(req: Request, res: Response) {
     try {
-      const { id } = req.params;
+      const id = req.params.id as string;
 
       const category = await prisma.businessCategory.findUnique({
         where: { id }
