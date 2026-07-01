@@ -392,15 +392,37 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                             const SizedBox(height: 8),
                             SwitchListTile(
                               value: _leaveAtDoor,
-                              title: const Text("Kapıya Bırak", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                              subtitle: const Text("Sipariş kapınıza bırakılır, temassız teslim edilir.", style: TextStyle(fontSize: 12, color: Colors.grey)),
-                              secondary: Icon(Icons.door_front_door_outlined, color: _leaveAtDoor ? kPrimaryColor : Colors.grey),
+                              title: Text(
+                                "Kapıya Bırak",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  color: _paymentMethod != 'online_payment' ? Colors.grey : Colors.black87,
+                                ),
+                              ),
+                              subtitle: Text(
+                                _paymentMethod != 'online_payment'
+                                    ? "Kapıda ödeme seçildiğinde temassız teslimat yapılamaz."
+                                    : "Sipariş kapınıza bırakılır, temassız teslim edilir.",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: _paymentMethod != 'online_payment' ? Colors.grey.shade400 : Colors.grey,
+                                ),
+                              ),
+                              secondary: Icon(
+                                Icons.door_front_door_outlined,
+                                color: _paymentMethod != 'online_payment'
+                                    ? Colors.grey.shade300
+                                    : (_leaveAtDoor ? kPrimaryColor : Colors.grey),
+                              ),
                               activeColor: kPrimaryColor,
-                              onChanged: (bool value) {
-                                setState(() {
-                                  _leaveAtDoor = value;
-                                });
-                              },
+                              onChanged: _paymentMethod != 'online_payment'
+                                  ? null
+                                  : (bool value) {
+                                      setState(() {
+                                        _leaveAtDoor = value;
+                                      });
+                                    },
                               contentPadding: EdgeInsets.zero,
                             ),
                             const Divider(height: 1),
@@ -443,13 +465,14 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                         child: _buildPaymentOption(
                           title: widget.isPickUp ? 'Mağazada Ödeme' : 'Kapıda Ödeme',
                           icon: widget.isPickUp ? Icons.store_outlined : Icons.local_shipping_outlined,
-                          isSelected: _paymentMethod != 'online_payment' && !widget.isPickUp,
-                          isDisabled: widget.isPickUp,
-                          onTap: widget.isPickUp ? null : () {
+                          isSelected: _paymentMethod != 'online_payment',
+                          isDisabled: false,
+                          onTap: () {
                             setState(() {
                               if (_paymentMethod == 'online_payment') {
                                 _paymentMethod = 'cash_on_delivery';
                               }
+                              _leaveAtDoor = false;
                             });
                           },
                         ),
@@ -489,7 +512,10 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                                   icon: Icons.money_rounded,
                                   isSelected: _paymentMethod == 'cash_on_delivery',
                                   isSubOption: true,
-                                  onTap: () => setState(() => _paymentMethod = 'cash_on_delivery'),
+                                  onTap: () => setState(() {
+                                    _paymentMethod = 'cash_on_delivery';
+                                    _leaveAtDoor = false;
+                                  }),
                                 ),
                               ),
                               const SizedBox(width: 8),
@@ -499,7 +525,10 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                                   icon: Icons.credit_card_rounded,
                                   isSelected: _paymentMethod == 'card_on_delivery',
                                   isSubOption: true,
-                                  onTap: () => setState(() => _paymentMethod = 'card_on_delivery'),
+                                  onTap: () => setState(() {
+                                    _paymentMethod = 'card_on_delivery';
+                                    _leaveAtDoor = false;
+                                  }),
                                 ),
                               ),
                             ],

@@ -302,6 +302,7 @@ export class OrderController {
         where: { id: transactionResult.createdOrder.id },
         include: {
           shop: { select: { name: true, imageUrl: true } },
+          address: true,
           items: {
             include: {
               product: { select: { name: true, imageUrl: true } }
@@ -355,6 +356,7 @@ export class OrderController {
               merchant: true
             }
           },
+          address: true,
           consumer: { select: { name: true, surname: true, phone: true } },
           courier: true,
           items: {
@@ -399,6 +401,7 @@ export class OrderController {
               merchant: true
             }
           },
+          address: true,
           consumer: { select: { name: true, surname: true, phone: true } },
           courier: true,
           items: {
@@ -494,6 +497,7 @@ export class OrderController {
               merchant: true
             }
           },
+          address: true,
           consumer: { select: { name: true, surname: true, phone: true } },
           courier: true,
           items: {
