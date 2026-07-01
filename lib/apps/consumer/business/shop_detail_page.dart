@@ -671,7 +671,10 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                               if (campaigns.isEmpty) return const SizedBox.shrink();
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 8.0),
-                                child: CampaignCarousel(campaigns: campaigns),
+                                child: CampaignCarousel(
+                                  campaigns: campaigns,
+                                  allShopProducts: allProductsAsync.value ?? [],
+                                ),
                               );
                             },
                           ),

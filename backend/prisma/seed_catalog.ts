@@ -185,6 +185,62 @@ async function main() {
     }
   }
 
+  const extraProducts = [
+    {
+      id: 20000001000001,
+      sku: "10000001",
+      name: "Lipton Yellow Label Poşet Çay 25'li",
+      brand: "Lipton",
+      category: "Çay",
+      unit: "PIECE",
+      regular_price: 65.5,
+      shown_price: 65.5,
+      discount_rate: 0,
+      pretty_name: "lipton-yellow-label-bardak-poset-cay-25-li",
+      images: { PRODUCT_HD: "https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&w=300&q=80" }
+    },
+    {
+      id: 20000001000002,
+      sku: "10000002",
+      name: "Nivea Nemlendirici Krem 150 Ml",
+      brand: "Nivea",
+      category: "Kişisel Bakım, Kozmetik, Sağlık",
+      unit: "PIECE",
+      regular_price: 120.0,
+      shown_price: 96.0,
+      discount_rate: 20,
+      pretty_name: "nivea-nemlendirici-krem-150-ml",
+      images: { PRODUCT_HD: "https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?auto=format&fit=crop&w=300&q=80" }
+    },
+    {
+      id: 20000001000003,
+      sku: "10000003",
+      name: "İpana 3D White Diş Macunu 75 Ml",
+      brand: "İpana",
+      category: "Kişisel Bakım, Kozmetik, Sağlık",
+      unit: "PIECE",
+      regular_price: 85.0,
+      shown_price: 85.0,
+      discount_rate: 0,
+      pretty_name: "ipana-3d-white-dis-macunu-75-ml",
+      images: { PRODUCT_HD: "https://images.unsplash.com/photo-1559599189-fe84dea4eb79?auto=format&fit=crop&w=300&q=80" }
+    },
+    {
+      id: 20000001000004,
+      sku: "10000004",
+      name: "Çaykur Rize Turist Çayı 1 Kg",
+      brand: "Çaykur",
+      category: "Çay",
+      unit: "PIECE",
+      regular_price: 195.0,
+      shown_price: 195.0,
+      discount_rate: 0,
+      pretty_name: "caykur-rize-turist-cayi-1-kg",
+      images: { PRODUCT_HD: "https://images.unsplash.com/photo-1597481499750-3e6b22637e12?auto=format&fit=crop&w=300&q=80" }
+    }
+  ];
+  allProducts.push(...extraProducts);
+
   console.log(`📦 Toplam ${allProducts.length} adet Migros ürünü tohumlanıyor...`);
 
   for (const item of allProducts) {
