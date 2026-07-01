@@ -14,6 +14,73 @@ class ConsumerShopRepository {
 
   ConsumerShopRepository(this._apiClient);
 
+  String? _lastCachedShopId;
+  final Map<String, Map<String, String>> _categoryMappings = {};
+
+  String _normalizeCategoryName(String name) {
+    return name
+        .toLowerCase()
+        .replaceAll('ı', 'i')
+        .replaceAll('ö', 'o')
+        .replaceAll('ü', 'u')
+        .replaceAll('ş', 's')
+        .replaceAll('ç', 'c')
+        .replaceAll('ğ', 'g')
+        .replaceAll('&', 've')
+        .replaceAll(',', '')
+        .replaceAll(RegExp(r'[^a-z0-9]'), '');
+  }
+
+  void updateCategoryMappings(String shopId, List<dynamic> rootNodes) {
+    _lastCachedShopId = shopId;
+    _categoryMappings.clear();
+    for (var root in rootNodes) {
+      final rootMap = Map<String, dynamic>.from(root);
+      final rootName = rootMap['name']?.toString() ?? 'Genel';
+      final rootId = rootMap['id']?.toString();
+      
+      if (rootId != null) {
+        _categoryMappings[rootId] = {
+          'category': rootName,
+          'subCategory': 'Tümü',
+        };
+      }
+      _categoryMappings[_normalizeCategoryName(rootName)] = {
+        'category': rootName,
+        'subCategory': 'Tümü',
+      };
+      
+      final children = rootMap['children'] as List<dynamic>?;
+      if (children != null && children.isNotEmpty) {
+        _buildCategoryMappings(children, rootName, null);
+      }
+    }
+  }
+
+  void _buildCategoryMappings(List<dynamic> nodes, String rootName, String? immediateChildName) {
+    for (var node in nodes) {
+      final nodeMap = Map<String, dynamic>.from(node);
+      final id = nodeMap['id']?.toString();
+      final name = nodeMap['name']?.toString() ?? '';
+      
+      if (id != null) {
+        _categoryMappings[id] = {
+          'category': rootName,
+          'subCategory': immediateChildName ?? name,
+        };
+      }
+      _categoryMappings[_normalizeCategoryName(name)] = {
+        'category': rootName,
+        'subCategory': immediateChildName ?? name,
+      };
+      
+      final children = nodeMap['children'] as List<dynamic>?;
+      if (children != null && children.isNotEmpty) {
+        _buildCategoryMappings(children, rootName, immediateChildName ?? name);
+      }
+    }
+  }
+
   bool _isValidImageUrl(String? url) {
     if (url == null || url.trim().isEmpty) return false;
     return url.startsWith('http://') || url.startsWith('https://');
@@ -54,7 +121,41 @@ class ConsumerShopRepository {
     }).toList();
   }
 
+  Map<String, String> _parseCategoryHierarchy(dynamic categoryJson) {
+    if (categoryJson == null) {
+      return {'category': 'Genel', 'subCategory': 'Tümü'};
+    }
+    
+    final List<dynamic> chain = [];
+    var current = categoryJson;
+    while (current != null) {
+      chain.add(current);
+      current = current['parent'];
+    }
+    
+    final rootName = chain[chain.length - 1]['name'] as String? ?? 'Genel';
+    String subName = 'Tümü';
+    
+    if (chain.length >= 2) {
+      subName = chain[chain.length - 2]['name'] as String? ?? 'Tümü';
+    }
+    
+    return {'category': rootName, 'subCategory': subName};
+  }
+
   Future<List<BusinessProduct>> getShopProducts(String shopId) async {
+    if (_lastCachedShopId != shopId || _categoryMappings.isEmpty) {
+      try {
+        final catResponse = await _apiClient.get('/api/consumer/shops/$shopId/categories');
+        final catData = catResponse['data'] as List<dynamic>?;
+        if (catData != null) {
+          updateCategoryMappings(shopId, catData);
+        }
+      } catch (e) {
+        print("Error pre-fetching categories in getShopProducts: $e");
+      }
+    }
+
     final response = await _apiClient.get('/api/consumer/shops/$shopId/products');
     final data = response['data'] as List<dynamic>?;
     if (data == null) return [];
@@ -71,20 +172,25 @@ class ConsumerShopRepository {
           ? imageUrl
           : 'https://via.placeholder.com/150';
 
+      final String categoryId = json['categoryId']?.toString() ?? json['category']?['id']?.toString() ?? '';
+      final String rawCategoryName = json['category']?['name']?.toString() ?? '';
+      final String normName = _normalizeCategoryName(rawCategoryName);
+      
       String categoryName = 'Genel';
       String subCategoryName = 'Tümü';
-
-      if (json['category'] != null) {
-        print("DEBUG CATEGORY: ${json['category']}");
-        final cat = json['category'];
-        if (cat['parent'] != null) {
-          categoryName = cat['parent']['name'] as String? ?? 'Genel';
-          subCategoryName = cat['name'] as String? ?? 'Tümü';
-        } else {
-          categoryName = cat['name'] as String? ?? 'Genel';
-        }
+      
+      if (_categoryMappings.containsKey(categoryId)) {
+        final mapping = _categoryMappings[categoryId]!;
+        categoryName = mapping['category']!;
+        subCategoryName = mapping['subCategory']!;
+      } else if (_categoryMappings.containsKey(normName)) {
+        final mapping = _categoryMappings[normName]!;
+        categoryName = mapping['category']!;
+        subCategoryName = mapping['subCategory']!;
       } else {
-        print("DEBUG CATEGORY: null");
+        final catInfo = _parseCategoryHierarchy(json['category']);
+        categoryName = catInfo['category']!;
+        subCategoryName = catInfo['subCategory']!;
       }
 
       final trackStock = json['trackStock'] as bool? ?? false;
@@ -162,16 +268,25 @@ class ConsumerShopRepository {
             ? imageUrl
             : 'https://via.placeholder.com/150';
 
+        final String categoryId = productJson['categoryId']?.toString() ?? productJson['category']?['id']?.toString() ?? '';
+        final String rawCategoryName = productJson['category']?['name']?.toString() ?? '';
+        final String normName = _normalizeCategoryName(rawCategoryName);
+        
         String categoryName = 'Genel';
         String subCategoryName = 'Tümü';
-
-        if (productJson['category'] != null) {
-          final cat = productJson['category'];
-          categoryName = cat is Map ? (cat['name'] as String? ?? 'Genel') : cat.toString();
-        }
-        if (productJson['subCategory'] != null) {
-          final sub = productJson['subCategory'];
-          subCategoryName = sub is Map ? (sub['name'] as String? ?? 'Tümü') : sub.toString();
+        
+        if (_categoryMappings.containsKey(categoryId)) {
+          final mapping = _categoryMappings[categoryId]!;
+          categoryName = mapping['category']!;
+          subCategoryName = mapping['subCategory']!;
+        } else if (_categoryMappings.containsKey(normName)) {
+          final mapping = _categoryMappings[normName]!;
+          categoryName = mapping['category']!;
+          subCategoryName = mapping['subCategory']!;
+        } else {
+          final catInfo = _parseCategoryHierarchy(productJson['category']);
+          categoryName = catInfo['category']!;
+          subCategoryName = catInfo['subCategory']!;
         }
 
         final trackStock = productJson['trackStock'] as bool? ?? false;
@@ -290,6 +405,8 @@ final shopCategoriesProvider = FutureProvider.family<List<ShopCategoryData>, Str
   final data = response['data'] as List<dynamic>?;
   if (data == null) return [];
   
+  repo.updateCategoryMappings(shopId, data);
+  
   return data.map((c) {
     final catMap = Map<String, dynamic>.from(c);
     final subList = catMap['children'] as List<dynamic>? ?? [];
@@ -299,7 +416,7 @@ final shopCategoriesProvider = FutureProvider.family<List<ShopCategoryData>, Str
       id: catMap['id'] as String? ?? '',
       name: catMap['name'] as String? ?? '',
       iconName: catMap['iconName'] as String? ?? 'shopping_basket',
-      backgroundImage: catMap['backgroundImage'] as String?,
+      backgroundImage: catMap['imageUrl'] as String? ?? catMap['backgroundImage'] as String?,
       subCategories: subNames,
     );
   }).toList();

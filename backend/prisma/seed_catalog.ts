@@ -238,7 +238,7 @@ async function main() {
       unitId = unitAdet.id;
       minQuantity = 1.0;
       stepSize = 1.0;
-    } else if (item.unit === "KILOGRAM" || nameLower.includes(" kg") || nameLower.includes(" g ") || nameLower.endsWith(" g") || dbCategory.shopType === "GREENGROCER" || dbCategory.shopType === "BUTCHER") {
+    } else if (dbCategory.shopType === "GREENGROCER" || dbCategory.shopType === "BUTCHER" || item.unit === "KILOGRAM" || nameLower.includes(" kg")) {
       unitId = unitKg.id;
       minQuantity = 0.5;
       stepSize = 0.25;

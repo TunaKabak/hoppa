@@ -23,8 +23,7 @@ class ModernShopDetailPage extends ConsumerStatefulWidget {
 class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
   int _crossAxisCount = 2;
   final ScrollController _scrollController = ScrollController();
-  final ScrollController _rightScrollController = ScrollController();
-  bool _isScrolled = false;
+  bool _showScrollToTop = false;
 
   final List<String> _sortOptions = [
     'Önerilen',
@@ -37,7 +36,6 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.shop.type.label == 'Çiçek') {
         ref.read(selectedCatalogCategoryProvider.notifier).state = 'Çiçek';
@@ -48,16 +46,15 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
   @override
   void dispose() {
     _scrollController.dispose();
-    _rightScrollController.dispose();
     super.dispose();
   }
 
-  void _onScroll() {
-    final bool previousScrolled = _isScrolled;
-    _isScrolled = _scrollController.offset > 80.0;
-    if (previousScrolled != _isScrolled) {
-      setState(() {});
-    }
+  void _scrollToTop() {
+    _scrollController.animateTo(
+      0,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.fastOutSlowIn,
+    );
   }
 
   void _changeGrid(int count) {
@@ -179,26 +176,64 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
     final allProductsAsync = ref.watch(shopProductsProvider(widget.shop.id));
     final categoriesAsync = ref.watch(shopCategoriesProvider(widget.shop.id));
 
+    String normalize(String name) {
+      return name
+          .toLowerCase()
+          .replaceAll('ı', 'i')
+          .replaceAll('ö', 'o')
+          .replaceAll('ü', 'u')
+          .replaceAll('ş', 's')
+          .replaceAll('ç', 'c')
+          .replaceAll('ğ', 'g')
+          .replaceAll('&', 've')
+          .replaceAll(',', '')
+          .replaceAll(RegExp(r'[^a-z0-9]'), '');
+    }
+
     List<String> currentSubCategories = [];
     if (selectedCategory != 'Tümü' && categoriesAsync.hasValue) {
       final matchingCat = categoriesAsync.value!.firstWhere(
-        (c) => c.name == selectedCategory,
+        (c) => normalize(c.name) == normalize(selectedCategory),
         orElse: () => ShopCategoryData(id: '', name: '', iconName: '', subCategories: []),
       );
-      currentSubCategories = matchingCat.subCategories;
+      
+      final String normSelectedCategory = normalize(selectedCategory);
+      final Set<String> productSubCategories = {};
+      if (allProductsAsync.hasValue) {
+        for (var bp in allProductsAsync.value!) {
+          if (normalize(bp.product.category) == normSelectedCategory) {
+            productSubCategories.add(normalize(bp.product.subCategory));
+          }
+        }
+      }
+      
+      currentSubCategories = matchingCat.subCategories.where(
+        (sub) => sub == 'Tümü' || productSubCategories.contains(normalize(sub))
+      ).toList();
     }
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      body: NestedScrollView(
-        controller: _scrollController,
-        floatHeaderSlivers: true,
-        headerSliverBuilder: (context, innerBoxIsScrolled) {
+      body: NotificationListener<ScrollNotification>(
+        onNotification: (notification) {
+          final metrics = notification.metrics;
+          final bool show = metrics.pixels > 300.0;
+          if (show != _showScrollToTop) {
+            setState(() {
+              _showScrollToTop = show;
+            });
+          }
+          return false;
+        },
+        child: NestedScrollView(
+          controller: _scrollController,
+          floatHeaderSlivers: true,
+          headerSliverBuilder: (context, innerBoxIsScrolled) {
           return [
             SliverAppBar(
               pinned: true,
-              floating: true,
-              snap: true,
+              floating: false,
+              snap: false,
               expandedHeight: 145.0,
               backgroundColor: theme.primaryColor,
               elevation: innerBoxIsScrolled ? 4 : 0,
@@ -214,15 +249,31 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                       onTap: _changeBusiness,
                       child: Row(
                         children: [
-                          CircleAvatar(
-                            radius: 14,
-                            backgroundColor: Colors.white,
-                            backgroundImage: widget.shop.logoUrl.isNotEmpty
-                                ? NetworkImage(widget.shop.logoUrl)
-                                : null,
-                            child: widget.shop.logoUrl.isEmpty
-                                ? Icon(Icons.store, size: 14, color: theme.primaryColor)
-                                : null,
+                          Container(
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: widget.shop.logoUrl.isNotEmpty
+                                  ? Image.network(
+                                      widget.shop.logoUrl,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) => Icon(
+                                        Icons.store,
+                                        size: 14,
+                                        color: theme.primaryColor,
+                                      ),
+                                    )
+                                  : Icon(
+                                      Icons.store,
+                                      size: 14,
+                                      color: theme.primaryColor,
+                                    ),
+                            ),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
@@ -239,12 +290,14 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                                const Text(
-                                  "İşletmeyi Değiştir",
-                                  style: TextStyle(
+                                Text(
+                                  "Min: ₺${widget.shop.minBasketAmount.toStringAsFixed(0)} • Teslimat: ₺${widget.shop.baseDeliveryFee.toStringAsFixed(0)} • Değiştir",
+                                  style: const TextStyle(
                                     color: Colors.white70,
-                                    fontSize: 11,
+                                    fontSize: 10,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ],
                             ),
@@ -295,12 +348,12 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Container(
+                           Container(
                             width: 44,
                             height: 44,
                             decoration: BoxDecoration(
-                              shape: BoxShape.circle,
                               color: Colors.white,
+                              borderRadius: BorderRadius.circular(10),
                               boxShadow: const [
                                 BoxShadow(
                                   color: Colors.black26,
@@ -310,7 +363,8 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                               ],
                               border: Border.all(color: Colors.white, width: 1.5),
                             ),
-                            child: ClipOval(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8.5),
                               child: widget.shop.logoUrl.isNotEmpty
                                   ? Image.network(
                                       widget.shop.logoUrl,
@@ -361,7 +415,7 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                                     ),
                                     const SizedBox(width: 2),
                                     Text(
-                                      "${widget.shop.averageRating.toStringAsFixed(1)} (${widget.shop.reviewCount} Değerlendirme) • ${widget.shop.openingTime} - ${widget.shop.closingTime}",
+                                      "${widget.shop.averageRating.toStringAsFixed(1)} (${widget.shop.reviewCount}) • Min: ₺${widget.shop.minBasketAmount.toStringAsFixed(0)} • Teslimat: ₺${widget.shop.baseDeliveryFee.toStringAsFixed(0)} • ${widget.shop.openingTime}-${widget.shop.closingTime}",
                                       style: const TextStyle(
                                         color: Colors.white70,
                                         fontSize: 10,
@@ -389,80 +443,77 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
             ),
           ];
         },
-        body: Column(
-          children: [
-            // 🚨 1. KADEME: YATAY ANA KATEGORİ LİSTESİ
-            Container(
-              height: 104,
-              color: theme.colorScheme.surface,
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: categoriesAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, stack) => Center(
-                  child: Icon(Icons.error_outline, color: Colors.red),
-                ),
-                data: (shopCategories) {
-                  // Dinamik kategori çıkarımı:
-                  final Set<String> productCategories = {};
-                  if (allProductsAsync.hasValue) {
-                    for (var bp in allProductsAsync.value!) {
-                      productCategories.add(bp.product.category);
+        body: CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: Container(
+                height: 104,
+                color: theme.colorScheme.surface,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: categoriesAsync.when(
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (err, stack) => Center(
+                    child: Icon(Icons.error_outline, color: Colors.red),
+                  ),
+                  data: (shopCategories) {
+                    final Set<String> productCategories = {};
+                    if (allProductsAsync.hasValue) {
+                      for (var bp in allProductsAsync.value!) {
+                        productCategories.add(normalize(bp.product.category));
+                      }
                     }
-                  }
 
-                  // Sadece ürünü olan kategorileri tutuyoruz
-                  final activeShopCategories = shopCategories.where(
-                    (c) => productCategories.contains(c.name)
-                  ).toList();
+                    final activeShopCategories = shopCategories.where(
+                      (c) => productCategories.contains(normalize(c.name))
+                    ).toList();
 
-                  final List<ShopCategoryData> listCategories = [
-                    ShopCategoryData(
-                      id: 'all',
-                      name: 'Tümü',
-                      iconName: 'grid_view',
-                      subCategories: [],
-                    ),
-                    ...activeShopCategories
-                  ];
+                    final List<ShopCategoryData> listCategories = [
+                      ShopCategoryData(
+                        id: 'all',
+                        name: 'Tümü',
+                        iconName: 'grid_view',
+                        subCategories: [],
+                      ),
+                      ...activeShopCategories
+                    ];
 
-                  return ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: listCategories.length,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    itemBuilder: (context, index) {
-                      final cat = listCategories[index];
-                      final isSelected = cat.name == selectedCategory;
-                      final hasImage = cat.backgroundImage != null && cat.backgroundImage!.isNotEmpty;
+                    return ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: listCategories.length,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      itemBuilder: (context, index) {
+                        final cat = listCategories[index];
+                        final isSelected = cat.name == selectedCategory;
+                        final hasImage = cat.backgroundImage != null && cat.backgroundImage!.isNotEmpty;
 
-                      return GestureDetector(
-                        onTap: () {
-                          ref.read(selectedCatalogCategoryProvider.notifier).state = cat.name;
-                          ref.read(selectedCatalogSubCategoryProvider.notifier).state = 'Tümü';
-                        },
-                        child: Container(
-                          width: 80,
-                          margin: const EdgeInsets.symmetric(horizontal: 6),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(3),
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: isSelected ? theme.primaryColor : Colors.transparent,
-                                    width: 2,
+                        return GestureDetector(
+                          onTap: () {
+                            ref.read(selectedCatalogCategoryProvider.notifier).state = cat.name;
+                            ref.read(selectedCatalogSubCategoryProvider.notifier).state = 'Tümü';
+                          },
+                          child: Container(
+                            width: 80,
+                            margin: const EdgeInsets.symmetric(horizontal: 6),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  width: 56,
+                                  height: 56,
+                                  padding: const EdgeInsets.all(3),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: isSelected ? theme.primaryColor : Colors.grey.shade200,
+                                      width: 1.5,
+                                    ),
+                                    color: Colors.white,
                                   ),
-                                ),
-                                child: CircleAvatar(
-                                  radius: 24,
-                                  backgroundColor: Colors.grey.shade100,
-                                  child: hasImage
-                                      ? ClipOval(
-                                          child: Image.network(
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(9),
+                                    child: hasImage
+                                        ? Image.network(
                                             cat.backgroundImage!,
-                                            width: 48,
-                                            height: 48,
                                             fit: BoxFit.cover,
                                             errorBuilder: (context, error, stackTrace) {
                                               return Icon(
@@ -473,86 +524,83 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                                                 color: isSelected ? theme.primaryColor : Colors.grey,
                                               );
                                             },
+                                          )
+                                        : Container(
+                                            color: Colors.grey.shade100,
+                                            child: Icon(
+                                              cat.name == 'Tümü'
+                                                  ? Icons.grid_view_rounded
+                                                  : _getCategoryIcon(cat.iconName),
+                                              size: 20,
+                                              color: isSelected ? theme.primaryColor : Colors.grey,
+                                            ),
                                           ),
-                                        )
-                                      : Icon(
-                                          cat.name == 'Tümü'
-                                              ? Icons.grid_view_rounded
-                                              : _getCategoryIcon(cat.iconName),
-                                          size: 20,
-                                          color: isSelected ? theme.primaryColor : Colors.grey,
-                                        ),
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 4),
-                                child: Text(
-                                  cat.name,
-                                  textAlign: TextAlign.center,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                    color: isSelected ? theme.primaryColor : theme.colorScheme.onSurface,
                                   ),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 6),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                                  child: Text(
+                                    cat.name,
+                                    textAlign: TextAlign.center,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                      color: isSelected ? theme.primaryColor : theme.colorScheme.onSurface,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-
-            // 🚨 2. KADEME: YATAY ALT KATEGORİ ÇİPLERİ (ChoiceChips)
-            if (selectedCategory != 'Tümü' && currentSubCategories.isNotEmpty && searchQuery.isEmpty)
-              Container(
-                height: 44,
-                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.15),
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: currentSubCategories.length,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  itemBuilder: (context, index) {
-                    final subCat = currentSubCategories[index];
-                    final isSelected = subCat == selectedSubCategory;
-
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: ChoiceChip(
-                        selected: isSelected,
-                        label: Text(
-                          subCat,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: isSelected ? Colors.white : theme.colorScheme.onSurface,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                          ),
-                        ),
-                        selectedColor: theme.primaryColor,
-                        backgroundColor: theme.colorScheme.surface,
-                        onSelected: (selected) {
-                          if (selected) {
-                            ref.read(selectedCatalogSubCategoryProvider.notifier).state = subCat;
-                          }
-                        },
-                      ),
+                        );
+                      },
                     );
                   },
                 ),
               ),
+            ),
+            if (selectedCategory != 'Tümü' && currentSubCategories.isNotEmpty && searchQuery.isEmpty)
+              SliverToBoxAdapter(
+                child: Container(
+                  height: 44,
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.15),
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: currentSubCategories.length,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    itemBuilder: (context, index) {
+                      final subCat = currentSubCategories[index];
+                      final isSelected = subCat == selectedSubCategory;
 
-            // Main Product Grid Area
-            Expanded(
-              child: CustomScrollView(
-                controller: _rightScrollController,
-                slivers: [
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: ChoiceChip(
+                          selected: isSelected,
+                          label: Text(
+                            subCat,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isSelected ? Colors.white : theme.colorScheme.onSurface,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            ),
+                          ),
+                          selectedColor: theme.primaryColor,
+                          backgroundColor: theme.colorScheme.surface,
+                          onSelected: (selected) {
+                            if (selected) {
+                              ref.read(selectedCatalogSubCategoryProvider.notifier).state = subCat;
+                            }
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
                   // Search Input
                   SliverToBoxAdapter(
                     child: Padding(
@@ -763,9 +811,15 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                 ],
               ),
             ),
-          ],
-        ),
-      ),
+          ),
+      floatingActionButton: _showScrollToTop
+          ? FloatingActionButton(
+              onPressed: _scrollToTop,
+              mini: true,
+              backgroundColor: theme.primaryColor,
+              child: const Icon(Icons.arrow_upward, color: Colors.white),
+            )
+          : null,
     );
   }
 }
