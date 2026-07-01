@@ -245,7 +245,6 @@ class ModernProductCard extends ConsumerWidget {
         children: [
           // Image Area
           Expanded(
-            flex: 3,
             child: Stack(
               children: [
                 Container(
@@ -335,79 +334,83 @@ class ModernProductCard extends ConsumerWidget {
 
                 // --- MİKTAR KONTROLÜ (Sağa Hizalı) ---
                 Positioned(
-                  bottom: 8,
-                  right: 8,
-                  child: _buildQuantityControl(context, ref, quantity, theme, isClosed),
+                  bottom: isCompact ? 4 : 8,
+                  right: isCompact ? 4 : 8,
+                  child: _buildQuantityControl(
+                    context,
+                    ref,
+                    quantity,
+                    theme,
+                    isClosed,
+                    isSmall: isCompact,
+                  ),
                 ),
               ],
             ),
           ),
 
           // Details Area
-          Expanded(
-            flex: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(8), // Reduced padding
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
+          Padding(
+            padding: EdgeInsets.all(isCompact ? 4 : 8), // Dynamic padding
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      product.brand,
+                      style: TextStyle(
+                        color: Colors.grey[500],
+                        fontSize: 9, // Smaller font
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      product.name,
+                      style: const TextStyle(
+                        color: Colors.black87,
+                        fontSize: 12, // Smaller font
+                        fontWeight: FontWeight.w700,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+                // Fiyat
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if (oldPrice != null)
+                        Text(
+                          "${oldPrice.toStringAsFixed(2)} TL",
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            decoration: TextDecoration.lineThrough,
+                          ),
+                        ),
                       Text(
-                        product.brand,
+                        "${activePrice.toStringAsFixed(2)} TL",
                         style: TextStyle(
-                          color: Colors.grey[500],
-                          fontSize: 9, // Smaller font
-                          fontWeight: FontWeight.w600,
+                          color: oldPrice != null ? Colors.red : theme.primaryColor,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        product.name,
-                        style: const TextStyle(
-                          color: Colors.black87,
-                          fontSize: 12, // Smaller font
-                          fontWeight: FontWeight.w700,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
-                  // Fiyat
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (oldPrice != null)
-                          Text(
-                            "${oldPrice.toStringAsFixed(2)} TL",
-                            style: const TextStyle(
-                              color: Colors.grey,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              decoration: TextDecoration.lineThrough,
-                            ),
-                          ),
-                        Text(
-                          "${activePrice.toStringAsFixed(2)} TL",
-                          style: TextStyle(
-                            color: oldPrice != null ? Colors.red : theme.primaryColor,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],
