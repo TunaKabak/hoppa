@@ -72,12 +72,6 @@ class ModernProductCard extends ConsumerWidget {
       }
     }
 
-    final String cleanUnit = product.unit.toUpperCase().trim();
-    final bool isDiscrete = cleanUnit == "ADET" || 
-                            cleanUnit == "PAKET" || 
-                            cleanUnit == "PIECE" || 
-                            cleanUnit == "ADET/PIECE";
-
     // --- LIST VIEW LAYOUT ---
     if (isListView) {
       return Container(
@@ -205,9 +199,7 @@ class ModernProductCard extends ConsumerWidget {
                               ),
                             ),
                           Text(
-                            isDiscrete
-                                ? "${activePrice.toStringAsFixed(2)} TL"
-                                : "${activePrice.toStringAsFixed(2)} TL / ${product.unit}",
+                            "${activePrice.toStringAsFixed(2)} TL",
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -384,11 +376,6 @@ class ModernProductCard extends ConsumerWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        "${product.unit.toUpperCase()} Fiyatı",
-                        style: TextStyle(color: Colors.grey[400], fontSize: 9),
-                      ),
                     ],
                   ),
                   // Fiyat
@@ -409,9 +396,7 @@ class ModernProductCard extends ConsumerWidget {
                             ),
                           ),
                         Text(
-                          isDiscrete
-                              ? "${activePrice.toStringAsFixed(2)} TL"
-                              : "${activePrice.toStringAsFixed(2)} TL / ${product.unit}",
+                          "${activePrice.toStringAsFixed(2)} TL",
                           style: TextStyle(
                             color: oldPrice != null ? Colors.red : theme.primaryColor,
                             fontSize: 15,

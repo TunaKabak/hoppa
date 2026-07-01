@@ -221,7 +221,24 @@ async function main() {
     let minQuantity = 1.0;
     let stepSize = 1.0;
 
-    if (item.unit === "KILOGRAM" || nameLower.includes(" kg") || nameLower.includes(" g ") || nameLower.endsWith(" g") || dbCategory.shopType === "GREENGROCER" || dbCategory.shopType === "BUTCHER") {
+    const isPackagedBakeryOrBread = nameLower.includes("ekmek") || 
+      nameLower.includes("bazlama") || 
+      nameLower.includes("tost") || 
+      nameLower.includes("yufka") || 
+      nameLower.includes("simit") || 
+      nameLower.includes("lavaş") || 
+      nameLower.includes("kurabiye") || 
+      (dbCategory && (
+        dbCategory.name.toLowerCase().includes("ekmek") || 
+        dbCategory.name.toLowerCase().includes("unlu mamül") || 
+        dbCategory.name.toLowerCase().includes("unlu mamul")
+      ));
+
+    if (isPackagedBakeryOrBread) {
+      unitId = unitAdet.id;
+      minQuantity = 1.0;
+      stepSize = 1.0;
+    } else if (item.unit === "KILOGRAM" || nameLower.includes(" kg") || nameLower.includes(" g ") || nameLower.endsWith(" g") || dbCategory.shopType === "GREENGROCER" || dbCategory.shopType === "BUTCHER") {
       unitId = unitKg.id;
       minQuantity = 0.5;
       stepSize = 0.25;

@@ -1,81 +1,108 @@
-Story 24 - Modern Dükkan Detay Sayfası Redesign, Akıllı Birim Gösterimi ve Kademeli Kategori Gezintisi
+Story 24 - Modern Dükkan Detay Sayfası Redesign, Akıllı Birim Gösterimi ve Yatay Kategori Gezintisi
 
-Bu görev belgesi; dükkan detay ekranını (shop_detail_page.dart) modern bir üst bilgi barı (Header), sol/sağ bölünmüş kategori navigasyonu (Split-Pane Navigation), akıllı fiyat-birim maskelemesi ve kusursuz çalışan dinamik filtrelerle baştan aşağı yenilemeyi amaçlar.
+Bu görev belgesi; dükkan detay ekranını (shop_detail_page.dart) ve ürün kartlarını (modern_product_card.dart), ekranın daralmasını engelleyen yatay çift aşamalı kategori filtreleri, optimize edilmiş collapsing header (Logo korumalı), ve gereksiz / KG birim kalabalığından arındırılmış fiyat kartlarıyla baştan tasarlamayı amaçlar.
 
 🎯 1. KULLANICI HİKAYESİ (USER STORY)
 
 "Bir platform tüketicisi olarak;
 
-Dükkan detay sayfasına girdiğimde, işletmenin açılış/kapanış saatlerini, tahmini teslimat süresini ve kurye ücretini tek bir bakışta görebilmek,
+Dükkan detay sayfasına girdiğimde, ekranı dikeyde daraltan hantal sol menüler yerine, en üstte yatayda kaydırılabilen şık ve rounded kategori resimlerini görmek,
 
-Paketli/adetli ürünlerde (Örn: Kepek Ekmeği) kafa karıştırıcı / KG veya / PAKET ibareleri yerine sadece net ve temiz fiyatı (Örn: 92.50 TL) görmek, tartılı manav ürünlerinde ise birimi net şekilde ayırt etmek,
+Seçtiğim ana kategoriye ait alt kategoriler (Örn: Ekmek -> Tost Ekmeği) varsa, hemen altında küçük çipler halinde görebilmek ve filtrelemelerin anında çalışmasını,
 
-Sol tarafta dikey olarak listelenen ana kategorilere tıkladığımda, sağ taraftaki ürün listesinin o kategoriye ait alt başlıklarla (Örn: Ekmek -> Tost Ekmeği) otomatik süzülmesini ve akıcı şekilde çalışmasını istiyorum."
+Sayfayı aşağı kaydırdığımda, küçülen üst barda dükkanın adıyla birlikte yuvarlak logosunun da şık bir şekilde görünmeye devam etmesini,
 
-🎨 2. GÖRSEL ANALİZ VE PLANLANAN İYİLEŞTİRMELER (UX CRITIQUE)
+Ürün kartlarında zaten 'KG Fiyatı' veya 'Paket Fiyatı' ibareleri yer aldığı için, ana fiyatın yanında gereksiz / KG veya / PAKET kalabalığı görmemeyi istiyorum."
 
-Screenshot_20260701_105308_Hoppa.jpg referans alınarak tespit edilen ve bu hikaye ile düzeltilecek 4 temel kusur:
+🎨 2. GÖRSEL ANALİZ VE YENİ TASARIM STANDARTLARI (UX REFACTOR)
 
-Mevcut Kusur
+Screenshot_20260701_105308_Hoppa.jpg ve kullanıcı geri bildirimleri doğrultusunda uygulayacağımız 7 altın standart:
+
+#
+
+Tasarım Problemi
 
 Tech Lead Çözüm Yaklaşımı
 
 Hedeflenen Arayüz Standartı
 
-Gereksiz/Hatalı Birim Gösterimi: Paketli bisküvi, gofret ve ekmeklerin altında büyük puntolarla 92.50 TL / KG yazıyor.
+1
 
-Akıllı Birim Filtreleme: Eğer ürün birimi ADET, PAKET, PIECE veya ADET/PIECE ise, / Birim yazısı tamamen gizlenecek; sadece 92.50 TL yazacak. Sadece dökme/tartılı (KG, GR, LITRE) ürünlerde / KG yazısı gösterilecek.
+Sol dikey menü daralması: Ekranı boğuyor ve kartları eziyor.
 
-Temiz, kafa karıştırmayan e-ticaret fiyat kartları.
+Yatay Üst Kategori Şeridi: Kategori seçici üst tarafa yatay kaydırılabilir (scrollable) olarak taşınacak.
 
-Header Veri Eksikliği: Üst bar çok büyük yer kaplamasına rağmen sadece puan gösteriyor. Çalışma saatleri ve teslimat bilgisi eksik.
+Geniş ve nefes alan ürün grid yerleşimi.
 
-Dynamic Header Card: SliverAppBar üzerine binen şık bir yarı-şeffaf kart içinde 08:00 - 22:00 • 25-35 dk • Ücretsiz Teslimat etiketleri konumlandırılacak.
+2
 
-Bilgi açısından zengin, modern collapsing header.
+Kategorilerde görsel kalitesizliği: Düz renk çemberleri hantal duruyor.
 
-Hantal Kategori Çipleri: Yuvarlak, yazıları sığmayan ve yatayda kayan dağınık kategori çemberleri.
+Rounded Category Cards: Kategoriler kendi görseliyle birlikte BorderRadius.circular(12) şeklinde rounded çerçeveyle çizilecek.
 
-Split-Pane (Sol-Sağ) Düzeni: Getir/Yemeksepeti standardında; ekranın solunda %25 genişliğinde dikey ana kategoriler menüsü, sağında ise kategorilere göre gruplanmış ürün grid'i yer alacak.
+Görsel zenginliği yüksek modern kategori çipleri.
 
-Ultra hızlı ve parmak dostu gezinme (Navigation).
+3
 
-Kırık Filtreler: Çipler çalışmıyor ve sayfa kaydırıldığında sabit kalmıyor.
+Kategori ikonsuzluğu: Bazı kategoriler boş kalıyor.
 
-Sticky Left Pane / Nested Scroll: Kategori menüsü sayfa kaydırılsa dahi sol tarafta sabit (sticky) kalacak, sağ taraftaki liste kaydırıldıkça aktif kategori sol menüde otomatik seçilecek (Scroll-to-Active).
+Icon Fallback Rule: Her kategorinin mutlaka şık bir görseli olacak; resim yoksa akıllı bir SVG/ikon fallback gösterilecek.
 
-Kesintisiz ve akıcı dükkan içi gezinme deneyimi.
+Boşluksuz ve tutarlı kategori listesi.
+
+4
+
+Devasa Header Alanı: Üst görsel alanı gereksiz yer kaplıyor.
+
+Header Height Reduction: SliverAppBar expandedHeight değeri 220'den 145.0 seviyesine indirilerek içerik alanı genişletilecek.
+
+Optimize edilmiş, modern collapsing header.
+
+5
+
+Collapsing Logo Kaybolması: Sayfa kayınca logo kayboluyor, marka algısı düşüyor.
+
+Mini Logo Persistence: Sayfa yukarı kayıp header küçüldüğünde (innerBoxIsScrolled), dükkan isminin hemen solunda 28dp'lik mini dairesel dükkan logosu belirecek.
+
+Kesintisiz marka kimliği.
+
+6
+
+Gereksiz Birim Kalabalığı: Kartlarda hem "KG Fiyatı" yazıp hem de fiyatta / KG yazması alan israfı.
+
+Price Clean-up: Kart üzerinde zaten birim türü belirtildiği için ana fiyat alanından / KG, / PAKET ibareleri silinecek; sadece net 92.50 TL yazacak.
+
+Sade ve temiz fiyat etiketleri.
+
+7
+
+Alt Kategori Filtre Hatası: Alt kategoriler çalışmıyor ve süzmüyor.
+
+Two-Tier Cascading Filter: Seçili ana kategorinin altında alt kategoriler yatay çipler halinde listelenecek (Örn: Tümü, Tost Ekmeği, Somun) ve filtreleme anında çalışacak.
+
+Kusursuz dükkan içi kategorizasyon.
 
 🛠️ 3. MOBİL UYGULAMA KATMANI (FLUTTER REFACTOR)
 
-A. Fiyat ve Birim Gösterim Kartı Güncellemesi (modern_product_card.dart)
+A. Ürün Fiyat Kartı Güncellemesi (modern_product_card.dart)
 
-Ürün fiyat etiketini adet bazlı ve kilo/litre bazlı ürün ayrımına göre akıllıca biçimlendiren Widget katmanı:
+Gereksiz / Birim ibaresini kaldıran, temiz fiyat etiket widget'ı:
 
 // apps/consumer_app/lib/shared/widgets/modern_product_card.dart
 
 class ModernProductPriceWidget extends StatelessWidget {
   final double price;
-  final String unit;
   final double? regularPrice;
 
   const ModernProductPriceWidget({
     Key? key,
     required this.price,
-    required this.unit,
     this.regularPrice,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final String cleanUnit = unit.toUpperCase().trim();
-    
-    // 🚨 AKILLI BİRİM KONTROLÜ (Adet/Paket ise birim ibaresini gizle)
-    final bool isDiscrete = cleanUnit == "ADET" || 
-                            cleanUnit == "PAKET" || 
-                            cleanUnit == "PIECE" || 
-                            cleanUnit == "ADET/PIECE";
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -89,29 +116,13 @@ class ModernProductPriceWidget extends StatelessWidget {
               decoration: TextDecoration.lineThrough,
             ),
           ),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
-          children: [
-            Text(
-              "${price.toStringAsFixed(2)} TL",
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.primary,
-              ),
-            ),
-            if (!isDiscrete) ...[
-              const SizedBox(width: 4),
-              Text(
-                "/ $cleanUnit",
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ],
+        Text(
+          "${price.toStringAsFixed(2)} TL",
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: theme.colorScheme.primary,
+          ),
         ),
       ],
     );
@@ -119,9 +130,7 @@ class ModernProductPriceWidget extends StatelessWidget {
 }
 
 
-B. Sol Dikey Kategori Menülü Dükkan Detay Sayfası (shop_detail_page.dart)
-
-Sol tarafta sabit dikey kategorilerin, sağ tarafta ise o kategorilere ait ürünlerin akıcı bir şekilde listelendiği modern pazar yeri bölünmüş ekran tasarımı (Split-Pane layout):
+B. Yeni Yatay Çift Katman Filtreli Dükkan Detay Sayfası (shop_detail_page.dart)
 
 // apps/consumer_app/lib/screens/shop/shop_detail_page.dart
 
@@ -137,23 +146,47 @@ class ModernShopDetailPage extends StatefulWidget {
 
 class _ModernShopDetailPageState extends State<ModernShopDetailPage> {
   int _selectedCategoryIndex = 0;
+  int _selectedSubCategoryIndex = 0; // 🚨 Alt kategori filtre indexi
   final ScrollController _productsScrollController = ScrollController();
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final activeCategory = widget.shop.categories[_selectedCategoryIndex];
+    
+    // Alt kategorileri çek (Varsayılan olarak ilk çip "Tümü" olacak şekilde ekleme yapıyoruz)
+    final List<Category> subCategories = [
+      Category(id: "all", name: "Tümü", children: []),
+      ...activeCategory.children,
+    ];
 
     return Scaffold(
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) {
           return [
             SliverAppBar(
-              expandedHeight: 220.0,
+              expandedHeight: 145.0, // 🚨 GÖRSEL POLISH: Header yüksekliği daraltıldı
               pinned: true,
               backgroundColor: theme.colorScheme.primary,
+              iconTheme: const IconThemeData(color: Colors.white),
               flexibleSpace: FlexibleSpaceBar(
+                titlePadding: const EdgeInsets.only(left: 48, bottom: 14), // Başlık hizalaması
                 title: innerBoxIsScrolled 
-                    ? Text(widget.shop.name, style: const TextStyle(color: Colors.white, fontSize: 16))
+                    ? Row(
+                        children: [
+                          // 🚨 LOGO KORUMASI: Daralan barda mini logo belirişi
+                          CircleAvatar(
+                            radius: 14,
+                            backgroundColor: Colors.white,
+                            backgroundImage: NetworkImage(widget.shop.logoUrl ?? ""),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            widget.shop.name, 
+                            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)
+                          ),
+                        ],
+                      )
                     : null,
                 background: Stack(
                   fit: StackFit.expand,
@@ -172,9 +205,9 @@ class _ModernShopDetailPageState extends State<ModernShopDetailPage> {
                       ),
                     ),
                     
-                    // 🚨 MODERN BİLGİ DOLU HEADER (Açılış Saatleri & Kurye & Süre)
+                    // Expanded Mode: Büyük Logo ve Bilgiler
                     Positioned(
-                      bottom: 16,
+                      bottom: 12,
                       left: 16,
                       right: 16,
                       child: Column(
@@ -183,45 +216,33 @@ class _ModernShopDetailPageState extends State<ModernShopDetailPage> {
                           Row(
                             children: [
                               CircleAvatar(
-                                radius: 24,
+                                radius: 22,
                                 backgroundColor: Colors.white,
                                 backgroundImage: NetworkImage(widget.shop.logoUrl ?? ""),
                               ),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: 10),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       widget.shop.name,
-                                      style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                                      style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.bold),
                                     ),
-                                    const SizedBox(height: 4),
+                                    const SizedBox(height: 2),
                                     Row(
                                       children: [
-                                        const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
+                                        const Icon(Icons.star_rounded, color: Colors.amber, size: 14),
                                         const SizedBox(width: 4),
                                         Text(
-                                          "${widget.shop.averageRating} (142 Değerlendirme)",
-                                          style: const TextStyle(color: Colors.white, fontSize: 11),
+                                          "${widget.shop.averageRating} (142 Değerlendirme) • 08:00 - 22:00",
+                                          style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold),
                                         ),
                                       ],
                                     ),
                                   ],
                                 ),
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          const Divider(color: Colors.white24, height: 1),
-                          const SizedBox(height: 8),
-                          // Çalışma saatleri, süre ve kurye ücreti satırı
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              _buildHeaderBadge(Icons.access_time, "08:00 - 22:00", Colors.orange),
-                              _buildHeaderBadge(Icons.delivery_dining, "25-35 dk", Colors.green),
-                              _buildHeaderBadge(Icons.payments_outlined, "Ücretsiz Teslimat", Colors.blue),
                             ],
                           ),
                         ],
@@ -233,16 +254,17 @@ class _ModernShopDetailPageState extends State<ModernShopDetailPage> {
             ),
           ];
         },
-        // 🚨 EKSTREM UX DEĞİŞİKLİĞİ: SOL-SAĞ BÖLÜNMÜŞ GEZİNTİ (Split-Pane Navigation)
-        body: Row(
+        body: Column(
           children: [
-            // Sol Taraf: %25 genişliğinde dikey Kategori Listesi
+            // 🚨 1. KADEME: YATAY ANA KATEGORİ LİSTESİ (Rounded & İkonlu)
             Container(
-              width: 100,
-              color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+              height: 96,
+              color: theme.colorScheme.surface,
+              padding: const EdgeInsets.symmetric(vertical: 8),
               child: ListView.builder(
+                scrollDirection: Axis.horizontal,
                 itemCount: widget.shop.categories.length,
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
                 itemBuilder: (context, index) {
                   final cat = widget.shop.categories[index];
                   final isSelected = _selectedCategoryIndex == index;
@@ -251,37 +273,47 @@ class _ModernShopDetailPageState extends State<ModernShopDetailPage> {
                     onTap: () {
                       setState(() {
                         _selectedCategoryIndex = index;
+                        _selectedSubCategoryIndex = 0; // Kategori değişince alt kategoriyi sıfırla
                       });
-                      // Sağdaki listeyi bu kategoriye ait ürünlere kaydır
-                      _scrollToCategory(index);
                     },
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+                      margin: const EdgeInsets.symmetric(horizontal: 6),
+                      width: 76,
                       decoration: BoxDecoration(
-                        color: isSelected ? theme.colorScheme.surface : Colors.transparent,
-                        border: Border(
-                          left: BorderSide(
-                            color: isSelected ? theme.colorScheme.primary : Colors.transparent,
-                            width: 4,
-                          ),
+                        color: isSelected ? theme.colorScheme.primaryContainer.withOpacity(0.3) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(12), // slightly rounded corners
+                        border: Border.all(
+                          color: isSelected ? theme.colorScheme.primary : Colors.transparent,
+                          width: 1.5,
                         ),
                       ),
                       child: Column(
-                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          if (cat.imageUrl != null)
-                            Image.network(cat.imageUrl!, width: 32, height: 32, errorBuilder: (_, __, ___) => const Icon(Icons.category)),
-                          const SizedBox(height: 4),
-                          Text(
-                            cat.name,
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                              color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurfaceVariant,
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              cat.imageUrl ?? "https://placehold.co/40", // Akıllı fallback görseli
+                              width: 38,
+                              height: 38,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Icon(Icons.category, color: theme.colorScheme.primary, size: 24),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: Text(
+                              cat.name,
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface,
+                              ),
                             ),
                           ),
                         ],
@@ -292,15 +324,55 @@ class _ModernShopDetailPageState extends State<ModernShopDetailPage> {
               ),
             ),
             
-            // Sağ Taraf: %75 genişliğinde Ürün Grid/Listesi
+            // 🚨 2. KADEME: YATAY ALT KATEGORİ ÇİPLERİ (Dinamik Cascading Filter)
+            if (subCategories.length > 1)
+              Container(
+                height: 44,
+                color: theme.colorScheme.surfaceVariant.withOpacity(0.15),
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: subCategories.length,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  itemBuilder: (context, index) {
+                    final subCat = subCategories[index];
+                    final isSelected = _selectedSubCategoryIndex == index;
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: ChoiceChip(
+                        selected: isSelected,
+                        label: Text(subCat.name, style: TextStyle(fontSize: 11, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+                        selectedColor: theme.colorScheme.primaryContainer,
+                        backgroundColor: theme.colorScheme.surface,
+                        onSelected: (selected) {
+                          if (selected) {
+                            setState(() {
+                              _selectedSubCategoryIndex = index;
+                            });
+                          }
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+            // Ürün Grid Listesi (%100 yatay alan özgürlüğüyle geniş ve nefes alan yapı)
             Expanded(
-              child: ListView.builder(
+              child: GridView.builder(
                 controller: _productsScrollController,
-                itemCount: widget.shop.categories[_selectedCategoryIndex].products.length,
                 padding: const EdgeInsets.all(12),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 0.78,
+                ),
+                itemCount: _getFilteredProducts(activeCategory, subCategories[_selectedSubCategoryIndex]).length,
                 itemBuilder: (context, index) {
-                  final product = widget.shop.categories[_selectedCategoryIndex].products[index];
-                  return ModernHorizontalProductCard(product: product); // Yatay kart yapısı bu düzende çok daha temiz durur
+                  final product = _getFilteredProducts(activeCategory, subCategories[_selectedSubCategoryIndex])[index];
+                  return ModernProductCard(product: product); // 2 sütunlu pürüzsüz kartlar
                 },
               ),
             ),
@@ -310,41 +382,33 @@ class _ModernShopDetailPageState extends State<ModernShopDetailPage> {
     );
   }
 
-  Widget _buildHeaderBadge(IconData icon, String label, Color color) {
-    return Row(
-      children: [
-        Icon(icon, size: 14, color: Colors.white),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
-        ),
-      ],
-    );
-  }
-
-  void _scrollToCategory(int index) {
-    // Sağ panele ait kaydırma/filtreleme mantığı tetiklenecek
+  // Hem kategori hem alt kategoriye göre filtreleme yapan kusursuz iş mantığı
+  List<Product> _getFilteredProducts(Category activeCategory, Category selectedSubCategory) {
+    if (selectedSubCategory.id == "all") {
+      // Eğer "Tümü" seçiliyse ana kategoriye ait tüm ürünleri getir
+      return activeCategory.products;
+    }
+    // Alt kategori seçilmişse, sadece o alt kategoriyle eşleşen ürünleri süz
+    return activeCategory.products.where((p) => p.subCategoryId == selectedSubCategory.id).toList();
   }
 }
 
 
 📢 4. DOĞRULAMA PLANI
 
-TypeScript & Backend Derleme:
-
-cd backend && npm run build
-
-
-Flutter Statik Analizleri:
+Flutter Derleme ve Statik Analizleri:
 
 cd apps/consumer_app && flutter analyze
 
 
 Manuel Arayüz Doğrulaması:
 
-Test Süpermarket detayına girin. Üst header alanında çalışma saatlerinin ve kurye ücreti etiketlerinin şık biçimde yer aldığını doğrulayın.
+Test Süpermarket detayına girin. Üst SleaveAppBar yüksekliğinin 145.0 seviyesinde son derece şık durduğunu doğrulayın.
 
-Ekmek kartlarındaki / PAKET veya / KG etiketlerinin kaybolduğunu, sadece 92.50 TL ve 55.95 TL temiz fiyatlarının kaldığını doğrulayın.
+Sayfa aşağı kaydırıldığında, daralan barda dükkan adının solunda mini dükkan logosunun kesintisiz olarak göründüğünü doğrulayın (Mini Logo Persistence).
 
-Sol taraftaki dikey kategori menüsünde gezinirken sağ paneldeki ürünlerin sarsıntısız şekilde süzüldüğünü doğrulayın.
+Sol dikey menünün kalkıp yerine yatayda şık, rounded ve ikonlu ana kategorilerin geldiğini ve ekranın yatayda daralmasının önlendiğini görün.
+
+Seçili ana kategorinin hemen altına açılan "Tümü" ve alt kategori ChoiceChip'lerine tıklandığında ürün grid listesinin sarsıntısız süzüldüğünü (Filter Sync) doğrulayın.
+
+Ürün fiyat etiketlerinden redundant / KG veya / PAKET gürültüsünün silinip sadeleştiğini gözlemleyin.
