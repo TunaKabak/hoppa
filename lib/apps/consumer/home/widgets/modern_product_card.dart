@@ -72,6 +72,12 @@ class ModernProductCard extends ConsumerWidget {
       }
     }
 
+    final String cleanUnit = product.unit.toUpperCase().trim();
+    final bool isDiscrete = cleanUnit == "ADET" || 
+                            cleanUnit == "PAKET" || 
+                            cleanUnit == "PIECE" || 
+                            cleanUnit == "ADET/PIECE";
+
     // --- LIST VIEW LAYOUT ---
     if (isListView) {
       return Container(
@@ -199,7 +205,9 @@ class ModernProductCard extends ConsumerWidget {
                               ),
                             ),
                           Text(
-                            "${activePrice.toStringAsFixed(2)} TL / ${product.unit}",
+                            isDiscrete
+                                ? "${activePrice.toStringAsFixed(2)} TL"
+                                : "${activePrice.toStringAsFixed(2)} TL / ${product.unit}",
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -401,7 +409,9 @@ class ModernProductCard extends ConsumerWidget {
                             ),
                           ),
                         Text(
-                          "${activePrice.toStringAsFixed(2)} TL / ${product.unit}",
+                          isDiscrete
+                              ? "${activePrice.toStringAsFixed(2)} TL"
+                              : "${activePrice.toStringAsFixed(2)} TL / ${product.unit}",
                           style: TextStyle(
                             color: oldPrice != null ? Colors.red : theme.primaryColor,
                             fontSize: 15,
