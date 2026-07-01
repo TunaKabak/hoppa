@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:provider/provider.dart' as p;
 import 'package:hoppa/apps/consumer/business/business_provider.dart';
 import 'package:hoppa/shared/models/business.dart';
+import 'package:hoppa/shared/models/business_product.dart';
 import 'package:hoppa/apps/consumer/cart/cart_provider.dart';
 import 'package:hoppa/apps/consumer/cart/widgets/cart_price_badge.dart';
 import 'package:hoppa/apps/consumer/home/widgets/modern_product_card.dart';
@@ -24,6 +25,7 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
   int _crossAxisCount = 2;
   final ScrollController _scrollController = ScrollController();
   bool _showScrollToTop = false;
+  bool _showMiniCategories = false;
 
   final List<String> _sortOptions = [
     'Önerilen',
@@ -164,6 +166,90 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
     }
   }
 
+  Widget _buildMiniCategoriesList(
+    BuildContext context,
+    WidgetRef ref,
+    AsyncValue<List<ShopCategoryData>> categoriesAsync,
+    AsyncValue<List<BusinessProduct>> allProductsAsync,
+    String selectedCategory,
+  ) {
+    final theme = Theme.of(context);
+    
+    String normalize(String name) {
+      return name
+          .toLowerCase()
+          .replaceAll('ı', 'i')
+          .replaceAll('ö', 'o')
+          .replaceAll('ü', 'u')
+          .replaceAll('ş', 's')
+          .replaceAll('ç', 'c')
+          .replaceAll('ğ', 'g')
+          .replaceAll('&', 've')
+          .replaceAll(',', '')
+          .replaceAll(RegExp(r'[^a-z0-9]'), '');
+    }
+
+    return categoriesAsync.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (shopCategories) {
+        final Set<String> productCategories = {};
+        if (allProductsAsync.hasValue) {
+          for (var bp in allProductsAsync.value!) {
+            productCategories.add(normalize(bp.product.category));
+          }
+        }
+
+        final activeShopCategories = shopCategories.where(
+          (c) => productCategories.contains(normalize(c.name))
+        ).toList();
+
+        final List<ShopCategoryData> listCategories = [
+          ShopCategoryData(
+            id: 'all',
+            name: 'Tümü',
+            iconName: 'grid_view',
+            subCategories: [],
+          ),
+          ...activeShopCategories
+        ];
+
+        return ListView.builder(
+          scrollDirection: Axis.horizontal,
+          itemCount: listCategories.length,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          itemBuilder: (context, index) {
+            final cat = listCategories[index];
+            final isSelected = cat.name == selectedCategory;
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: ChoiceChip(
+                selected: isSelected,
+                label: Text(
+                  cat.name,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isSelected ? Colors.white : theme.colorScheme.onSurface,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+                selectedColor: theme.primaryColor,
+                backgroundColor: theme.colorScheme.surface,
+                onSelected: (selected) {
+                  if (selected) {
+                    ref.read(selectedCatalogCategoryProvider.notifier).state = cat.name;
+                    ref.read(selectedCatalogSubCategoryProvider.notifier).state = 'Tümü';
+                  }
+                },
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -214,22 +300,46 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      body: NotificationListener<ScrollNotification>(
-        onNotification: (notification) {
-          final metrics = notification.metrics;
-          final bool show = metrics.pixels > 300.0;
-          if (show != _showScrollToTop) {
-            setState(() {
-              _showScrollToTop = show;
-            });
-          }
-          return false;
-        },
-        child: NestedScrollView(
-          controller: _scrollController,
-          floatHeaderSlivers: true,
-          headerSliverBuilder: (context, innerBoxIsScrolled) {
-          return [
+      body: Stack(
+        children: [
+          NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              final metrics = notification.metrics;
+              final bool show = metrics.pixels > 300.0;
+              if (show != _showScrollToTop) {
+                setState(() {
+                  _showScrollToTop = show;
+                });
+              }
+
+              // Scroll direction detection for mini categories
+              if (notification is ScrollUpdateNotification) {
+                final double scrollDelta = notification.scrollDelta ?? 0.0;
+                final double pixels = metrics.pixels;
+
+                if (pixels > 145.0) {
+                  if (scrollDelta < -2.0) { // Scrolling UP
+                    if (!_showMiniCategories) {
+                      setState(() => _showMiniCategories = true);
+                    }
+                  } else if (scrollDelta > 2.0) { // Scrolling DOWN
+                    if (_showMiniCategories) {
+                      setState(() => _showMiniCategories = false);
+                    }
+                  }
+                } else {
+                  if (_showMiniCategories) {
+                    setState(() => _showMiniCategories = false);
+                  }
+                }
+              }
+              return false;
+            },
+            child: NestedScrollView(
+              controller: _scrollController,
+              floatHeaderSlivers: false,
+              headerSliverBuilder: (context, innerBoxIsScrolled) {
+              return [
             SliverAppBar(
               pinned: true,
               floating: false,
@@ -311,12 +421,8 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                       ),
                     )
                   : null,
-              actions: [
-                AnimatedOpacity(
-                  opacity: innerBoxIsScrolled ? 0.0 : 1.0,
-                  duration: const Duration(milliseconds: 300),
-                  child: const CartPriceBadge(),
-                ),
+              actions: const [
+                CartPriceBadge(),
               ],
               flexibleSpace: FlexibleSpaceBar(
                 background: Stack(
@@ -815,6 +921,44 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
               ),
             ),
           ),
+          // Pinned Floating Mini Categories Bar
+          Positioned(
+            top: kToolbarHeight + MediaQuery.of(context).padding.top, // Right below the collapsed App Bar
+            left: 0,
+            right: 0,
+            child: AnimatedSlide(
+              offset: _showMiniCategories ? Offset.zero : const Offset(0, -1.2),
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              child: AnimatedOpacity(
+                opacity: _showMiniCategories ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 200),
+                child: Container(
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: _buildMiniCategoriesList(
+                    context,
+                    ref,
+                    categoriesAsync,
+                    allProductsAsync,
+                    selectedCategory,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
       floatingActionButton: _showScrollToTop
           ? FloatingActionButton(
               onPressed: _scrollToTop,

@@ -1,0 +1,63 @@
+name: Auto Merge on Commit Message
+
+on:
+  push:
+    branches-ignore:
+      - main # main branch'ine direkt push yapıldığında tetiklenmesini engelliyoruz
+
+jobs:
+  check-and-merge:
+    runs-on: ubuntu-latest
+    # GitHub Token'a PR açma ve birleştirme yetkisi veriyoruz
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Tüm commit geçmişini çekiyoruz
+
+      - name: Check Commit Message
+        id: check_msg
+        run: |
+          # En son atılan commit mesajını alıyoruz
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          echo "Son commit mesajı: $COMMIT_MSG"
+          
+          # Mesaj "merge-to-main" içeriyor mu kontrolü
+          if [[ "$COMMIT_MSG" == *"merge-to-main"* ]]; then
+            echo "MATCH=true" >> $GITHUB_OUTPUT
+          else
+            echo "MATCH=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create and Merge Pull Request
+        if: steps.check_msg.outputs.MATCH == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Push yapılan mevcut branch adını alıyoruz
+          BRANCH_NAME=$(echo ${GITHUB_REF#refs/heads/})
+          echo "Mevcut branch: $BRANCH_NAME"
+          
+          # 1. GitHub CLI kullanarak otomatik PR açıyoruz
+          PR_URL=$(gh pr create \
+            --base main \
+            --head "$BRANCH_NAME" \
+            --title "Otomatik Merge: $BRANCH_NAME -> main" \
+            --body "Commit mesajında 'merge-to-main' tespit edildiği için otomatik oluşturuldu.")
+          
+          echo "PR Oluşturuldu: $PR_URL"
+          
+          # 2. Branch kontrolü yaparak merge işlemini gerçekleştiriyoruz
+          if [ "$BRANCH_NAME" = "develop" ]; then
+            # Eğer push yapılan branch 'develop' ise merge et ama branch'i SİLME
+            gh pr merge "$PR_URL" --merge
+            echo "PR başarıyla main ile birleştirildi. 'develop' branch'i güvenle korundu."
+          else
+            # Diğer tüm geçici branch'ler (feature/*, fix/* vb.) için merge et ve branch'i SİL
+            gh pr merge "$PR_URL" --merge --delete-branch-on-merge
+            echo "PR başarıyla main ile birleştirildi ve kaynak branch ($BRANCH_NAME) silindi."
+          fi

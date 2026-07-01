@@ -17,6 +17,7 @@ class ActiveOrderCard extends ConsumerStatefulWidget {
 
 class _ActiveOrderCardState extends ConsumerState<ActiveOrderCard> {
   Timer? _pollingTimer;
+  bool _isExpanded = false;
 
   @override
   void initState() {
@@ -80,104 +81,138 @@ class _ActiveOrderCardState extends ConsumerState<ActiveOrderCard> {
             ),
             child: InkWell(
               onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => OrderDetailPage(order: order),
-                  ),
-                );
+                setState(() {
+                  _isExpanded = !_isExpanded;
+                });
               },
               borderRadius: BorderRadius.circular(16),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        _buildStatusIcon(order.status),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _getStatusText(order.status),
-                                style: Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black87,
-                                    ),
-                              ),
-                              const SizedBox(height: 4),
-                              // YENİ: Sipariş Özeti (Kalemler, Miktar)
-                              Text(
-                                order.items.map((item) => "${item.quantity.toInt()}x ${item.name}").join(", "),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: Colors.grey[800],
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              // YENİ: Ödeme Tipi, Saat ve Teslimat Süresi
-                              Row(
-                                children: [
-                                  Icon(Icons.payment, size: 12, color: Colors.grey[600]),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    order.paymentMethod == "ONLINE_PAYMENT" ? "Online Kredi Kartı" : "Kapıda Ödeme",
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600], fontSize: 11),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Icon(Icons.access_time, size: 12, color: Colors.grey[600]),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '${order.createdAt.hour.toString().padLeft(2, '0')}:${order.createdAt.minute.toString().padLeft(2, '0')}',
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600], fontSize: 11),
-                                  ),
-                                ],
-                              ),
-                              if (order.orderNote.isNotEmpty) ...[
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    Icon(Icons.notes, size: 12, color: Colors.orange[400]),
-                                    const SizedBox(width: 4),
-                                    Expanded(
-                                      child: Text(
-                                        'Not: ${order.orderNote}',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.orange[800], fontStyle: FontStyle.italic, fontSize: 11),
+              child: AnimatedSize(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeInOut,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          _buildStatusIcon(order.status),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _getStatusText(order.status),
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black87,
                                       ),
-                                    ),
-                                  ],
                                 ),
+                                const SizedBox(height: 4),
+                                if (!_isExpanded)
+                                  Text(
+                                    "${order.items.length} Ürün • Tutar: ${order.totalAmount.toStringAsFixed(2)} ₺",
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: Colors.grey[700],
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  )
+                                else
+                                  Text(
+                                    order.items.map((item) => "${item.quantity.toInt()}x ${item.name}").join(", "),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: Colors.grey[800],
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                               ],
-                              const SizedBox(height: 4),
-                              Text(
-                                'Tahmini Teslimat: ${order.deliveryTime.isNotEmpty ? order.deliveryTime : "-"}',
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(color: Colors.grey[600], fontSize: 11),
+                            ),
+                          ),
+                          Icon(
+                            _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                            color: Colors.orange,
+                          ),
+                        ],
+                      ),
+                      
+                      // Expanded Details
+                      if (_isExpanded) ...[
+                        const SizedBox(height: 12),
+                        const Divider(),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(Icons.payment, size: 12, color: Colors.grey[600]),
+                            const SizedBox(width: 4),
+                            Text(
+                              order.paymentMethod == "ONLINE_PAYMENT" ? "Online Kredi Kartı" : "Kapıda Ödeme",
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600], fontSize: 11),
+                            ),
+                            const SizedBox(width: 8),
+                            Icon(Icons.access_time, size: 12, color: Colors.grey[600]),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${order.createdAt.hour.toString().padLeft(2, '0')}:${order.createdAt.minute.toString().padLeft(2, '0')}',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600], fontSize: 11),
+                            ),
+                          ],
+                        ),
+                        if (order.orderNote.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              Icon(Icons.notes, size: 12, color: Colors.orange[400]),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  'Not: ${order.orderNote}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.orange[800], fontStyle: FontStyle.italic, fontSize: 11),
+                                ),
                               ),
                             ],
                           ),
+                        ],
+                        const SizedBox(height: 6),
+                        Text(
+                          'Tahmini Teslimat: ${order.deliveryTime.isNotEmpty ? order.deliveryTime : "-"}',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: Colors.grey[600], fontSize: 11),
                         ),
-                        const Icon(
-                          Icons.arrow_forward_ios_rounded,
-                          color: Colors.grey,
-                          size: 16,
+                        const SizedBox(height: 16),
+                        _buildStepProgressBar(
+                          context,
+                          order.status,
+                          order.deliveryMethod,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => OrderDetailPage(order: order),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.receipt_long_rounded, size: 18),
+                          label: const Text("Sipariş Detayına Git"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange.shade50,
+                            foregroundColor: Colors.orange.shade800,
+                            elevation: 0,
+                            minimumSize: const Size(double.infinity, 40),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            side: BorderSide(color: Colors.orange.shade200),
+                          ),
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 16),
-                    _buildStepProgressBar(
-                      context,
-                      order.status,
-                      "delivery", // varsayılan delivery
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

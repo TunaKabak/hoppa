@@ -64,6 +64,12 @@ class CampaignProductsPage extends ConsumerWidget {
       return false;
     }).toList();
 
+    String formatDate(DateTime date) {
+      final months = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"];
+      return "${date.day} ${months[date.month - 1]} ${date.year}";
+    }
+    final dateString = "${formatDate(campaign.startDate)} - ${formatDate(campaign.endDate)}";
+
     return Scaffold(
       appBar: AppBar(
         title: Text(campaign.name),
@@ -71,76 +77,144 @@ class CampaignProductsPage extends ConsumerWidget {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: Column(
-        children: [
-          // Banner Area
-          Container(
-            width: double.infinity,
-            height: 180,
-            decoration: BoxDecoration(
-              image: DecorationImage(
-                image: NetworkImage(campaign.imageUrl),
-                fit: BoxFit.cover,
-              ),
-            ),
+      body: CustomScrollView(
+        slivers: [
+          // 1. Campaign Image Banner (No text overlay)
+          SliverToBoxAdapter(
             child: Container(
-              color: Colors.black.withOpacity(0.4),
-              padding: const EdgeInsets.all(16),
-              alignment: Alignment.bottomLeft,
-              child: Text(
-                campaign.description,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  shadows: [
-                    Shadow(
-                      color: Colors.black54,
-                      offset: Offset(0, 1),
-                      blurRadius: 4,
-                    ),
-                  ],
+              width: double.infinity,
+              height: 180,
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: NetworkImage(campaign.imageUrl),
+                  fit: BoxFit.cover,
                 ),
               ),
             ),
           ),
-          // Products Grid
-          Expanded(
-            child: campaignProducts.isEmpty
-                ? const Center(
-                    child: Text(
-                      "Bu kampanyaya ait aktif ürün bulunamadı.",
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
-                    ),
-                  )
-                : GridView.builder(
-                    padding: const EdgeInsets.all(12),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      childAspectRatio: 0.72,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                    ),
-                    itemCount: campaignProducts.length,
-                    itemBuilder: (context, index) {
-                      final product = campaignProducts[index];
-                      return GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ProductDetailPage(businessProduct: product),
-                            ),
-                          );
-                        },
-                        child: ModernProductCard(
-                          businessProduct: product,
-                          campaign: campaign, // Pass campaign so correct discount shows
-                        ),
-                      );
-                    },
+          // 2. Campaign Details Card
+          SliverToBoxAdapter(
+            child: Container(
+              margin: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey.shade200),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    campaign.name,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  if (campaign.description.isNotEmpty) ...[
+                    Text(
+                      campaign.description,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade700,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  Row(
+                    children: [
+                      Icon(Icons.calendar_today_outlined, size: 16, color: theme.primaryColor),
+                      const SizedBox(width: 6),
+                      Text(
+                        "Kampanya Dönemi:",
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        dateString,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: theme.primaryColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
+          // 3. Grid Header
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(
+                "Kampanyalı Ürünler (${campaignProducts.length})",
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+          ),
+          // 4. Products Grid or Empty Info
+          if (campaignProducts.isEmpty)
+            const SliverFillRemaining(
+              child: Center(
+                child: Text(
+                  "Bu kampanyaya ait aktif ürün bulunamadı.",
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              ),
+            )
+          else
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              sliver: SliverGrid(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  childAspectRatio: 0.72,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final product = campaignProducts[index];
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ProductDetailPage(businessProduct: product),
+                          ),
+                        );
+                      },
+                      child: ModernProductCard(
+                        businessProduct: product,
+                        campaign: campaign,
+                      ),
+                    );
+                  },
+                  childCount: campaignProducts.length,
+                ),
+              ),
+            ),
         ],
       ),
     );

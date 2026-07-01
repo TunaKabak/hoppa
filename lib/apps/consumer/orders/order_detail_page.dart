@@ -491,8 +491,83 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                 ],
+
+                // Konum Harita Gösterimi & Yönlendirme (Dinamik Gel Al / Eve Teslim Koordinatları)
+                (() {
+                  final double? mapLat = order.deliveryMethod == 'pickup' 
+                      ? _business?.latitude 
+                      : (order.addressLatitude != 0.0 ? order.addressLatitude : null);
+                  final double? mapLng = order.deliveryMethod == 'pickup' 
+                      ? _business?.longitude 
+                      : (order.addressLongitude != 0.0 ? order.addressLongitude : null);
+
+                  if (mapLat == null || mapLng == null || mapLat == 0.0 || mapLng == 0.0) {
+                    return const SizedBox.shrink();
+                  }
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: SizedBox(
+                          height: 150,
+                          width: double.infinity,
+                          child: FlutterMap(
+                            options: MapOptions(
+                              initialCenter: LatLng(mapLat, mapLng),
+                              initialZoom: 15,
+                              interactionOptions: const InteractionOptions(flags: InteractiveFlag.none), // Statik harita
+                            ),
+                            children: [
+                              TileLayer(
+                                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                userAgentPackageName: 'com.hoppa.app',
+                              ),
+                              MarkerLayer(
+                                markers: [
+                                  Marker(
+                                    point: LatLng(mapLat, mapLng),
+                                    width: 40,
+                                    height: 40,
+                                    child: const Icon(
+                                      Icons.location_on,
+                                      color: Colors.red,
+                                      size: 36,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          final url = Uri.parse("https://www.google.com/maps/search/?api=1&query=$mapLat,$mapLng");
+                          if (await canLaunchUrl(url)) {
+                            await launchUrl(url, mode: LaunchMode.externalApplication);
+                          }
+                        },
+                        icon: const Icon(Icons.map_outlined, size: 16),
+                        label: Text(
+                          order.deliveryMethod == 'pickup' ? "Mağaza Konumunu Haritada Aç" : "Teslimat Konumunu Haritada Aç",
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 38),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          side: BorderSide(color: Theme.of(context).primaryColor.withOpacity(0.5)),
+                          foregroundColor: Theme.of(context).primaryColor,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                  );
+                })(),
 
                 // Dinamik İrtibat Numarası
                 Row(
