@@ -68,7 +68,18 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
         builder: (context, snapshot) {
           final campaigns = snapshot.data ?? [];
           Campaign? activeCampaign;
-          double price = widget.businessProduct.price;
+          final double regularPrice = widget.businessProduct.regularPrice;
+          final double originalPrice = widget.businessProduct.price;
+          final int discountRate = widget.businessProduct.discountRate;
+
+          double activePrice = originalPrice;
+          double? oldPrice;
+          int activeDiscountRate = discountRate;
+
+          if (discountRate > 0) {
+            oldPrice = regularPrice;
+            activePrice = originalPrice;
+          }
 
           if (campaigns.isNotEmpty) {
             try {
@@ -77,7 +88,12 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                   widget.businessProduct.productBarcode,
                 ),
               );
-              price = activeCampaign.calculateDiscountedPrice(price);
+              final campaignPrice = activeCampaign.calculateDiscountedPrice(originalPrice);
+              if (campaignPrice < activePrice) {
+                oldPrice = originalPrice;
+                activePrice = campaignPrice;
+                activeDiscountRate = (((originalPrice - campaignPrice) / originalPrice) * 100).round();
+              }
             } catch (_) {}
           }
 
@@ -240,44 +256,65 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                       ),
                       const SizedBox(height: 16),
                       // Fiyat ve Birim
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          if (activeCampaign != null)
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                right: 12,
-                                bottom: 4,
-                              ),
-                              child: Text(
-                                '₺${widget.businessProduct.price.toStringAsFixed(2)}',
+                          if (activeDiscountRate > 0 && oldPrice != null) ...[
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    "%$activeDiscountRate İNDİRİM",
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  "₺${oldPrice.toStringAsFixed(2)}",
+                                  style: GoogleFonts.inter(
+                                    fontSize: 16,
+                                    color: Colors.grey.shade500,
+                                    fontWeight: FontWeight.bold,
+                                    decoration: TextDecoration.lineThrough,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                          ],
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                '₺${activePrice.toStringAsFixed(2)}',
                                 style: GoogleFonts.inter(
-                                  fontSize: 20,
+                                  fontSize: 28,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.grey.shade500,
-                                  decoration: TextDecoration.lineThrough,
+                                  color: activeDiscountRate > 0 ? Colors.red : const Color(0xFF00A651),
                                 ),
                               ),
-                            ),
-                          Text(
-                            '₺${price.toStringAsFixed(2)}',
-                            style: GoogleFonts.inter(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF00A651), // Emerald Green
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 6),
-                            child: Text(
-                              product.unit.toLowerCase() == 'adet' ? '/ adet' : '/ ${product.unit}',
-                              style: GoogleFonts.inter(
-                                fontSize: 16,
-                                color: Colors.grey.shade600,
-                                fontWeight: FontWeight.w500,
+                              const SizedBox(width: 8),
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 6),
+                                child: Text(
+                                  product.unit.toLowerCase() == 'adet' ? '/ adet' : '/ ${product.unit}',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 16,
+                                    color: Colors.grey.shade600,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
                               ),
-                            ),
+                            ],
                           ),
                         ],
                       ),

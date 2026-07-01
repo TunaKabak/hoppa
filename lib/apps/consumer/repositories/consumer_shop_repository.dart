@@ -299,6 +299,7 @@ final shopCategoriesProvider = FutureProvider.family<List<ShopCategoryData>, Str
       id: catMap['id'] as String? ?? '',
       name: catMap['name'] as String? ?? '',
       iconName: catMap['iconName'] as String? ?? 'shopping_basket',
+      backgroundImage: catMap['backgroundImage'] as String?,
       subCategories: subNames,
     );
   }).toList();

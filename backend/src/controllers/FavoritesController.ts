@@ -40,7 +40,9 @@ export class FavoritesController {
             include: {
               unit: true,
               brand: true,
-              category: true,
+              category: {
+                include: { parent: true }
+              },
               globalProduct: true, // Görsel fallback için master ürün dahil edilmelidir!
             }
           }
@@ -58,9 +60,12 @@ export class FavoritesController {
           // Görsel fallback kuralı:
           imageUrl: prod.imageUrl || prod.globalProduct?.imageUrl || "/images/default-product.png",
           unit: prod.unit, // İlişkisel birim nesnesi
+          brand: prod.brand,
+          category: prod.category,
           minQuantity: prod.minQuantity,
           stepSize: prod.stepSize,
           shopId: prod.shopId,
+          categoryId: prod.categoryId
         };
       });
 
