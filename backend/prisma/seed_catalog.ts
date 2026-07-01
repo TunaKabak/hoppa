@@ -34,7 +34,7 @@ function determineShopType(name: string): string {
   if (n.includes("et, tavuk, balık") || n.includes("kasap") || n.includes("kırmızı et") || n.includes("beyaz et")) {
     return "BUTCHER";
   }
-  if (n.includes("restoran") || n.includes("hazır yemek") || n.includes("fırın") || n.includes("unlu mamül")) {
+  if (n.includes("restoran") || n.includes("hazır yemek")) {
     return "RESTAURANT";
   }
   return "MARKET";
