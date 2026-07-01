@@ -28,16 +28,12 @@ class ConsumerShopRepository {
       final map = Map<String, dynamic>.from(json);
 
       // Map API field differences and apply image URL validation fallbacks
-      map['logoUrl'] = _isValidImageUrl(json['logoUrl'])
-          ? json['logoUrl']
-          : (_isValidImageUrl(json['imageUrl'])
-              ? json['imageUrl']
-              : 'https://via.placeholder.com/150');
-      map['headerImageUrl'] = _isValidImageUrl(json['coverUrl'])
-          ? json['coverUrl']
-          : (_isValidImageUrl(json['headerImageUrl'])
-              ? json['headerImageUrl']
-              : 'https://via.placeholder.com/150');
+      map['logoUrl'] = _isValidImageUrl(json['imageUrl'])
+          ? json['imageUrl']
+          : 'https://via.placeholder.com/150';
+      map['headerImageUrl'] = _isValidImageUrl(json['headerImageUrl'])
+          ? json['headerImageUrl']
+          : 'https://via.placeholder.com/150';
       map['isOpen'] = json['isActive'] ?? true;
       map['minBasketAmount'] = json['minOrderAmount'] != null
           ? double.tryParse(json['minOrderAmount'].toString()) ?? 0.0

@@ -300,8 +300,8 @@ async function seedCampaignsAndShopVisuals() {
   await prisma.shop.updateMany({
     where: { name: { contains: "Süpermarket" } },
     data: {
-      logoUrl: "https://images.migrosone.com/sanalmarket/category/list/72310/migros-580baf.png",
-      coverUrl: "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80",
+      imageUrl: "https://images.migrosone.com/sanalmarket/category/list/72310/migros-580baf.png",
+      headerImageUrl: "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80",
       averageRating: 4.8,
       reviewCount: 142
     }
@@ -310,8 +310,8 @@ async function seedCampaignsAndShopVisuals() {
   await prisma.shop.updateMany({
     where: { name: { contains: "Manav" } },
     data: {
-      logoUrl: "https://images.migrosone.com/sanalmarket/category/list/2/meyve-f77b42.png",
-      coverUrl: "https://images.unsplash.com/photo-1610348725531-843dff14682c?auto=format&fit=crop&w=1200&q=80",
+      imageUrl: "https://images.migrosone.com/sanalmarket/category/list/2/meyve-f77b42.png",
+      headerImageUrl: "https://images.unsplash.com/photo-1610348725531-843dff14682c?auto=format&fit=crop&w=1200&q=80",
       averageRating: 4.9,
       reviewCount: 89
     }
