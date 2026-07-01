@@ -112,8 +112,6 @@ model Shop {
   isActive         Boolean   @default(false) // Dükkan açık/kapalı veya aktif/pasif mi
   imageUrl         String?   // Dükkan logosu
   headerImageUrl   String?   // Dükkan kapak resmi
-  logoUrl          String?   // Dükkan yuvarlak logosu (Örn: Migros Turuncu M)
-  coverUrl         String?   // Dükkan üst kapak resmi (Örn: Taze meyve/sebze reyonu)
   type             ShopType  @default(OTHER)
   
   // Lokasyon ve Mesafe
