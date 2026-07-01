@@ -40,6 +40,8 @@ async function fetchWithRetry(url: string, options: any, retries = 3, delay = 20
 async function main() {
   console.log("🚀 Veritabanı temel verileriyle tohumlanıyor...");
 
+  const passwordHash = await bcrypt.hash("123456", 12);
+
   // 1. SUPER ADMIN OLUŞTUR
   const superAdmin = await prisma.user.upsert({
     where: { phone: "+905550000000" },
@@ -52,6 +54,28 @@ async function main() {
     },
   });
   console.log("✅ Super Admin Oluşturuldu:", superAdmin.phone);
+
+  // 1.1 SUPER ADMIN MERCHANT HESABI OLUŞTUR
+  const adminMerchant = await prisma.merchant.upsert({
+    where: { email: "admin@test.com" },
+    update: {
+      status: "ACTIVE",
+      phone: "+905550000000",
+      role: "super_admin",
+    },
+    create: {
+      email: "admin@test.com",
+      passwordHash: passwordHash,
+      businessName: "Sistem Yönetimi",
+      phone: "+905550000000",
+      status: "ACTIVE",
+      role: "super_admin",
+      agreedToTerms: true,
+      ownerFirstName: "Super",
+      ownerLastName: "Admin",
+    },
+  });
+  console.log("✅ Super Admin Merchant Created:", adminMerchant.email);
 
   // 2. HAZIR ONAYLI MERCHANT USER'I OLUŞTUR
   const merchantUser = await prisma.user.upsert({
@@ -67,7 +91,6 @@ async function main() {
   console.log("✅ Merchant User Oluşturuldu:", merchantUser.phone);
 
   // 3. MERCHANT MODELİ OLUŞTUR
-  const passwordHash = await bcrypt.hash("123456", 12);
   const merchant = await prisma.merchant.upsert({
     where: { email: "merchant@test.com" },
     update: {
@@ -128,6 +151,7 @@ async function main() {
       type: "FREE_DELIVERY_FIRST_ORDERS",
       isActive: true,
       maxUsesPerUser: 5,
+      imageUrl: "https://images.unsplash.com/photo-1508962914676-134849a727f0?auto=format&fit=crop&w=600&q=80",
     }
   });
   console.log("✅ Kampanya Oluşturuldu:", firstOrdersCampaign.title);
@@ -253,11 +277,18 @@ async function main() {
     console.log(`\n📂 "${catTarget.trName}" kategorisi için API'ye bağlanılıyor...`);
 
     // İlişkisel Kategorinin Oluşturulması
-    const category = await prisma.category.upsert({
-      where: { name: catTarget.trName },
-      update: {},
-      create: { name: catTarget.trName, shopType: catTarget.shopType }
+    let category = await prisma.category.findFirst({
+      where: { name: catTarget.trName }
     });
+    if (!category) {
+      category = await prisma.category.create({
+        data: {
+          id: require('crypto').randomUUID(),
+          name: catTarget.trName,
+          shopType: catTarget.shopType
+        }
+      });
+    }
 
     // Türkiye pazarındaki ve kategorideki ürünleri çeken API v2 URL'si
     const url = `https://world.openfoodfacts.org/api/v2/search?countries_tags=en:turkey&categories_tags_en=${catTarget.apiName}&fields=code,product_name,image_url,brands&page_size=50`;
@@ -331,8 +362,9 @@ async function main() {
                 barcode: apiProd.code,
                 name: apiProd.product_name,
                 imageUrl: apiProd.image_url,
+                regularPrice: randomPrice,
                 price: randomPrice,
-                stock: randomStock,
+                stockQuantity: randomStock,
                 description: `${apiProd.product_name} - Kaliteli ve taze market ürünü.`,
                 isActive: true,
               }

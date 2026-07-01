@@ -3,10 +3,32 @@ import bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
 
-async function main() {
-  console.log("Seeding database with Test Users...");
+async function findCategoryByName(name: string, shopType: string): Promise<string> {
+  const cat = await prisma.category.findFirst({
+    where: { 
+      name: { equals: name, mode: 'insensitive' },
+      shopType: shopType
+    }
+  });
+  if (cat) return cat.id;
+  
+  // Create if not found
+  const newCat = await prisma.category.create({
+    data: {
+      id: require('crypto').randomUUID(),
+      name: name,
+      shopType: shopType
+    }
+  });
+  return newCat.id;
+}
 
-  // 1. SUPER ADMIN OLUŞTUR
+async function main() {
+  console.log("Seeding database with Test Users and Shops...");
+
+  const passwordHash = await bcrypt.hash("123456", 12);
+
+  // 1. SUPER ADMIN OLUŞTUR (User tablosu)
   const superAdmin = await prisma.user.upsert({
     where: { phone: "+905550000000" },
     update: { role: "SUPER_ADMIN" },
@@ -17,7 +39,29 @@ async function main() {
       surname: "Admin",
     },
   });
-  console.log("✅ Super Admin Created:", superAdmin.phone);
+  console.log("✅ Super Admin User Created:", superAdmin.phone);
+
+  // 1.1 SUPER ADMIN MERCHANT HESABI OLUŞTUR (Merchant tablosu)
+  const adminMerchant = await prisma.merchant.upsert({
+    where: { email: "admin@test.com" },
+    update: {
+      status: "ACTIVE",
+      phone: "+905550000000",
+      role: "super_admin",
+    },
+    create: {
+      email: "admin@test.com",
+      passwordHash: passwordHash,
+      businessName: "Sistem Yönetimi",
+      phone: "+905550000000",
+      status: "ACTIVE",
+      role: "super_admin",
+      agreedToTerms: true,
+      ownerFirstName: "Super",
+      ownerLastName: "Admin",
+    },
+  });
+  console.log("✅ Super Admin Merchant Account Created:", adminMerchant.email);
 
   // 2. HAZIR ONAYLI MERCHANT USER'I OLUŞTUR (User tablosunda)
   const merchantUser = await prisma.user.upsert({
@@ -33,7 +77,6 @@ async function main() {
   console.log("✅ Merchant User Created:", merchantUser.phone);
 
   // 3. MERCHANT MODELİ OLUŞTUR (Merchant tablosunda login olabilmesi için)
-  const passwordHash = await bcrypt.hash("123456", 12);
   const merchant = await prisma.merchant.upsert({
     where: { email: "merchant@test.com" },
     update: {
@@ -87,6 +130,9 @@ async function main() {
   console.log("✅ Test Shop Created:", testShop.name);
 
   // 4.1 İLK 5 SİPARİŞ BEDAVA KAMPANYASI OLUŞTUR
+  await prisma.campaign.deleteMany({
+    where: { title: "İlk 5 Sipariş Bedava" }
+  });
   const firstOrdersCampaign = await prisma.campaign.create({
     data: {
       title: "İlk 5 Sipariş Bedava",
@@ -94,6 +140,7 @@ async function main() {
       type: "FREE_DELIVERY_FIRST_ORDERS",
       isActive: true,
       maxUsesPerUser: 5,
+      imageUrl: "https://images.unsplash.com/photo-1508962914676-134849a727f0?auto=format&fit=crop&w=600&q=80",
     }
   });
   console.log("✅ Campaign Created:", firstOrdersCampaign.title);
@@ -157,51 +204,70 @@ async function main() {
   });
   console.log("✅ Test Market Shop Created:", testMarketShop.name);
 
-  // 7. SÜPERMARKET ALTINA ÜRÜNLERİ EKLE
-  const marketProducts = [
-    { name: "1 Litre Su", price: 10.0, stock: 100, description: "Doğal kaynak suyu", category: "Su & İçecek", subCategory: "Su" },
-    { name: "Taze Ekmek", price: 15.0, stock: 50, description: "Günlük taze ekmek", category: "Fırın", subCategory: "Ekmek" },
-    { name: "Günlük Süt", price: 45.0, stock: 30, description: "Pastörize günlük süt", category: "Süt & Kahvaltılık", subCategory: "Süt" },
-  ];
-
+  // 7. SÜPERMARKET VE RESTORAN ALTINA ÜRÜNLERİ EKLE
   let unitAdet = await prisma.unit.findUnique({ where: { code: "ADET" } });
   if (!unitAdet) {
     unitAdet = await prisma.unit.create({ data: { code: "ADET", nameTr: "Adet", nameEn: "Pieces" } });
   }
 
-  for (const p of marketProducts) {
-    // Kategori/Alt kategori bul veya oluştur
-    let parentCat = await prisma.category.findUnique({ where: { name: p.category } });
-    if (!parentCat) {
-      parentCat = await prisma.category.create({ data: { name: p.category, shopType: "MARKET" } });
-    }
-    
-    let subCat = await prisma.subCategory.findFirst({ where: { name: p.subCategory, categoryId: parentCat.id } });
-    if (!subCat) {
-      subCat = await prisma.subCategory.create({ data: { name: p.subCategory, categoryId: parentCat.id } });
-    }
+  const catKebapId = await findCategoryByName("Kebaplar", "RESTAURANT");
+  const catIcecekId = await findCategoryByName("İçecekler", "MARKET");
+  const catSutId = await findCategoryByName("Süt & Kahvaltılık", "MARKET");
+  const catFirinId = await findCategoryByName("Fırın", "MARKET");
 
-    const existingProduct = await prisma.product.findFirst({
-      where: { shopId: testMarketShop.id, name: p.name }
+  const restaurantProducts = [
+    { name: "Adana Kebap", price: 280.0, stock: 99, description: "Közlenmiş domates ve biber ile", categoryId: catKebapId },
+    { name: "Urfa Kebap", price: 280.0, stock: 99, description: "Közlenmiş domates ve biber ile", categoryId: catKebapId },
+  ];
+
+  const marketProducts = [
+    { name: "1 Litre Su", price: 10.0, stock: 100, description: "Doğal kaynak suyu", categoryId: catIcecekId },
+    { name: "Taze Ekmek", price: 15.0, stock: 50, description: "Günlük taze ekmek", categoryId: catFirinId },
+    { name: "Günlük Süt", price: 45.0, stock: 30, description: "Pastörize günlük süt", categoryId: catSutId },
+  ];
+
+  for (const p of restaurantProducts) {
+    const existing = await prisma.product.findFirst({
+      where: { shopId: testShop.id, name: p.name }
     });
-
-    if (!existingProduct) {
+    if (!existing) {
       await prisma.product.create({
         data: {
-          shopId: testMarketShop.id,
-          categoryId: parentCat.id,
-          subCategoryId: subCat.id,
+          shopId: testShop.id,
+          categoryId: p.categoryId,
           unitId: unitAdet.id,
           name: p.name,
+          regularPrice: p.price,
           price: p.price,
-          stock: p.stock,
+          stockQuantity: p.stock,
           description: p.description,
           isActive: true,
         }
       });
     }
   }
-  console.log("✅ Market Products Seeded successfully.");
+
+  for (const p of marketProducts) {
+    const existing = await prisma.product.findFirst({
+      where: { shopId: testMarketShop.id, name: p.name }
+    });
+    if (!existing) {
+      await prisma.product.create({
+        data: {
+          shopId: testMarketShop.id,
+          categoryId: p.categoryId,
+          unitId: unitAdet.id,
+          name: p.name,
+          regularPrice: p.price,
+          price: p.price,
+          stockQuantity: p.stock,
+          description: p.description,
+          isActive: true,
+        }
+      });
+    }
+  }
+  console.log("✅ Shop Products Seeded successfully.");
 
   // 8. DEFAULT KURYEYİ OLUŞTUR
   const defaultCourier = await prisma.courier.upsert({
@@ -223,7 +289,6 @@ async function main() {
     );
     console.log("✅ Supabase Realtime replication enabled for CourierLocation table.");
   } catch (err: any) {
-    // Replikasyon zaten aktifse veya tablo yayında varsa hata yoksayılır
     console.log("ℹ️ Supabase Realtime replication notice (likely already active):", err.message || err);
   }
 }
