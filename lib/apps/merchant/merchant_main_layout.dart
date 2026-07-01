@@ -13,6 +13,7 @@ import 'package:hoppa/apps/merchant/merchant_settings_page.dart';
 import 'package:hoppa/apps/merchant/merchant_analytics_page.dart';
 import 'package:hoppa/apps/merchant/campaign/merchant_campaigns_page.dart';
 import 'package:hoppa/apps/merchant/admin/admin_approvals_page.dart';
+import 'package:hoppa/apps/merchant/admin/admin_business_categories_page.dart';
 import 'package:hoppa/apps/merchant/auth/merchant_auth_wrapper.dart' as hoppa_wrapper;
 import 'package:core_network/core_network.dart';
 import 'package:hoppa/shared/core/services/notification_service.dart';
@@ -145,6 +146,9 @@ class _MerchantMainLayoutState extends ConsumerState<MerchantMainLayout> {
       pages.add(
         const AdminApprovalsPage(key: ValueKey('admin_approvals')),
       );
+      pages.add(
+        const AdminBusinessCategoriesPage(key: ValueKey('admin_categories')),
+      );
     }
     pages.add(
       MerchantSettingsPage(
@@ -167,6 +171,7 @@ class _MerchantMainLayoutState extends ConsumerState<MerchantMainLayout> {
     }
     if (user.isSuperAdmin) {
       items.add(const _NavItem(Icons.admin_panel_settings_rounded, 'Başvurular'));
+      items.add(const _NavItem(Icons.category_rounded, 'Kategoriler'));
     }
     items.add(const _NavItem(Icons.settings_rounded, 'Ayarlar'));
     return items;

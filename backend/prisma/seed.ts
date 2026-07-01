@@ -284,6 +284,40 @@ async function main() {
   });
   console.log("✅ Default Courier Created:", defaultCourier.name);
 
+  // 8.5. SEED BUSINESS CATEGORIES
+  const businessCategories = [
+    { name: "Market", icon: "shopping_basket", color: "#00A651", subtitle: "Market alışverişi", avgDeliveryTime: "20-30 dk", badge: "popular", order: 0 },
+    { name: "Restoran", icon: "restaurant", color: "#FF6B00", subtitle: "Yemek siparişi", avgDeliveryTime: "25-35 dk", badge: "popular", order: 1 },
+    { name: "Su", icon: "water_drop", color: "#2196F3", subtitle: "Su ve içecek", avgDeliveryTime: "15-25 dk", badge: null, order: 2 },
+    { name: "Kuruyemiş", icon: "grain", color: "#795548", subtitle: "Kuruyemiş çeşitleri", avgDeliveryTime: "20-30 dk", badge: "new", order: 3 },
+    { name: "Kahve", icon: "coffee", color: "#4E342E", subtitle: "Kahve ve içecek", avgDeliveryTime: "15-20 dk", badge: null, order: 4 },
+    { name: "Çiçek", icon: "local_florist", color: "#E91E63", subtitle: "Çiçek siparişi", avgDeliveryTime: "30-45 dk", badge: null, order: 5 },
+  ];
+
+  for (const cat of businessCategories) {
+    await prisma.businessCategory.upsert({
+      where: { name: cat.name },
+      update: {
+        icon: cat.icon,
+        color: cat.color,
+        subtitle: cat.subtitle,
+        avgDeliveryTime: cat.avgDeliveryTime,
+        badge: cat.badge,
+        order: cat.order,
+      },
+      create: {
+        name: cat.name,
+        icon: cat.icon,
+        color: cat.color,
+        subtitle: cat.subtitle,
+        avgDeliveryTime: cat.avgDeliveryTime,
+        badge: cat.badge ?? null,
+        order: cat.order,
+      },
+    });
+  }
+  console.log("✅ Business Categories Seeded successfully.");
+
   // 9. SUPABASE REALTIME REPLİKASYONUNU AKTİF ET
   try {
     await prisma.$executeRawUnsafe(

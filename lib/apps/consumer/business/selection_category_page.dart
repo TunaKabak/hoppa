@@ -8,74 +8,53 @@ import 'package:hoppa/apps/consumer/home/widgets/account_bottom_sheet.dart';
 import 'package:hoppa/apps/consumer/business/business_provider.dart';
 import 'package:hoppa/apps/consumer/business/widgets/category_grid_item.dart';
 import 'package:hoppa/apps/consumer/home/widgets/promo_slider.dart';
+import 'package:hoppa/apps/consumer/repositories/consumer_shop_repository.dart';
 
-class SelectionCategoryPage extends StatelessWidget {
+class SelectionCategoryPage extends rp.ConsumerWidget {
   const SelectionCategoryPage({super.key});
-
-  static final List<Map<String, dynamic>> _categories = [
-    {
-      'name': 'Market',
-      'icon': Icons.shopping_basket,
-      'color': Colors.green,
-      'badge': 'popular',
-      'businessCount': 45,
-      'avgDeliveryTime': '20-30 dk',
-      'subtitle': 'Market alışverişi',
-    },
-    {
-      'name': 'Restoran',
-      'icon': Icons.restaurant,
-      'color': Colors.orange,
-      'badge': 'popular',
-      'businessCount': 32,
-      'avgDeliveryTime': '25-35 dk',
-      'subtitle': 'Yemek siparişi',
-    },
-    {
-      'name': 'Su',
-      'icon': Icons.water_drop,
-      'color': Colors.blue,
-      'businessCount': 12,
-      'avgDeliveryTime': '15-25 dk',
-      'subtitle': 'Su ve içecek',
-    },
-    {
-      'name': 'Kuruyemiş',
-      'icon': Icons.grain,
-      'color': Colors.brown,
-      'badge': 'new',
-      'businessCount': 8,
-      'avgDeliveryTime': '20-30 dk',
-      'subtitle': 'Kuruyemiş çeşitleri',
-    },
-    {
-      'name': 'Kahve',
-      'icon': Icons.coffee,
-      'color': Colors.brown.shade700,
-      'businessCount': 18,
-      'avgDeliveryTime': '15-20 dk',
-      'subtitle': 'Kahve ve içecek',
-    },
-    {
-      'name': 'Çiçek',
-      'icon': Icons.local_florist,
-      'color': Colors.pink,
-      'businessCount': 6,
-      'avgDeliveryTime': '30-45 dk',
-      'subtitle': 'Çiçek siparişi',
-    },
-  ];
 
   static const Map<String, String> _featuredImages = {
     'Market': 'assets/images/market_bg.png',
     'Restoran': 'assets/images/restaurant_bg.png',
-    // Only Market and Restoran are featured with background images
-    // Other categories will show detailed info instead
   };
 
+  IconData _getIconData(String iconName) {
+    switch (iconName) {
+      case 'shopping_basket':
+        return Icons.shopping_basket;
+      case 'restaurant':
+        return Icons.restaurant;
+      case 'water_drop':
+        return Icons.water_drop;
+      case 'grain':
+        return Icons.grain;
+      case 'coffee':
+        return Icons.coffee;
+      case 'local_florist':
+        return Icons.local_florist;
+      default:
+        return Icons.store;
+    }
+  }
+
+  Color _getColor(String hexColor) {
+    try {
+      if (hexColor.startsWith('#')) {
+        hexColor = hexColor.substring(1);
+      }
+      if (hexColor.length == 6) {
+        hexColor = 'FF$hexColor';
+      }
+      return Color(int.parse(hexColor, radix: 16));
+    } catch (_) {
+      return Colors.green;
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, rp.WidgetRef ref) {
     final theme = Theme.of(context);
+    final categoriesAsync = ref.watch(businessCategoriesProvider);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -94,8 +73,6 @@ class SelectionCategoryPage extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Promo Slider
-                    // In a real scenario, these could be global platform-wide campaigns.
-                    // For now, it stays empty on the category selection page.
                     const PromoSlider(campaigns: []),
                     const SizedBox(height: 24),
 
@@ -114,40 +91,75 @@ class SelectionCategoryPage extends StatelessWidget {
                     // Category Grid (non-scrollable, expands to content)
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: GridView.builder(
-                        shrinkWrap: true, // Takes only needed space
-                        physics:
-                            const NeverScrollableScrollPhysics(), // Disable internal scroll
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
+                      child: categoriesAsync.when(
+                        loading: () => const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(24.0),
+                            child: CircularProgressIndicator(),
+                          ),
+                        ),
+                        error: (err, stack) => Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24.0),
+                            child: Text(
+                              "Kategoriler yüklenemedi: $err",
+                              style: const TextStyle(color: Colors.red),
+                            ),
+                          ),
+                        ),
+                        data: (categoriesList) {
+                          if (categoriesList.isEmpty) {
+                            return const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(24.0),
+                                child: Text("Henüz kategori tanımlanmamış."),
+                              ),
+                            );
+                          }
+
+                          return GridView.builder(
+                            shrinkWrap: true, // Takes only needed space
+                            physics: const NeverScrollableScrollPhysics(), // Disable internal scroll
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: 2,
                               childAspectRatio: 1.1,
                               crossAxisSpacing: 12,
                               mainAxisSpacing: 12,
                             ),
-                        itemCount: _categories.length,
-                        itemBuilder: (context, index) {
-                          final cat = _categories[index];
-                          final catName = cat['name'] as String;
-                          final isFeatured = _featuredImages.containsKey(
-                            catName,
-                          );
-                          final bgImage = _featuredImages[catName];
+                            itemCount: categoriesList.length,
+                            itemBuilder: (context, index) {
+                              final cat = categoriesList[index];
+                              final catName = cat.name;
+                              final isFeatured = _featuredImages.containsKey(
+                                catName,
+                              );
+                              final bgImage = _featuredImages[catName];
 
-                          return CategoryGridItem(
-                            category: cat,
-                            isFeatured: isFeatured,
-                            backgroundImage: bgImage,
-                            badge: cat['badge'] as String?,
-                            businessCount: cat['businessCount'] as int?,
-                            avgDeliveryTime: cat['avgDeliveryTime'] as String?,
-                            subtitle: cat['subtitle'] as String?,
-                            index: index,
-                            onTap: () {
-                              Provider.of<BusinessProvider>(
-                                context,
-                                listen: false,
-                              ).setCategory(catName);
+                              final catMap = {
+                                'name': cat.name,
+                                'icon': _getIconData(cat.icon),
+                                'color': _getColor(cat.color),
+                                'badge': cat.badge,
+                                'avgDeliveryTime': cat.avgDeliveryTime,
+                                'subtitle': cat.subtitle,
+                              };
+
+                              return CategoryGridItem(
+                                category: catMap,
+                                isFeatured: isFeatured,
+                                backgroundImage: bgImage,
+                                badge: cat.badge,
+                                businessCount: null,
+                                avgDeliveryTime: cat.avgDeliveryTime,
+                                subtitle: cat.subtitle,
+                                index: index,
+                                onTap: () {
+                                  Provider.of<BusinessProvider>(
+                                    context,
+                                    listen: false,
+                                  ).setCategory(catName);
+                                },
+                              );
                             },
                           );
                         },

@@ -71,36 +71,51 @@ class _ActiveOrderCardState extends ConsumerState<ActiveOrderCard> {
           // Sort by newest first
           activeOrders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-          if (activeOrders.length == 1) {
-            return _SingleActiveOrderCard(
-              order: activeOrders.first,
-              canExpand: true,
-              margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-            );
-          }
-
-          // Multiple active orders -> scroll horizontally
-          return SizedBox(
-            height: 155,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: activeOrders.length,
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
-              itemBuilder: (context, index) {
-                final order = activeOrders[index];
-                return SizedBox(
-                  width: MediaQuery.of(context).size.width * 0.82,
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: 12.0),
-                    child: _SingleActiveOrderCard(
-                      order: order,
-                      canExpand: false,
-                      margin: EdgeInsets.zero,
-                    ),
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+                child: Text(
+                  "Aktif Siparişleriniz",
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
                   ),
-                );
-              },
-            ),
+                ),
+              ),
+              if (activeOrders.length == 1)
+                _SingleActiveOrderCard(
+                  order: activeOrders.first,
+                  canExpand: true,
+                  margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                )
+              else
+                SizedBox(
+                  height: 155,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: activeOrders.length,
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+                    itemBuilder: (context, index) {
+                      final order = activeOrders[index];
+                      return SizedBox(
+                        width: MediaQuery.of(context).size.width * 0.82,
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 12.0),
+                          child: _SingleActiveOrderCard(
+                            order: order,
+                            canExpand: false,
+                            margin: EdgeInsets.zero,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+            ],
           );
         } catch (e) {
           return const SizedBox.shrink();

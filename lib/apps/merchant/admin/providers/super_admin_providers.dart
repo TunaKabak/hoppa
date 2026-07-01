@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // core_auth supplies apiClientProvider
 import 'package:core_auth/core_auth.dart';
+import 'package:hoppa/shared/models/business_category.dart';
 import '../repositories/super_admin_repository.dart';
 
 final superAdminRepositoryProvider = Provider<SuperAdminRepository>((ref) {
@@ -34,4 +35,38 @@ class PendingMerchantsController extends AsyncNotifier<List<PendingMerchant>> {
 
 final pendingMerchantsProvider = AsyncNotifierProvider<PendingMerchantsController, List<PendingMerchant>>(
   PendingMerchantsController.new,
+);
+
+class AdminBusinessCategoriesController extends AsyncNotifier<List<BusinessCategory>> {
+  @override
+  Future<List<BusinessCategory>> build() async {
+    return _fetchCategories();
+  }
+
+  Future<List<BusinessCategory>> _fetchCategories() async {
+    final repo = ref.read(superAdminRepositoryProvider);
+    return await repo.adminGetBusinessCategories();
+  }
+
+  Future<void> createCategory(BusinessCategory category) async {
+    final repo = ref.read(superAdminRepositoryProvider);
+    await repo.adminCreateBusinessCategory(category);
+    ref.invalidateSelf();
+  }
+
+  Future<void> updateCategory(BusinessCategory category) async {
+    final repo = ref.read(superAdminRepositoryProvider);
+    await repo.adminUpdateBusinessCategory(category);
+    ref.invalidateSelf();
+  }
+
+  Future<void> deleteCategory(String id) async {
+    final repo = ref.read(superAdminRepositoryProvider);
+    await repo.adminDeleteBusinessCategory(id);
+    ref.invalidateSelf();
+  }
+}
+
+final adminBusinessCategoriesProvider = AsyncNotifierProvider<AdminBusinessCategoriesController, List<BusinessCategory>>(
+  AdminBusinessCategoriesController.new,
 );

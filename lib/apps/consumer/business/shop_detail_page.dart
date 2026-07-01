@@ -707,6 +707,14 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                   ),
                 ),
               ),
+                  // Active Order card
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      child: ActiveOrderCard(businessId: widget.shop.id),
+                    ),
+                  ),
+
                   // Search Input
                   SliverToBoxAdapter(
                     child: Padding(
@@ -722,7 +730,7 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                             ref.read(catalogSearchQueryProvider.notifier).state = val;
                           },
                           decoration: InputDecoration(
-                            hintText: "Ürün, kategori veya marka ara...",
+                            hintText: "Bu mağazada ara...",
                             hintStyle: theme.inputDecorationTheme.hintStyle?.copyWith(fontSize: 13),
                             prefixIcon: Icon(
                               Icons.search,
@@ -785,14 +793,6 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                             },
                           ),
                     ),
-
-                  // Active Order card
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                      child: ActiveOrderCard(businessId: widget.shop.id),
-                    ),
-                  ),
 
                   // Sorting and Grid size controls
                   SliverToBoxAdapter(

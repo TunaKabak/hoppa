@@ -8,11 +8,19 @@ import 'package:hoppa/shared/models/business_product.dart';
 import 'package:hoppa/shared/models/shop_category_data.dart';
 import 'package:hoppa/shared/models/category_model.dart';
 import 'package:hoppa/shared/models/campaign.dart';
+import 'package:hoppa/shared/models/business_category.dart';
 
 class ConsumerShopRepository {
   final ApiClient _apiClient;
 
   ConsumerShopRepository(this._apiClient);
+
+  Future<List<BusinessCategory>> getBusinessCategories() async {
+    final response = await _apiClient.get('/api/consumer/business-categories');
+    final data = response['data'] as List<dynamic>?;
+    if (data == null) return [];
+    return data.map((json) => BusinessCategory.fromJson(Map<String, dynamic>.from(json))).toList();
+  }
 
   String? _lastCachedShopId;
   final Map<String, Map<String, String>> _categoryMappings = {};
@@ -491,5 +499,9 @@ final filteredShopProductsProvider = Provider.family<AsyncValue<List<BusinessPro
     }
     return list;
   });
+});
+
+final businessCategoriesProvider = FutureProvider<List<BusinessCategory>>((ref) async {
+  return ref.watch(consumerShopRepositoryProvider).getBusinessCategories();
 });
 
