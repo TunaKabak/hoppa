@@ -469,13 +469,13 @@ class BusinessSelectionPage extends ConsumerWidget {
                           color: kPrimaryColor,
                           borderRadius: BorderRadius.circular(6),
                         ),
-                        child: const Row(
+                        child: Row(
                           children: [
-                            Icon(Icons.star, color: Colors.white, size: 12),
-                            SizedBox(width: 4),
+                            const Icon(Icons.star, color: Colors.white, size: 12),
+                            const SizedBox(width: 4),
                             Text(
-                              "4.8", // Mock Puan
-                              style: TextStyle(
+                              "${business.averageRating.toStringAsFixed(1)} (${business.reviewCount})",
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,

@@ -1,10 +1,28 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // Note: apiClientProvider comes from core_auth but since merchant app uses it we can define or import it.
 // Assuming core_auth is imported in merchant_main_layout or we can import it.
-import 'package:core_auth/core_auth.dart'; 
+import 'package:core_auth/core_auth.dart';
+import 'package:hoppa/shared/models/category_model.dart';
 
 import '../repositories/merchant_shop_repository.dart';
 import '../repositories/merchant_product_repository.dart';
+
+final merchantCategoryTreeProvider = FutureProvider<List<Category>>((
+  ref,
+) async {
+  final apiClient = ref.watch(apiClientProvider);
+  final response = await apiClient.get('/api/consumer/categories');
+  final data = response['data'] as List<dynamic>?;
+  if (data == null) return [];
+  return data
+      .map(
+        (json) => Category.fromMap(
+          Map<String, dynamic>.from(json),
+          json['id']?.toString() ?? '',
+        ),
+      )
+      .toList();
+});
 
 // --- Repositories ---
 final merchantShopRepositoryProvider = Provider<MerchantShopRepository>((ref) {
@@ -12,11 +30,12 @@ final merchantShopRepositoryProvider = Provider<MerchantShopRepository>((ref) {
   return MerchantShopRepository(apiClient);
 });
 
-final merchantProductRepositoryProvider = Provider<MerchantProductRepository>((ref) {
+final merchantProductRepositoryProvider = Provider<MerchantProductRepository>((
+  ref,
+) {
   final apiClient = ref.watch(apiClientProvider);
   return MerchantProductRepository(apiClient);
 });
-
 
 // --- Shop Controller ---
 class ShopController extends AsyncNotifier<MerchantShop?> {
@@ -69,10 +88,8 @@ class ShopController extends AsyncNotifier<MerchantShop?> {
   }
 }
 
-final shopControllerProvider = AsyncNotifierProvider<ShopController, MerchantShop?>(
-  ShopController.new,
-);
-
+final shopControllerProvider =
+    AsyncNotifierProvider<ShopController, MerchantShop?>(ShopController.new);
 
 // --- Product Controller ---
 class ProductController extends AsyncNotifier<List<MerchantProduct>> {
@@ -101,7 +118,12 @@ class ProductController extends AsyncNotifier<List<MerchantProduct>> {
     }
   }
 
-  Future<void> addProductFromCatalog(String barcode, double price, int? stock, bool trackStock) async {
+  Future<void> addProductFromCatalog(
+    String barcode,
+    double price,
+    int? stock,
+    bool trackStock,
+  ) async {
     state = const AsyncLoading();
     try {
       final repo = ref.read(merchantProductRepositoryProvider);
@@ -113,7 +135,9 @@ class ProductController extends AsyncNotifier<List<MerchantProduct>> {
     }
   }
 
-  Future<void> bulkAddProductFromCatalog(List<Map<String, dynamic>> items) async {
+  Future<void> bulkAddProductFromCatalog(
+    List<Map<String, dynamic>> items,
+  ) async {
     state = const AsyncLoading();
     try {
       final repo = ref.read(merchantProductRepositoryProvider);
@@ -153,7 +177,7 @@ class ProductController extends AsyncNotifier<List<MerchantProduct>> {
     try {
       final repo = ref.read(merchantProductRepositoryProvider);
       await repo.updateProduct(id, {'isActive': isActive});
-      
+
       // Update local state without full refetch for speed
       if (state.hasValue) {
         final products = state.value!.map((p) {
@@ -180,6 +204,8 @@ class ProductController extends AsyncNotifier<List<MerchantProduct>> {
               minQuantity: p.minQuantity,
               stepSize: p.stepSize,
               trackStock: p.trackStock,
+              regularPrice: p.regularPrice,
+              discountRate: p.discountRate,
             );
           }
           return p;
@@ -192,6 +218,7 @@ class ProductController extends AsyncNotifier<List<MerchantProduct>> {
   }
 }
 
-final productControllerProvider = AsyncNotifierProvider<ProductController, List<MerchantProduct>>(
-  ProductController.new,
-);
+final productControllerProvider =
+    AsyncNotifierProvider<ProductController, List<MerchantProduct>>(
+      ProductController.new,
+    );

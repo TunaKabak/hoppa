@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:hoppa/shared/models/business.dart';
 import 'package:hoppa/shared/models/business_product.dart';
 import 'package:hoppa/shared/models/shop_category_data.dart';
+import 'package:hoppa/shared/models/category_model.dart';
+import 'package:hoppa/shared/models/campaign.dart';
 
 class ConsumerShopRepository {
   final ApiClient _apiClient;
@@ -26,15 +28,27 @@ class ConsumerShopRepository {
       final map = Map<String, dynamic>.from(json);
 
       // Map API field differences and apply image URL validation fallbacks
-      map['logoUrl'] = _isValidImageUrl(json['imageUrl'])
-          ? json['imageUrl']
-          : 'https://via.placeholder.com/150';
-      map['headerImageUrl'] = _isValidImageUrl(json['headerImageUrl'])
-          ? json['headerImageUrl']
-          : 'https://via.placeholder.com/150';
+      map['logoUrl'] = _isValidImageUrl(json['logoUrl'])
+          ? json['logoUrl']
+          : (_isValidImageUrl(json['imageUrl'])
+              ? json['imageUrl']
+              : 'https://via.placeholder.com/150');
+      map['headerImageUrl'] = _isValidImageUrl(json['coverUrl'])
+          ? json['coverUrl']
+          : (_isValidImageUrl(json['headerImageUrl'])
+              ? json['headerImageUrl']
+              : 'https://via.placeholder.com/150');
       map['isOpen'] = json['isActive'] ?? true;
-      map['minBasketAmount'] = json['minOrderAmount'] != null ? double.tryParse(json['minOrderAmount'].toString()) ?? 0.0 : 0.0;
-      map['deliveryRadius'] = json['deliveryRadiusKm'] != null ? (json['deliveryRadiusKm'] as num).toDouble() : 5.0;
+      map['minBasketAmount'] = json['minOrderAmount'] != null
+          ? double.tryParse(json['minOrderAmount'].toString()) ?? 0.0
+          : 0.0;
+      map['deliveryRadius'] = json['deliveryRadiusKm'] != null
+          ? (json['deliveryRadiusKm'] as num).toDouble()
+          : 5.0;
+      map['averageRating'] = json['averageRating'] != null
+          ? double.tryParse(json['averageRating'].toString()) ?? 5.0
+          : 5.0;
+      map['reviewCount'] = json['reviewCount'] as int? ?? 0;
 
       if (json['type'] != null) {
         map['type'] = json['type'].toString().toLowerCase();
@@ -80,6 +94,9 @@ class ConsumerShopRepository {
       final trackStock = json['trackStock'] as bool? ?? false;
       final stockQuantity = json['stockQuantity'] as int? ?? 0;
 
+      final double regularPriceVal = json['regularPrice'] != null ? (double.tryParse(json['regularPrice'].toString()) ?? price) : price;
+      final int discountRateVal = json['discountRate'] as int? ?? 0;
+
       final productMap = {
         'barcode': json['barcode'] ?? id,
         'name': name,
@@ -92,6 +109,11 @@ class ConsumerShopRepository {
         'unit': json['unit'] ?? 'ADET',
         'minQuantity': json['minQuantity'] != null ? double.tryParse(json['minQuantity'].toString()) : null,
         'stepSize': json['stepSize'] != null ? double.tryParse(json['stepSize'].toString()) : null,
+        'regularPrice': regularPriceVal,
+        'shownPrice': price,
+        'discountRate': discountRateVal,
+        'sku': json['sku'],
+        'prettyName': json['prettyName'],
       };
 
       final map = {
@@ -102,6 +124,8 @@ class ConsumerShopRepository {
         'isAvailable': isActive,
         'trackStock': trackStock,
         'stockQuantity': stockQuantity,
+        'regularPrice': regularPriceVal,
+        'discountRate': discountRateVal,
         'product_details': productMap,
       };
 
@@ -118,7 +142,7 @@ class ConsumerShopRepository {
       
       return data.map((item) {
         final productJson = item['product'] ?? item;
-        final isAvailable = item['isAvailable'] as bool? ?? false;
+        final isAvailable = item['isAvailable'] as bool? ?? productJson['isActive'] as bool? ?? true;
         
         final id = productJson['id'] as String? ?? '';
         final shopId = productJson['shopId'] as String? ?? '';
@@ -164,6 +188,9 @@ class ConsumerShopRepository {
         final brandVal = productJson['brand'];
         final brandName = brandVal is Map ? (brandVal['name'] as String? ?? 'Hoppa') : (brandVal as String? ?? 'Hoppa');
 
+        final double regularPriceVal = productJson['regularPrice'] != null ? (double.tryParse(productJson['regularPrice'].toString()) ?? price) : price;
+        final int discountRateVal = productJson['discountRate'] as int? ?? 0;
+
         final productMap = {
           'barcode': productJson['barcode'] ?? id,
           'name': name,
@@ -176,6 +203,11 @@ class ConsumerShopRepository {
           'unit': unitCode,
           'minQuantity': productJson['minQuantity'] != null ? double.tryParse(productJson['minQuantity'].toString()) : null,
           'stepSize': productJson['stepSize'] != null ? double.tryParse(productJson['stepSize'].toString()) : null,
+          'regularPrice': regularPriceVal,
+          'shownPrice': price,
+          'discountRate': discountRateVal,
+          'sku': productJson['sku'],
+          'prettyName': productJson['prettyName'],
         };
 
         final map = {
@@ -186,6 +218,8 @@ class ConsumerShopRepository {
           'isAvailable': isActive,
           'trackStock': trackStock,
           'stockQuantity': stockQuantity,
+          'regularPrice': regularPriceVal,
+          'discountRate': discountRateVal,
           'product_details': productMap,
         };
 
@@ -200,11 +234,40 @@ class ConsumerShopRepository {
       return [];
     }
   }
+
+  Future<List<Campaign>> getCampaigns() async {
+    try {
+      final response = await _apiClient.get('/api/consumer/campaigns');
+      final data = response['data'] as List<dynamic>?;
+      if (data == null) return [];
+      return data.map((json) {
+        final id = json['id']?.toString() ?? '';
+        final map = Map<String, dynamic>.from(json);
+        map['vendorId'] = json['vendorId'] ?? '';
+        map['name'] = json['title'] ?? json['name'] ?? 'Adsız Kampanya';
+        map['type'] = json['type'] == 'PERCENTAGE_DISCOUNT' ? 'percentage' : 'fixed_price';
+        map['discountValue'] = json['discountValue'] != null ? double.tryParse(json['discountValue'].toString()) ?? 0.0 : 0.0;
+        map['startDate'] = json['createdAt'] ?? DateTime.now().toIso8601String();
+        map['endDate'] = json['finishDate'] ?? DateTime.now().add(const Duration(days: 30)).toIso8601String();
+        map['imageUrl'] = json['imageUrl'] ?? '';
+        map['description'] = json['description'] ?? '';
+        map['isActive'] = json['isActive'] ?? true;
+        return Campaign.fromMap(map, id);
+      }).toList();
+    } catch (e) {
+      print("Error fetching campaigns from REST: $e");
+      return [];
+    }
+  }
 }
 
 // Riverpod Providers
 final consumerShopRepositoryProvider = Provider<ConsumerShopRepository>((ref) {
   return ConsumerShopRepository(ref.watch(apiClientProvider));
+});
+
+final activeCampaignsProvider = FutureProvider<List<Campaign>>((ref) async {
+  return ref.watch(consumerShopRepositoryProvider).getCampaigns();
 });
 
 // App Lifecycle Listener for auto-refreshing shops when app resumes
@@ -242,6 +305,18 @@ final shopCategoriesProvider = FutureProvider.family<List<ShopCategoryData>, Str
       iconName: catMap['iconName'] as String? ?? 'shopping_basket',
       subCategories: subNames,
     );
+  }).toList();
+});
+
+final shopCategoryTreeProvider = FutureProvider.family<List<Category>, String>((ref, shopId) async {
+  final repo = ref.watch(consumerShopRepositoryProvider);
+  final response = await repo._apiClient.get('/api/consumer/shops/$shopId/categories');
+  final data = response['data'] as List<dynamic>?;
+  if (data == null) return [];
+  
+  return data.map((c) {
+    final catMap = Map<String, dynamic>.from(c);
+    return Category.fromMap(catMap, catMap['id']?.toString() ?? '');
   }).toList();
 });
 

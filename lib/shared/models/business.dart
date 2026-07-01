@@ -22,6 +22,8 @@ class Business {
   final List<DeliveryTier> deliveryTiers; // YENİ: Mesafe bazlı min tutar kuralları
   final double baseDeliveryFee;
   final double? freeDeliveryThreshold;
+  final double averageRating;
+  final int reviewCount;
 
   Business({
     required this.id,
@@ -44,6 +46,8 @@ class Business {
     this.deliveryTiers = const [],
     this.baseDeliveryFee = 30.0,
     this.freeDeliveryThreshold,
+    this.averageRating = 5.0,
+    this.reviewCount = 0,
   });
 
   factory Business.fromMap(Map<String, dynamic> data, String id) {
@@ -74,6 +78,8 @@ class Business {
       freeDeliveryThreshold: data['freeDeliveryThreshold'] != null 
           ? (data['freeDeliveryThreshold']).toDouble() 
           : null,
+      averageRating: (data['averageRating'] ?? 5.0).toDouble(),
+      reviewCount: data['reviewCount'] ?? 0,
     );
   }
 
@@ -98,6 +104,8 @@ class Business {
       'deliveryTiers': deliveryTiers.map((t) => t.toMap()).toList(),
       'baseDeliveryFee': baseDeliveryFee,
       'freeDeliveryThreshold': freeDeliveryThreshold,
+      'averageRating': averageRating,
+      'reviewCount': reviewCount,
     };
   }
 
@@ -122,6 +130,8 @@ class Business {
     List<DeliveryTier>? deliveryTiers,
     double? baseDeliveryFee,
     double? freeDeliveryThreshold,
+    double? averageRating,
+    int? reviewCount,
   }) {
     return Business(
       id: id ?? this.id,
@@ -144,6 +154,8 @@ class Business {
       deliveryTiers: deliveryTiers ?? this.deliveryTiers,
       baseDeliveryFee: baseDeliveryFee ?? this.baseDeliveryFee,
       freeDeliveryThreshold: freeDeliveryThreshold ?? this.freeDeliveryThreshold,
+      averageRating: averageRating ?? this.averageRating,
+      reviewCount: reviewCount ?? this.reviewCount,
     );
   }
 }

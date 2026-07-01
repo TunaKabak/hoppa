@@ -31,17 +31,25 @@ class Campaign {
   });
 
   factory Campaign.fromMap(Map<String, dynamic> data, String documentId) {
+    DateTime parseDate(dynamic val) {
+      if (val == null) return DateTime.now();
+      if (val is Timestamp) return val.toDate();
+      if (val is String) return DateTime.tryParse(val) ?? DateTime.now();
+      if (val is DateTime) return val;
+      return DateTime.now();
+    }
+
     return Campaign(
       id: documentId,
       vendorId: data['vendorId'] ?? '',
       name: data['name'] ?? 'Adsız Kampanya',
-      type: data['type'] == 'fixed_price'
+      type: data['type'] == 'fixed_price' || data['type'] == 'CampaignType.fixedPrice'
           ? CampaignType.fixedPrice
           : CampaignType.percentage,
       targetProducts: List<String>.from(data['targetProducts'] ?? []),
       discountValue: (data['discountValue'] ?? 0.0).toDouble(),
-      startDate: (data['startDate'] as Timestamp).toDate(),
-      endDate: (data['endDate'] as Timestamp).toDate(),
+      startDate: parseDate(data['startDate']),
+      endDate: parseDate(data['endDate']),
       imageUrl: data['imageUrl'] ?? '',
       description: data['description'] ?? '',
       isActive: data['isActive'] ?? true,

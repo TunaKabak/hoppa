@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hoppa/apps/merchant/merchant_main_layout.dart';
 import 'package:hoppa/apps/merchant/repositories/merchant_product_repository.dart';
 import 'package:hoppa/apps/merchant/providers/merchant_api_providers.dart';
+import 'package:hoppa/apps/merchant/widgets/cascading_category_selector.dart';
 
 class MerchantProductListPage extends ConsumerStatefulWidget {
   final String businessId;
@@ -49,6 +50,7 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
   final _nameController = TextEditingController();
   final _brandController = TextEditingController();
   final _categoryController = TextEditingController();
+  String? _selectedCategoryId;
   final _subCategoryController = TextEditingController(); // Basit Text alan
   final _imageUrlController = TextEditingController();
   final _descController = TextEditingController();
@@ -1055,14 +1057,13 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                 ),
                 const SizedBox(height: 16),
 
-                // Kategori (Herkes için)
-                TextFormField(
-                  controller: _categoryController,
-                  decoration: const InputDecoration(
-                    labelText: "Kategori",
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (v) => (v == null || v.isEmpty) ? "Zorunlu alan" : null,
+                // Kategori (Herkes için - Cascading Dropdown)
+                CascadingCategorySelector(
+                  initialCategoryName: _categoryController.text,
+                  onChanged: (catId, catName) {
+                    _categoryController.text = catName;
+                    _selectedCategoryId = catId;
+                  },
                 ),
                 const SizedBox(height: 16),
 
@@ -1714,6 +1715,7 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
         'trackStock': _initialTrackStock,
         'imageUrl': _imageUrlController.text.trim(),
         'isActive': true,
+        'categoryId': _selectedCategoryId,
         'categoryName': _categoryController.text.trim(),
         'unit': _selectedUnit,
         'minQuantity': (_selectedUnit == "KG" || _selectedUnit == "LITRE" || _selectedUnit == "GR") ? _minQuantity : 1.0,
@@ -2096,6 +2098,8 @@ class _EditProductDialogState extends State<_EditProductDialog> {
   late double _minQuantity;
   late double _stepSize;
   late bool _trackStock;
+  String? _selectedCategoryId;
+  String _selectedCategoryName = "";
 
   final List<String> _units = ["ADET", "KG", "LITRE", "PAKET", "DEMET", "GR"];
 
@@ -2114,6 +2118,7 @@ class _EditProductDialogState extends State<_EditProductDialog> {
     _minQuantity = widget.product.minQuantity;
     _stepSize = widget.product.stepSize;
     _trackStock = widget.product.trackStock;
+    _selectedCategoryId = widget.product.categoryId;
   }
 
   @override
@@ -2155,6 +2160,16 @@ class _EditProductDialogState extends State<_EditProductDialog> {
                 TextFormField(
                   controller: _descController,
                   decoration: const InputDecoration(labelText: "Açıklama (Opsiyonel)", border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 12),
+                CascadingCategorySelector(
+                  initialCategoryId: _selectedCategoryId,
+                  onChanged: (catId, catName) {
+                    setState(() {
+                      _selectedCategoryId = catId;
+                      _selectedCategoryName = catName;
+                    });
+                  },
                 ),
                 const SizedBox(height: 12),
                 SwitchListTile(
@@ -2358,6 +2373,8 @@ class _EditProductDialogState extends State<_EditProductDialog> {
               'unit': _selectedUnit,
               'minQuantity': (_selectedUnit == "KG" || _selectedUnit == "LITRE" || _selectedUnit == "GR") ? _minQuantity : 1.0,
               'stepSize': (_selectedUnit == "KG" || _selectedUnit == "LITRE" || _selectedUnit == "GR") ? _stepSize : 1.0,
+              'categoryId': _selectedCategoryId,
+              'categoryName': _selectedCategoryName,
             };
 
             if (!isRestaurant) {

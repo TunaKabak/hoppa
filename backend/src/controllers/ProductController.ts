@@ -66,7 +66,7 @@ export class ProductController {
       if (!shop) return res.status(404).json({ error: true, message: "Dükkan bulunamadı" });
 
       const { 
-        name, description, price, discountPrice, stock, imageUrl, categoryId, categoryName,
+        name, description, price, discountPrice, regularPrice, discountRate, stock, imageUrl, categoryId, categoryName,
         barcode, brand, stockQuantity, weightOrVolume, preparationTime, hasDeposit, depositPrice,
         unit, minQuantity, stepSize, trackStock
       } = req.body;
@@ -176,14 +176,21 @@ export class ProductController {
         });
       }
 
+      const dbPrice = price ? parseFloat(price.toString()) : 0.0;
+      const dbDiscountPrice = discountPrice ? parseFloat(discountPrice.toString()) : null;
+      
+      const dbRegularPrice = regularPrice !== undefined ? parseFloat(regularPrice.toString()) : (dbDiscountPrice !== null ? dbPrice : dbPrice);
+      const dbShownPrice = dbDiscountPrice !== null ? dbDiscountPrice : dbPrice;
+      const dbDiscountRate = discountRate !== undefined ? parseInt(discountRate.toString()) : (dbDiscountPrice !== null && dbPrice > 0 ? Math.round(((dbPrice - dbDiscountPrice) / dbPrice) * 100) : 0);
+
       const product = await prisma.product.create({
         data: {
           shopId: shop.id,
           name,
           description,
-          price,
-          discountPrice,
-          stock: parsedStock,
+          regularPrice: dbRegularPrice,
+          price: dbShownPrice,
+          discountRate: dbDiscountRate,
           imageUrl,
           categoryId: resolvedCategoryId,
           unitId,
@@ -231,7 +238,7 @@ export class ProductController {
       }
 
       const { 
-        name, description, price, discountPrice, stock, imageUrl, isActive, categoryId, categoryName,
+        name, description, price, discountPrice, regularPrice, discountRate, stock, imageUrl, isActive, categoryId, categoryName,
         barcode, brand, stockQuantity, weightOrVolume, preparationTime, hasDeposit, depositPrice,
         unit, minQuantity, stepSize, trackStock
       } = req.body;
@@ -362,14 +369,33 @@ export class ProductController {
         });
       }
 
+      let dbRegularPrice = regularPrice !== undefined ? parseFloat(regularPrice.toString()) : undefined;
+      let dbShownPrice = price !== undefined ? parseFloat(price.toString()) : undefined;
+      let dbDiscountRate = discountRate !== undefined ? parseInt(discountRate.toString()) : undefined;
+
+      if (price !== undefined) {
+        const pNum = parseFloat(price.toString());
+        if (discountPrice !== undefined) {
+          dbRegularPrice = pNum;
+          dbShownPrice = discountPrice !== null ? parseFloat(discountPrice.toString()) : pNum;
+          dbDiscountRate = discountPrice !== null && pNum > 0
+            ? Math.round(((pNum - parseFloat(discountPrice.toString())) / pNum) * 100)
+            : 0;
+        } else {
+          dbRegularPrice = pNum;
+          dbShownPrice = pNum;
+          dbDiscountRate = 0;
+        }
+      }
+
       const updated = await prisma.product.update({
         where: { id: productId },
         data: { 
           name, 
           description, 
-          price, 
-          discountPrice, 
-          stock: parsedStock, 
+          regularPrice: dbRegularPrice,
+          price: dbShownPrice,
+          discountRate: dbDiscountRate,
           imageUrl, 
           isActive, 
           categoryId: resolvedCategoryId,
@@ -521,9 +547,9 @@ export class ProductController {
       const merchantId = req.user?.id;
       if (!merchantId) return res.status(401).json({ error: true, message: "Yetkisiz erişim" });
 
-      const { barcode, price, stock, trackStock } = req.body;
+      const { barcode, price, stock, stockQuantity, trackStock } = req.body;
       if (!barcode || price === undefined) {
-        return res.status(400).json({ error: true, message: "Barkod ve fiyat alanları zorunludur." });
+        return res.status(400).json({ error: true, message: "Barkod ve fiyat alanları zorununludur." });
       }
 
       const shop = await prisma.shop.findUnique({ where: { merchantId } });
@@ -533,8 +559,9 @@ export class ProductController {
       if (!globalProduct) return res.status(404).json({ error: true, message: "Katalogda bu barkodlu ürün bulunamadı." });
 
       const parsedTrackStock = trackStock === true || trackStock === "true" ? true : false;
-      const parsedStock = parsedTrackStock ? (stock !== null && stock !== undefined && stock !== "" ? parseInt(stock.toString()) : null) : null;
-      const parsedStockQty = parsedTrackStock ? (parsedStock || 0) : 0;
+      const parsedStockQty = parsedTrackStock 
+        ? (stockQuantity !== undefined ? parseInt(stockQuantity.toString()) : (stock !== undefined && stock !== null ? parseInt(stock.toString()) : 0))
+        : 0;
 
       // Bu dükkanda aynı isimli ürün zaten var mı?
       const existingProduct = await prisma.product.findFirst({
@@ -549,8 +576,9 @@ export class ProductController {
         savedProduct = await prisma.product.update({
           where: { id: existingProduct.id },
           data: {
-            price,
-            stock: parsedStock,
+            regularPrice: price,
+            price: price,
+            discountRate: 0,
             stockQuantity: parsedStockQty,
             trackStock: parsedTrackStock,
             isActive: true,
@@ -581,8 +609,9 @@ export class ProductController {
             brandId: globalProduct.brandId,
             name: globalProduct.name,
             description: globalProduct.name,
-            price,
-            stock: parsedStock,
+            regularPrice: price,
+            price: price,
+            discountRate: 0,
             stockQuantity: parsedStockQty,
             trackStock: parsedTrackStock,
             imageUrl: globalProduct.imageUrl,
@@ -624,15 +653,16 @@ export class ProductController {
       const results = [];
 
       for (const item of items) {
-        const { barcode, price, stock, trackStock } = item;
+        const { barcode, price, stock, stockQuantity, trackStock } = item;
         if (!barcode || price === undefined) continue;
 
         const globalProduct = await prisma.globalProduct.findUnique({ where: { barcode } });
         if (!globalProduct) continue;
 
         const parsedTrackStock = trackStock === true || trackStock === "true" ? true : false;
-        const parsedStock = parsedTrackStock ? (stock !== null && stock !== undefined && stock !== "" ? parseInt(stock.toString()) : null) : null;
-        const parsedStockQty = parsedTrackStock ? (parsedStock || 0) : 0;
+        const parsedStockQty = parsedTrackStock 
+          ? (stockQuantity !== undefined ? parseInt(stockQuantity.toString()) : (stock !== undefined && stock !== null ? parseInt(stock.toString()) : 0))
+          : 0;
 
         const existingProduct = await prisma.product.findFirst({
           where: {
@@ -646,8 +676,9 @@ export class ProductController {
           savedProduct = await prisma.product.update({
             where: { id: existingProduct.id },
             data: {
-              price,
-              stock: parsedStock,
+              regularPrice: price,
+              price: price,
+              discountRate: 0,
               stockQuantity: parsedStockQty,
               trackStock: parsedTrackStock,
               isActive: true,
@@ -678,8 +709,9 @@ export class ProductController {
               brandId: globalProduct.brandId,
               name: globalProduct.name,
               description: globalProduct.name,
-              price,
-              stock: parsedStock,
+              regularPrice: price,
+              price: price,
+              discountRate: 0,
               stockQuantity: parsedStockQty,
               trackStock: parsedTrackStock,
               imageUrl: globalProduct.imageUrl,

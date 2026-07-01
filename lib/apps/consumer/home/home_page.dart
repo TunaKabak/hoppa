@@ -12,6 +12,9 @@ import 'package:hoppa/apps/consumer/orders/widgets/active_order_card.dart';
 import 'package:hoppa/apps/consumer/product/product_detail_page.dart';
 import 'package:hoppa/apps/consumer/repositories/consumer_shop_repository.dart';
 import 'package:hoppa/shared/models/shop_category_data.dart';
+import 'package:hoppa/apps/consumer/home/widgets/hierarchical_category_drawer.dart';
+import 'package:hoppa/apps/consumer/home/widgets/campaign_carousel.dart';
+import 'package:hoppa/shared/models/campaign.dart';
 
 
 class HomePage extends ConsumerStatefulWidget {
@@ -300,76 +303,72 @@ class _HomePageState extends ConsumerState<HomePage>
       },
       child: Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
+        drawer: HierarchicalCategoryDrawer(shopId: selectedBusiness.id),
         body: CustomScrollView(
           controller: _scrollController,
           slivers: [
             SliverAppBar(
               pinned: true,
-              floating: true,
-              expandedHeight: 110.0,
-              backgroundColor: Colors.white,
-              elevation: 4, // Hafif gölge
-              shadowColor: Colors.black12, // Gölge rengi
+              floating: false,
+              expandedHeight: 200.0,
+              backgroundColor: _isScrolled ? theme.primaryColor : Colors.transparent,
+              elevation: _isScrolled ? 4 : 0,
+              shadowColor: Colors.black12,
               surfaceTintColor: Colors.transparent,
               shape: const RoundedRectangleBorder(
                 borderRadius: BorderRadius.vertical(
                   bottom: Radius.circular(20),
                 ),
               ),
-              title: GestureDetector(
-                onTap: _changeBusiness,
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: theme.primaryColor.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.store,
-                        color: theme.primaryColor,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
+              leading: Builder(
+                builder: (context) => IconButton(
+                  icon: const Icon(
+                    Icons.menu,
+                    color: Colors.white,
+                  ),
+                  onPressed: () {
+                    Scaffold.of(context).openDrawer();
+                  },
+                ),
+              ),
+              title: _isScrolled
+                  ? GestureDetector(
+                      onTap: _changeBusiness,
+                      child: Row(
                         children: [
-                          Text(
-                            "Alışveriş Yapılan ${selectedBusiness.type.label}",
-                            style: const TextStyle(
-                              color: Colors.grey,
-                              fontSize: 11,
-                            ),
-                          ),
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Text(
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
                                   selectedBusiness.name,
-                                  style: theme.textTheme.titleMedium?.copyWith(
+                                  style: const TextStyle(
+                                    color: Colors.white,
                                     fontWeight: FontWeight.bold,
+                                    fontSize: 16,
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                              ),
-                              const SizedBox(width: 4),
-                              Icon(
-                                Icons.keyboard_arrow_down,
-                                size: 16,
-                                color: theme.primaryColor,
-                              ),
-                            ],
+                                const Text(
+                                  "İşletmeyi Değiştir",
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(
+                            Icons.keyboard_arrow_down,
+                            size: 16,
+                            color: Colors.white,
                           ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
-              ),
+                    )
+                  : null,
               actions: [
                 AnimatedOpacity(
                   opacity: _isScrolled ? 0.0 : 1.0,
@@ -379,7 +378,7 @@ class _HomePageState extends ConsumerState<HomePage>
                 IconButton(
                   icon: const Icon(
                     Icons.notifications_none_rounded,
-                    color: Colors.grey,
+                    color: Colors.white,
                   ),
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -390,70 +389,169 @@ class _HomePageState extends ConsumerState<HomePage>
                   },
                 ),
               ],
-              bottom: PreferredSize(
-                preferredSize: const Size.fromHeight(60),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        child: Container(
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF1F3F5),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: TextField(
-                            readOnly: true,
-                            onTap: () {
-                              p.Provider.of<NavigationProvider>(
-                                context,
-                                listen: false,
-                              ).setIndex(1);
-                            },
-                            decoration: InputDecoration(
-                              hintText: "Ürün, kategori veya marka ara...",
-                              hintStyle: theme.inputDecorationTheme.hintStyle,
-                              prefixIcon: IconButton(
-                                icon: Icon(
-                                  Icons.search,
-                                  color: theme.primaryColor,
+              flexibleSpace: FlexibleSpaceBar(
+                centerTitle: true,
+                background: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // 1. Kapak Resmi
+                    Image.network(
+                      selectedBusiness.headerImageUrl.isNotEmpty ? selectedBusiness.headerImageUrl : "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80",
+                      fit: BoxFit.cover,
+                    ),
+                    const DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black38,
+                            Colors.transparent,
+                            Colors.black54,
+                          ],
+                        ),
+                      ),
+                    ),
+                    // 2. Logo ve Puanlar
+                    Positioned(
+                      bottom: 16,
+                      left: 16,
+                      right: 16,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Container(
+                            width: 64,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white,
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Colors.black26,
+                                  blurRadius: 8,
+                                  offset: Offset(0, 4),
+                                )
+                              ],
+                              border: Border.all(color: Colors.white, width: 2),
+                            ),
+                            child: ClipOval(
+                              child: Image.network(
+                                selectedBusiness.logoUrl.isNotEmpty ? selectedBusiness.logoUrl : "https://via.placeholder.com/100",
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Icon(
+                                  Icons.store,
+                                  color: theme.colorScheme.primary,
+                                  size: 32,
                                 ),
-                                onPressed: () {
-                                  p.Provider.of<NavigationProvider>(
-                                    context,
-                                    listen: false,
-                                  ).setIndex(1);
-                                },
                               ),
-                              border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(
-                                vertical: 14,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  selectedBusiness.name,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.star_rounded,
+                                      color: Colors.amber,
+                                      size: 18,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      "${selectedBusiness.averageRating.toStringAsFixed(1)} (${selectedBusiness.reviewCount} Değerlendirme)",
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // Search Bar Slivers
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Container(
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F3F5),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: TextField(
+                          readOnly: true,
+                          onTap: () {
+                            p.Provider.of<NavigationProvider>(
+                              context,
+                              listen: false,
+                            ).setIndex(1);
+                          },
+                          decoration: InputDecoration(
+                            hintText: "Ürün, kategori veya marka ara...",
+                            hintStyle: theme.inputDecorationTheme.hintStyle,
+                            prefixIcon: IconButton(
+                              icon: Icon(
+                                Icons.search,
+                                color: theme.primaryColor,
                               ),
+                              onPressed: () {
+                                p.Provider.of<NavigationProvider>(
+                                  context,
+                                  listen: false,
+                                ).setIndex(1);
+                              },
+                            ),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 14,
                             ),
                           ),
                         ),
                       ),
-                      // Animasyonlu genişlik ve opaklık değişimi
-                      // Animasyonlu genişlik değişimi
-                      AnimatedSize(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOut,
-                        child: SizedBox(
-                          width: _isScrolled ? null : 0,
-                          child: _isScrolled
-                              ? const Row(
-                                  children: [
-                                    SizedBox(width: 12),
-                                    CartPriceBadge(),
-                                  ],
-                                )
-                              : const SizedBox.shrink(),
-                        ),
+                    ),
+                    AnimatedSize(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                      child: SizedBox(
+                        width: _isScrolled ? null : 0,
+                        child: _isScrolled
+                            ? const Row(
+                                children: [
+                                  SizedBox(width: 12),
+                                  CartPriceBadge(),
+                                ],
+                              )
+                            : const SizedBox.shrink(),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -506,11 +604,20 @@ class _HomePageState extends ConsumerState<HomePage>
                       ),
                     ),
 
-                  if (selectedCategory == 'Tümü' &&
-                      false) // Disabled campaigns for REST API
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16.0),
-                      child: SizedBox.shrink(),
+                  if (selectedCategory == 'Tümü')
+                    ref.watch(activeCampaignsProvider).when(
+                      loading: () => const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16.0),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                      error: (err, stack) => const SizedBox.shrink(),
+                      data: (campaigns) {
+                        if (campaigns.isEmpty) return const SizedBox.shrink();
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 16.0),
+                          child: CampaignCarousel(campaigns: campaigns),
+                        );
+                      },
                     ),
 
                   // Active Order Banner (Moved here)

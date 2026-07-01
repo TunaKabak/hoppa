@@ -135,82 +135,95 @@ export class ConsumerShopController {
     }
   }
 
-  // Sadece seçili dükkana (shopId) ait aktif olarak satılan ürünlerin bağlı olduğu kategori ve alt kategorileri dinamik olarak getirir
+  // Sadece seçili dükkana (shopId) ait aktif olarak satılan ürünlerin bağlı olduğu kategori ve alt kategorileri dinamik olarak hiyerarşik ağaç yapısında getirir
   async getShopActiveCategories(req: Request, res: Response) {
     try {
       const shopId = req.params.shopId as string;
 
-      const categories = await prisma.category.findMany({
+      const shop = await prisma.shop.findUnique({
+        where: { id: shopId }
+      });
+      const shopType = shop ? shop.type : "MARKET";
+
+      // 🚨 HIYERARŞİK SQL SORGUSU (Prisma):
+      // 1. Sadece bu dükkanda aktif ürünü olan kategorileri bul.
+      const activeCategoriesWithProducts = await prisma.category.findMany({
         where: {
-          parentId: null, // Only root categories
-          OR: [
-            {
-              products: {
-                some: { 
-                  shopId: shopId,
-                  isActive: true
-                }
-              }
-            },
-            {
-              children: {
-                some: {
-                  products: {
-                    some: { 
-                      shopId: shopId,
-                      isActive: true
-                    }
-                  }
-                }
-              }
-            }
-          ]
+          products: { some: { shopId: shopId, isActive: true } }
+        },
+        select: { id: true }
+      });
+
+      const activeCategoryIds = activeCategoriesWithProducts.map(c => c.id);
+
+      // Kök kategorileri çekip sadece aktif çocukları içerecek şekilde ağacı oluşturuyoruz
+      const categoryTree = await prisma.category.findMany({
+        where: {
+          parentId: null, // Sadece en üst seviye (Root) kategoriler
+          shopType: shopType // İlgili dükkan tipine göre (Örn: MARKET, RESTAURANT)
         },
         include: {
           children: {
-            where: {
-              products: { 
-                some: { 
-                  shopId: shopId,
-                  isActive: true
-                } 
-              }
+            include: {
+              children: true // Gerekirse 3. seviye derinlik
             }
           }
         },
         orderBy: { name: "asc" }
       });
 
-      // Map new 3NF self-referential Category relation to old children list format for client backward compatibility
-      const formatted = (categories as any[]).map(cat => ({
-        id: cat.id,
-        name: cat.name,
-        shopType: cat.shopType,
-        iconName: cat.imageUrl, 
-        iconUrl: cat.imageUrl,
-        imageUrl: cat.imageUrl,
-        color: cat.color,
-        parent: null,
-        children: (cat.children || []).map((sub: any) => ({
-          id: sub.id,
-          name: sub.name,
-          categoryId: sub.parentId,
-          imageUrl: sub.imageUrl,
-          color: sub.color,
-          parent: {
-            id: cat.id,
-            name: cat.name,
-            shopType: cat.shopType,
-            imageUrl: cat.imageUrl
-          },
-          children: []
-        }))
-      }));
+      // Yardımcı fonksiyon: Ağacın bu dalında veya alt kollarında aktif ürün var mı?
+      const hasActiveProductInBranch = (node: any, activeIds: string[]): boolean => {
+        if (activeIds.includes(node.id)) return true;
+        if (node.children && node.children.length > 0) {
+          return node.children.some((child: any) => hasActiveProductInBranch(child, activeIds));
+        }
+        return false;
+      };
+
+      // Filtreleme: Sadece içinde aktif ürün olan veya alt kırılımlarında aktif ürün barındıran dalları tut
+      const filteredTree = categoryTree.filter(node => {
+        return hasActiveProductInBranch(node, activeCategoryIds);
+      });
+
+      // Map ve formatlama: İstemciye geri uyumluluk için alt kırılımları zenginleştiriyoruz
+      const formatCategoryNode = (node: any): any => {
+        const childNodes = (node.children || [])
+          .filter((child: any) => hasActiveProductInBranch(child, activeCategoryIds))
+          .map((child: any) => formatCategoryNode(child));
+
+        return {
+          id: node.id,
+          name: node.name,
+          shopType: node.shopType,
+          iconName: node.imageUrl,
+          iconUrl: node.imageUrl,
+          imageUrl: node.imageUrl,
+          color: node.color,
+          parentId: node.parentId,
+          children: childNodes
+        };
+      };
+
+      const formatted = filteredTree.map(node => formatCategoryNode(node));
 
       return res.status(200).json({ error: false, data: formatted });
     } catch (error: any) {
-      console.error("Dinamik kategori çekme hatası:", error);
-      return res.status(500).json({ error: true, message: "Kategoriler getirilirken hata oluştu." });
+      console.error("Hiyerarşik kategori ağacı hatası:", error);
+      return res.status(500).json({ error: true, message: "Kategori ağacı oluşturulurken hata oluştu." });
+    }
+  }
+
+  // Tüm aktif kampanyaları getirir
+  async getCampaigns(req: Request, res: Response) {
+    try {
+      const campaigns = await prisma.campaign.findMany({
+        where: { isActive: true }
+      });
+      return res.status(200).json({ error: false, data: campaigns });
+    } catch (error: any) {
+      console.error("Kampanyalar çekilemedi:", error);
+      return res.status(500).json({ error: true, message: error.message || "Kampanyalar listelenirken hata oluştu." });
     }
   }
 }

@@ -123,7 +123,7 @@ export class OrderController {
       let totalAmount = 0;
       for (const item of items) {
         const product = dbProductMap.get(item.productId)!;
-        const unitPrice = product.discountPrice ? Number(product.discountPrice) : Number(product.price);
+        const unitPrice = Number(product.price);
         totalAmount += unitPrice * item.quantity;
       }
 
@@ -242,7 +242,7 @@ export class OrderController {
 
         const orderItemsData = items.map((item: any) => {
           const product = dbProductMap.get(item.productId)!;
-          const unitPrice = product.discountPrice ? product.discountPrice : product.price;
+          const unitPrice = product.price;
           return {
             orderId: createdOrder.id,
             productId: item.productId,

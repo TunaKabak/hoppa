@@ -22,6 +22,8 @@ class MerchantProduct {
   final double minQuantity;
   final double stepSize;
   final bool trackStock; // YENİ
+  final double regularPrice; // YENİ
+  final int discountRate; // YENİ
 
   MerchantProduct({
     required this.id,
@@ -45,16 +47,22 @@ class MerchantProduct {
     this.minQuantity = 1.0,
     this.stepSize = 1.0,
     this.trackStock = false,
+    required this.regularPrice,
+    this.discountRate = 0,
   });
 
   factory MerchantProduct.fromMap(Map<String, dynamic> map) {
+    final double priceVal = map['price'] != null ? (double.tryParse(map['price'].toString()) ?? 0.0) : 0.0;
+    final double regularPriceVal = map['regularPrice'] != null ? (double.tryParse(map['regularPrice'].toString()) ?? priceVal) : priceVal;
+    final int discountRateVal = map['discountRate'] as int? ?? 0;
+
     return MerchantProduct(
       id: map['id'] ?? '',
       shopId: map['shopId'] ?? '',
       categoryId: map['categoryId'],
       name: map['name'] ?? '',
       description: map['description'],
-      price: map['price'] != null ? double.tryParse(map['price'].toString()) ?? 0.0 : 0.0,
+      price: priceVal,
       discountPrice: map['discountPrice'] != null ? double.tryParse(map['discountPrice'].toString()) : null,
       stock: map['stock'] != null ? int.tryParse(map['stock'].toString()) : null,
       imageUrl: map['imageUrl'],
@@ -70,6 +78,8 @@ class MerchantProduct {
       minQuantity: map['minQuantity'] != null ? double.tryParse(map['minQuantity'].toString()) ?? 1.0 : 1.0,
       stepSize: map['stepSize'] != null ? double.tryParse(map['stepSize'].toString()) ?? 1.0 : 1.0,
       trackStock: map['trackStock'] as bool? ?? false,
+      regularPrice: regularPriceVal,
+      discountRate: discountRateVal,
     );
   }
 
@@ -94,6 +104,8 @@ class MerchantProduct {
       'minQuantity': minQuantity,
       'stepSize': stepSize,
       'trackStock': trackStock,
+      'regularPrice': regularPrice,
+      'discountRate': discountRate,
     };
   }
 }
