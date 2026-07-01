@@ -91,6 +91,16 @@ export class OrderController {
         return res.status(400).json({ error: true, message: "Dükkan şu an çalışma saatleri dışındadır. Lütfen daha sonra tekrar deneyiniz." });
       }
 
+      // 1.5. Kapıda Ödeme ve Temassız Teslimat Karşılıklı Dışlama Kontrolü (Business Rule)
+      const isPayAtDoor = paymentMethod === "CASH_ON_DELIVERY" || paymentMethod === "CARD_ON_DELIVERY" || paymentMethod === "cash_on_delivery" || paymentMethod === "card_on_delivery";
+      const isLeaveAtDoor = leaveAtDoor === true || leaveAtDoor === "true";
+      if (isPayAtDoor && isLeaveAtDoor) {
+        return res.status(400).json({ 
+          error: true, 
+          message: "Kapıda ödeme seçildiğinde temassız teslimat (Kapıya Bırak) yapılamaz." 
+        });
+      }
+
       // 2. Ürünlerin fiyatlarını veritabanından çek ve doğrula
       const productIds = items.map((item: any) => item.productId);
       const dbProducts = await prisma.product.findMany({
