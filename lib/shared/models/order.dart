@@ -145,8 +145,16 @@ class Order {
       orderNote: orderNote,
       dontRingBell: dontRingBell,
       leaveAtDoor: leaveAtDoor,
-      addressLatitude: data['address_latitude'] != null ? (data['address_latitude'] as num).toDouble() : 0.0,
-      addressLongitude: data['address_longitude'] != null ? (data['address_longitude'] as num).toDouble() : 0.0,
+      addressLatitude: data['address_latitude'] != null 
+          ? (data['address_latitude'] as num).toDouble() 
+          : (data['address'] != null && data['address']['latitude'] != null 
+              ? (data['address']['latitude'] as num).toDouble() 
+              : 0.0),
+      addressLongitude: data['address_longitude'] != null 
+          ? (data['address_longitude'] as num).toDouble() 
+          : (data['address'] != null && data['address']['longitude'] != null 
+              ? (data['address']['longitude'] as num).toDouble() 
+              : 0.0),
       paymentMethod: data['paymentMethod'] ?? data['payment_method'] ?? 'CASH_ON_DELIVERY',
       courierId: data['courierId'] ?? data['courier_id'],
       estimatedDeliveryDuration: data['estimatedDeliveryDuration'] != null 
