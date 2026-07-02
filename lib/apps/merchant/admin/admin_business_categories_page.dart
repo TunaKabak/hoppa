@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hoppa/shared/models/business_category.dart';
+import 'package:hoppa/apps/merchant/merchant_main_layout.dart';
 import 'providers/super_admin_providers.dart';
 
 class AdminBusinessCategoriesPage extends ConsumerStatefulWidget {
@@ -15,6 +16,8 @@ class AdminBusinessCategoriesPage extends ConsumerStatefulWidget {
 class _AdminBusinessCategoriesPageState
     extends ConsumerState<AdminBusinessCategoriesPage> {
   bool _isLoading = false;
+  List<BusinessCategory> _localCategories = [];
+  bool _isOrderDirty = false;
 
   final List<String> _availableIcons = [
     'shopping_basket',
@@ -93,13 +96,13 @@ class _AdminBusinessCategoriesPageState
     final nameController = TextEditingController(text: category?.name ?? '');
     final subtitleController =
         TextEditingController(text: category?.subtitle ?? '');
-    final deliveryController =
-        TextEditingController(text: category?.avgDeliveryTime ?? '');
-    final badgeController = TextEditingController(text: category?.badge ?? '');
-    final orderController =
-        TextEditingController(text: (category?.order ?? 0).toString());
     
-    String selectedIcon = category?.icon ?? _availableIcons.first;
+    // Check if the saved icon is a URL (starts with http) or a preset
+    final isIconUrl = category != null && (category.icon.startsWith('http') || category.icon.contains('/'));
+    final iconUrlController =
+        TextEditingController(text: isIconUrl ? category.icon : '');
+
+    String selectedIcon = isIconUrl ? _availableIcons.first : (category?.icon ?? _availableIcons.first);
     String selectedColorHex = category?.color ?? _presetColors.first['hex']!;
     bool isActive = category?.isActive ?? true;
 
@@ -125,7 +128,7 @@ class _AdminBusinessCategoriesPageState
                       TextField(
                         controller: nameController,
                         decoration: const InputDecoration(
-                          labelText: "Kategori Adı (Örn: Market)",
+                          labelText: "Kategori Adı (Örn: Kasap)",
                           border: OutlineInputBorder(),
                         ),
                       ),
@@ -133,67 +136,24 @@ class _AdminBusinessCategoriesPageState
                       TextField(
                         controller: subtitleController,
                         decoration: const InputDecoration(
-                          labelText: "Alt Başlık (Örn: Market alışverişi)",
+                          labelText: "Alt Başlık (Örn: Taze et ürünleri)",
                           border: OutlineInputBorder(),
                         ),
                       ),
                       const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: deliveryController,
-                              decoration: const InputDecoration(
-                                labelText: "Ort. Teslimat Süresi (Örn: 20-30 dk)",
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TextField(
-                              controller: badgeController,
-                              decoration: const InputDecoration(
-                                labelText: "Rozet (Örn: popular, new)",
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: orderController,
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                labelText: "Sıralama (Order)",
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Row(
-                            children: [
-                              const Text("Aktif: "),
-                              Switch(
-                                value: isActive,
-                                activeColor: const Color(0xFF00A651),
-                                onChanged: (val) {
-                                  setDialogState(() => isActive = val);
-                                },
-                              ),
-                            ],
-                          ),
-                        ],
+                      TextField(
+                        controller: iconUrlController,
+                        decoration: const InputDecoration(
+                          labelText: "İkon / Resim URL (İsteğe bağlı)",
+                          border: OutlineInputBorder(),
+                          hintText: "http://... veya aşağıdaki ikonlardan seçin",
+                        ),
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
                         value: selectedIcon,
                         decoration: const InputDecoration(
-                          labelText: "İkon Seçin",
+                          labelText: "Varsayılan İkon Seçin",
                           border: OutlineInputBorder(),
                         ),
                         items: _availableIcons.map((iconName) {
@@ -222,7 +182,7 @@ class _AdminBusinessCategoriesPageState
                             ? selectedColorHex
                             : null,
                         decoration: const InputDecoration(
-                          labelText: "Renk Seçin",
+                          labelText: "Kart Rengi Seçin",
                           border: OutlineInputBorder(),
                         ),
                         items: _presetColors.map((colorItem) {
@@ -251,6 +211,19 @@ class _AdminBusinessCategoriesPageState
                           }
                         },
                       ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          const Text("Aktif: "),
+                          Switch(
+                            value: isActive,
+                            activeColor: const Color(0xFF00A651),
+                            onChanged: (val) {
+                              setDialogState(() => isActive = val);
+                            },
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -277,23 +250,28 @@ class _AdminBusinessCategoriesPageState
                     }
                     Navigator.pop(ctx);
 
+                    final iconVal = iconUrlController.text.trim().isNotEmpty
+                        ? iconUrlController.text.trim()
+                        : selectedIcon;
+
                     final tempCategory = BusinessCategory(
                       id: category?.id ?? '',
                       name: name,
-                      icon: selectedIcon,
+                      icon: iconVal,
                       color: selectedColorHex,
-                      badge: badgeController.text.trim().isEmpty
-                          ? null
-                          : badgeController.text.trim(),
-                      avgDeliveryTime: deliveryController.text.trim().isEmpty
-                          ? null
-                          : deliveryController.text.trim(),
+                      badge: category?.badge,
+                      avgDeliveryTime: category?.avgDeliveryTime,
                       subtitle: subtitleController.text.trim().isEmpty
                           ? null
                           : subtitleController.text.trim(),
                       isActive: isActive,
-                      order: int.tryParse(orderController.text) ?? 0,
+                      order: category?.order ?? 0,
                     );
+
+                    setState(() {
+                      _localCategories.clear();
+                      _isOrderDirty = false;
+                    });
 
                     if (isEdit) {
                       _handleAction(
@@ -344,6 +322,10 @@ class _AdminBusinessCategoriesPageState
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () {
               Navigator.pop(ctx);
+              setState(() {
+                _localCategories.clear();
+                _isOrderDirty = false;
+              });
               _handleAction(
                 () => ref
                     .read(adminBusinessCategoriesProvider.notifier)
@@ -362,20 +344,55 @@ class _AdminBusinessCategoriesPageState
   Widget build(BuildContext context) {
     final categoriesAsync = ref.watch(adminBusinessCategoriesProvider);
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7F6),
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          onPressed: () {
+            ref.read(merchantNavigationIndexProvider.notifier).setIndex(0);
+          },
+        ),
         title: Text(
-          "Dükkan Kategorileri Yönetimi",
+          "İşletme Kategori Yönetimi",
           style: GoogleFonts.poppins(
             color: Colors.black87,
             fontWeight: FontWeight.bold,
+            fontSize: 18,
           ),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
         actions: [
+          if (_isOrderDirty)
+            TextButton.icon(
+              onPressed: () {
+                _handleAction(() async {
+                  final List<Map<String, dynamic>> orders = [];
+                  for (int i = 0; i < _localCategories.length; i++) {
+                    orders.add({
+                      'id': _localCategories[i].id,
+                      'order': i,
+                    });
+                  }
+                  await ref
+                      .read(adminBusinessCategoriesProvider.notifier)
+                      .reorderCategories(orders);
+                  setState(() {
+                    _isOrderDirty = false;
+                    _localCategories.clear();
+                  });
+                }, "Sıralama başarıyla kaydedildi.");
+              },
+              icon: const Icon(Icons.save, color: Color(0xFF00A651)),
+              label: const Text(
+                "Kaydet",
+                style: TextStyle(
+                    color: Color(0xFF00A651), fontWeight: FontWeight.bold),
+              ),
+            ),
           IconButton(
             icon: const Icon(Icons.add_circle_outline,
                 color: Color(0xFF00A651), size: 28),
@@ -419,34 +436,55 @@ class _AdminBusinessCategoriesPageState
                   );
                 }
 
-                return ListView.builder(
+                // Initialize local list for dragging if empty
+                if (_localCategories.isEmpty && !_isOrderDirty) {
+                  _localCategories = List.from(categories);
+                }
+
+                return ReorderableListView.builder(
                   padding: const EdgeInsets.all(16),
-                  itemCount: categories.length,
+                  itemCount: _localCategories.length,
+                  onReorder: (oldIndex, newIndex) {
+                    setState(() {
+                      if (newIndex > oldIndex) newIndex -= 1;
+                      final item = _localCategories.removeAt(oldIndex);
+                      _localCategories.insert(newIndex, item);
+                      _isOrderDirty = true;
+                    });
+                  },
                   itemBuilder: (context, index) {
-                    final cat = categories[index];
+                    final cat = _localCategories[index];
                     final catColor = _parseColor(cat.color);
+                    
+                    // Check if icon is custom network image or material icon name
+                    final bool hasImage = cat.icon.startsWith('http') || cat.icon.contains('/');
                     final iconData = _iconMapping[cat.icon] ?? Icons.store;
 
                     return Card(
+                      key: ValueKey(cat.id),
                       elevation: 2,
                       margin: const EdgeInsets.only(bottom: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         leading: CircleAvatar(
                           backgroundColor: catColor.withOpacity(0.1),
-                          child: Icon(iconData, color: catColor),
+                          backgroundImage: hasImage ? NetworkImage(cat.icon) : null,
+                          child: hasImage ? null : Icon(iconData, color: catColor),
                         ),
-                        title: Row(
+                        title: Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 8,
                           children: [
                             Text(
                               cat.name,
                               style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.bold),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15),
                             ),
-                            if (cat.badge != null) ...[
-                              const SizedBox(width: 8),
+                            if (cat.badge != null)
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 6, vertical: 2),
@@ -462,50 +500,67 @@ class _AdminBusinessCategoriesPageState
                                       fontWeight: FontWeight.bold),
                                 ),
                               ),
-                            ],
-                            const Spacer(),
-                            Text(
-                              "Sıra: ${cat.order}",
-                              style: const TextStyle(
-                                  fontSize: 12, color: Colors.grey),
-                            ),
+                            if (cat.shopCount != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.shade100,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  "${cat.shopCount} İşletme",
+                                  style: TextStyle(
+                                      color: Colors.blue.shade800,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ),
                           ],
                         ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(cat.subtitle ?? "Alt başlık yok"),
-                            Row(
-                              children: [
-                                if (cat.avgDeliveryTime != null) ...[
-                                  const Icon(Icons.access_time,
-                                      size: 14, color: Colors.grey),
+                        subtitle: Padding(
+                          padding: const EdgeInsets.only(top: 4.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                cat.subtitle ?? "Alt başlık yok",
+                                style: const TextStyle(fontSize: 13, color: Colors.black87),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  if (cat.avgDeliveryTime != null) ...[
+                                    const Icon(Icons.access_time,
+                                        size: 14, color: Colors.grey),
+                                    const SizedBox(width: 4),
+                                    Text(cat.avgDeliveryTime!,
+                                        style:
+                                            const TextStyle(color: Colors.grey, fontSize: 12)),
+                                    const SizedBox(width: 16),
+                                  ],
+                                  Icon(
+                                    cat.isActive
+                                        ? Icons.check_circle
+                                        : Icons.cancel,
+                                    size: 14,
+                                    color: cat.isActive
+                                        ? Colors.green
+                                        : Colors.red,
+                                  ),
                                   const SizedBox(width: 4),
-                                  Text(cat.avgDeliveryTime!,
-                                      style:
-                                          const TextStyle(color: Colors.grey)),
-                                  const SizedBox(width: 16),
+                                  Text(
+                                    cat.isActive ? "Aktif" : "Pasif",
+                                    style: TextStyle(
+                                        color: cat.isActive
+                                            ? Colors.green
+                                            : Colors.red,
+                                        fontSize: 12),
+                                  ),
                                 ],
-                                Icon(
-                                  cat.isActive
-                                      ? Icons.check_circle
-                                      : Icons.cancel,
-                                  size: 14,
-                                  color: cat.isActive
-                                      ? Colors.green
-                                      : Colors.red,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  cat.isActive ? "Aktif" : "Pasif",
-                                  style: TextStyle(
-                                      color: cat.isActive
-                                          ? Colors.green
-                                          : Colors.red),
-                                ),
-                              ],
-                            ),
-                          ],
+                              ),
+                            ],
+                          ),
                         ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -516,8 +571,23 @@ class _AdminBusinessCategoriesPageState
                             ),
                             IconButton(
                               icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () => _confirmDelete(cat.id, cat.name),
+                              onPressed: () {
+                                final count = cat.shopCount ?? 0;
+                                if (count > 0) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        "Bu kategori silinemez! Bağlı $count adet işletme bulunmaktadır."
+                                      ),
+                                      backgroundColor: Colors.orange.shade800,
+                                    ),
+                                  );
+                                } else {
+                                  _confirmDelete(cat.id, cat.name);
+                                }
+                              },
                             ),
+                            const Icon(Icons.drag_handle, color: Colors.grey),
                           ],
                         ),
                       ),

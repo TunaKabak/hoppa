@@ -19887,3 +19887,4 @@ apps/web_app/.env.production
 apps/web_app/.next/
 apps/web_app/out/
 backend/dist/controllers/FavoritesController.js
+.agents/task.md

@@ -97,4 +97,13 @@ class SuperAdminRepository {
   Future<void> adminDeleteBusinessCategory(String id) async {
     await _apiClient.delete('/api/admin/business-categories/$id');
   }
+
+  Future<void> adminReorderBusinessCategories(List<Map<String, dynamic>> orders) async {
+    await _apiClient.put(
+      '/api/admin/business-categories/reorder',
+      body: {
+        'orders': orders,
+      },
+    );
+  }
 }

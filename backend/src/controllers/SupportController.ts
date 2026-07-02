@@ -89,8 +89,8 @@ export class SupportController {
         return;
       }
 
-      // Gemini 2.5 Flash API Payload hazırlığı
-      const stableModel = "gemini-2.5-flash";
+      // Gemini 1.5 Flash API Payload hazırlığı
+      const stableModel = "gemini-1.5-flash";
       const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${stableModel}:generateContent?key=${apiKey}`;
       const payload = {
         contents: [

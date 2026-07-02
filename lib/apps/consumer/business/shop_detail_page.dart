@@ -312,20 +312,13 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                 });
               }
 
-              // Scroll direction detection for mini categories
+              // Scroll detection for mini categories
               if (notification is ScrollUpdateNotification) {
-                final double scrollDelta = notification.scrollDelta ?? 0.0;
                 final double pixels = metrics.pixels;
 
-                if (pixels > 145.0) {
-                  if (scrollDelta < -2.0) { // Scrolling UP
-                    if (!_showMiniCategories) {
-                      setState(() => _showMiniCategories = true);
-                    }
-                  } else if (scrollDelta > 2.0) { // Scrolling DOWN
-                    if (_showMiniCategories) {
-                      setState(() => _showMiniCategories = false);
-                    }
+                if (pixels >= 145.0) {
+                  if (!_showMiniCategories) {
+                    setState(() => _showMiniCategories = true);
                   }
                 } else {
                   if (_showMiniCategories) {
@@ -551,6 +544,45 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
         },
         body: CustomScrollView(
           slivers: [
+            // Search Input
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
+                child: Container(
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F3F5),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: TextField(
+                    onChanged: (val) {
+                      ref.read(catalogSearchQueryProvider.notifier).state = val;
+                    },
+                    decoration: InputDecoration(
+                      hintText: "Bu mağazada ara...",
+                      hintStyle: theme.inputDecorationTheme.hintStyle?.copyWith(fontSize: 13),
+                      prefixIcon: Icon(
+                        Icons.search,
+                        color: theme.primaryColor,
+                        size: 20,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // Active Order card
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                child: ActiveOrderCard(businessId: widget.shop.id),
+              ),
+            ),
+
+            // Categories list
             SliverToBoxAdapter(
               child: Container(
                 height: 104,
@@ -668,6 +700,8 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                 ),
               ),
             ),
+
+            // Subcategories list
             if (selectedCategory != 'Tümü' && currentSubCategories.isNotEmpty && searchQuery.isEmpty)
               SliverToBoxAdapter(
                 child: Container(
@@ -707,43 +741,6 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                   ),
                 ),
               ),
-                  // Active Order card
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                      child: ActiveOrderCard(businessId: widget.shop.id),
-                    ),
-                  ),
-
-                  // Search Input
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
-                      child: Container(
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF1F3F5),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: TextField(
-                          onChanged: (val) {
-                            ref.read(catalogSearchQueryProvider.notifier).state = val;
-                          },
-                          decoration: InputDecoration(
-                            hintText: "Bu mağazada ara...",
-                            hintStyle: theme.inputDecorationTheme.hintStyle?.copyWith(fontSize: 13),
-                            prefixIcon: Icon(
-                              Icons.search,
-                              color: theme.primaryColor,
-                              size: 20,
-                            ),
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
 
                   // Closed Shop Warning
                   if (!widget.shop.isOpen)
@@ -921,37 +918,39 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
               ),
             ),
           ),
-          // Pinned Floating Mini Categories Bar
           Positioned(
             top: kToolbarHeight + MediaQuery.of(context).padding.top, // Right below the collapsed App Bar
             left: 0,
             right: 0,
-            child: AnimatedSlide(
-              offset: _showMiniCategories ? Offset.zero : const Offset(0, -1.2),
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeInOut,
-              child: AnimatedOpacity(
-                opacity: _showMiniCategories ? 1.0 : 0.0,
-                duration: const Duration(milliseconds: 200),
-                child: Container(
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: _buildMiniCategoriesList(
-                    context,
-                    ref,
-                    categoriesAsync,
-                    allProductsAsync,
-                    selectedCategory,
+            child: IgnorePointer(
+              ignoring: !_showMiniCategories,
+              child: AnimatedSlide(
+                offset: _showMiniCategories ? Offset.zero : const Offset(0, -1.2),
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeInOut,
+                child: AnimatedOpacity(
+                  opacity: _showMiniCategories ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 200),
+                  child: Container(
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: _buildMiniCategoriesList(
+                      context,
+                      ref,
+                      categoriesAsync,
+                      allProductsAsync,
+                      selectedCategory,
+                    ),
                   ),
                 ),
               ),

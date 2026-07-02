@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider, Consumer;
 import 'package:hoppa/shared/models/business_product.dart';
 import 'package:hoppa/apps/consumer/favorites/favorite_provider.dart';
 import 'package:hoppa/apps/consumer/home/widgets/modern_product_card.dart';
 import 'package:hoppa/shared/core/services/business_service.dart';
 import 'package:hoppa/apps/consumer/repositories/consumer_shop_repository.dart';
 
-class FavoritesPage extends StatefulWidget {
+class FavoritesPage extends ConsumerStatefulWidget {
   const FavoritesPage({super.key});
 
   @override
-  State<FavoritesPage> createState() => _FavoritesPageState();
+  ConsumerState<FavoritesPage> createState() => _FavoritesPageState();
 }
 
-class _FavoritesPageState extends State<FavoritesPage> {
+class _FavoritesPageState extends ConsumerState<FavoritesPage> {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final BusinessService _businessService = BusinessService();
 
@@ -24,7 +25,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
     // Migrate from Firestore to Prisma/API 
     // Fetch products from the new backend endpoint via ConsumerShopRepository
     try {
-      final repository = Provider.of<ConsumerShopRepository>(context, listen: false);
+      final repository = ref.read(consumerShopRepositoryProvider);
       return await repository.getFavoriteProducts(ids);
     } catch (e) {
       print("Error fetching favorite products from API: $e");

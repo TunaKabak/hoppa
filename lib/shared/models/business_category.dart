@@ -8,6 +8,7 @@ class BusinessCategory {
   final String? subtitle;
   final bool isActive;
   final int order;
+  final int? shopCount;
 
   BusinessCategory({
     required this.id,
@@ -19,6 +20,7 @@ class BusinessCategory {
     this.subtitle,
     this.isActive = true,
     this.order = 0,
+    this.shopCount,
   });
 
   factory BusinessCategory.fromJson(Map<String, dynamic> json) {
@@ -32,6 +34,7 @@ class BusinessCategory {
       subtitle: json['subtitle'] as String?,
       isActive: json['isActive'] as bool? ?? true,
       order: json['order'] as int? ?? 0,
+      shopCount: json['shopCount'] as int?,
     );
   }
 
@@ -46,6 +49,7 @@ class BusinessCategory {
       'subtitle': subtitle,
       'isActive': isActive,
       'order': order,
+      'shopCount': shopCount,
     };
   }
 }

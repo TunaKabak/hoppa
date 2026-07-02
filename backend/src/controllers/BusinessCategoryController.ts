@@ -3,6 +3,90 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+function getShopTypeForCategory(catName: string): string | null {
+  const norm = catName.toLowerCase();
+  if (norm.includes("restoran") || norm.includes("restaurant")) return "RESTAURANT";
+  if (norm.includes("market")) return "MARKET";
+  if (norm.includes("su")) return "WATER";
+  if (norm.includes("çiçek") || norm.includes("flower")) return "FLOWER";
+  if (norm.includes("manav") || norm.includes("greengrocer")) return "GREENGROCER";
+  if (norm.includes("kasap") || norm.includes("butcher")) return "BUTCHER";
+  return null;
+}
+
+async function enrichCategoryWithMetrics(cat: any) {
+  const shopType = getShopTypeForCategory(cat.name);
+  if (!shopType) {
+    return {
+      ...cat,
+      shopCount: 0
+    };
+  }
+
+  const shops = await prisma.shop.findMany({
+    where: { type: shopType as any },
+    select: { id: true, createdAt: true }
+  });
+  const shopIds = shops.map(s => s.id);
+  const shopCount = shops.length;
+
+  // 1. Calculate Average Delivery Time from Delivered Orders
+  const orders = await prisma.order.findMany({
+    where: {
+      shopId: { in: shopIds },
+      status: "DELIVERED"
+    },
+    select: {
+      createdAt: true,
+      updatedAt: true
+    }
+  });
+
+  let avgDeliveryTime = cat.avgDeliveryTime || "30-45 dk";
+  if (orders.length > 0) {
+    const totalMinutes = orders.reduce((sum, o) => {
+      const diffMs = o.updatedAt.getTime() - o.createdAt.getTime();
+      const diffMins = Math.max(1, Math.round(diffMs / 60000));
+      return sum + diffMins;
+    }, 0);
+    const avgMinutes = Math.round(totalMinutes / orders.length);
+    const rounded = Math.round(avgMinutes / 5) * 5;
+    const minTime = Math.max(10, rounded - 5);
+    const maxTime = rounded + 5;
+    avgDeliveryTime = `${minTime}-${maxTime} dk`;
+  }
+
+  // 2. Calculate Badge standard rules
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+  const hasNewShop = shops.some(s => s.createdAt >= oneWeekAgo);
+
+  let badge = cat.badge || null;
+  if (hasNewShop) {
+    badge = "yeni";
+  } else {
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
+    const orderCount = await prisma.order.count({
+      where: {
+        shopId: { in: shopIds },
+        status: "DELIVERED",
+        createdAt: { gte: oneMonthAgo }
+      }
+    });
+    if (orderCount > 10) {
+      badge = "popüler";
+    }
+  }
+
+  return {
+    ...cat,
+    avgDeliveryTime,
+    badge,
+    shopCount
+  };
+}
+
 export class BusinessCategoryController {
   // Consumer-facing: Get only active business categories
   async getBusinessCategories(req: Request, res: Response) {
@@ -11,7 +95,9 @@ export class BusinessCategoryController {
         where: { isActive: true },
         orderBy: { order: "asc" },
       });
-      return res.status(200).json({ error: false, data: categories });
+
+      const enriched = await Promise.all(categories.map(c => enrichCategoryWithMetrics(c)));
+      return res.status(200).json({ error: false, data: enriched });
     } catch (error: any) {
       return res.status(500).json({ error: true, message: error.message });
     }
@@ -23,7 +109,9 @@ export class BusinessCategoryController {
       const categories = await prisma.businessCategory.findMany({
         orderBy: { order: "asc" },
       });
-      return res.status(200).json({ error: false, data: categories });
+
+      const enriched = await Promise.all(categories.map(c => enrichCategoryWithMetrics(c)));
+      return res.status(200).json({ error: false, data: enriched });
     } catch (error: any) {
       return res.status(500).json({ error: true, message: error.message });
     }
@@ -119,11 +207,46 @@ export class BusinessCategoryController {
         return res.status(404).json({ error: true, message: "Kategori bulunamadı." });
       }
 
+      // Check if any business is associated with this category
+      const shopType = getShopTypeForCategory(category.name);
+      if (shopType) {
+        const shopCount = await prisma.shop.count({
+          where: { type: shopType as any }
+        });
+        if (shopCount > 0) {
+          return res.status(400).json({
+            error: true,
+            message: `Bu kategoriye bağlı ${shopCount} adet işletme bulunmaktadır. Bağlı işletmeler varken kategori silinemez.`
+          });
+        }
+      }
+
       await prisma.businessCategory.delete({
         where: { id }
       });
 
       return res.status(200).json({ error: false, message: "Kategori başarıyla silindi." });
+    } catch (error: any) {
+      return res.status(500).json({ error: true, message: error.message });
+    }
+  }
+
+  // Admin-facing: Reorder categories
+  async adminReorderBusinessCategories(req: Request, res: Response) {
+    try {
+      const { orders } = req.body;
+      if (!Array.isArray(orders)) {
+        return res.status(400).json({ error: true, message: "Geçersiz sıralama bilgisi." });
+      }
+
+      await prisma.$transaction(
+        orders.map((o: any) => prisma.businessCategory.update({
+          where: { id: o.id },
+          data: { order: Number(o.order) }
+        }))
+      );
+
+      return res.status(200).json({ error: false, message: "Kategori sıralaması başarıyla güncellendi." });
     } catch (error: any) {
       return res.status(500).json({ error: true, message: error.message });
     }

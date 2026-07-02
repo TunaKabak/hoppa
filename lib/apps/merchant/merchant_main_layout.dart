@@ -20,6 +20,16 @@ import 'package:hoppa/shared/core/services/notification_service.dart';
 
 final GlobalKey<ScaffoldState> merchantDrawerKey = GlobalKey<ScaffoldState>();
 
+class MerchantNavigationIndex extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void setIndex(int value) {
+    state = value;
+  }
+}
+final merchantNavigationIndexProvider = NotifierProvider<MerchantNavigationIndex, int>(MerchantNavigationIndex.new);
+
 class MerchantMainLayout extends ConsumerStatefulWidget {
   final String businessId;
   const MerchantMainLayout({super.key, required this.businessId});
@@ -29,7 +39,6 @@ class MerchantMainLayout extends ConsumerStatefulWidget {
 }
 
 class _MerchantMainLayoutState extends ConsumerState<MerchantMainLayout> {
-  int _selectedIndex = 0;
   String _businessName = 'İşletme Paneli';
   
   String _activeBusinessId = '';
@@ -65,6 +74,7 @@ class _MerchantMainLayoutState extends ConsumerState<MerchantMainLayout> {
         if (_activeBusinessId.isEmpty && _allBusinesses.isNotEmpty) {
           _activeBusinessId = _allBusinesses.first.id;
         }
+        ref.read(selectedMerchantBusinessIdProvider.notifier).setSelectedId(_activeBusinessId);
       }
       if (_activeBusinessId.isNotEmpty) {
         await _loadBusinessName();
@@ -127,7 +137,7 @@ class _MerchantMainLayoutState extends ConsumerState<MerchantMainLayout> {
       MerchantProductListPage(
         key: ValueKey('prods_$_activeBusinessId'),
         businessId: _activeBusinessId,
-        isActiveTab: _selectedIndex == 2,
+        isActiveTab: ref.watch(merchantNavigationIndexProvider) == 2,
       ),
       MerchantAnalyticsPage(
         key: ValueKey('analy_$_activeBusinessId'),
@@ -171,7 +181,7 @@ class _MerchantMainLayoutState extends ConsumerState<MerchantMainLayout> {
     }
     if (user.isSuperAdmin) {
       items.add(const _NavItem(Icons.admin_panel_settings_rounded, 'Başvurular'));
-      items.add(const _NavItem(Icons.category_rounded, 'Kategoriler'));
+      items.add(const _NavItem(Icons.category_rounded, 'İşletme Kategorileri'));
     }
     items.add(const _NavItem(Icons.settings_rounded, 'Ayarlar'));
     return items;
@@ -189,18 +199,18 @@ class _MerchantMainLayoutState extends ConsumerState<MerchantMainLayout> {
 
     final user = authState.user;
 
+    final selectedIndex = ref.watch(merchantNavigationIndexProvider);
+
     return PopScope(
-      canPop: _selectedIndex == 0,
+      canPop: selectedIndex == 0,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        setState(() {
-          _selectedIndex = 0;
-        });
+        ref.read(merchantNavigationIndexProvider.notifier).setIndex(0);
       },
       child: Scaffold(
         key: merchantDrawerKey,
         drawer: _buildDrawer(theme, colorScheme, user),
-        body: IndexedStack(index: _selectedIndex, children: _getPages(user)),
+        body: IndexedStack(index: selectedIndex, children: _getPages(user)),
       ),
     );
   }
@@ -279,6 +289,7 @@ class _MerchantMainLayoutState extends ConsumerState<MerchantMainLayout> {
                         }).toList(),
                         onChanged: (newVal) async {
                           if (newVal != null && newVal != _activeBusinessId) {
+                            ref.read(selectedMerchantBusinessIdProvider.notifier).setSelectedId(newVal);
                             setState(() {
                               _activeBusinessId = newVal;
                               _isLoading = true;
@@ -336,7 +347,7 @@ class _MerchantMainLayoutState extends ConsumerState<MerchantMainLayout> {
               itemCount: navItems.length,
               itemBuilder: (context, index) {
                 final item = navItems[index];
-                final isSelected = _selectedIndex == index;
+                final isSelected = ref.watch(merchantNavigationIndexProvider) == index;
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 4),
                   child: ListTile(
@@ -367,7 +378,7 @@ class _MerchantMainLayoutState extends ConsumerState<MerchantMainLayout> {
                       alpha: 0.08,
                     ),
                     onTap: () {
-                      setState(() => _selectedIndex = index);
+                      ref.read(merchantNavigationIndexProvider.notifier).setIndex(index);
                       Navigator.pop(context); // Drawer'ı kapat
                     },
                   ),
