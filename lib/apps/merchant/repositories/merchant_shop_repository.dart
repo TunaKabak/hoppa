@@ -114,9 +114,10 @@ class MerchantShopRepository {
 
   MerchantShopRepository(this._apiClient);
 
-  Future<MerchantShop?> getShop() async {
+  Future<MerchantShop?> getShop({String? shopId}) async {
     try {
-      final response = await _apiClient.get('/api/merchant/shop');
+      final path = shopId != null && shopId.isNotEmpty ? '/api/merchant/shop?shopId=$shopId' : '/api/merchant/shop';
+      final response = await _apiClient.get(path);
       if (response['data'] != null) {
         return MerchantShop.fromMap(response['data']);
       }
@@ -129,13 +130,15 @@ class MerchantShopRepository {
     }
   }
 
-  Future<MerchantShop> updateShop(Map<String, dynamic> data) async {
-    final response = await _apiClient.put('/api/merchant/shop', body: data);
+  Future<MerchantShop> updateShop(Map<String, dynamic> data, {String? shopId}) async {
+    final path = shopId != null && shopId.isNotEmpty ? '/api/merchant/shop?shopId=$shopId' : '/api/merchant/shop';
+    final response = await _apiClient.put(path, body: data);
     return MerchantShop.fromMap(response['data']);
   }
 
-  Future<MerchantShop> toggleStatus(bool isActive) async {
-    final response = await _apiClient.post('/api/merchant/shop/toggle-status', body: {'isActive': isActive});
+  Future<MerchantShop> toggleStatus(bool isActive, {String? shopId}) async {
+    final path = shopId != null && shopId.isNotEmpty ? '/api/merchant/shop/toggle-status?shopId=$shopId' : '/api/merchant/shop/toggle-status';
+    final response = await _apiClient.post(path, body: {'isActive': isActive});
     return MerchantShop.fromMap(response['data']);
   }
 }

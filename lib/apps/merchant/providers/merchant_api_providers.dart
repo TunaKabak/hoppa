@@ -25,6 +25,16 @@ final merchantCategoryTreeProvider = FutureProvider<List<Category>>((
 });
 
 // --- Repositories ---
+class SelectedMerchantBusinessId extends Notifier<String> {
+  @override
+  String build() => '';
+
+  void setSelectedId(String id) {
+    state = id;
+  }
+}
+final selectedMerchantBusinessIdProvider = NotifierProvider<SelectedMerchantBusinessId, String>(SelectedMerchantBusinessId.new);
+
 final merchantShopRepositoryProvider = Provider<MerchantShopRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
   return MerchantShopRepository(apiClient);
@@ -45,19 +55,21 @@ class ShopController extends AsyncNotifier<MerchantShop?> {
   }
 
   Future<MerchantShop?> _fetchShop() async {
+    final selectedShopId = ref.watch(selectedMerchantBusinessIdProvider);
     final repo = ref.read(merchantShopRepositoryProvider);
-    return await repo.getShop();
+    return await repo.getShop(shopId: selectedShopId.isNotEmpty ? selectedShopId : null);
   }
 
   Future<void> updateShop(Map<String, dynamic> data) async {
     final currentVal = state.value;
     state = const AsyncLoading();
     try {
+      final selectedShopId = ref.read(selectedMerchantBusinessIdProvider);
       final repo = ref.read(merchantShopRepositoryProvider);
 
       final payload = Map<String, dynamic>.from(data);
 
-      final updatedShop = await repo.updateShop(payload);
+      final updatedShop = await repo.updateShop(payload, shopId: selectedShopId.isNotEmpty ? selectedShopId : null);
       state = AsyncData(updatedShop);
     } catch (e, st) {
       if (currentVal != null) {
@@ -73,8 +85,9 @@ class ShopController extends AsyncNotifier<MerchantShop?> {
     final currentVal = state.value;
     state = const AsyncLoading();
     try {
+      final selectedShopId = ref.read(selectedMerchantBusinessIdProvider);
       final repo = ref.read(merchantShopRepositoryProvider);
-      final updatedShop = await repo.toggleStatus(isActive);
+      final updatedShop = await repo.toggleStatus(isActive, shopId: selectedShopId.isNotEmpty ? selectedShopId : null);
       state = AsyncData(updatedShop);
     } catch (e, st) {
       // Revert on error

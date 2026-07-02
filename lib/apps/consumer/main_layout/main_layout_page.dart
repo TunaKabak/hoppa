@@ -75,8 +75,10 @@ class _MainLayoutPageState extends ConsumerState<MainLayoutPage> {
     int currentIndex = navProvider.currentIndex;
 
     // Alt menüyü göster/gizle: Ana Sayfa (0) ve Kategori/İşletme Seçilmemişse GİZLE.
+    // Ayrıca Sepet (2) ekranında alt barı gizle.
     bool showBottomBar =
-        !(currentIndex == 0 && businessProvider.selectedBusiness == null);
+        !(currentIndex == 0 && businessProvider.selectedBusiness == null) &&
+        currentIndex != 2;
 
     // FAB Tıklanınca yapılacak işlem (Hoppa! - Ana Kategoriye Dön)
     void onFabPressed() {

@@ -6,13 +6,24 @@ const prisma = new PrismaClient();
 export class ShopController {
   async getMyShop(req: Request, res: Response) {
     try {
-      const merchantId = req.user?.id;
-      if (!merchantId) return res.status(401).json({ error: true, message: "Kullanıcı bilgisi eksik." });
+      const isSuperAdmin = req.user?.role === "super_admin";
+      const queryShopId = req.query.shopId as string;
 
-      const shop = await prisma.shop.findUnique({
-        where: { merchantId },
-        include: { merchant: { select: { businessName: true, status: true, businessPhone: true, identityNumber: true, taxNumber: true } } }
-      });
+      let shop;
+      if (isSuperAdmin && queryShopId) {
+        shop = await prisma.shop.findUnique({
+          where: { id: queryShopId },
+          include: { merchant: { select: { businessName: true, status: true, businessPhone: true, identityNumber: true, taxNumber: true } } }
+        });
+      } else {
+        const merchantId = req.user?.id;
+        if (!merchantId) return res.status(401).json({ error: true, message: "Kullanıcı bilgisi eksik." });
+
+        shop = await prisma.shop.findUnique({
+          where: { merchantId },
+          include: { merchant: { select: { businessName: true, status: true, businessPhone: true, identityNumber: true, taxNumber: true } } }
+        });
+      }
 
       return res.status(200).json({ error: false, data: shop });
     } catch (error: any) {
@@ -22,8 +33,26 @@ export class ShopController {
 
   async updateMyShop(req: Request, res: Response) {
     try {
-      const merchantId = req.user?.id;
-      if (!merchantId) return res.status(401).json({ error: true, message: "Kullanıcı bilgisi eksik." });
+      const isSuperAdmin = req.user?.role === "super_admin";
+      const queryShopId = req.query.shopId as string;
+
+      let targetShop;
+      if (isSuperAdmin && queryShopId) {
+        targetShop = await prisma.shop.findUnique({
+          where: { id: queryShopId }
+        });
+      } else {
+        const merchantId = req.user?.id;
+        if (!merchantId) return res.status(401).json({ error: true, message: "Kullanıcı bilgisi eksik." });
+
+        targetShop = await prisma.shop.findUnique({
+          where: { merchantId }
+        });
+      }
+
+      if (!targetShop) {
+        return res.status(404).json({ error: true, message: "Dükkan bulunamadı." });
+      }
 
       const {
         name, description, address, latitude, longitude,
@@ -37,10 +66,9 @@ export class ShopController {
       if (businessPhone !== undefined) merchantUpdate.businessPhone = businessPhone;
       if (identityNumber !== undefined) merchantUpdate.identityNumber = identityNumber;
 
-      // Update the shop or upsert it if missing
-      const updated = await prisma.shop.upsert({
-        where: { merchantId },
-        update: {
+      const updated = await prisma.shop.update({
+        where: { id: targetShop.id },
+        data: {
           name,
           description,
           address,
@@ -64,27 +92,6 @@ export class ShopController {
               update: merchantUpdate
             }
           } : {})
-        },
-        create: {
-          merchantId,
-          name: name || "Yeni Dükkan", // Upsert requires default requirements based on schema
-          description,
-          address,
-          latitude,
-          longitude,
-          deliveryRadiusKm,
-          deliveryPolygon,
-          workingHours,
-          minOrderAmount: minimumOrderAmount ?? minOrderAmount,
-          minimumOrderAmount: minimumOrderAmount ?? minOrderAmount,
-          deliveryPricingType,
-          baseDeliveryFee,
-          deliveryFeePerKm,
-          freeDeliveryThreshold,
-          deliveryTime,
-          imageUrl,
-          headerImageUrl,
-          taxNumber
         },
         include: { merchant: { select: { businessName: true, status: true, businessPhone: true, identityNumber: true, taxNumber: true } } }
       });

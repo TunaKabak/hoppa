@@ -151,63 +151,78 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
                   )
                 : _business == null
                     ? const SizedBox.shrink()
-                    : ListTile(
-                        contentPadding: const EdgeInsets.all(16),
-                        leading: CircleAvatar(
-                          radius: 28,
-                          backgroundColor: Colors.grey[200],
-                          backgroundImage: _business!.logoUrl.isNotEmpty
-                              ? NetworkImage(_business!.logoUrl)
-                              : null,
-                          child: _business!.logoUrl.isEmpty
-                              ? const Icon(Icons.store, color: Colors.grey)
-                              : null,
-                        ),
-                        title: Text(
-                          _business!.name,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Padding(
+                            padding: EdgeInsets.only(left: 16.0, top: 16.0, right: 16.0),
+                            child: Text(
+                              "Gönderici (İşletme) Bilgileri",
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black54,
+                              ),
+                            ),
                           ),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 4),
-                            Row(
+                          ListTile(
+                            contentPadding: const EdgeInsets.only(left: 16, right: 16, bottom: 16, top: 8),
+                            leading: CircleAvatar(
+                              radius: 28,
+                              backgroundColor: Colors.grey[200],
+                              backgroundImage: _business!.logoUrl.isNotEmpty
+                                  ? NetworkImage(_business!.logoUrl)
+                                  : null,
+                              child: _business!.logoUrl.isEmpty
+                                  ? const Icon(Icons.store, color: Colors.grey)
+                                  : null,
+                            ),
+                            title: Text(
+                              _business!.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Icon(
-                                  Icons.location_on,
-                                  size: 14,
-                                  color: Colors.grey,
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.location_on,
+                                      size: 14,
+                                      color: Colors.grey,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        _business!.address,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    _business!.address,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                                if (_business!.phone.isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.phone,
+                                        size: 14,
+                                        color: Colors.grey,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(_business!.phone),
+                                    ],
                                   ),
-                                ),
+                                ],
                               ],
                             ),
-                            if (_business!.phone.isNotEmpty) ...[
-                              const SizedBox(height: 2),
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.phone,
-                                    size: 14,
-                                    color: Colors.grey,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(_business!.phone),
-                                ],
-                              ),
-                            ],
-                          ],
-                        ),
-                        // Optional: Add trailing call button if desired
+                          ),
+                        ],
                       ),
           ),
 
@@ -548,8 +563,10 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
                       OutlinedButton.icon(
                         onPressed: () async {
                           final url = Uri.parse("https://www.google.com/maps/search/?api=1&query=$mapLat,$mapLng");
-                          if (await canLaunchUrl(url)) {
+                          try {
                             await launchUrl(url, mode: LaunchMode.externalApplication);
+                          } catch (e) {
+                            debugPrint("Could not launch maps: $e");
                           }
                         },
                         icon: const Icon(Icons.map_outlined, size: 16),
@@ -635,85 +652,6 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
                 const SizedBox(height: 16),
                 const SizedBox(height: 16),
 
-                // MİNİ HARİTA (OpenStreetMap)
-                if (order.addressLatitude != 0.0 &&
-                    order.addressLongitude != 0.0)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      height: 150,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.blue[100]!),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: FlutterMap(
-                        options: MapOptions(
-                          initialCenter: LatLng(
-                            order.addressLatitude,
-                            order.addressLongitude,
-                          ),
-                          initialZoom: 15,
-                          interactionOptions: const InteractionOptions(
-                            flags: InteractiveFlag
-                                .none, // Disable interactions for mini map
-                          ),
-                        ),
-                        children: [
-                          TileLayer(
-                            urlTemplate:
-                                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                            userAgentPackageName: 'com.hoppa.app',
-                          ),
-                          MarkerLayer(
-                            markers: [
-                              Marker(
-                                point: LatLng(
-                                  order.addressLatitude,
-                                  order.addressLongitude,
-                                ),
-                                width: 40,
-                                height: 40,
-                                child: const Icon(
-                                  Icons.location_on,
-                                  color: Colors.red,
-                                  size: 40,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                else
-                  // Fallback for orders without coordinates
-                  Container(
-                    height: 120,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[300]!),
-                    ),
-                    child: const Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.map_outlined,
-                            color: Colors.grey,
-                            size: 32,
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            "Konum bilgisi yok",
-                            style: TextStyle(color: Colors.grey, fontSize: 12),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
               ],
             ),
           ),

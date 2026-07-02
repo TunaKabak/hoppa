@@ -840,10 +840,45 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                     ],
                   ),
                 )
-              : ListView.separated(
-                  controller: _catalogScrollController,
-                  padding: const EdgeInsets.all(12),
-                  itemCount: _catalogSearchResults.length + (_hasMoreCatalogItems ? 1 : 0),
+              : Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      child: Row(
+                        children: [
+                          Checkbox(
+                            value: _catalogSearchResults.every((p) => _selectedCatalogProductIds.contains(p.id)),
+                            activeColor: Colors.green.shade500,
+                            tristate: true,
+                            onChanged: (val) {
+                              setState(() {
+                                if (val == true) {
+                                  _selectedCatalogProductIds.addAll(_catalogSearchResults.map((p) => p.id));
+                                } else {
+                                  _selectedCatalogProductIds.removeAll(_catalogSearchResults.map((p) => p.id));
+                                }
+                              });
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            "Tümünü Seç / Tümünü Kaldır",
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                          const Spacer(),
+                          Text(
+                            "${_selectedCatalogProductIds.length} Ürün Seçildi",
+                            style: TextStyle(color: Colors.green.shade700, fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1),
+                    Expanded(
+                      child: ListView.separated(
+                        controller: _catalogScrollController,
+                        padding: const EdgeInsets.all(12),
+                        itemCount: _catalogSearchResults.length + (_hasMoreCatalogItems ? 1 : 0),
                   separatorBuilder: (_, _) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     if (index == _catalogSearchResults.length) {
@@ -936,6 +971,9 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                       ),
                     );
                   },
+                ),
+                    ),
+                  ],
                 ),
         ),
       ],

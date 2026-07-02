@@ -9,6 +9,7 @@ import 'package:hoppa/shared/core/services/campaign_service.dart'; // Campaign S
 import 'package:hoppa/shared/core/services/navigation_provider.dart'; // Navigation Provider
 import 'package:hoppa/apps/consumer/cart/widgets/cart_price_badge.dart'; // YENİ
 import 'package:provider/provider.dart' as p;
+import 'package:hoppa/apps/consumer/favorites/favorite_provider.dart';
 import 'package:hoppa/apps/consumer/repositories/consumer_shop_repository.dart';
 import 'package:hoppa/shared/core/utils/quantity_formatter.dart';
 
@@ -140,6 +141,35 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                   onPressed: () => Navigator.pop(context),
                 ),
                 actions: [
+                  p.Consumer<FavoriteProvider>(
+                    builder: (context, favProvider, child) {
+                      final isFavorited = favProvider.isFavorite(widget.businessProduct.id);
+                      return IconButton(
+                        icon: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withAlpha(26),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            isFavorited ? Icons.favorite : Icons.favorite_border,
+                            color: isFavorited ? Colors.red : Colors.black,
+                            size: 20,
+                          ),
+                        ),
+                        onPressed: () {
+                          favProvider.toggleFavorite(widget.businessProduct.id);
+                        },
+                      );
+                    },
+                  ),
                   Padding(
                     padding: const EdgeInsets.only(right: 16.0),
                     child: CartPriceBadge(
@@ -396,28 +426,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                 ref.read(cartProvider.notifier).removeFromCart(widget.businessProduct.id);
                 HapticFeedback.lightImpact();
                 if (isRemoving && mounted) {
-                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Row(
-                        children: [
-                          const Icon(Icons.delete_outline, color: Colors.white),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              "${widget.businessProduct.product.name} sepetten çıkarıldı",
-                            ),
-                          ),
-                        ],
-                      ),
-                      backgroundColor: Colors.grey.shade600,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
+                  // No SnackBar as per Request 5
                 }
               });
             },
@@ -482,28 +491,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                       ref.read(cartProvider.notifier).addToCart(widget.businessProduct);
                       HapticFeedback.lightImpact();
                       if (mounted) {
-                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Row(
-                              children: [
-                                const Icon(Icons.check_circle, color: Colors.white),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    "${widget.businessProduct.product.name} sepete eklendi",
-                                  ),
-                                ),
-                              ],
-                            ),
-                            backgroundColor: const Color(0xFF81C784),
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            duration: const Duration(seconds: 2),
-                          ),
-                        );
+                        // No SnackBar as per Request 5
                       }
                     } catch (e) {
                       final msg = e.toString();

@@ -65,6 +65,12 @@ class AdminBusinessCategoriesController extends AsyncNotifier<List<BusinessCateg
     await repo.adminDeleteBusinessCategory(id);
     ref.invalidateSelf();
   }
+
+  Future<void> reorderCategories(List<Map<String, dynamic>> orders) async {
+    final repo = ref.read(superAdminRepositoryProvider);
+    await repo.adminReorderBusinessCategories(orders);
+    ref.invalidateSelf();
+  }
 }
 
 final adminBusinessCategoriesProvider = AsyncNotifierProvider<AdminBusinessCategoriesController, List<BusinessCategory>>(

@@ -188,6 +188,19 @@ class _CartPageState extends ConsumerState<CartPage> {
                       : _buildGroupedList(cartState, activeCampaigns, colorScheme),
                 ),
 
+                TextButton.icon(
+                  onPressed: () => _handleClose(context),
+                  icon: const Icon(Icons.arrow_back, size: 16),
+                  label: const Text(
+                    "Alışverişe Devam Et",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                  style: TextButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 36),
+                    foregroundColor: colorScheme.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                  ),
+                ),
                 CompactCheckoutBar(
                   subTotal: cartState.totalAmount,
                   deliveryFee: deliveryFee,

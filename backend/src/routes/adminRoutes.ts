@@ -25,6 +25,7 @@ router.put("/merchants/:id/status", (req, res) => superAdminController.updateMer
 // Admin -> Business Category Management
 router.get("/business-categories", (req, res) => businessCategoryController.adminGetBusinessCategories(req, res));
 router.post("/business-categories", (req, res) => businessCategoryController.adminCreateBusinessCategory(req, res));
+router.put("/business-categories/reorder", (req, res) => businessCategoryController.adminReorderBusinessCategories(req, res));
 router.put("/business-categories/:id", (req, res) => businessCategoryController.adminUpdateBusinessCategory(req, res));
 router.delete("/business-categories/:id", (req, res) => businessCategoryController.adminDeleteBusinessCategory(req, res));
 

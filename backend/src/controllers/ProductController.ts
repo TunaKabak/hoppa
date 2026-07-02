@@ -500,11 +500,17 @@ export class ProductController {
       }
 
       if (category) {
-        whereClause.category = { name: { equals: category, mode: "insensitive" } };
+        const catList = category.split(",").map(c => c.trim()).filter(Boolean);
+        if (catList.length > 0) {
+          whereClause.category = { name: { in: catList } };
+        }
       }
 
       if (brand) {
-        whereClause.brand = { name: { equals: brand, mode: "insensitive" } };
+        const brandList = brand.split(",").map(b => b.trim()).filter(Boolean);
+        if (brandList.length > 0) {
+          whereClause.brand = { name: { in: brandList } };
+        }
       }
 
       const skip = (page - 1) * limit;
