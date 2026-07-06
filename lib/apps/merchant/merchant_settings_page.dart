@@ -45,6 +45,10 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
   
   String _selectedDeliveryTime = '30-45 dk';
   String _deliveryPricingType = 'FIXED';
+
+  bool _supportsOnline = true;
+  bool _supportsCash = true;
+  bool _supportsCard = true;
   
   final List<String> _deliveryTimeOptions = ['15-30 dk', '30-45 dk', '45-60 dk', '60+ dk'];
   // Delivery Radius & Polygon
@@ -196,6 +200,11 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
     _baseDeliveryFeeController.text = shop.baseDeliveryFee?.toString() ?? '30.0';
     _deliveryFeePerKmController.text = shop.deliveryFeePerKm?.toString() ?? '5.0';
     _freeDeliveryThresholdController.text = shop.freeDeliveryThreshold?.toString() ?? '';
+
+    final allowed = shop.allowedPaymentMethods ?? ['ONLINE_PAYMENT', 'CASH_ON_DELIVERY', 'CARD_ON_DELIVERY'];
+    _supportsOnline = allowed.contains('ONLINE_PAYMENT');
+    _supportsCash = allowed.contains('CASH_ON_DELIVERY');
+    _supportsCard = allowed.contains('CARD_ON_DELIVERY');
     
     if (_deliveryTimeOptions.contains(shop.deliveryTime)) {
       _selectedDeliveryTime = shop.deliveryTime!;
@@ -297,6 +306,16 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
     if (!_formKey.currentState!.validate()) return;
     if (_shop == null) return;
 
+    if (!_supportsOnline && !_supportsCash && !_supportsCard) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("En az bir ödeme yöntemi kabul edilmelidir."),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     final combinedAddress = [
       _addressController.text.trim(),
       _districtController.text.trim(),
@@ -324,6 +343,11 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
         'baseDeliveryFee': double.tryParse(_baseDeliveryFeeController.text) ?? 30.0,
         'deliveryFeePerKm': double.tryParse(_deliveryFeePerKmController.text) ?? 5.0,
         'freeDeliveryThreshold': double.tryParse(_freeDeliveryThresholdController.text),
+        'allowedPaymentMethods': [
+          if (_supportsOnline) 'ONLINE_PAYMENT',
+          if (_supportsCash) 'CASH_ON_DELIVERY',
+          if (_supportsCard) 'CARD_ON_DELIVERY',
+        ],
       });
 
       if (mounted) {
@@ -696,6 +720,42 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
               border: OutlineInputBorder(),
             ),
             keyboardType: TextInputType.number,
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            "Kabul Edilen Ödeme Yöntemleri",
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            title: const Text("Online Ödeme (Kredi/Banka Kartı)"),
+            subtitle: const Text("Müşteriler sipariş verirken uygulama üzerinden online ödeyebilir."),
+            value: _supportsOnline,
+            onChanged: (val) {
+              setState(() {
+                _supportsOnline = val;
+              });
+            },
+          ),
+          SwitchListTile(
+            title: const Text("Kapıda Nakit"),
+            subtitle: const Text("Müşteriler siparişi teslim alırken nakit ödeyebilir."),
+            value: _supportsCash,
+            onChanged: (val) {
+              setState(() {
+                _supportsCash = val;
+              });
+            },
+          ),
+          SwitchListTile(
+            title: const Text("Kapıda Kredi Kartı"),
+            subtitle: const Text("Müşteriler siparişi teslim alırken POS cihazı ile ödeyebilir."),
+            value: _supportsCard,
+            onChanged: (val) {
+              setState(() {
+                _supportsCard = val;
+              });
+            },
           ),
           const SizedBox(height: 24),
           Row(

@@ -136,6 +136,7 @@ model Shop {
   averageRating    Float     @default(5.0) // Cache alan: Puan ortalaması
   reviewCount      Int       @default(0)   // Cache alan: Toplam yorum sayısı
   reviews          Review[]
+  allowedPaymentMethods PaymentMethod[] @default([CASH_ON_DELIVERY, CARD_ON_DELIVERY, ONLINE_PAYMENT])
 
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt

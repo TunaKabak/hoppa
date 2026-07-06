@@ -301,6 +301,29 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
 
     final businessProvider = p.Provider.of<BusinessProvider>(context);
     final selectedBusiness = businessProvider.selectedBusiness;
+
+    final allowedMethods = selectedBusiness?.allowedPaymentMethods ?? const ['ONLINE_PAYMENT', 'CASH_ON_DELIVERY', 'CARD_ON_DELIVERY'];
+    final supportsOnline = allowedMethods.contains('ONLINE_PAYMENT');
+    final supportsCash = allowedMethods.contains('CASH_ON_DELIVERY');
+    final supportsCard = allowedMethods.contains('CARD_ON_DELIVERY');
+    final supportsPayAtDoor = supportsCash || supportsCard;
+
+    // Adjust selected payment method if current is not allowed by the business
+    if (_paymentMethod == 'online_payment' && !supportsOnline) {
+      if (supportsCash) {
+        _paymentMethod = 'cash_on_delivery';
+      } else if (supportsCard) {
+        _paymentMethod = 'card_on_delivery';
+      }
+    } else if ((_paymentMethod == 'cash_on_delivery' && !supportsCash) || (_paymentMethod == 'card_on_delivery' && !supportsCard)) {
+      if (_paymentMethod == 'cash_on_delivery' && supportsCard) {
+        _paymentMethod = 'card_on_delivery';
+      } else if (_paymentMethod == 'card_on_delivery' && supportsCash) {
+        _paymentMethod = 'cash_on_delivery';
+      } else if (supportsOnline) {
+        _paymentMethod = 'online_payment';
+      }
+    }
     
     bool hasFreeDeliveryCampaign = activeCampaigns.any((c) => c.type.name.toUpperCase() == "FREE_DELIVERY_FIRST_ORDERS");
     
@@ -452,31 +475,33 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      Expanded(
-                        child: _buildPaymentOption(
-                          title: 'Kredi / Banka Kartı',
-                          icon: Icons.credit_card,
-                          isSelected: _paymentMethod == 'online_payment',
-                          onTap: () => setState(() => _paymentMethod = 'online_payment'),
+                      if (supportsOnline)
+                        Expanded(
+                          child: _buildPaymentOption(
+                            title: 'Kredi / Banka Kartı',
+                            icon: Icons.credit_card,
+                            isSelected: _paymentMethod == 'online_payment',
+                            onTap: () => setState(() => _paymentMethod = 'online_payment'),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildPaymentOption(
-                          title: widget.isPickUp ? 'Mağazada Ödeme' : 'Kapıda Ödeme',
-                          icon: widget.isPickUp ? Icons.store_outlined : Icons.local_shipping_outlined,
-                          isSelected: _paymentMethod != 'online_payment',
-                          isDisabled: false,
-                          onTap: () {
-                            setState(() {
-                              if (_paymentMethod == 'online_payment') {
-                                _paymentMethod = 'cash_on_delivery';
-                              }
-                              _leaveAtDoor = false;
-                            });
-                          },
+                      if (supportsOnline && supportsPayAtDoor) const SizedBox(width: 8),
+                      if (supportsPayAtDoor)
+                        Expanded(
+                          child: _buildPaymentOption(
+                            title: widget.isPickUp ? 'Mağazada Ödeme' : 'Kapıda Ödeme',
+                            icon: widget.isPickUp ? Icons.store_outlined : Icons.local_shipping_outlined,
+                            isSelected: _paymentMethod != 'online_payment',
+                            isDisabled: false,
+                            onTap: () {
+                              setState(() {
+                                if (_paymentMethod == 'online_payment') {
+                                  _paymentMethod = supportsCash ? 'cash_on_delivery' : 'card_on_delivery';
+                                }
+                                _leaveAtDoor = false;
+                              });
+                            },
+                          ),
                         ),
-                      ),
                     ],
                   ),
                   AnimatedCrossFade(
@@ -506,31 +531,33 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                           const SizedBox(height: 12),
                           Row(
                             children: [
-                              Expanded(
-                                child: _buildPaymentOption(
-                                  title: widget.isPickUp ? 'Nakit' : 'Kapıda Nakit',
-                                  icon: Icons.money_rounded,
-                                  isSelected: _paymentMethod == 'cash_on_delivery',
-                                  isSubOption: true,
-                                  onTap: () => setState(() {
-                                    _paymentMethod = 'cash_on_delivery';
-                                    _leaveAtDoor = false;
-                                  }),
+                              if (supportsCash)
+                                Expanded(
+                                  child: _buildPaymentOption(
+                                    title: widget.isPickUp ? 'Nakit' : 'Kapıda Nakit',
+                                    icon: Icons.money_rounded,
+                                    isSelected: _paymentMethod == 'cash_on_delivery',
+                                    isSubOption: true,
+                                    onTap: () => setState(() {
+                                      _paymentMethod = 'cash_on_delivery';
+                                      _leaveAtDoor = false;
+                                    }),
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: _buildPaymentOption(
-                                  title: widget.isPickUp ? 'Kart' : 'Kapıda Kredi Kartı',
-                                  icon: Icons.credit_card_rounded,
-                                  isSelected: _paymentMethod == 'card_on_delivery',
-                                  isSubOption: true,
-                                  onTap: () => setState(() {
-                                    _paymentMethod = 'card_on_delivery';
-                                    _leaveAtDoor = false;
-                                  }),
+                              if (supportsCash && supportsCard) const SizedBox(width: 8),
+                              if (supportsCard)
+                                Expanded(
+                                  child: _buildPaymentOption(
+                                    title: widget.isPickUp ? 'Kart' : 'Kapıda Kredi Kartı',
+                                    icon: Icons.credit_card_rounded,
+                                    isSelected: _paymentMethod == 'card_on_delivery',
+                                    isSubOption: true,
+                                    onTap: () => setState(() {
+                                      _paymentMethod = 'card_on_delivery';
+                                      _leaveAtDoor = false;
+                                    }),
+                                  ),
                                 ),
-                              ),
                             ],
                           ),
                         ],
