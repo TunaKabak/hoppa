@@ -45,6 +45,7 @@ import adminRoutes from "./routes/adminRoutes";
 import mediaRoutes from "./routes/media.routes";
 import notificationRoutes from "./routes/notificationRoutes";
 import courierRoutes from "./routes/courierRoutes";
+import publicRoutes from "./routes/publicRoutes";
 import { otpRateLimiter } from "./middlewares/RateLimiter";
 
 const app = express();
@@ -94,6 +95,7 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/media", mediaRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/couriers", courierRoutes);
+app.use("/api/public", publicRoutes);
 
 app.get('/health', (req: Request, res: Response) => {
     res.status(200).json({ status: "OK", timestamp: new Date() });
