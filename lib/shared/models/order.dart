@@ -28,6 +28,9 @@ class Order {
   final String? courierName;
   final String? courierVehiclePlate;
   final Map<String, dynamic>? review;
+  final String? businessName;
+  final String? businessImageUrl;
+  final String? businessType;
  
   Order({
     required this.id,
@@ -54,6 +57,9 @@ class Order {
     this.courierName,
     this.courierVehiclePlate,
     this.review,
+    this.businessName,
+    this.businessImageUrl,
+    this.businessType,
   });
 
   factory Order.fromMap(Map<String, dynamic> data, String id) {
@@ -69,6 +75,11 @@ class Order {
     final courierName = data['courier'] != null ? data['courier']['name'] as String? : null;
     final courierVehiclePlate = data['courier'] != null ? data['courier']['vehiclePlate'] as String? : null;
     final review = data['review'] as Map<String, dynamic>?;
+
+    final shopData = data['shop'] as Map<String, dynamic>?;
+    final businessName = shopData?['name'] as String?;
+    final businessImageUrl = shopData?['imageUrl'] as String?;
+    final businessType = shopData?['type'] as String?;
 
     // Backward compatibility: Parse old format if new fields are empty
     if (deliveryMethod.isEmpty) {
@@ -169,6 +180,9 @@ class Order {
       courierName: courierName,
       courierVehiclePlate: courierVehiclePlate,
       review: review,
+      businessName: businessName,
+      businessImageUrl: businessImageUrl,
+      businessType: businessType,
     );
   }
 
@@ -199,6 +213,12 @@ class Order {
           'vehiclePlate': courierVehiclePlate,
         },
       if (review != null) 'review': review,
+      if (businessName != null || businessImageUrl != null || businessType != null)
+        'shop': {
+          'name': businessName,
+          'imageUrl': businessImageUrl,
+          'type': businessType,
+        },
     };
   }
 }

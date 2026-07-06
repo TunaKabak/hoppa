@@ -307,6 +307,10 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
               if (notification.metrics.axis != Axis.vertical) {
                 return false;
               }
+              // Only listen to the inner scroll view (depth > 0) to avoid mixed scroll pixels from the NestedScrollView header
+              if (notification.depth == 0) {
+                return false;
+              }
               final metrics = notification.metrics;
               final bool show = metrics.pixels > 300.0;
               if (show != _showScrollToTop) {
@@ -342,7 +346,7 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
               snap: false,
               expandedHeight: 145.0,
               backgroundColor: theme.primaryColor,
-              elevation: innerBoxIsScrolled ? 4 : 0,
+              forceElevated: innerBoxIsScrolled,
               iconTheme: const IconThemeData(color: Colors.white),
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -941,7 +945,7 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                       border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withValues(alpha: 0.05),
                           blurRadius: 4,
                           offset: const Offset(0, 2),
                         ),

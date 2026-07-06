@@ -6,6 +6,7 @@ import 'package:hoppa/shared/core/widgets/animated_sliding_toggle.dart';
 import 'package:hoppa/shared/models/order.dart' as model;
 import 'package:hoppa/shared/models/order_status.dart';
 import 'package:hoppa/apps/consumer/orders/order_detail_page.dart';
+import 'package:hoppa/shared/models/business_type.dart';
 
 class OrderHistoryPage extends ConsumerStatefulWidget {
   const OrderHistoryPage({super.key});
@@ -154,24 +155,107 @@ class _OrderCard extends ConsumerWidget {
         tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         title: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            _buildStatusBadge(status),
-            const Spacer(),
-            Text(
-              "${order.totalAmount.toStringAsFixed(2)} ₺",
-              style: const TextStyle(
-                fontWeight: FontWeight.w900,
-                fontSize: 16,
-                color: Color(0xFF00A651),
+            // Business Logo
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: order.businessImageUrl != null && order.businessImageUrl!.isNotEmpty
+                    ? Image.network(
+                        order.businessImageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => _getFallbackIcon(order.businessType),
+                      )
+                    : _getFallbackIcon(order.businessType),
+              ),
+            ),
+            const SizedBox(width: 10),
+            // Business Name & Category / ID
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    order.businessName ?? 'Bilinmeyen İşletme',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: Colors.black87,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      // Category
+                      if (order.businessType != null) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE8F5E9),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            BusinessType.fromString(order.businessType!).label,
+                            style: const TextStyle(
+                              fontSize: 9,
+                              color: Color(0xFF2E7D32),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                      ],
+                      // Order ID
+                      Text(
+                        "#${order.id.length > 8 ? order.id.substring(order.id.length - 8) : order.id}",
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ],
         ),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 8.0),
-          child: Text(
-            formattedDate,
-            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    formattedDate,
+                    style: TextStyle(color: Colors.grey[600], fontSize: 11),
+                  ),
+                  const SizedBox(height: 6),
+                  _buildStatusBadge(status),
+                ],
+              ),
+              Text(
+                "${order.totalAmount.toStringAsFixed(2)} ₺",
+                style: const TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                  color: Color(0xFF00A651),
+                ),
+              ),
+            ],
           ),
         ),
         children: [
@@ -400,5 +484,44 @@ class _OrderCard extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Widget _getFallbackIcon(String? typeStr) {
+    if (typeStr == null) return const Icon(Icons.store, color: Colors.grey, size: 20);
+    final type = BusinessType.fromString(typeStr);
+    IconData iconData;
+    switch (type) {
+      case BusinessType.market:
+        iconData = Icons.shopping_basket_rounded;
+        break;
+      case BusinessType.restaurant:
+        iconData = Icons.restaurant_rounded;
+        break;
+      case BusinessType.cafe:
+        iconData = Icons.local_cafe_rounded;
+        break;
+      case BusinessType.butcher:
+        iconData = Icons.flatware_rounded;
+        break;
+      case BusinessType.greengrocer:
+        iconData = Icons.eco_rounded;
+        break;
+      case BusinessType.bakery:
+        iconData = Icons.bakery_dining_rounded;
+        break;
+      case BusinessType.water:
+        iconData = Icons.local_drink_rounded;
+        break;
+      case BusinessType.nuts:
+        iconData = Icons.grain_rounded;
+        break;
+      case BusinessType.florist:
+        iconData = Icons.local_florist_rounded;
+        break;
+      case BusinessType.other:
+        iconData = Icons.store_rounded;
+        break;
+    }
+    return Icon(iconData, color: Colors.grey[600], size: 20);
   }
 }
