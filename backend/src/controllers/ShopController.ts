@@ -58,8 +58,21 @@ export class ShopController {
         name, description, address, latitude, longitude,
         deliveryRadiusKm, deliveryPolygon, workingHours, minOrderAmount, minimumOrderAmount, imageUrl, headerImageUrl,
         taxNumber, businessPhone, identityNumber,
-        deliveryPricingType, baseDeliveryFee, deliveryFeePerKm, freeDeliveryThreshold, deliveryTime
+        deliveryPricingType, baseDeliveryFee, deliveryFeePerKm, freeDeliveryThreshold, deliveryTime,
+        allowedPaymentMethods
       } = req.body;
+
+      if (allowedPaymentMethods !== undefined) {
+        if (!Array.isArray(allowedPaymentMethods) || allowedPaymentMethods.length === 0) {
+          return res.status(400).json({ error: true, message: "En az bir ödeme yöntemi kabul edilmelidir." });
+        }
+        const validMethods = ["CASH_ON_DELIVERY", "CARD_ON_DELIVERY", "ONLINE_PAYMENT"];
+        for (const m of allowedPaymentMethods) {
+          if (!validMethods.includes(m)) {
+            return res.status(400).json({ error: true, message: `Geçersiz ödeme yöntemi: ${m}` });
+          }
+        }
+      }
 
       // Build merchant update payload dynamically
       const merchantUpdate: any = {};
@@ -87,6 +100,7 @@ export class ShopController {
           imageUrl,
           headerImageUrl,
           taxNumber,
+          allowedPaymentMethods,
           ...(Object.keys(merchantUpdate).length > 0 ? {
             merchant: {
               update: merchantUpdate

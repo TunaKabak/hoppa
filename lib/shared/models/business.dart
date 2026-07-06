@@ -24,6 +24,7 @@ class Business {
   final double? freeDeliveryThreshold;
   final double averageRating;
   final int reviewCount;
+  final List<String> allowedPaymentMethods;
 
   Business({
     required this.id,
@@ -48,6 +49,7 @@ class Business {
     this.freeDeliveryThreshold,
     this.averageRating = 5.0,
     this.reviewCount = 0,
+    this.allowedPaymentMethods = const ['CASH_ON_DELIVERY', 'CARD_ON_DELIVERY', 'ONLINE_PAYMENT'],
   });
 
   factory Business.fromMap(Map<String, dynamic> data, String id) {
@@ -80,6 +82,7 @@ class Business {
           : null,
       averageRating: (data['averageRating'] ?? 5.0).toDouble(),
       reviewCount: data['reviewCount'] ?? 0,
+      allowedPaymentMethods: List<String>.from(data['allowedPaymentMethods'] ?? const ['CASH_ON_DELIVERY', 'CARD_ON_DELIVERY', 'ONLINE_PAYMENT']),
     );
   }
 
@@ -106,6 +109,7 @@ class Business {
       'freeDeliveryThreshold': freeDeliveryThreshold,
       'averageRating': averageRating,
       'reviewCount': reviewCount,
+      'allowedPaymentMethods': allowedPaymentMethods,
     };
   }
 
@@ -132,6 +136,7 @@ class Business {
     double? freeDeliveryThreshold,
     double? averageRating,
     int? reviewCount,
+    List<String>? allowedPaymentMethods,
   }) {
     return Business(
       id: id ?? this.id,
@@ -156,6 +161,7 @@ class Business {
       freeDeliveryThreshold: freeDeliveryThreshold ?? this.freeDeliveryThreshold,
       averageRating: averageRating ?? this.averageRating,
       reviewCount: reviewCount ?? this.reviewCount,
+      allowedPaymentMethods: allowedPaymentMethods ?? this.allowedPaymentMethods,
     );
   }
 }

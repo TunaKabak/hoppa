@@ -30,7 +30,7 @@ class _SplashPageState extends State<SplashPage> {
   // Tüm ağ ve sistem kontrollerini başlatır
   Future<void> _startSystemChecks() async {
     if (_isRetrying && _currentState == SplashConnectionState.loading) return;
-    
+
     setState(() {
       _currentState = SplashConnectionState.loading;
       _isRetrying = true;
@@ -57,8 +57,9 @@ class _SplashPageState extends State<SplashPage> {
   // Fiziksel internet kontrolü
   Future<bool> _checkPhysicalConnection() async {
     try {
-      final result = await InternetAddress.lookup('google.com')
-          .timeout(const Duration(seconds: 4));
+      final result = await InternetAddress.lookup(
+        'google.com',
+      ).timeout(const Duration(seconds: 4));
       return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
     } catch (_) {
       return false;
@@ -71,10 +72,13 @@ class _SplashPageState extends State<SplashPage> {
       // API_URL çevre değişkeninizden veya config'den okunmalıdır
       final baseUrl = dotenv.env['API_URL'] ?? 'http://127.0.0.1:3000';
       final url = Uri.parse("$baseUrl/api/public/health");
-      
-      final response = await http.get(url)
-          .timeout(const Duration(seconds: 5)); // 5 saniye içinde cevap gelmelidir
-          
+
+      final response = await http
+          .get(url)
+          .timeout(
+            const Duration(seconds: 5),
+          ); // 5 saniye içinde cevap gelmelidir
+
       return response.statusCode == 200;
     } catch (_) {
       return false;
@@ -105,7 +109,8 @@ class _SplashPageState extends State<SplashPage> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.primary, // Marka ana yeşili
+      backgroundColor:
+          theme.colorScheme.secondary, // Marka ana turuncusu (vurgu)
       body: SafeArea(
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 300),
@@ -117,7 +122,6 @@ class _SplashPageState extends State<SplashPage> {
 
   Widget _buildBodyForState(ThemeData theme) {
     switch (_currentState) {
-      
       // 1. DURUM: Sistem Yükleniyor (Standart Splash)
       case SplashConnectionState.loading:
         return Center(
@@ -144,7 +148,10 @@ class _SplashPageState extends State<SplashPage> {
               const SizedBox(
                 width: 28,
                 height: 28,
-                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 3,
+                ),
               ),
             ],
           ),
@@ -156,7 +163,8 @@ class _SplashPageState extends State<SplashPage> {
           key: const ValueKey('offline'),
           icon: Icons.wifi_off_rounded,
           title: "İnternet Bağlantısı Yok",
-          description: "Hoppa ile lezzetli anlara ulaşabilmek için aktif bir internet bağlantınızın olması gerekir. Lütfen ayarlarınızı kontrol edip tekrar deneyiniz.",
+          description:
+              "Hoppa ile lezzetli anlara ulaşabilmek için aktif bir internet bağlantınızın olması gerekir. Lütfen ayarlarınızı kontrol edip tekrar deneyiniz.",
           buttonText: "Tekrar Dene",
           theme: theme,
         );
@@ -167,7 +175,8 @@ class _SplashPageState extends State<SplashPage> {
           key: const ValueKey('server_down'),
           icon: Icons.cloud_off_rounded,
           title: "Size Daha İyi Hizmet Verebilmek İçin Bakımdayız",
-          description: "Sistemlerimizi güncelliyor ve sizin için Hoppa'yı daha hızlı hale getiriyoruz. Kısa süre sonra tekrar yanınızda olacağız.",
+          description:
+              "Sistemlerimizi güncelliyor ve sizin için Hoppa'yı daha hızlı hale getiriyoruz. Kısa süre sonra tekrar yanınızda olacağız.",
           buttonText: "Yeniden Dene",
           theme: theme,
         );
@@ -199,7 +208,7 @@ class _SplashPageState extends State<SplashPage> {
             child: Icon(icon, size: 72, color: Colors.white),
           ),
           const SizedBox(height: 32),
-          
+
           // Kurumsal Başlık
           Text(
             title,
@@ -212,7 +221,7 @@ class _SplashPageState extends State<SplashPage> {
             ),
           ),
           const SizedBox(height: 12),
-          
+
           // Sakinleştirici Açıklama Metni
           Text(
             description,
@@ -224,7 +233,7 @@ class _SplashPageState extends State<SplashPage> {
             ),
           ),
           const SizedBox(height: 40),
-          
+
           // İnteraktif Yeniden Dene Butonu
           SizedBox(
             width: double.infinity,
@@ -232,16 +241,21 @@ class _SplashPageState extends State<SplashPage> {
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
-                foregroundColor: theme.colorScheme.primary,
+                foregroundColor: theme.colorScheme.secondary,
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
               ),
               onPressed: () {
                 _startSystemChecks();
               },
               child: Text(
                 buttonText,
-                style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold),
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),

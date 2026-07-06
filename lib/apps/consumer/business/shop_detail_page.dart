@@ -304,6 +304,9 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
         children: [
           NotificationListener<ScrollNotification>(
             onNotification: (notification) {
+              if (notification.metrics.axis != Axis.vertical) {
+                return false;
+              }
               final metrics = notification.metrics;
               final bool show = metrics.pixels > 300.0;
               if (show != _showScrollToTop) {
