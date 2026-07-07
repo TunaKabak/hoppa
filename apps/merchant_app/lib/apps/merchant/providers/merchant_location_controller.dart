@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:core_shared/shared/core/data/kktc_districts.dart';
 
 class MerchantLocationResult {
   final String address;
@@ -84,18 +85,42 @@ class MerchantLocationNotifier extends AsyncNotifier<String?> {
         streetAddress = thoroughfareField;
       }
 
-      // 2. City prioritization
-      // Fixed KKTC cities: Lefkoşa, Girne, Gazimağusa, İskele, Güzelyurt, Lefke.
+      // 2. City prioritization with mapping
       final kktcCities = ['Lefkoşa', 'Girne', 'Gazimağusa', 'İskele', 'Güzelyurt', 'Lefke'];
+      final Map<String, String> cityMapping = {
+        'nicosia': 'Lefkoşa',
+        'lefkosia': 'Lefkoşa',
+        'kyrenia': 'Girne',
+        'keryneia': 'Girne',
+        'famagusta': 'Gazimağusa',
+        'gazimagusa': 'Gazimağusa',
+        'magusa': 'Gazimağusa',
+        'ammochostos': 'Gazimağusa',
+        'iskele': 'İskele',
+        'trikomo': 'İskele',
+        'güzelyurt': 'Güzelyurt',
+        'guzelyurt': 'Güzelyurt',
+        'morphou': 'Güzelyurt',
+        'lefke': 'Lefke',
+        'lefka': 'Lefke',
+      };
       
-      // Look in place.locality or place.subAdministrativeArea or place.administrativeArea
       String resolvedCity = '';
       for (final field in [place.locality, place.subAdministrativeArea, place.administrativeArea]) {
         if (field != null && field.isNotEmpty) {
-          for (final kc in kktcCities) {
-            if (field.toLowerCase().contains(kc.toLowerCase()) || kc.toLowerCase().contains(field.toLowerCase())) {
-              resolvedCity = kc;
+          final valLower = field.toLowerCase();
+          for (final entry in cityMapping.entries) {
+            if (valLower.contains(entry.key) || entry.key.contains(valLower)) {
+              resolvedCity = entry.value;
               break;
+            }
+          }
+          if (resolvedCity.isEmpty) {
+            for (final kc in kktcCities) {
+              if (valLower.contains(kc.toLowerCase()) || kc.toLowerCase().contains(valLower)) {
+                resolvedCity = kc;
+                break;
+              }
             }
           }
         }
@@ -103,15 +128,33 @@ class MerchantLocationNotifier extends AsyncNotifier<String?> {
       }
       city = resolvedCity;
 
-      // 3. District prioritization
+      // 3. District prioritization based on resolved city
       String resolvedDistrict = '';
-      if (place.subLocality != null && place.subLocality!.isNotEmpty) {
-        resolvedDistrict = place.subLocality!;
-      } else if (place.subAdministrativeArea != null && 
-                 place.subAdministrativeArea!.isNotEmpty && 
-                 resolvedCity.isNotEmpty &&
-                 !place.subAdministrativeArea!.toLowerCase().contains(resolvedCity.toLowerCase())) {
-        resolvedDistrict = place.subAdministrativeArea!;
+      if (city.isNotEmpty) {
+        final districts = kKktcDistricts[city] ?? [];
+        for (final field in [place.subLocality, place.thoroughfare, place.street, place.name]) {
+          if (field != null && field.isNotEmpty) {
+            final fLower = field.toLowerCase();
+            for (final d in districts) {
+              if (fLower.contains(d.toLowerCase()) || d.toLowerCase().contains(fLower)) {
+                resolvedDistrict = d;
+                break;
+              }
+            }
+          }
+          if (resolvedDistrict.isNotEmpty) break;
+        }
+      }
+
+      if (resolvedDistrict.isEmpty) {
+        if (place.subLocality != null && place.subLocality!.isNotEmpty) {
+          resolvedDistrict = place.subLocality!;
+        } else if (place.subAdministrativeArea != null && 
+                   place.subAdministrativeArea!.isNotEmpty && 
+                   resolvedCity.isNotEmpty &&
+                   !place.subAdministrativeArea!.toLowerCase().contains(resolvedCity.toLowerCase())) {
+          resolvedDistrict = place.subAdministrativeArea!;
+        }
       }
       district = resolvedDistrict;
 

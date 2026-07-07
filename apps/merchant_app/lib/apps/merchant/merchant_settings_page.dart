@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -126,6 +127,12 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
       _districtController.text = district;
       _addressController.text = openAddress;
     });
+  }
+
+  double _calculateZoomForRadius(double radiusKm) {
+    if (radiusKm <= 0) return 13.0;
+    final zoom = 14.5 - (math.log(radiusKm) / math.log(2));
+    return zoom.clamp(10.0, 16.0);
   }
 
   String? _getMatchedDistrict(String? city, String districtText) {
@@ -981,13 +988,40 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
             streetAddress = thoroughfareField;
           }
 
+          final Map<String, String> cityMapping = {
+            'nicosia': 'Lefkoşa',
+            'lefkosia': 'Lefkoşa',
+            'kyrenia': 'Girne',
+            'keryneia': 'Girne',
+            'famagusta': 'Gazimağusa',
+            'gazimagusa': 'Gazimağusa',
+            'magusa': 'Gazimağusa',
+            'ammochostos': 'Gazimağusa',
+            'iskele': 'İskele',
+            'trikomo': 'İskele',
+            'güzelyurt': 'Güzelyurt',
+            'guzelyurt': 'Güzelyurt',
+            'morphou': 'Güzelyurt',
+            'lefke': 'Lefke',
+            'lefka': 'Lefke',
+          };
+
           String resolvedCity = '';
           for (final field in [place.locality, place.subAdministrativeArea, place.administrativeArea]) {
             if (field != null && field.isNotEmpty) {
-              for (final kc in _kktcCities) {
-                if (field.toLowerCase().contains(kc.toLowerCase()) || kc.toLowerCase().contains(field.toLowerCase())) {
-                  resolvedCity = kc;
+              final valLower = field.toLowerCase();
+              for (final entry in cityMapping.entries) {
+                if (valLower.contains(entry.key) || entry.key.contains(valLower)) {
+                  resolvedCity = entry.value;
                   break;
+                }
+              }
+              if (resolvedCity.isEmpty) {
+                for (final kc in _kktcCities) {
+                  if (valLower.contains(kc.toLowerCase()) || kc.toLowerCase().contains(valLower)) {
+                    resolvedCity = kc;
+                    break;
+                  }
                 }
               }
             }
@@ -995,13 +1029,31 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
           }
 
           String resolvedDistrict = '';
-          if (place.subLocality != null && place.subLocality!.isNotEmpty) {
-            resolvedDistrict = place.subLocality!;
-          } else if (place.subAdministrativeArea != null && 
-                     place.subAdministrativeArea!.isNotEmpty && 
-                     resolvedCity.isNotEmpty &&
-                     !place.subAdministrativeArea!.toLowerCase().contains(resolvedCity.toLowerCase())) {
-            resolvedDistrict = place.subAdministrativeArea!;
+          if (resolvedCity.isNotEmpty) {
+            final districts = kKktcDistricts[resolvedCity] ?? [];
+            for (final field in [place.subLocality, place.thoroughfare, place.street, place.name]) {
+              if (field != null && field.isNotEmpty) {
+                final fLower = field.toLowerCase();
+                for (final d in districts) {
+                  if (fLower.contains(d.toLowerCase()) || d.toLowerCase().contains(fLower)) {
+                    resolvedDistrict = d;
+                    break;
+                  }
+                }
+              }
+              if (resolvedDistrict.isNotEmpty) break;
+            }
+          }
+
+          if (resolvedDistrict.isEmpty) {
+            if (place.subLocality != null && place.subLocality!.isNotEmpty) {
+              resolvedDistrict = place.subLocality!;
+            } else if (place.subAdministrativeArea != null && 
+                       place.subAdministrativeArea!.isNotEmpty && 
+                       resolvedCity.isNotEmpty &&
+                       !place.subAdministrativeArea!.toLowerCase().contains(resolvedCity.toLowerCase())) {
+              resolvedDistrict = place.subAdministrativeArea!;
+            }
           }
 
           setState(() {
@@ -1279,6 +1331,10 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
                 setState(() {
                   _deliveryRadius = val;
                 });
+                _mapController.move(
+                  LatLng(_latitude ?? 35.1856, _longitude ?? 33.3823),
+                  _calculateZoomForRadius(val),
+                );
               },
             ),
           ] else ...[
