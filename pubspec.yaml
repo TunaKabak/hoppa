@@ -66,6 +66,12 @@ dependencies:
     path: packages/core_auth
   core_network:
     path: packages/core_network
+  core_shared:
+    path: packages/core_shared
+  consumer_app:
+    path: apps/consumer_app
+  merchant_app:
+    path: apps/merchant_app
   flutter_riverpod: ^3.3.1
   shared_preferences: ^2.5.5
   webview_flutter: ^4.14.0
