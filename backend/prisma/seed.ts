@@ -3,10 +3,176 @@ import bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
 
+const richCategories = [
+  // RESTAURANT
+  {
+    name: "Kebaplar & Izgaralar",
+    shopType: "RESTAURANT",
+    children: ["Adana & Urfa", "Dürümler", "Tavuk Şiş", "Karışık Izgara"]
+  },
+  {
+    name: "Pide & Lahmacun",
+    shopType: "RESTAURANT",
+    children: ["Lahmacun", "Kıymalı Pide", "Kaşarlı Pide", "Karışık Pide"]
+  },
+  {
+    name: "Pizza & Fast Food",
+    shopType: "RESTAURANT",
+    children: ["Pizzalar", "Hamburgerler", "Patates Kızartması", "Sandviçler"]
+  },
+  {
+    name: "Ev Yemekleri & Çorbalar",
+    shopType: "RESTAURANT",
+    children: ["Çorbalar", "Zeytinyağlılar", "Ana Yemekler", "Pilav & Makarna"]
+  },
+  {
+    name: "Tatlılar",
+    shopType: "RESTAURANT",
+    children: ["Şerbetli Tatlılar", "Sütlü Tatlılar", "Pastalar"]
+  },
+  {
+    name: "İçecekler",
+    shopType: "RESTAURANT",
+    children: ["Gazlı İçecekler", "Su & Ayran", "Meyve Suları"]
+  },
+
+  // MARKET
+  {
+    name: "Temel Gıda",
+    shopType: "MARKET",
+    children: ["Bakliyat", "Sıvı Yağlar", "Şeker & Tuz", "Un & Makarna"]
+  },
+  {
+    name: "Süt & Kahvaltılık",
+    shopType: "MARKET",
+    children: ["Peynir", "Zeytin", "Yumurta", "Tereyağı & Margarin", "Süt"]
+  },
+  {
+    name: "Atıştırmalık",
+    shopType: "MARKET",
+    children: ["Bisküvi & Kek", "Çikolata & Gofret", "Cips & Kuruyemiş"]
+  },
+  {
+    name: "Fırın",
+    shopType: "MARKET",
+    children: ["Ekmek", "Simit & Poğaça", "Unlu Mamuller"]
+  },
+  {
+    name: "İçecekler",
+    shopType: "MARKET",
+    children: ["Gazlı İçecekler", "Meyve Suları", "Çay & Kahve", "Su & Maden Suyu"]
+  },
+  {
+    name: "Temizlik & Hijyen",
+    shopType: "MARKET",
+    children: ["Deterjanlar", "Kağıt Ürünleri", "Kişisel Bakım"]
+  },
+
+  // GREENGROCER
+  {
+    name: "Sebzeler",
+    shopType: "GREENGROCER",
+    children: ["Yeşillikler", "Patates & Soğan", "Domates & Biber", "Mevsim Sebzeleri"]
+  },
+  {
+    name: "Meyveler",
+    shopType: "GREENGROCER",
+    children: ["Narenciye", "Egzotik Meyveler", "Mevsim Meyveleri"]
+  },
+
+  // BUTCHER
+  {
+    name: "Kırmızı Et",
+    shopType: "BUTCHER",
+    children: ["Dana Eti", "Kuzu Eti", "Kıymalar"]
+  },
+  {
+    name: "Beyaz Et",
+    shopType: "BUTCHER",
+    children: ["Tavuk Eti", "Hindi Eti"]
+  },
+  {
+    name: "Hazır Ürünler",
+    shopType: "BUTCHER",
+    children: ["Mangal Kömürü", "Köfteler", "Marine Etler"]
+  },
+
+  // WATER
+  {
+    name: "Damacana Su",
+    shopType: "WATER",
+    children: ["19L Damacana", "Cam Damacana"]
+  },
+  {
+    name: "Pet Şişe Su",
+    shopType: "WATER",
+    children: ["5L Su", "1.5L Su", "0.5L Su"]
+  },
+
+  // FLOWER
+  {
+    name: "Canlı Çiçekler",
+    shopType: "FLOWER",
+    children: ["Saksı Çiçekleri", "Buketler", "Güller"]
+  },
+  {
+    name: "Yapay Çiçekler & Hediyelikler",
+    shopType: "FLOWER",
+    children: ["Yapay Çiçekler", "Çikolata & Balon"]
+  }
+];
+
+async function seedRichCategories() {
+  console.log("Seeding rich hierarchical categories...");
+  for (const group of richCategories) {
+    let root = await prisma.category.findFirst({
+      where: {
+        name: group.name,
+        shopType: group.shopType,
+        parentId: null
+      }
+    });
+    
+    if (!root) {
+      root = await prisma.category.create({
+        data: {
+          id: require('crypto').randomUUID(),
+          name: group.name,
+          shopType: group.shopType,
+          parentId: null
+        }
+      });
+    }
+    
+    for (const childName of group.children) {
+      const child = await prisma.category.findFirst({
+        where: {
+          name: childName,
+          shopType: group.shopType,
+          parentId: root.id
+        }
+      });
+      
+      if (!child) {
+        await prisma.category.create({
+          data: {
+            id: require('crypto').randomUUID(),
+            name: childName,
+            shopType: group.shopType,
+            parentId: root.id
+          }
+        });
+      }
+    }
+  }
+  console.log("✅ Hierarchical categories seeded successfully.");
+}
+
 async function findCategoryByName(name: string, shopType: string): Promise<string> {
+  // Try to find exact or as prefix (e.g. "Kebaplar" matches "Kebaplar & Izgaralar")
   const cat = await prisma.category.findFirst({
     where: { 
-      name: { equals: name, mode: 'insensitive' },
+      name: { contains: name, mode: 'insensitive' },
       shopType: shopType
     }
   });
@@ -175,6 +341,9 @@ async function main() {
   console.log("Seeding database with Test Users and Shops...");
 
   const passwordHash = await bcrypt.hash("123456", 12);
+
+  // Seed rich categories
+  await seedRichCategories();
 
   // 1. SUPER ADMIN OLUŞTUR (User tablosu)
   const superAdmin = await prisma.user.upsert({

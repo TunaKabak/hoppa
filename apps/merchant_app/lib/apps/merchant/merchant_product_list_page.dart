@@ -4,6 +4,9 @@ import 'package:merchant_app/apps/merchant/merchant_main_layout.dart';
 import 'package:merchant_app/apps/merchant/repositories/merchant_product_repository.dart';
 import 'package:merchant_app/apps/merchant/providers/merchant_api_providers.dart';
 import 'package:merchant_app/apps/merchant/widgets/cascading_category_selector.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:core_shared/shared/core/services/media_service.dart';
+import 'package:core_auth/core_auth.dart';
 
 class MerchantProductListPage extends ConsumerStatefulWidget {
   final String businessId;
@@ -30,6 +33,7 @@ class _MerchantProductListPageState
   List<String> _selectedBrands = [];
   final Set<String> _selectedInventoryIds = {};
   bool _isInventoryActionLoading = false;
+  String _inventoryFilterStatus = 'all';
 
   // --- CATALOG TAB VARIABLIES ---
   final TextEditingController _catalogSearchController =
@@ -58,7 +62,8 @@ class _MerchantProductListPageState
   final _descController = TextEditingController();
   final _initialPriceController = TextEditingController();
   final _initialStockController = TextEditingController();
-  final _weightOrVolumeController = TextEditingController();
+  final _weightOrVolumeAmountController = TextEditingController();
+  String _weightOrVolumeUnit = 'kg';
   final _preparationTimeController = TextEditingController();
   final _depositPriceController = TextEditingController();
   bool _hasDeposit = false;
@@ -67,6 +72,7 @@ class _MerchantProductListPageState
   double _stepSize = 1.0;
   bool _initialTrackStock = false;
   List<Map<String, dynamic>> _customOptionGroups = [];
+  bool _isUploadingProductImage = false;
   final List<String> _units = ["ADET", "KG", "LITRE", "PAKET", "DEMET", "GR"];
 
   @override
@@ -128,7 +134,7 @@ class _MerchantProductListPageState
     _descController.dispose();
     _initialPriceController.dispose();
     _initialStockController.dispose();
-    _weightOrVolumeController.dispose();
+    _weightOrVolumeAmountController.dispose();
     _preparationTimeController.dispose();
     _depositPriceController.dispose();
     _catalogScrollController.dispose();
@@ -446,7 +452,6 @@ class _MerchantProductListPageState
 
   // ===========================================================================
   // TAB 1: ENVANTER (INVENTORY)
-  // ===========================================================================
   Widget _buildInventoryTab() {
     final productsAsync = ref.watch(productControllerProvider);
 
@@ -475,271 +480,340 @@ class _MerchantProductListPageState
           );
         }
 
+        final filteredProducts = products.where((p) {
+          if (_inventoryFilterStatus == 'active') return p.isActive == true;
+          if (_inventoryFilterStatus == 'inactive') return p.isActive == false;
+          return true;
+        }).toList();
+
         return Column(
           children: [
-            // Select All Bar
-            Container(
+            // Filter Bar
+            Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: Colors.grey.shade50,
               child: Row(
                 children: [
-                  Checkbox(
-                    value: _selectedInventoryIds.length == products.length,
-                    onChanged: (val) {
-                      setState(() {
-                        if (val == true) {
-                          _selectedInventoryIds.addAll(
-                            products.map((p) => p.id),
-                          );
-                        } else {
+                  Expanded(
+                    child: SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment(
+                          value: 'all',
+                          label: Text('Tümü'),
+                          icon: Icon(Icons.all_inbox),
+                        ),
+                        ButtonSegment(
+                          value: 'active',
+                          label: Text('Aktifler'),
+                          icon: Icon(Icons.check_circle_outline),
+                        ),
+                        ButtonSegment(
+                          value: 'inactive',
+                          label: Text('Pasifler'),
+                          icon: Icon(Icons.block_outlined),
+                        ),
+                      ],
+                      selected: {_inventoryFilterStatus},
+                      onSelectionChanged: (Set<String> newSelection) {
+                        setState(() {
+                          _inventoryFilterStatus = newSelection.first;
                           _selectedInventoryIds.clear();
-                        }
-                      });
-                    },
-                  ),
-                  const Text(
-                    "Tümünü Seç",
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                        });
+                      },
+                    ),
                   ),
                 ],
               ),
             ),
-            Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.all(12),
-                itemCount: products.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final p = products[index];
-                  final isSelected = _selectedInventoryIds.contains(p.id);
-
-                  return Card(
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(
-                        color: isSelected
-                            ? Colors.green.shade500
-                            : Colors.transparent,
-                        width: 2,
+            const Divider(height: 1),
+            if (filteredProducts.isEmpty)
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.filter_list_off,
+                        size: 48,
+                        color: Colors.grey[300],
                       ),
-                    ),
-                    child: InkWell(
-                      onTap: () {
+                      const SizedBox(height: 12),
+                      const Text(
+                        "Bu filtreye uygun ürün bulunamadı.",
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else ...[
+              // Select All Bar
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                color: Colors.grey.shade50,
+                child: Row(
+                  children: [
+                    Checkbox(
+                      value: filteredProducts.isNotEmpty &&
+                          _selectedInventoryIds.length == filteredProducts.length &&
+                          filteredProducts.every((p) => _selectedInventoryIds.contains(p.id)),
+                      onChanged: (val) {
                         setState(() {
-                          if (isSelected) {
-                            _selectedInventoryIds.remove(p.id);
+                          if (val == true) {
+                            _selectedInventoryIds.addAll(
+                              filteredProducts.map((p) => p.id),
+                            );
                           } else {
-                            _selectedInventoryIds.add(p.id);
+                            for (final p in filteredProducts) {
+                              _selectedInventoryIds.remove(p.id);
+                            }
                           }
                         });
                       },
-                      borderRadius: BorderRadius.circular(12),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Row(
-                          children: [
-                            Checkbox(
-                              value: isSelected,
-                              activeColor: Colors.green.shade500,
-                              onChanged: (val) {
-                                setState(() {
-                                  if (val == true) {
-                                    _selectedInventoryIds.add(p.id);
-                                  } else {
-                                    _selectedInventoryIds.remove(p.id);
-                                  }
-                                });
-                              },
-                            ),
-                            // Product Image
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child:
-                                  (p.imageUrl != null && p.imageUrl!.isNotEmpty)
-                                      ? Image.network(
-                                          p.imageUrl!,
-                                          width: 70,
-                                          height: 70,
-                                          fit: BoxFit.cover,
-                                          errorBuilder:
-                                              (context, error, stackTrace) =>
-                                                  Container(
+                    ),
+                    const Text(
+                      "Tümünü Seç",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: ListView.separated(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: filteredProducts.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final p = filteredProducts[index];
+                    final isSelected = _selectedInventoryIds.contains(p.id);
+
+                    return Card(
+                      elevation: 2,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(
+                          color: isSelected
+                              ? Colors.green.shade500
+                              : Colors.transparent,
+                          width: 2,
+                        ),
+                      ),
+                      child: InkWell(
+                        onTap: () {
+                          setState(() {
+                            if (isSelected) {
+                              _selectedInventoryIds.remove(p.id);
+                            } else {
+                              _selectedInventoryIds.add(p.id);
+                            }
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Row(
+                            children: [
+                              Checkbox(
+                                value: isSelected,
+                                activeColor: Colors.green.shade500,
+                                onChanged: (val) {
+                                  setState(() {
+                                    if (val == true) {
+                                      _selectedInventoryIds.add(p.id);
+                                    } else {
+                                      _selectedInventoryIds.remove(p.id);
+                                    }
+                                  });
+                                },
+                              ),
+                              // Product Image
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child:
+                                    (p.imageUrl != null && p.imageUrl!.isNotEmpty)
+                                        ? Image.network(
+                                            p.imageUrl!,
+                                            width: 70,
+                                            height: 70,
+                                            fit: BoxFit.cover,
+                                            errorBuilder:
+                                                (context, error, stackTrace) =>
+                                                    Container(
+                                              width: 70,
+                                              height: 70,
+                                              color: Colors.grey[200],
+                                              child: const Icon(
+                                                Icons.broken_image,
+                                                color: Colors.grey,
+                                              ),
+                                            ),
+                                          )
+                                        : Container(
                                             width: 70,
                                             height: 70,
                                             color: Colors.grey[200],
                                             child: const Icon(
-                                              Icons.broken_image,
+                                              Icons.image_not_supported,
                                               color: Colors.grey,
                                             ),
                                           ),
-                                        )
-                                      : Container(
-                                          width: 70,
-                                          height: 70,
-                                          color: Colors.grey[200],
-                                          child: const Icon(
-                                            Icons.image_not_supported,
-                                            color: Colors.grey,
-                                          ),
-                                        ),
-                            ),
-                            const SizedBox(width: 12),
+                              ),
+                              const SizedBox(width: 12),
 
-                            // Info & Stock Switch
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    p.name,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 15,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Wrap(
-                                    spacing: 12,
-                                    runSpacing: 8,
-                                    crossAxisAlignment:
-                                        WrapCrossAlignment.center,
-                                    children: [
-                                      // Price Edit Chip
-                                      InkWell(
-                                        onTap: () => _showInlineEditDialog(
-                                          p,
-                                          type: 'price',
-                                          currentValue: p.price,
-                                          title: "Fiyatı Güncelle",
-                                          suffix: "₺",
-                                        ),
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Colors.blue[50],
-                                            borderRadius: BorderRadius.circular(
-                                              6,
-                                            ),
-                                            border: Border.all(
-                                              color: Colors.blue[200]!,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            "${p.price.toStringAsFixed(2)} ₺",
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.blue[800],
-                                              fontSize: 13,
-                                            ),
-                                          ),
-                                        ),
+                              // Info & Stock Switch
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      p.name,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
                                       ),
-                                      // Stock Edit Chip
-                                      InkWell(
-                                        onTap: p.trackStock
-                                            ? () => _showInlineEditDialog(
-                                                  p,
-                                                  type: 'stock',
-                                                  currentValue:
-                                                      (p.stock ?? 0).toDouble(),
-                                                  title: "Stoğu Güncelle",
-                                                  suffix: "Adet",
-                                                )
-                                            : null,
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 4,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Wrap(
+                                      spacing: 12,
+                                      runSpacing: 8,
+                                      crossAxisAlignment:
+                                          WrapCrossAlignment.center,
+                                      children: [
+                                        // Price Edit Chip
+                                        InkWell(
+                                          onTap: () => _showInlineEditDialog(
+                                            p,
+                                            type: 'price',
+                                            currentValue: p.price,
+                                            title: "Fiyatı Güncelle",
+                                            suffix: "₺",
                                           ),
-                                          decoration: BoxDecoration(
-                                            color: p.trackStock
-                                                ? Colors.orange[50]
-                                                : Colors.green[50],
-                                            borderRadius: BorderRadius.circular(
-                                              6,
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 4,
                                             ),
-                                            border: Border.all(
+                                            decoration: BoxDecoration(
+                                              color: Colors.blue[50],
+                                              borderRadius: BorderRadius.circular(
+                                                6,
+                                              ),
+                                              border: Border.all(
+                                                color: Colors.blue[200]!,
+                                              ),
+                                            ),
+                                            child: Text(
+                                              "${p.price.toStringAsFixed(2)} ₺",
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.blue[800],
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        // Stock Edit Chip
+                                        InkWell(
+                                          onTap: p.trackStock
+                                              ? () => _showInlineEditDialog(
+                                                    p,
+                                                    type: 'stock',
+                                                    currentValue:
+                                                        (p.stock ?? 0).toDouble(),
+                                                    title: "Stoğu Güncelle",
+                                                    suffix: "Adet",
+                                                  )
+                                              : null,
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 4,
+                                            ),
+                                            decoration: BoxDecoration(
                                               color: p.trackStock
-                                                  ? Colors.orange[200]!
-                                                  : Colors.green[200]!,
+                                                  ? Colors.orange[50]
+                                                  : Colors.green[50],
+                                              borderRadius: BorderRadius.circular(
+                                                6,
+                                              ),
+                                              border: Border.all(
+                                                color: p.trackStock
+                                                    ? Colors.orange[200]!
+                                                    : Colors.green[200]!,
+                                              ),
+                                            ),
+                                            child: Text(
+                                              p.trackStock
+                                                  ? "Stok: ${p.stock}"
+                                                  : "Stok: Sınırsız",
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                color: p.trackStock
+                                                    ? Colors.orange[800]
+                                                    : Colors.green[800],
+                                                fontSize: 13,
+                                              ),
                                             ),
                                           ),
-                                          child: Text(
-                                            p.trackStock
-                                                ? "Stok: ${p.stock}"
-                                                : "Stok: Sınırsız",
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              color: p.trackStock
-                                                  ? Colors.orange[800]
-                                                  : Colors.green[800],
-                                              fontSize: 13,
-                                            ),
-                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              // Right Side Switches (Availability & Weighed)
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Availability Switch
+                                  Column(
+                                    children: [
+                                      Switch(
+                                        value: p.isActive,
+                                        activeTrackColor: Colors.green,
+                                        onChanged: (val) {
+                                          ref
+                                              .read(
+                                                productControllerProvider
+                                                    .notifier,
+                                              )
+                                              .toggleProductStatus(p.id, val);
+                                        },
+                                      ),
+                                      Text(
+                                        p.isActive ? "Aktif" : "Pasif",
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: p.isActive
+                                              ? Colors.green
+                                              : Colors.grey,
+                                          fontWeight: FontWeight.bold,
                                         ),
                                       ),
                                     ],
                                   ),
+                                  // Tartılı Switch has been removed as the new model does not support it
+                                  const SizedBox(width: 8),
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.edit,
+                                      color: Colors.blue,
+                                    ),
+                                    onPressed: () => _showEditProductDialog(p),
+                                  ),
                                 ],
                               ),
-                            ),
-
-                            // Right Side Switches (Availability & Weighed)
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                // Availability Switch
-                                Column(
-                                  children: [
-                                    Switch(
-                                      value: p.isActive,
-                                      activeTrackColor: Colors.green,
-                                      onChanged: (val) {
-                                        ref
-                                            .read(
-                                              productControllerProvider
-                                                  .notifier,
-                                            )
-                                            .toggleProductStatus(p.id, val);
-                                      },
-                                    ),
-                                    Text(
-                                      p.isActive ? "Aktif" : "Pasif",
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: p.isActive
-                                            ? Colors.green
-                                            : Colors.grey,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                // Tartılı Switch has been removed as the new model does not support it
-                                const SizedBox(width: 8),
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.edit,
-                                    color: Colors.blue,
-                                  ),
-                                  onPressed: () => _showEditProductDialog(p),
-                                ),
-                              ],
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
-            ),
+            ],
           ],
         );
       },
@@ -1120,6 +1194,18 @@ class _MerchantProductListPageState
 
         final shopType = shop.type;
 
+        final products = ref.read(productControllerProvider).value ?? [];
+        final existingBrands = products
+            .map((p) => p.brand)
+            .where((b) => b != null && b.isNotEmpty)
+            .cast<String>()
+            .toSet()
+            .toList();
+        final autocompleteBrands = {
+          ...existingBrands,
+          "Ülker", "Eti", "Nestle", "Coca-Cola", "Fanta", "Sprite", "Pınar", "Sütaş", "Danone", "Lipton", "Knorr", "Filiz", "Barilla", "Doğuş", "Çaykur", "Erikli", "Sırma", "Damla", "Aynes", "Tursil", "Alo", "Ariel", "Fairy", "Finish", "Colgate", "Sensodyne", "Signal", "Ipana", "Duru", "Dove", "Palmolive", "Elidor", "Pantene", "L'Oreal", "Nivea", "Garnier"
+        }.toList();
+
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Form(
@@ -1262,20 +1348,43 @@ class _MerchantProductListPageState
                       ),
                       const SizedBox(width: 16),
                       Expanded(
-                        child: TextFormField(
-                          controller: _brandController,
-                          decoration: InputDecoration(
-                            labelText: shopType == 'MARKET'
-                                ? "Marka (Zorunlu)"
-                                : "Marka (Opsiyonel)",
-                            border: const OutlineInputBorder(),
-                          ),
-                          validator: (v) {
-                            if (shopType == 'MARKET' &&
-                                (v == null || v.isEmpty)) {
-                              return "Zorunlu alan";
+                        child: Autocomplete<String>(
+                          optionsBuilder: (TextEditingValue textEditingValue) {
+                            if (textEditingValue.text.isEmpty) {
+                              return const Iterable<String>.empty();
                             }
-                            return null;
+                            return autocompleteBrands.where((String option) {
+                              return option.toLowerCase().contains(textEditingValue.text.toLowerCase());
+                            });
+                          },
+                          onSelected: (String selection) {
+                            _brandController.text = selection;
+                          },
+                          fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                            if (controller.text.isEmpty && _brandController.text.isNotEmpty) {
+                              controller.text = _brandController.text;
+                            }
+                            controller.addListener(() {
+                              _brandController.text = controller.text;
+                            });
+                            return TextFormField(
+                              controller: controller,
+                              focusNode: focusNode,
+                              onFieldSubmitted: (v) => onFieldSubmitted(),
+                              decoration: InputDecoration(
+                                labelText: shopType == 'MARKET'
+                                    ? "Marka (Zorunlu)"
+                                    : "Marka (Opsiyonel)",
+                                border: const OutlineInputBorder(),
+                              ),
+                              validator: (v) {
+                                if (shopType == 'MARKET' &&
+                                    (v == null || v.isEmpty)) {
+                                  return "Zorunlu alan";
+                                }
+                                return null;
+                              },
+                            );
                           },
                         ),
                       ),
@@ -1306,33 +1415,99 @@ class _MerchantProductListPageState
 
                 // Ağırlık veya Hacim (Restaurant hariç)
                 if (shopType != 'RESTAURANT') ...[
-                  TextFormField(
-                    controller: _weightOrVolumeController,
-                    decoration: const InputDecoration(
-                      labelText: "Ağırlık veya Hacim (Örn: 1.5L, 500g)",
-                      border: OutlineInputBorder(),
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: TextFormField(
+                          controller: _weightOrVolumeAmountController,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          decoration: const InputDecoration(
+                            labelText: "Ağırlık / Hacim Değeri",
+                            hintText: "Örn: 1.5 veya 500",
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          value: _weightOrVolumeUnit,
+                          decoration: const InputDecoration(
+                            labelText: "Birim",
+                            border: OutlineInputBorder(),
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: 'g', child: Text('g')),
+                            DropdownMenuItem(value: 'kg', child: Text('kg')),
+                            DropdownMenuItem(value: 'ml', child: Text('ml')),
+                            DropdownMenuItem(value: 'L', child: Text('L')),
+                            DropdownMenuItem(value: 'adet', child: Text('adet')),
+                          ],
+                          onChanged: (val) {
+                            setState(() {
+                              _weightOrVolumeUnit = val!;
+                            });
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
                 ],
 
-                // Resim URL
-                TextFormField(
-                  controller: _imageUrlController,
-                  decoration: const InputDecoration(
-                    labelText: "Resim URL (Opsiyonel)",
-                    border: OutlineInputBorder(),
-                  ),
+                // Ürün Görseli Seçme ve Yükleme
+                Row(
+                  children: [
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.grey.shade50,
+                      ),
+                      child: _imageUrlController.text.isNotEmpty
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.network(
+                                _imageUrlController.text,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, color: Colors.grey),
+                              ),
+                            )
+                          : const Icon(Icons.add_photo_alternate_outlined, color: Colors.grey, size: 36),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (_isUploadingProductImage)
+                            const CircularProgressIndicator()
+                          else
+                            ElevatedButton.icon(
+                              onPressed: _pickAndUploadProductImage,
+                              icon: const Icon(Icons.upload),
+                              label: const Text("Resim Seç ve Yükle"),
+                            ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _imageUrlController.text.isNotEmpty
+                                ? "Resim başarıyla yüklendi."
+                                : "Galeri veya kameradan ürün resmi yükleyin.",
+                            style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
 
                 // Açıklama
-                TextFormField(
+                MarkdownTextareaField(
                   controller: _descController,
-                  decoration: const InputDecoration(
-                    labelText: "Açıklama (Opsiyonel)",
-                    border: OutlineInputBorder(),
-                  ),
                 ),
                 const SizedBox(height: 16),
 
@@ -1599,6 +1774,52 @@ class _MerchantProductListPageState
         );
       },
     );
+  }
+
+  Future<void> _pickAndUploadProductImage() async {
+    final MediaService mediaService = MediaService(ref.read(apiClientProvider));
+    final file = await mediaService.pickImage(source: ImageSource.gallery);
+    if (file == null) return;
+
+    setState(() {
+      _isUploadingProductImage = true;
+    });
+
+    try {
+      final String? url = await mediaService.uploadImage(
+        file: file,
+        path: '', 
+      );
+
+      if (url != null) {
+        setState(() {
+          _imageUrlController.text = url;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Ürün resmi başarıyla yüklendi!"),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Yükleme hatası: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploadingProductImage = false;
+        });
+      }
+    }
   }
 
   // --- LOGIC METHODS ---
@@ -1986,10 +2207,10 @@ class _MerchantProductListPageState
         payload['stockQuantity'] = _initialTrackStock
             ? (int.tryParse(_initialStockController.text) ?? 0)
             : 0;
-        payload['weightOrVolume'] =
-            _weightOrVolumeController.text.trim().isNotEmpty
-                ? _weightOrVolumeController.text.trim()
-                : null;
+        final weightVal = _weightOrVolumeAmountController.text.trim();
+        final combinedWeightOrVolume = weightVal.isNotEmpty ? "$weightVal$_weightOrVolumeUnit" : null;
+
+        payload['weightOrVolume'] = combinedWeightOrVolume;
       } else if (shopType == 'WATER') {
         payload['barcode'] = _barcodeController.text.trim().isNotEmpty
             ? _barcodeController.text.trim()
@@ -2000,10 +2221,10 @@ class _MerchantProductListPageState
         payload['stockQuantity'] = _initialTrackStock
             ? (int.tryParse(_initialStockController.text) ?? 0)
             : 0;
-        payload['weightOrVolume'] =
-            _weightOrVolumeController.text.trim().isNotEmpty
-                ? _weightOrVolumeController.text.trim()
-                : null;
+        final weightVal = _weightOrVolumeAmountController.text.trim();
+        final combinedWeightOrVolume = weightVal.isNotEmpty ? "$weightVal$_weightOrVolumeUnit" : null;
+
+        payload['weightOrVolume'] = combinedWeightOrVolume;
         payload['hasDeposit'] = _hasDeposit;
         if (_hasDeposit) {
           payload['depositPrice'] =
@@ -2019,10 +2240,10 @@ class _MerchantProductListPageState
         payload['stockQuantity'] = _initialTrackStock
             ? (int.tryParse(_initialStockController.text) ?? 0)
             : 0;
-        payload['weightOrVolume'] =
-            _weightOrVolumeController.text.trim().isNotEmpty
-                ? _weightOrVolumeController.text.trim()
-                : null;
+        final weightVal = _weightOrVolumeAmountController.text.trim();
+        final combinedWeightOrVolume = weightVal.isNotEmpty ? "$weightVal$_weightOrVolumeUnit" : null;
+
+        payload['weightOrVolume'] = combinedWeightOrVolume;
       }
 
       await ref.read(productControllerProvider.notifier).addProduct(payload);
@@ -2044,7 +2265,7 @@ class _MerchantProductListPageState
         _descController.clear();
         _initialPriceController.clear();
         _initialStockController.clear();
-        _weightOrVolumeController.clear();
+        _weightOrVolumeAmountController.clear();
         _preparationTimeController.clear();
         _depositPriceController.clear();
         setState(() {
@@ -2128,9 +2349,26 @@ class _MerchantProductListPageState
     final shopAsync = ref.read(shopControllerProvider);
     final shopType = shopAsync.value?.type ?? 'OTHER';
 
+    final products = ref.read(productControllerProvider).value ?? [];
+    final existingBrands = products
+        .map((p) => p.brand)
+        .where((b) => b != null && b.isNotEmpty)
+        .cast<String>()
+        .toSet()
+        .toList();
+    final autocompleteBrands = {
+      ...existingBrands,
+      "Ülker", "Eti", "Nestle", "Coca-Cola", "Fanta", "Sprite", "Pınar", "Sütaş", "Danone", "Lipton", "Knorr", "Filiz", "Barilla", "Doğuş", "Çaykur", "Erikli", "Sırma", "Damla", "Aynes", "Tursil", "Alo", "Ariel", "Fairy", "Finish", "Colgate", "Sensodyne", "Signal", "Ipana", "Duru", "Dove", "Palmolive", "Elidor", "Pantene", "L'Oreal", "Nivea", "Garnier"
+    }.toList();
+
     final payload = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (ctx) => _EditProductDialog(product: p, shopType: shopType),
+      builder: (ctx) => _EditProductDialog(
+        product: p,
+        shopType: shopType,
+        autocompleteBrands: autocompleteBrands,
+        ref: ref,
+      ),
     );
 
     if (payload != null) {
@@ -2713,11 +2951,15 @@ class _MultiSelectFilterSheetState extends State<_MultiSelectFilterSheet> {
 class _EditProductDialog extends StatefulWidget {
   final MerchantProduct product;
   final String shopType;
+  final List<String> autocompleteBrands;
+  final WidgetRef ref;
 
   const _EditProductDialog({
     Key? key,
     required this.product,
     required this.shopType,
+    required this.autocompleteBrands,
+    required this.ref,
   }) : super(key: key);
 
   @override
@@ -2732,7 +2974,8 @@ class _EditProductDialogState extends State<_EditProductDialog> {
   late TextEditingController _stockController;
   late TextEditingController _barcodeController;
   late TextEditingController _brandController;
-  late TextEditingController _weightOrVolumeController;
+  late TextEditingController _weightOrVolumeAmountController;
+  late String _weightOrVolumeUnit;
   late TextEditingController _prepTimeController;
   late String _selectedUnit;
   late double _minQuantity;
@@ -2741,6 +2984,8 @@ class _EditProductDialogState extends State<_EditProductDialog> {
   String? _selectedCategoryId;
   String _selectedCategoryName = "";
   late List<Map<String, dynamic>> _dialogOptionGroups;
+  String? _imageUrl;
+  bool _isUploadingImage = false;
 
   final List<String> _units = ["ADET", "KG", "LITRE", "PAKET", "DEMET", "GR"];
 
@@ -2761,9 +3006,11 @@ class _EditProductDialogState extends State<_EditProductDialog> {
       text: widget.product.barcode ?? '',
     );
     _brandController = TextEditingController(text: widget.product.brand ?? '');
-    _weightOrVolumeController = TextEditingController(
-      text: widget.product.weightOrVolume ?? '',
-    );
+    
+    final parsed = _parseWeightOrVolume(widget.product.weightOrVolume);
+    _weightOrVolumeAmountController = TextEditingController(text: parsed['amount']);
+    _weightOrVolumeUnit = parsed['unit'] ?? 'kg';
+
     _prepTimeController = TextEditingController(
       text: (widget.product.preparationTime ?? 0).toString(),
     );
@@ -2790,6 +3037,22 @@ class _EditProductDialogState extends State<_EditProductDialog> {
           },
         )
         .toList();
+    _imageUrl = widget.product.imageUrl;
+  }
+
+  Map<String, String> _parseWeightOrVolume(String? value) {
+    if (value == null || value.isEmpty) {
+      return {'amount': '', 'unit': 'kg'};
+    }
+    final regex = RegExp(r'^([\d\.]+)\s*([a-zA-ZğüşöçıİĞÜŞÖÇ]+)$');
+    final match = regex.firstMatch(value.trim());
+    if (match != null && match.groupCount == 2) {
+      return {
+        'amount': match.group(1) ?? '',
+        'unit': match.group(2) ?? 'kg',
+      };
+    }
+    return {'amount': value, 'unit': 'kg'};
   }
 
   @override
@@ -2800,9 +3063,55 @@ class _EditProductDialogState extends State<_EditProductDialog> {
     _stockController.dispose();
     _barcodeController.dispose();
     _brandController.dispose();
-    _weightOrVolumeController.dispose();
+    _weightOrVolumeAmountController.dispose();
     _prepTimeController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickAndUploadImage() async {
+    final MediaService mediaService = MediaService(widget.ref.read(apiClientProvider));
+    final file = await mediaService.pickImage(source: ImageSource.gallery);
+    if (file == null) return;
+
+    setState(() {
+      _isUploadingImage = true;
+    });
+
+    try {
+      final String? url = await mediaService.uploadImage(
+        file: file,
+        path: '', 
+      );
+
+      if (url != null) {
+        setState(() {
+          _imageUrl = url;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Ürün resmi başarıyla yüklendi!"),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Yükleme hatası: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploadingImage = false;
+        });
+      }
+    }
   }
 
   @override
@@ -2835,12 +3144,56 @@ class _EditProductDialogState extends State<_EditProductDialog> {
                       (v == null || v.isEmpty) ? "Zorunlu alan" : null,
                 ),
                 const SizedBox(height: 12),
-                TextFormField(
+                // Ürün Görseli Düzenleme
+                Row(
+                  children: [
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.grey.shade50,
+                      ),
+                      child: _imageUrl != null && _imageUrl!.isNotEmpty
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                _imageUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, color: Colors.grey),
+                              ),
+                            )
+                          : const Icon(Icons.add_photo_alternate_outlined, color: Colors.grey, size: 28),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (_isUploadingImage)
+                            const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          else
+                            ElevatedButton.icon(
+                              onPressed: _pickAndUploadImage,
+                              icon: const Icon(Icons.upload, size: 16),
+                              label: const Text("Resim Seç ve Yükle", style: TextStyle(fontSize: 12)),
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                MarkdownTextareaField(
                   controller: _descController,
-                  decoration: const InputDecoration(
-                    labelText: "Açıklama (Opsiyonel)",
-                    border: OutlineInputBorder(),
-                  ),
                 ),
                 const SizedBox(height: 12),
                 CascadingCategorySelector(
@@ -2933,30 +3286,85 @@ class _EditProductDialogState extends State<_EditProductDialog> {
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: TextFormField(
-                          controller: _brandController,
-                          decoration: InputDecoration(
-                            labelText: isMarket
-                                ? "Marka (Zorunlu)"
-                                : "Marka (Opsiyonel)",
-                            border: const OutlineInputBorder(),
-                          ),
-                          validator: (v) {
-                            if (isMarket && (v == null || v.isEmpty))
-                              return "Zorunlu alan";
-                            return null;
+                        child: Autocomplete<String>(
+                          optionsBuilder: (TextEditingValue textEditingValue) {
+                            if (textEditingValue.text.isEmpty) {
+                              return const Iterable<String>.empty();
+                            }
+                            return widget.autocompleteBrands.where((String option) {
+                              return option.toLowerCase().contains(textEditingValue.text.toLowerCase());
+                            });
+                          },
+                          onSelected: (String selection) {
+                            _brandController.text = selection;
+                          },
+                          fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                            if (controller.text.isEmpty && _brandController.text.isNotEmpty) {
+                              controller.text = _brandController.text;
+                            }
+                            controller.addListener(() {
+                              _brandController.text = controller.text;
+                            });
+                            return TextFormField(
+                              controller: controller,
+                              focusNode: focusNode,
+                              onFieldSubmitted: (v) => onFieldSubmitted(),
+                              decoration: InputDecoration(
+                                labelText: isMarket
+                                    ? "Marka (Zorunlu)"
+                                    : "Marka (Opsiyonel)",
+                                border: const OutlineInputBorder(),
+                              ),
+                              validator: (v) {
+                                if (isMarket && (v == null || v.isEmpty)) {
+                                  return "Zorunlu alan";
+                                }
+                                return null;
+                              },
+                            );
                           },
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _weightOrVolumeController,
-                    decoration: const InputDecoration(
-                      labelText: "Ağırlık veya Hacim (Örn: 1.5L, 500g)",
-                      border: OutlineInputBorder(),
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: TextFormField(
+                          controller: _weightOrVolumeAmountController,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          decoration: const InputDecoration(
+                            labelText: "Ağırlık / Hacim Değeri",
+                            hintText: "Örn: 1.5 veya 500",
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          value: _weightOrVolumeUnit,
+                          decoration: const InputDecoration(
+                            labelText: "Birim",
+                            border: OutlineInputBorder(),
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: 'g', child: Text('g')),
+                            DropdownMenuItem(value: 'kg', child: Text('kg')),
+                            DropdownMenuItem(value: 'ml', child: Text('ml')),
+                            DropdownMenuItem(value: 'L', child: Text('L')),
+                            DropdownMenuItem(value: 'adet', child: Text('adet')),
+                          ],
+                          onChanged: (val) {
+                            setState(() {
+                              _weightOrVolumeUnit = val!;
+                            });
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
                 ],
@@ -3133,6 +3541,7 @@ class _EditProductDialogState extends State<_EditProductDialog> {
             if (!_formKey.currentState!.validate()) return;
             final payload = <String, dynamic>{
               'name': _nameController.text.trim(),
+              'imageUrl': _imageUrl,
               'description': _descController.text.trim(),
               'price': double.tryParse(_priceController.text) ?? 0.0,
               'stock': _trackStock
@@ -3163,10 +3572,10 @@ class _EditProductDialogState extends State<_EditProductDialog> {
                   : null;
               payload['stockQuantity'] =
                   _trackStock ? (int.tryParse(_stockController.text) ?? 0) : 0;
-              payload['weightOrVolume'] =
-                  _weightOrVolumeController.text.trim().isNotEmpty
-                      ? _weightOrVolumeController.text.trim()
-                      : null;
+              final weightVal = _weightOrVolumeAmountController.text.trim();
+              payload['weightOrVolume'] = weightVal.isNotEmpty
+                  ? "$weightVal$_weightOrVolumeUnit"
+                  : null;
             } else {
               payload['preparationTime'] =
                   int.tryParse(_prepTimeController.text) ?? 0;
@@ -3495,6 +3904,105 @@ class _EditProductDialogState extends State<_EditProductDialog> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class MarkdownTextareaField extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+
+  const MarkdownTextareaField({
+    Key? key,
+    required this.controller,
+    this.label = "Açıklama (Opsiyonel)",
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.format_bold, size: 20),
+                onPressed: () {
+                  final text = controller.text;
+                  final selection = controller.selection;
+                  if (selection.isValid && !selection.isCollapsed) {
+                    final selectedText = text.substring(selection.start, selection.end);
+                    final newText = text.replaceRange(selection.start, selection.end, '**$selectedText**');
+                    controller.text = newText;
+                    controller.selection = TextSelection.collapsed(offset: selection.start + 2);
+                  } else {
+                    final cursorPosition = selection.baseOffset >= 0 ? selection.baseOffset : text.length;
+                    final newText = text.replaceRange(cursorPosition, cursorPosition, '****');
+                    controller.text = newText;
+                    controller.selection = TextSelection.collapsed(offset: cursorPosition + 2);
+                  }
+                },
+                tooltip: "Kalın",
+                constraints: const BoxConstraints(),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+              IconButton(
+                icon: const Icon(Icons.format_italic, size: 20),
+                onPressed: () {
+                  final text = controller.text;
+                  final selection = controller.selection;
+                  if (selection.isValid && !selection.isCollapsed) {
+                    final selectedText = text.substring(selection.start, selection.end);
+                    final newText = text.replaceRange(selection.start, selection.end, '*$selectedText*');
+                    controller.text = newText;
+                    controller.selection = TextSelection.collapsed(offset: selection.start + 1);
+                  } else {
+                    final cursorPosition = selection.baseOffset >= 0 ? selection.baseOffset : text.length;
+                    final newText = text.replaceRange(cursorPosition, cursorPosition, '**');
+                    controller.text = newText;
+                    controller.selection = TextSelection.collapsed(offset: cursorPosition + 1);
+                  }
+                },
+                tooltip: "İtalik",
+                constraints: const BoxConstraints(),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+              IconButton(
+                icon: const Icon(Icons.format_list_bulleted, size: 20),
+                onPressed: () {
+                  final text = controller.text;
+                  final selection = controller.selection;
+                  final cursorPosition = selection.isValid && selection.baseOffset >= 0 ? selection.baseOffset : text.length;
+                  final newText = text.replaceRange(cursorPosition, cursorPosition, '\n- ');
+                  controller.text = newText;
+                  controller.selection = TextSelection.collapsed(offset: cursorPosition + 4);
+                },
+                tooltip: "Liste",
+                constraints: const BoxConstraints(),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+            ],
+          ),
+        ),
+        TextFormField(
+          controller: controller,
+          maxLines: 4,
+          keyboardType: TextInputType.multiline,
+          decoration: InputDecoration(
+            labelText: label,
+            border: const OutlineInputBorder(
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(8)),
+            ),
+            alignLabelWithHint: true,
+          ),
+        ),
+      ],
     );
   }
 }

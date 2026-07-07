@@ -73,13 +73,14 @@ Hoppa projesinde görevler, etki alanına göre aşağıdaki agent rollerine ata
   * Farklı ekran çözünürlükleri için responsive uyumluluk testleri.
 
 ### 2.6. 🔍 Planner & Analyzer Agent (Analiz ve Planlama Temsilcisi)
-* **Sorumluluk Alanı:** Yeni gelen geliştirme isteklerinin, hata raporlarının analizi, etki analizi (impact analysis), bağımlılıkların tespiti ve uygulama planının hazırlanması.
+* **Sorumluluk Alanı:** Yeni gelen geliştirme isteklerinin, hata raporlarının analizi, etki analizi (impact analysis), bağımlılıkların tespiti, teknik tasarım hazırlanması ve uygulama planının planlanması.
 * **Standartlar:**
   * Kod değişikliği yapmadan önce mutlaka ilgili dosyaları aramak ve mimari bağımlılıkları incelemek.
   * Görevi mantıksal, küçük ve doğrulanabilir adımlara bölmek.
+  * Göreve başlamadan önce `stories/` dizini altında sıralı bir hikaye dosyası (`story_<StoryNo>_<Açıklama>.md`) oluşturarak teknik tasarımı, veritabanı şeması ve akış şemalarını orada belgelemek.
   * Kullanıcıya sunulacak detaylı bir uygulama planı (`implementation_plan.md`) taslağı hazırlamak.
 * **Doğrulama Protokolü:**
-  * Uygulama planının ve görev adımlarının kullanıcı tarafından onaylanması.
+  * Hikaye (`story_<StoryNo>_...md`) dosyasının ve uygulama planının kullanıcı tarafından onaylanması.
   * Plan onaylandıktan sonra bir yapılacaklar listesi (`task.md`) oluşturulması.
 
 ---

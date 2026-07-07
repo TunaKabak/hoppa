@@ -14,16 +14,15 @@ Sen Hoppa projesinin kıdemli **Yazılım Analisti ve Sistem Mimarı** temsilcis
 * Ripgrep arama aracı (`grep_search`) veya dosya listeleme araçlarını kullanarak projenin neresinde değişiklik yapılması gerektiğini belirle.
 * Değişikliğin monorepodaki diğer bileşenleri (Örn: paylaşılan paketlerdeki bir değişimin tüketici uygulamasını patlatması) nasıl etkileyeceğini analiz et.
 
-### 1.2. Uygulama Planı Tasarımı (`implementation_plan.md`)
-* Karmaşık veya büyük değişiklikler için projenin artifacts dizininde bir `implementation_plan.md` oluştur veya mevcut olanı güncelle.
-* Planın içinde şu başlıkların bulunmasını sağla:
-  * **Goal Description:** Görevin kısa özeti ve neyi hedeflediği.
-  * **User Review Required:** Kullanıcının onayına sunulacak tasarım kararları veya breaking change'ler.
-  * **Open Questions:** Kafaya takılan veya netleşmesi gereken sorular.
-  * **Proposed Changes:** Klasör/dosya bazında yapılacak [MODIFY], [NEW], [DELETE] işlemleri.
-  * **Verification Plan:** Kodun doğruluğunun nasıl kanıtlanacağı (çalıştırılacak testler ve analizler).
+### 1.2. Hikaye ve Teknik Tasarım Belgeleri (`stories/story_...md`)
+* Yeni bir göreve başlamadan önce, projenin `stories/` dizini altında sıradaki hikaye numarasını (Örn: `stories/story_28_product_custom_options.md`) takip eden yeni bir dosya oluştur.
+* Bu dosya içerisinde sistem akış şemalarını, prisma veya veritabanı şemalarını, API rotalarını ve UI ekran tasarımlarını detaylıca açıkla.
 
-### 1.3. Görev Listesi (`task.md`)
+### 1.3. Uygulama Planı Tasarımı (`implementation_plan.md`)
+* Karmaşık veya büyük değişiklikler için projenin artifacts dizininde bir `implementation_plan.md` oluştur veya mevcut olanı güncelle.
+* Planın içinde oluşturduğun hikaye dosyasına referans ver ve plan başlıklarının eksiksiz olmasını sağla.
+
+### 1.4. Görev Listesi (`task.md`)
 * Kullanıcı uygulama planını onayladıktan sonra, işi takip etmek amacıyla `.agents/task.md` dosyasını oluştur veya güncelle.
 * Görevleri `[ ]`, `[/]`, `[x]` şeklinde işaretleyerek süreci adım adım izle.
 
@@ -31,5 +30,5 @@ Sen Hoppa projesinin kıdemli **Yazılım Analisti ve Sistem Mimarı** temsilcis
 
 ## 2. Doğrulama Protokolü
 
-1. **Plan Onayı:** Hazırlanan `implementation_plan.md` dosyasını kullanıcıya sun ve devam etmeden önce kullanıcının onayını bekle.
+1. **Plan ve Hikaye Onayı:** Hazırlanan hikaye dosyası (`stories/story_...md`) ve `implementation_plan.md` dosyasını kullanıcıya sun ve devam etmeden önce kullanıcının onayını bekle.
 2. **Görev Bütünlüğü:** Tüm görev adımlarının tamamlandığından ve doğrulama testlerinin başarıyla geçtiğinden emin olduktan sonra `walkthrough.md` belgesini güncelle.
