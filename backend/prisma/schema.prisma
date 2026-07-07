@@ -36,6 +36,13 @@ model User {
   favoriteProducts FavoriteProduct[]
   favoriteShops    FavoriteShop[]
   reviews          Review[]
+  courier          Courier?
+}
+
+enum Role {
+  CONSUMER
+  MERCHANT
+  COURIER
 }
 
 
@@ -439,21 +446,23 @@ model DeviceToken {
 
 model Courier {
   id           String           @id @default(uuid())
+  userId       String           @unique
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   name         String
   phoneNumber  String           @unique
   vehiclePlate String?
-  isActive     Boolean          @default(true)
+  isActive     Boolean          @default(true) // Nöbette mi? (On Duty)
   locations    CourierLocation[]
   orders       Order[]
 }
 
 model CourierLocation {
   id        String   @id @default(uuid())
-  courierId String   @unique
+  courierId String
   courier   Courier  @relation(fields: [courierId], references: [id], onDelete: Cascade)
   latitude  Float
   longitude Float
-  bearing   Float    @default(0.0)
+  bearing   Float    @default(0.0) // Motorun gidiş açısı θ
   updatedAt DateTime @updatedAt
 
   @@index([courierId])

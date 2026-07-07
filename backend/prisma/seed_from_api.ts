@@ -242,10 +242,24 @@ async function main() {
   console.log("✅ Ölçü Birimleri Oluşturuldu.");
 
   // 9. KURYEYİ OLUŞTUR
+  const courierUser = await prisma.user.upsert({
+    where: { phone: "+905555555555" },
+    update: { role: "courier" },
+    create: {
+      phone: "+905555555555",
+      role: "courier",
+      name: "Süleyman",
+      surname: "Kurye",
+    },
+  });
+
   const defaultCourier = await prisma.courier.upsert({
     where: { phoneNumber: "+905555555555" },
-    update: {},
+    update: {
+      userId: courierUser.id,
+    },
     create: {
+      userId: courierUser.id,
       name: "Süleyman Kurye",
       phoneNumber: "+905555555555",
       vehiclePlate: "34 HO 9999",
