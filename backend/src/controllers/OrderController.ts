@@ -487,8 +487,22 @@ export class OrderController {
       if (upperStatus === "ON_THE_WAY") {
         let courier = await prisma.courier.findFirst();
         if (!courier) {
+          let courierUser = await prisma.user.findUnique({
+            where: { phone: "+905555555555" }
+          });
+          if (!courierUser) {
+            courierUser = await prisma.user.create({
+              data: {
+                phone: "+905555555555",
+                role: "courier",
+                name: "Süleyman",
+                surname: "Kurye"
+              }
+            });
+          }
           courier = await prisma.courier.create({
             data: {
+              userId: courierUser.id,
               name: "Süleyman Kurye",
               phoneNumber: "+905555555555",
               vehiclePlate: "34 HO 9999",
