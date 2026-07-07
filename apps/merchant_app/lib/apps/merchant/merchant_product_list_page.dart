@@ -168,12 +168,12 @@ class _MerchantProductListPageState
           _buildCustomProductTab(),
         ],
       ),
-      bottomNavigationBar:
-          _tabController.index == 0 && _selectedInventoryIds.isNotEmpty
+      bottomNavigationBar: _tabController.index == 0 &&
+              _selectedInventoryIds.isNotEmpty
           ? _buildBulkActionBar()
           : _tabController.index == 1 && _selectedCatalogProductIds.isNotEmpty
-          ? _buildCatalogBulkActionBar()
-          : null,
+              ? _buildCatalogBulkActionBar()
+              : null,
     );
   }
 
@@ -557,32 +557,32 @@ class _MerchantProductListPageState
                               borderRadius: BorderRadius.circular(8),
                               child:
                                   (p.imageUrl != null && p.imageUrl!.isNotEmpty)
-                                  ? Image.network(
-                                      p.imageUrl!,
-                                      width: 70,
-                                      height: 70,
-                                      fit: BoxFit.cover,
-                                      errorBuilder:
-                                          (context, error, stackTrace) =>
-                                              Container(
-                                                width: 70,
-                                                height: 70,
-                                                color: Colors.grey[200],
-                                                child: const Icon(
-                                                  Icons.broken_image,
-                                                  color: Colors.grey,
-                                                ),
-                                              ),
-                                    )
-                                  : Container(
-                                      width: 70,
-                                      height: 70,
-                                      color: Colors.grey[200],
-                                      child: const Icon(
-                                        Icons.image_not_supported,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
+                                      ? Image.network(
+                                          p.imageUrl!,
+                                          width: 70,
+                                          height: 70,
+                                          fit: BoxFit.cover,
+                                          errorBuilder:
+                                              (context, error, stackTrace) =>
+                                                  Container(
+                                            width: 70,
+                                            height: 70,
+                                            color: Colors.grey[200],
+                                            child: const Icon(
+                                              Icons.broken_image,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                        )
+                                      : Container(
+                                          width: 70,
+                                          height: 70,
+                                          color: Colors.grey[200],
+                                          child: const Icon(
+                                            Icons.image_not_supported,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
                             ),
                             const SizedBox(width: 12),
 
@@ -644,13 +644,13 @@ class _MerchantProductListPageState
                                       InkWell(
                                         onTap: p.trackStock
                                             ? () => _showInlineEditDialog(
-                                                p,
-                                                type: 'stock',
-                                                currentValue: (p.stock ?? 0)
-                                                    .toDouble(),
-                                                title: "Stoğu Güncelle",
-                                                suffix: "Adet",
-                                              )
+                                                  p,
+                                                  type: 'stock',
+                                                  currentValue:
+                                                      (p.stock ?? 0).toDouble(),
+                                                  title: "Stoğu Güncelle",
+                                                  suffix: "Adet",
+                                                )
                                             : null,
                                         child: Container(
                                           padding: const EdgeInsets.symmetric(
@@ -882,161 +882,153 @@ class _MerchantProductListPageState
           child: _isCatalogLoading
               ? const Center(child: CircularProgressIndicator())
               : _catalogSearchResults.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.search_off, size: 64, color: Colors.grey[300]),
-                      const SizedBox(height: 16),
-                      const Text(
-                        "Ürün bulunamadı veya arama yapılmadı.",
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                )
-              : Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 4,
-                      ),
-                      child: Row(
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Checkbox(
-                            value: _catalogSearchResults.every(
-                              (p) => _selectedCatalogProductIds.contains(p.id),
-                            ),
-                            activeColor: Colors.green.shade500,
-                            tristate: true,
-                            onChanged: (val) {
-                              setState(() {
-                                if (val == true) {
-                                  _selectedCatalogProductIds.addAll(
-                                    _catalogSearchResults.map((p) => p.id),
-                                  );
-                                } else {
-                                  _selectedCatalogProductIds.removeAll(
-                                    _catalogSearchResults.map((p) => p.id),
-                                  );
-                                }
-                              });
-                            },
-                          ),
-                          const SizedBox(width: 8),
+                          Icon(Icons.search_off,
+                              size: 64, color: Colors.grey[300]),
+                          const SizedBox(height: 16),
                           const Text(
-                            "Tümünü Seç / Tümünü Kaldır",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            "${_selectedCatalogProductIds.length} Ürün Seçildi",
-                            style: TextStyle(
-                              color: Colors.green.shade700,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            "Ürün bulunamadı veya arama yapılmadı.",
+                            style: TextStyle(color: Colors.grey),
                           ),
                         ],
                       ),
-                    ),
-                    const Divider(height: 1),
-                    Expanded(
-                      child: ListView.separated(
-                        controller: _catalogScrollController,
-                        padding: const EdgeInsets.all(12),
-<<<<<<< HEAD:lib/apps/merchant/merchant_product_list_page.dart
-                        itemCount:
-                            _catalogSearchResults.length +
-                            (_hasMoreCatalogItems ? 1 : 0),
-                        separatorBuilder: (_, _) => const SizedBox(height: 12),
-                        itemBuilder: (context, index) {
-                          if (index == _catalogSearchResults.length) {
-                            return const Padding(
-                              padding: EdgeInsets.all(16.0),
-                              child: Center(child: CircularProgressIndicator()),
-                            );
-                          }
-                          final product = _catalogSearchResults[index];
-                          final isSelected = _selectedCatalogProductIds
-                              .contains(product.id);
-=======
-                        itemCount: _catalogSearchResults.length + (_hasMoreCatalogItems ? 1 : 0),
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    if (index == _catalogSearchResults.length) {
-                      return const Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: Center(child: CircularProgressIndicator()),
-                      );
-                    }
-                    final product = _catalogSearchResults[index];
-                    final isSelected = _selectedCatalogProductIds.contains(product.id);
->>>>>>> 9861256d52524af920e5323a647fba2c63d41cb3:apps/merchant_app/lib/apps/merchant/merchant_product_list_page.dart
-
-                          return Card(
-                            elevation: 2,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: BorderSide(
-                                color: isSelected
-                                    ? Colors.green.shade500
-                                    : Colors.transparent,
-                                width: 2,
+                    )
+                  : Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 4,
+                          ),
+                          child: Row(
+                            children: [
+                              Checkbox(
+                                value: _catalogSearchResults.every(
+                                  (p) =>
+                                      _selectedCatalogProductIds.contains(p.id),
+                                ),
+                                activeColor: Colors.green.shade500,
+                                tristate: true,
+                                onChanged: (val) {
+                                  setState(() {
+                                    if (val == true) {
+                                      _selectedCatalogProductIds.addAll(
+                                        _catalogSearchResults.map((p) => p.id),
+                                      );
+                                    } else {
+                                      _selectedCatalogProductIds.removeAll(
+                                        _catalogSearchResults.map((p) => p.id),
+                                      );
+                                    }
+                                  });
+                                },
                               ),
-                            ),
-                            child: InkWell(
-                              onTap: () {
-                                setState(() {
-                                  if (isSelected) {
-                                    _selectedCatalogProductIds.remove(
-                                      product.id,
-                                    );
-                                  } else {
-                                    _selectedCatalogProductIds.add(product.id);
-                                  }
-                                });
-                              },
-                              borderRadius: BorderRadius.circular(12),
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Row(
-                                  children: [
-                                    Checkbox(
-                                      value: isSelected,
-                                      activeColor: Colors.green.shade500,
-                                      onChanged: (val) {
-                                        setState(() {
-                                          if (val == true) {
-                                            _selectedCatalogProductIds.add(
-                                              product.id,
-                                            );
-                                          } else {
-                                            _selectedCatalogProductIds.remove(
-                                              product.id,
-                                            );
-                                          }
-                                        });
-                                      },
-                                    ),
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: (product.imageUrl.isNotEmpty)
-                                          ? Image.network(
-                                              product.imageUrl,
-                                              width: 60,
-                                              height: 60,
-                                              fit: BoxFit.cover,
-                                              errorBuilder:
-                                                  (
+                              const SizedBox(width: 8),
+                              const Text(
+                                "Tümünü Seç / Tümünü Kaldır",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              const Spacer(),
+                              Text(
+                                "${_selectedCatalogProductIds.length} Ürün Seçildi",
+                                style: TextStyle(
+                                  color: Colors.green.shade700,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Divider(height: 1),
+                        Expanded(
+                          child: ListView.separated(
+                            controller: _catalogScrollController,
+                            padding: const EdgeInsets.all(12),
+                            itemCount: _catalogSearchResults.length +
+                                (_hasMoreCatalogItems ? 1 : 0),
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: 12),
+                            itemBuilder: (context, index) {
+                              if (index == _catalogSearchResults.length) {
+                                return const Padding(
+                                  padding: EdgeInsets.all(16.0),
+                                  child: Center(
+                                      child: CircularProgressIndicator()),
+                                );
+                              }
+                              final product = _catalogSearchResults[index];
+                              final isSelected = _selectedCatalogProductIds
+                                  .contains(product.id);
+
+                              return Card(
+                                elevation: 2,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  side: BorderSide(
+                                    color: isSelected
+                                        ? Colors.green.shade500
+                                        : Colors.transparent,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      if (isSelected) {
+                                        _selectedCatalogProductIds.remove(
+                                          product.id,
+                                        );
+                                      } else {
+                                        _selectedCatalogProductIds
+                                            .add(product.id);
+                                      }
+                                    });
+                                  },
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Row(
+                                      children: [
+                                        Checkbox(
+                                          value: isSelected,
+                                          activeColor: Colors.green.shade500,
+                                          onChanged: (val) {
+                                            setState(() {
+                                              if (val == true) {
+                                                _selectedCatalogProductIds.add(
+                                                  product.id,
+                                                );
+                                              } else {
+                                                _selectedCatalogProductIds
+                                                    .remove(
+                                                  product.id,
+                                                );
+                                              }
+                                            });
+                                          },
+                                        ),
+                                        ClipRRect(
+                                          borderRadius:
+                                              BorderRadius.circular(8),
+                                          child: (product.imageUrl.isNotEmpty)
+                                              ? Image.network(
+                                                  product.imageUrl,
+                                                  width: 60,
+                                                  height: 60,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (
                                                     context,
                                                     error,
                                                     stackTrace,
-                                                  ) => Container(
+                                                  ) =>
+                                                      Container(
                                                     width: 60,
                                                     height: 60,
                                                     color: Colors.grey[200],
@@ -1045,51 +1037,51 @@ class _MerchantProductListPageState
                                                       color: Colors.grey,
                                                     ),
                                                   ),
-                                            )
-                                          : Container(
-                                              width: 60,
-                                              height: 60,
-                                              color: Colors.grey[200],
-                                              child: const Icon(
-                                                Icons.image_not_supported,
-                                                color: Colors.grey,
+                                                )
+                                              : Container(
+                                                  width: 60,
+                                                  height: 60,
+                                                  color: Colors.grey[200],
+                                                  child: const Icon(
+                                                    Icons.image_not_supported,
+                                                    color: Colors.grey,
+                                                  ),
+                                                ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                product.name,
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 14,
+                                                ),
                                               ),
-                                            ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            product.name,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 14,
-                                            ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                "${product.brand} • ${product.category}",
+                                                style: TextStyle(
+                                                  color: Colors.grey.shade600,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            "${product.brand} • ${product.category}",
-                                            style: TextStyle(
-                                              color: Colors.grey.shade600,
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
+                                        ),
+                                      ],
                                     ),
-                                  ],
+                                  ),
                                 ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
         ),
       ],
     );
@@ -1388,8 +1380,8 @@ class _MerchantProductListPageState
                 Text(
                   "Miktar ve Satış Birimi Ayarları",
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
                 const SizedBox(height: 16),
 
@@ -1434,7 +1426,9 @@ class _MerchantProductListPageState
                           Expanded(
                             child: Text(
                               "Minimum Sipariş Miktarı:",
-                              style: Theme.of(context).textTheme.bodyMedium
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
                                   ?.copyWith(fontWeight: FontWeight.bold),
                             ),
                           ),
@@ -1467,7 +1461,9 @@ class _MerchantProductListPageState
                           Expanded(
                             child: Text(
                               "Miktar Artış Adımı (Step):",
-                              style: Theme.of(context).textTheme.bodyMedium
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
                                   ?.copyWith(fontWeight: FontWeight.bold),
                             ),
                           ),
@@ -1512,8 +1508,7 @@ class _MerchantProductListPageState
                       ),
                     ],
                   ),
-                  crossFadeState:
-                      (_selectedUnit == "KG" ||
+                  crossFadeState: (_selectedUnit == "KG" ||
                           _selectedUnit == "LITRE" ||
                           _selectedUnit == "GR")
                       ? CrossFadeState.showSecond
@@ -1756,9 +1751,8 @@ class _MerchantProductListPageState
                     if (!dialogFormKey.currentState!.validate()) return;
 
                     final price = double.parse(priceController.text);
-                    final stock = trackStock
-                        ? int.parse(stockController.text)
-                        : null;
+                    final stock =
+                        trackStock ? int.parse(stockController.text) : null;
 
                     Navigator.pop(ctx); // Close dialog
 
@@ -1970,14 +1964,12 @@ class _MerchantProductListPageState
         'categoryId': _selectedCategoryId,
         'categoryName': _categoryController.text.trim(),
         'unit': _selectedUnit,
-        'minQuantity':
-            (_selectedUnit == "KG" ||
+        'minQuantity': (_selectedUnit == "KG" ||
                 _selectedUnit == "LITRE" ||
                 _selectedUnit == "GR")
             ? _minQuantity
             : 1.0,
-        'stepSize':
-            (_selectedUnit == "KG" ||
+        'stepSize': (_selectedUnit == "KG" ||
                 _selectedUnit == "LITRE" ||
                 _selectedUnit == "GR")
             ? _stepSize
@@ -1996,8 +1988,8 @@ class _MerchantProductListPageState
             : 0;
         payload['weightOrVolume'] =
             _weightOrVolumeController.text.trim().isNotEmpty
-            ? _weightOrVolumeController.text.trim()
-            : null;
+                ? _weightOrVolumeController.text.trim()
+                : null;
       } else if (shopType == 'WATER') {
         payload['barcode'] = _barcodeController.text.trim().isNotEmpty
             ? _barcodeController.text.trim()
@@ -2010,8 +2002,8 @@ class _MerchantProductListPageState
             : 0;
         payload['weightOrVolume'] =
             _weightOrVolumeController.text.trim().isNotEmpty
-            ? _weightOrVolumeController.text.trim()
-            : null;
+                ? _weightOrVolumeController.text.trim()
+                : null;
         payload['hasDeposit'] = _hasDeposit;
         if (_hasDeposit) {
           payload['depositPrice'] =
@@ -2029,8 +2021,8 @@ class _MerchantProductListPageState
             : 0;
         payload['weightOrVolume'] =
             _weightOrVolumeController.text.trim().isNotEmpty
-            ? _weightOrVolumeController.text.trim()
-            : null;
+                ? _weightOrVolumeController.text.trim()
+                : null;
       }
 
       await ref.read(productControllerProvider.notifier).addProduct(payload);
@@ -2669,9 +2661,8 @@ class _MultiSelectFilterSheetState extends State<_MultiSelectFilterSheet> {
                       title: Text(
                         item,
                         style: TextStyle(
-                          fontWeight: isSelected
-                              ? FontWeight.bold
-                              : FontWeight.normal,
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.normal,
                         ),
                       ),
                       value: isSelected,
@@ -3120,8 +3111,7 @@ class _EditProductDialogState extends State<_EditProductDialog> {
                       ),
                     ],
                   ),
-                  crossFadeState:
-                      (_selectedUnit == "KG" ||
+                  crossFadeState: (_selectedUnit == "KG" ||
                           _selectedUnit == "LITRE" ||
                           _selectedUnit == "GR")
                       ? CrossFadeState.showSecond
@@ -3150,14 +3140,12 @@ class _EditProductDialogState extends State<_EditProductDialog> {
                   : null,
               'trackStock': _trackStock,
               'unit': _selectedUnit,
-              'minQuantity':
-                  (_selectedUnit == "KG" ||
+              'minQuantity': (_selectedUnit == "KG" ||
                       _selectedUnit == "LITRE" ||
                       _selectedUnit == "GR")
                   ? _minQuantity
                   : 1.0,
-              'stepSize':
-                  (_selectedUnit == "KG" ||
+              'stepSize': (_selectedUnit == "KG" ||
                       _selectedUnit == "LITRE" ||
                       _selectedUnit == "GR")
                   ? _stepSize
@@ -3173,13 +3161,12 @@ class _EditProductDialogState extends State<_EditProductDialog> {
               payload['brand'] = _brandController.text.trim().isNotEmpty
                   ? _brandController.text.trim()
                   : null;
-              payload['stockQuantity'] = _trackStock
-                  ? (int.tryParse(_stockController.text) ?? 0)
-                  : 0;
+              payload['stockQuantity'] =
+                  _trackStock ? (int.tryParse(_stockController.text) ?? 0) : 0;
               payload['weightOrVolume'] =
                   _weightOrVolumeController.text.trim().isNotEmpty
-                  ? _weightOrVolumeController.text.trim()
-                  : null;
+                      ? _weightOrVolumeController.text.trim()
+                      : null;
             } else {
               payload['preparationTime'] =
                   int.tryParse(_prepTimeController.text) ?? 0;

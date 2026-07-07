@@ -1,5 +1,5 @@
 import 'package:core_network/core_network.dart';
-import 'package:hoppa/shared/models/product.dart';
+import 'package:core_shared/shared/models/product.dart';
 
 class MerchantProduct {
   final String id;
@@ -55,8 +55,12 @@ class MerchantProduct {
   });
 
   factory MerchantProduct.fromMap(Map<String, dynamic> map) {
-    final double priceVal = map['price'] != null ? (double.tryParse(map['price'].toString()) ?? 0.0) : 0.0;
-    final double regularPriceVal = map['regularPrice'] != null ? (double.tryParse(map['regularPrice'].toString()) ?? priceVal) : priceVal;
+    final double priceVal = map['price'] != null
+        ? (double.tryParse(map['price'].toString()) ?? 0.0)
+        : 0.0;
+    final double regularPriceVal = map['regularPrice'] != null
+        ? (double.tryParse(map['regularPrice'].toString()) ?? priceVal)
+        : priceVal;
     final int discountRateVal = map['discountRate'] as int? ?? 0;
 
     var rawGroups = map['optionGroups'] as List<dynamic>? ?? [];
@@ -71,20 +75,33 @@ class MerchantProduct {
       name: map['name'] ?? '',
       description: map['description'],
       price: priceVal,
-      discountPrice: map['discountPrice'] != null ? double.tryParse(map['discountPrice'].toString()) : null,
-      stock: map['stock'] != null ? int.tryParse(map['stock'].toString()) : null,
+      discountPrice: map['discountPrice'] != null
+          ? double.tryParse(map['discountPrice'].toString())
+          : null,
+      stock:
+          map['stock'] != null ? int.tryParse(map['stock'].toString()) : null,
       imageUrl: map['imageUrl'],
       isActive: map['isActive'] ?? true,
       barcode: map['barcode'],
       brand: map['brand'],
-      stockQuantity: map['stockQuantity'] != null ? int.tryParse(map['stockQuantity'].toString()) : null,
+      stockQuantity: map['stockQuantity'] != null
+          ? int.tryParse(map['stockQuantity'].toString())
+          : null,
       weightOrVolume: map['weightOrVolume'],
-      preparationTime: map['preparationTime'] != null ? int.tryParse(map['preparationTime'].toString()) : null,
+      preparationTime: map['preparationTime'] != null
+          ? int.tryParse(map['preparationTime'].toString())
+          : null,
       hasDeposit: map['hasDeposit'] ?? false,
-      depositPrice: map['depositPrice'] != null ? double.tryParse(map['depositPrice'].toString()) : null,
+      depositPrice: map['depositPrice'] != null
+          ? double.tryParse(map['depositPrice'].toString())
+          : null,
       unit: map['unit'] ?? "ADET",
-      minQuantity: map['minQuantity'] != null ? double.tryParse(map['minQuantity'].toString()) ?? 1.0 : 1.0,
-      stepSize: map['stepSize'] != null ? double.tryParse(map['stepSize'].toString()) ?? 1.0 : 1.0,
+      minQuantity: map['minQuantity'] != null
+          ? double.tryParse(map['minQuantity'].toString()) ?? 1.0
+          : 1.0,
+      stepSize: map['stepSize'] != null
+          ? double.tryParse(map['stepSize'].toString()) ?? 1.0
+          : 1.0,
       trackStock: map['trackStock'] as bool? ?? false,
       regularPrice: regularPriceVal,
       discountRate: discountRateVal,
@@ -175,8 +192,12 @@ class CatalogProduct {
       isWeighted: map['isWeighted'] ?? false,
       description: map['description'],
       unit: map['unit'] ?? "ADET",
-      minQuantity: map['minQuantity'] != null ? double.tryParse(map['minQuantity'].toString()) ?? 1.0 : 1.0,
-      stepSize: map['stepSize'] != null ? double.tryParse(map['stepSize'].toString()) ?? 1.0 : 1.0,
+      minQuantity: map['minQuantity'] != null
+          ? double.tryParse(map['minQuantity'].toString()) ?? 1.0
+          : 1.0,
+      stepSize: map['stepSize'] != null
+          ? double.tryParse(map['stepSize'].toString()) ?? 1.0
+          : 1.0,
     );
   }
 }
@@ -190,17 +211,20 @@ class MerchantProductRepository {
     final response = await _apiClient.get('/api/merchant/products');
     final data = response['data'] as List<dynamic>?;
     if (data == null) return [];
-    
+
     return data.map((json) => MerchantProduct.fromMap(json)).toList();
   }
 
   Future<MerchantProduct> createProduct(Map<String, dynamic> data) async {
-    final response = await _apiClient.post('/api/merchant/products', body: data);
+    final response =
+        await _apiClient.post('/api/merchant/products', body: data);
     return MerchantProduct.fromMap(response['data']);
   }
 
-  Future<MerchantProduct> updateProduct(String id, Map<String, dynamic> data) async {
-    final response = await _apiClient.put('/api/merchant/products/$id', body: data);
+  Future<MerchantProduct> updateProduct(
+      String id, Map<String, dynamic> data) async {
+    final response =
+        await _apiClient.put('/api/merchant/products/$id', body: data);
     return MerchantProduct.fromMap(response['data']);
   }
 
@@ -209,7 +233,8 @@ class MerchantProductRepository {
   }
 
   // Global katalogda arama ve filtreleme yapar
-  Future<List<CatalogProduct>> searchCatalog(String query, {String? category, String? brand, int page = 1, int limit = 20}) async {
+  Future<List<CatalogProduct>> searchCatalog(String query,
+      {String? category, String? brand, int page = 1, int limit = 20}) async {
     String url = '/api/merchant/products/catalog?page=$page&limit=$limit';
     if (query.isNotEmpty) {
       url += '&q=${Uri.encodeComponent(query)}';
@@ -220,7 +245,7 @@ class MerchantProductRepository {
     if (brand != null && brand.isNotEmpty) {
       url += '&brand=${Uri.encodeComponent(brand)}';
     }
-    
+
     final response = await _apiClient.get(url);
     final data = response['data'] as List<dynamic>?;
     if (data == null) return [];
@@ -230,12 +255,14 @@ class MerchantProductRepository {
 
   // Katalog filtrelerini (kategori ve markaları) çeker
   Future<CatalogFilters> getCatalogFilters() async {
-    final response = await _apiClient.get('/api/merchant/products/catalog/filters');
+    final response =
+        await _apiClient.get('/api/merchant/products/catalog/filters');
     return CatalogFilters.fromMap(response['data'] ?? {});
   }
 
   // Katalogdan dükkan envanterine tekil ürün kopyalar
-  Future<void> addFromCatalog(String barcode, double price, int? stock, bool trackStock) async {
+  Future<void> addFromCatalog(
+      String barcode, double price, int? stock, bool trackStock) async {
     await _apiClient.post(
       '/api/merchant/products/catalog/add',
       body: {
