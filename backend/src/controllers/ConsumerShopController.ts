@@ -22,7 +22,8 @@ function formatProduct(product: any) {
         shopType: parent.shopType
       } : null
     } : null,
-    categoryId: cat ? cat.id : null
+    categoryId: cat ? cat.id : null,
+    optionGroups: product.optionGroups || []
   };
 }
 
@@ -116,7 +117,12 @@ export class ConsumerShopController {
           },
           unit: true,
           brand: true,
-          globalProduct: true
+          globalProduct: true,
+          optionGroups: {
+            include: {
+              options: true
+            }
+          }
         },
         orderBy: { createdAt: 'desc' }
       });

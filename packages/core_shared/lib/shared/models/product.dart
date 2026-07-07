@@ -1,3 +1,76 @@
+class ProductOption {
+  final String id;
+  final String name;
+  final double price;
+  final bool isActive;
+
+  ProductOption({
+    required this.id,
+    required this.name,
+    required this.price,
+    this.isActive = true,
+  });
+
+  factory ProductOption.fromMap(Map<String, dynamic> map) {
+    return ProductOption(
+      id: map['id'] ?? '',
+      name: map['name'] ?? '',
+      price: map['price'] != null ? (double.tryParse(map['price'].toString()) ?? 0.0) : 0.0,
+      isActive: map['isActive'] ?? true,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'price': price,
+      'isActive': isActive,
+    };
+  }
+}
+
+class ProductOptionGroup {
+  final String id;
+  final String name;
+  final int minSelections;
+  final int maxSelections;
+  final List<ProductOption> options;
+
+  ProductOptionGroup({
+    required this.id,
+    required this.name,
+    required this.minSelections,
+    required this.maxSelections,
+    required this.options,
+  });
+
+  factory ProductOptionGroup.fromMap(Map<String, dynamic> map) {
+    var rawOpts = map['options'] as List<dynamic>? ?? [];
+    List<ProductOption> parsedOpts = rawOpts
+        .map((o) => ProductOption.fromMap(Map<String, dynamic>.from(o)))
+        .toList();
+
+    return ProductOptionGroup(
+      id: map['id'] ?? '',
+      name: map['name'] ?? '',
+      minSelections: map['minSelections'] as int? ?? 0,
+      maxSelections: map['maxSelections'] as int? ?? 1,
+      options: parsedOpts,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'minSelections': minSelections,
+      'maxSelections': maxSelections,
+      'options': options.map((o) => o.toMap()).toList(),
+    };
+  }
+}
+
 class Product {
   final String barcode; // ID yerine Barkod
   final String name;
@@ -15,6 +88,7 @@ class Product {
   final int discountRate; // YENİ
   final String? sku; // YENİ
   final String? prettyName; // YENİ
+  final List<ProductOptionGroup> optionGroups; // YENİ: Seçenek Grupları
 
   Product({
     required this.barcode,
@@ -33,6 +107,7 @@ class Product {
     this.discountRate = 0,
     this.sku,
     this.prettyName,
+    this.optionGroups = const [],
   });
 
   factory Product.fromMap(Map<String, dynamic> data) {
@@ -56,6 +131,12 @@ class Product {
       }
     }
 
+    // 3. Seçenek Grupları Çözümleme
+    var rawGroups = data['optionGroups'] as List<dynamic>? ?? [];
+    List<ProductOptionGroup> parsedGroups = rawGroups
+        .map((g) => ProductOptionGroup.fromMap(Map<String, dynamic>.from(g)))
+        .toList();
+
     return Product(
       barcode: data['barcode'] ?? '',
       name: data['name'] ?? '',
@@ -77,6 +158,7 @@ class Product {
       discountRate: data['discountRate'] as int? ?? 0,
       sku: data['sku'] as String?,
       prettyName: data['prettyName'] as String?,
+      optionGroups: parsedGroups,
     );
   }
 
@@ -98,6 +180,7 @@ class Product {
       'discountRate': discountRate,
       'sku': sku,
       'prettyName': prettyName,
+      'optionGroups': optionGroups.map((g) => g.toMap()).toList(),
     };
   }
 }

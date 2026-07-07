@@ -144,7 +144,10 @@ export class OrderController {
       let totalAmount = 0;
       for (const item of items) {
         const product = dbProductMap.get(item.productId)!;
-        const unitPrice = Number(product.price);
+        const optionsPrice = item.options && Array.isArray(item.options)
+          ? item.options.reduce((sum: number, opt: any) => sum + parseFloat(opt.price || 0), 0)
+          : 0;
+        const unitPrice = Number(product.price) + optionsPrice;
         totalAmount += unitPrice * item.quantity;
       }
 
@@ -261,20 +264,29 @@ export class OrderController {
           }
         });
 
-        const orderItemsData = items.map((item: any) => {
+        for (const item of items) {
           const product = dbProductMap.get(item.productId)!;
-          const unitPrice = product.price;
-          return {
-            orderId: createdOrder.id,
-            productId: item.productId,
-            quantity: item.quantity,
-            unitPrice
-          };
-        });
+          const optionsPrice = item.options && Array.isArray(item.options)
+            ? item.options.reduce((sum: number, opt: any) => sum + parseFloat(opt.price || 0), 0)
+            : 0;
+          const unitPrice = Number(product.price) + optionsPrice;
 
-        await tx.orderItem.createMany({
-          data: orderItemsData
-        });
+          await tx.orderItem.create({
+            data: {
+              orderId: createdOrder.id,
+              productId: item.productId,
+              quantity: item.quantity,
+              unitPrice: unitPrice,
+              options: item.options && Array.isArray(item.options) ? {
+                create: item.options.map((opt: any) => ({
+                  name: opt.name,
+                  price: parseFloat(opt.price || 0),
+                  optionId: opt.optionId || null
+                }))
+              } : undefined
+            }
+          });
+        }
 
         let paymentUrl = undefined;
 
@@ -316,7 +328,8 @@ export class OrderController {
           address: true,
           items: {
             include: {
-              product: { select: { name: true, imageUrl: true } }
+              product: { select: { name: true, imageUrl: true } },
+              options: true
             }
           }
         }
@@ -372,7 +385,8 @@ export class OrderController {
           courier: true,
           items: {
             include: {
-              product: { select: { name: true, imageUrl: true } }
+              product: { select: { name: true, imageUrl: true } },
+              options: true
             }
           },
           review: true
@@ -417,7 +431,8 @@ export class OrderController {
           courier: true,
           items: {
             include: {
-              product: { select: { name: true, imageUrl: true } }
+              product: { select: { name: true, imageUrl: true } },
+              options: true
             }
           },
           review: true
@@ -527,7 +542,8 @@ export class OrderController {
           courier: true,
           items: {
             include: {
-              product: { select: { name: true, imageUrl: true } }
+              product: { select: { name: true, imageUrl: true } },
+              options: true
             }
           }
         }
