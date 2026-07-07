@@ -20,7 +20,8 @@ class MerchantProductListPage extends ConsumerStatefulWidget {
       _MerchantProductListPageState();
 }
 
-class _MerchantProductListPageState extends ConsumerState<MerchantProductListPage>
+class _MerchantProductListPageState
+    extends ConsumerState<MerchantProductListPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
@@ -31,7 +32,8 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
   bool _isInventoryActionLoading = false;
 
   // --- CATALOG TAB VARIABLIES ---
-  final TextEditingController _catalogSearchController = TextEditingController();
+  final TextEditingController _catalogSearchController =
+      TextEditingController();
   List<CatalogProduct> _catalogSearchResults = [];
   bool _isCatalogLoading = false;
   final Set<String> _selectedCatalogProductIds = {};
@@ -64,6 +66,7 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
   double _minQuantity = 1.0;
   double _stepSize = 1.0;
   bool _initialTrackStock = false;
+  List<Map<String, dynamic>> _customOptionGroups = [];
   final List<String> _units = ["ADET", "KG", "LITRE", "PAKET", "DEMET", "GR"];
 
   @override
@@ -72,20 +75,27 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() {
       if (mounted) setState(() {});
-      if (_tabController.index == 1 && _catalogSearchResults.isEmpty && !_isCatalogLoading) {
+      if (_tabController.index == 1 &&
+          _catalogSearchResults.isEmpty &&
+          !_isCatalogLoading) {
         _performCatalogSearch();
       }
     });
     _loadCatalogFilters();
     _catalogScrollController.addListener(() {
-      if (_catalogScrollController.position.pixels >= _catalogScrollController.position.maxScrollExtent - 200) {
-        if (!_isCatalogLoading && !_isCatalogPaginating && _hasMoreCatalogItems) {
+      if (_catalogScrollController.position.pixels >=
+          _catalogScrollController.position.maxScrollExtent - 200) {
+        if (!_isCatalogLoading &&
+            !_isCatalogPaginating &&
+            _hasMoreCatalogItems) {
           _performCatalogSearch(isLoadMore: true);
         }
       }
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_tabController.index == 1 && _catalogSearchResults.isEmpty && mounted) {
+      if (_tabController.index == 1 &&
+          _catalogSearchResults.isEmpty &&
+          mounted) {
         _performCatalogSearch();
       }
     });
@@ -158,11 +168,12 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
           _buildCustomProductTab(),
         ],
       ),
-      bottomNavigationBar: _tabController.index == 0 && _selectedInventoryIds.isNotEmpty
+      bottomNavigationBar:
+          _tabController.index == 0 && _selectedInventoryIds.isNotEmpty
           ? _buildBulkActionBar()
           : _tabController.index == 1 && _selectedCatalogProductIds.isNotEmpty
-              ? _buildCatalogBulkActionBar()
-              : null,
+          ? _buildCatalogBulkActionBar()
+          : null,
     );
   }
 
@@ -268,7 +279,7 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
         // The text "X seçildi" takes ~100px. Padding is ~32px.
         final spaceForActions = screenWidth - 140;
         final maxVisible = (spaceForActions / 100).floor();
-        
+
         if (maxVisible >= actions.length) {
           return Row(
             mainAxisSize: MainAxisSize.min,
@@ -278,7 +289,10 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                 child: InkWell(
                   onTap: a.onTap,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: a.color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
@@ -290,7 +304,10 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                         const SizedBox(width: 4),
                         Text(
                           a.label,
-                          style: TextStyle(color: a.color, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            color: a.color,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ],
                     ),
@@ -328,7 +345,10 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                   SizedBox(width: 4),
                   Text(
                     "İşlemler",
-                    style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: Colors.blue,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
@@ -346,7 +366,7 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
       for (final id in _selectedInventoryIds) {
         await notif.toggleProductStatus(id, isAvailable);
       }
-      
+
       if (mounted) {
         setState(() {
           _selectedInventoryIds.clear();
@@ -532,55 +552,60 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                                 });
                               },
                             ),
-                          // Product Image
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: (p.imageUrl != null && p.imageUrl!.isNotEmpty) ? Image.network(
-                              p.imageUrl!,
-                              width: 70,
-                              height: 70,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Container(
-                                    width: 70,
-                                    height: 70,
-                                    color: Colors.grey[200],
-                                    child: const Icon(
-                                      Icons.broken_image,
-                                      color: Colors.grey,
+                            // Product Image
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child:
+                                  (p.imageUrl != null && p.imageUrl!.isNotEmpty)
+                                  ? Image.network(
+                                      p.imageUrl!,
+                                      width: 70,
+                                      height: 70,
+                                      fit: BoxFit.cover,
+                                      errorBuilder:
+                                          (context, error, stackTrace) =>
+                                              Container(
+                                                width: 70,
+                                                height: 70,
+                                                color: Colors.grey[200],
+                                                child: const Icon(
+                                                  Icons.broken_image,
+                                                  color: Colors.grey,
+                                                ),
+                                              ),
+                                    )
+                                  : Container(
+                                      width: 70,
+                                      height: 70,
+                                      color: Colors.grey[200],
+                                      child: const Icon(
+                                        Icons.image_not_supported,
+                                        color: Colors.grey,
+                                      ),
                                     ),
-                                  ),
-                            ) : Container(
-                                    width: 70,
-                                    height: 70,
-                                    color: Colors.grey[200],
-                                    child: const Icon(
-                                      Icons.image_not_supported,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                          ),
-                          const SizedBox(width: 12),
+                            ),
+                            const SizedBox(width: 12),
 
-                          // Info & Stock Switch
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  p.name,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
+                            // Info & Stock Switch
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    p.name,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 4),
-                                Wrap(
+                                  const SizedBox(height: 4),
+                                  Wrap(
                                     spacing: 12,
                                     runSpacing: 8,
-                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    crossAxisAlignment:
+                                        WrapCrossAlignment.center,
                                     children: [
                                       // Price Edit Chip
                                       InkWell(
@@ -617,32 +642,43 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                                       ),
                                       // Stock Edit Chip
                                       InkWell(
-                                        onTap: p.trackStock ? () => _showInlineEditDialog(
-                                          p,
-                                          type: 'stock',
-                                          currentValue: (p.stock ?? 0).toDouble(),
-                                          title: "Stoğu Güncelle",
-                                          suffix: "Adet",
-                                        ) : null,
+                                        onTap: p.trackStock
+                                            ? () => _showInlineEditDialog(
+                                                p,
+                                                type: 'stock',
+                                                currentValue: (p.stock ?? 0)
+                                                    .toDouble(),
+                                                title: "Stoğu Güncelle",
+                                                suffix: "Adet",
+                                              )
+                                            : null,
                                         child: Container(
                                           padding: const EdgeInsets.symmetric(
                                             horizontal: 8,
                                             vertical: 4,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: p.trackStock ? Colors.orange[50] : Colors.green[50],
+                                            color: p.trackStock
+                                                ? Colors.orange[50]
+                                                : Colors.green[50],
                                             borderRadius: BorderRadius.circular(
                                               6,
                                             ),
                                             border: Border.all(
-                                              color: p.trackStock ? Colors.orange[200]! : Colors.green[200]!,
+                                              color: p.trackStock
+                                                  ? Colors.orange[200]!
+                                                  : Colors.green[200]!,
                                             ),
                                           ),
                                           child: Text(
-                                            p.trackStock ? "Stok: ${p.stock}" : "Stok: Sınırsız",
+                                            p.trackStock
+                                                ? "Stok: ${p.stock}"
+                                                : "Stok: Sınırsız",
                                             style: TextStyle(
                                               fontWeight: FontWeight.bold,
-                                              color: p.trackStock ? Colors.orange[800] : Colors.green[800],
+                                              color: p.trackStock
+                                                  ? Colors.orange[800]
+                                                  : Colors.green[800],
                                               fontSize: 13,
                                             ),
                                           ),
@@ -650,50 +686,58 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                                       ),
                                     ],
                                   ),
-                              ],
-                            ),
-                          ),
-
-                          // Right Side Switches (Availability & Weighed)
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Availability Switch
-                              Column(
-                                children: [
-                                  Switch(
-                                    value: p.isActive,
-                                    activeTrackColor: Colors.green,
-                                    onChanged: (val) {
-                                      ref.read(productControllerProvider.notifier).toggleProductStatus(p.id, val);
-                                    },
-                                  ),
-                                  Text(
-                                    p.isActive ? "Aktif" : "Pasif",
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: p.isActive
-                                          ? Colors.green
-                                          : Colors.grey,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
                                 ],
                               ),
-                              // Tartılı Switch has been removed as the new model does not support it
-                              const SizedBox(width: 8),
-                              IconButton(
-                                icon: const Icon(Icons.edit, color: Colors.blue),
-                                onPressed: () => _showEditProductDialog(p),
-                              ),
-                            ],
-                          ),
-                        ],
+                            ),
+
+                            // Right Side Switches (Availability & Weighed)
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Availability Switch
+                                Column(
+                                  children: [
+                                    Switch(
+                                      value: p.isActive,
+                                      activeTrackColor: Colors.green,
+                                      onChanged: (val) {
+                                        ref
+                                            .read(
+                                              productControllerProvider
+                                                  .notifier,
+                                            )
+                                            .toggleProductStatus(p.id, val);
+                                      },
+                                    ),
+                                    Text(
+                                      p.isActive ? "Aktif" : "Pasif",
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: p.isActive
+                                            ? Colors.green
+                                            : Colors.grey,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                // Tartılı Switch has been removed as the new model does not support it
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.edit,
+                                    color: Colors.blue,
+                                  ),
+                                  onPressed: () => _showEditProductDialog(p),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
               ),
             ),
           ],
@@ -775,7 +819,11 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                         );
                       },
                       icon: const Icon(Icons.category, size: 18),
-                      label: Text(_selectedCategories.isEmpty ? "Kategoriler" : "Kategori (${_selectedCategories.length})"),
+                      label: Text(
+                        _selectedCategories.isEmpty
+                            ? "Kategoriler"
+                            : "Kategori (${_selectedCategories.length})",
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -800,14 +848,21 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                         );
                       },
                       icon: const Icon(Icons.branding_watermark, size: 18),
-                      label: Text(_selectedBrands.isEmpty ? "Markalar" : "Marka (${_selectedBrands.length})"),
+                      label: Text(
+                        _selectedBrands.isEmpty
+                            ? "Markalar"
+                            : "Marka (${_selectedBrands.length})",
+                      ),
                     ),
                   ),
                 ],
               ),
               // Envanter Filtresi Switch
               SwitchListTile(
-                title: const Text("Envanterde Olanları Gizle", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                title: const Text(
+                  "Envanterde Olanları Gizle",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
                 value: _inventoryFilter == 'not_in',
                 activeColor: Colors.green.shade500,
                 contentPadding: EdgeInsets.zero,
@@ -843,19 +898,28 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
               : Column(
                   children: [
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 4,
+                      ),
                       child: Row(
                         children: [
                           Checkbox(
-                            value: _catalogSearchResults.every((p) => _selectedCatalogProductIds.contains(p.id)),
+                            value: _catalogSearchResults.every(
+                              (p) => _selectedCatalogProductIds.contains(p.id),
+                            ),
                             activeColor: Colors.green.shade500,
                             tristate: true,
                             onChanged: (val) {
                               setState(() {
                                 if (val == true) {
-                                  _selectedCatalogProductIds.addAll(_catalogSearchResults.map((p) => p.id));
+                                  _selectedCatalogProductIds.addAll(
+                                    _catalogSearchResults.map((p) => p.id),
+                                  );
                                 } else {
-                                  _selectedCatalogProductIds.removeAll(_catalogSearchResults.map((p) => p.id));
+                                  _selectedCatalogProductIds.removeAll(
+                                    _catalogSearchResults.map((p) => p.id),
+                                  );
                                 }
                               });
                             },
@@ -863,12 +927,19 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                           const SizedBox(width: 8),
                           const Text(
                             "Tümünü Seç / Tümünü Kaldır",
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
                           ),
                           const Spacer(),
                           Text(
                             "${_selectedCatalogProductIds.length} Ürün Seçildi",
-                            style: TextStyle(color: Colors.green.shade700, fontSize: 12, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              color: Colors.green.shade700,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ],
                       ),
@@ -878,100 +949,130 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                       child: ListView.separated(
                         controller: _catalogScrollController,
                         padding: const EdgeInsets.all(12),
-                        itemCount: _catalogSearchResults.length + (_hasMoreCatalogItems ? 1 : 0),
-                  separatorBuilder: (_, _) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    if (index == _catalogSearchResults.length) {
-                      return const Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: Center(child: CircularProgressIndicator()),
-                      );
-                    }
-                    final product = _catalogSearchResults[index];
-                    final isSelected = _selectedCatalogProductIds.contains(product.id);
+                        itemCount:
+                            _catalogSearchResults.length +
+                            (_hasMoreCatalogItems ? 1 : 0),
+                        separatorBuilder: (_, _) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          if (index == _catalogSearchResults.length) {
+                            return const Padding(
+                              padding: EdgeInsets.all(16.0),
+                              child: Center(child: CircularProgressIndicator()),
+                            );
+                          }
+                          final product = _catalogSearchResults[index];
+                          final isSelected = _selectedCatalogProductIds
+                              .contains(product.id);
 
-                    return Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(
-                          color: isSelected ? Colors.green.shade500 : Colors.transparent,
-                          width: 2,
-                        ),
-                      ),
-                      child: InkWell(
-                        onTap: () {
-                          setState(() {
-                            if (isSelected) {
-                              _selectedCatalogProductIds.remove(product.id);
-                            } else {
-                              _selectedCatalogProductIds.add(product.id);
-                            }
-                          });
-                        },
-                        borderRadius: BorderRadius.circular(12),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Row(
-                            children: [
-                              Checkbox(
-                                value: isSelected,
-                                activeColor: Colors.green.shade500,
-                                onChanged: (val) {
-                                  setState(() {
-                                    if (val == true) {
-                                      _selectedCatalogProductIds.add(product.id);
-                                    } else {
-                                      _selectedCatalogProductIds.remove(product.id);
-                                    }
-                                  });
-                                },
+                          return Card(
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide(
+                                color: isSelected
+                                    ? Colors.green.shade500
+                                    : Colors.transparent,
+                                width: 2,
                               ),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: (product.imageUrl.isNotEmpty) ? Image.network(
-                                  product.imageUrl,
-                                  width: 60,
-                                  height: 60,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      Container(
-                                        width: 60,
-                                        height: 60,
-                                        color: Colors.grey[200],
-                                        child: const Icon(Icons.image, color: Colors.grey),
-                                      ),
-                                ) : Container(
-                                        width: 60,
-                                        height: 60,
-                                        color: Colors.grey[200],
-                                        child: const Icon(Icons.image_not_supported, color: Colors.grey),
-                                      ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                            ),
+                            child: InkWell(
+                              onTap: () {
+                                setState(() {
+                                  if (isSelected) {
+                                    _selectedCatalogProductIds.remove(
+                                      product.id,
+                                    );
+                                  } else {
+                                    _selectedCatalogProductIds.add(product.id);
+                                  }
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Row(
                                   children: [
-                                    Text(
-                                      product.name,
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                    Checkbox(
+                                      value: isSelected,
+                                      activeColor: Colors.green.shade500,
+                                      onChanged: (val) {
+                                        setState(() {
+                                          if (val == true) {
+                                            _selectedCatalogProductIds.add(
+                                              product.id,
+                                            );
+                                          } else {
+                                            _selectedCatalogProductIds.remove(
+                                              product.id,
+                                            );
+                                          }
+                                        });
+                                      },
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      "${product.brand} • ${product.category}",
-                                      style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: (product.imageUrl.isNotEmpty)
+                                          ? Image.network(
+                                              product.imageUrl,
+                                              width: 60,
+                                              height: 60,
+                                              fit: BoxFit.cover,
+                                              errorBuilder:
+                                                  (
+                                                    context,
+                                                    error,
+                                                    stackTrace,
+                                                  ) => Container(
+                                                    width: 60,
+                                                    height: 60,
+                                                    color: Colors.grey[200],
+                                                    child: const Icon(
+                                                      Icons.image,
+                                                      color: Colors.grey,
+                                                    ),
+                                                  ),
+                                            )
+                                          : Container(
+                                              width: 60,
+                                              height: 60,
+                                              color: Colors.grey[200],
+                                              child: const Icon(
+                                                Icons.image_not_supported,
+                                                color: Colors.grey,
+                                              ),
+                                            ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            product.name,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            "${product.brand} • ${product.category}",
+                                            style: TextStyle(
+                                              color: Colors.grey.shade600,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
                     ),
                   ],
                 ),
@@ -1034,7 +1135,10 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.storefront, color: Colors.blueGrey.shade700),
+                          Icon(
+                            Icons.storefront,
+                            color: Colors.blueGrey.shade700,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -1051,22 +1155,36 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                       const SizedBox(height: 12),
                       Row(
                         children: [
-                          Icon(Icons.timer_outlined, size: 16, color: Colors.blueGrey.shade600),
+                          Icon(
+                            Icons.timer_outlined,
+                            size: 16,
+                            color: Colors.blueGrey.shade600,
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             "Ort. Teslimat: ${shop.deliveryTime ?? 'Belirtilmedi'}",
-                            style: TextStyle(color: Colors.blueGrey.shade700, fontSize: 13),
+                            style: TextStyle(
+                              color: Colors.blueGrey.shade700,
+                              fontSize: 13,
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Icon(Icons.shopping_basket_outlined, size: 16, color: Colors.blueGrey.shade600),
+                          Icon(
+                            Icons.shopping_basket_outlined,
+                            size: 16,
+                            color: Colors.blueGrey.shade600,
+                          ),
                           const SizedBox(width: 6),
                           Text(
                             "Min Sepet: ${shop.minOrderAmount?.toStringAsFixed(2) ?? '0.00'} ₺",
-                            style: TextStyle(color: Colors.blueGrey.shade700, fontSize: 13),
+                            style: TextStyle(
+                              color: Colors.blueGrey.shade700,
+                              fontSize: 13,
+                            ),
                           ),
                         ],
                       ),
@@ -1091,7 +1209,8 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                     labelText: "Ürün Adı",
                     border: OutlineInputBorder(),
                   ),
-                  validator: (v) => (v == null || v.isEmpty) ? "Zorunlu alan" : null,
+                  validator: (v) =>
+                      (v == null || v.isEmpty) ? "Zorunlu alan" : null,
                 ),
                 const SizedBox(height: 16),
 
@@ -1113,7 +1232,9 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                         child: TextFormField(
                           controller: _barcodeController,
                           decoration: InputDecoration(
-                            labelText: shopType == 'MARKET' ? "Barkod (Zorunlu)" : "Barkod (Opsiyonel)",
+                            labelText: shopType == 'MARKET'
+                                ? "Barkod (Zorunlu)"
+                                : "Barkod (Opsiyonel)",
                             border: const OutlineInputBorder(),
                             suffixIcon: IconButton(
                               icon: const Icon(Icons.refresh),
@@ -1125,7 +1246,8 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                             ),
                           ),
                           validator: (v) {
-                            if (shopType == 'MARKET' && (v == null || v.isEmpty)) {
+                            if (shopType == 'MARKET' &&
+                                (v == null || v.isEmpty)) {
                               return "Zorunlu alan";
                             }
                             return null;
@@ -1137,11 +1259,14 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                         child: TextFormField(
                           controller: _brandController,
                           decoration: InputDecoration(
-                            labelText: shopType == 'MARKET' ? "Marka (Zorunlu)" : "Marka (Opsiyonel)",
+                            labelText: shopType == 'MARKET'
+                                ? "Marka (Zorunlu)"
+                                : "Marka (Opsiyonel)",
                             border: const OutlineInputBorder(),
                           ),
                           validator: (v) {
-                            if (shopType == 'MARKET' && (v == null || v.isEmpty)) {
+                            if (shopType == 'MARKET' &&
+                                (v == null || v.isEmpty)) {
                               return "Zorunlu alan";
                             }
                             return null;
@@ -1165,7 +1290,8 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                     ),
                     validator: (v) {
                       if (v == null || v.isEmpty) return "Zorunlu alan";
-                      if (int.tryParse(v) == null) return "Geçerli bir sayı girin.";
+                      if (int.tryParse(v) == null)
+                        return "Geçerli bir sayı girin.";
                       return null;
                     },
                   ),
@@ -1204,6 +1330,13 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                 ),
                 const SizedBox(height: 16),
 
+                if (shopType == 'RESTAURANT') ...[
+                  _buildOptionGroupsEditor(_customOptionGroups, () {
+                    if (mounted) setState(() {});
+                  }),
+                  const SizedBox(height: 16),
+                ],
+
                 // Depozito Bilgisi (Sadece WATER)
                 if (shopType == 'WATER') ...[
                   SwitchListTile(
@@ -1215,7 +1348,9 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _depositPriceController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       decoration: const InputDecoration(
                         labelText: "Depozito Ücreti (₺)",
                         border: OutlineInputBorder(),
@@ -1238,7 +1373,9 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                 const Divider(height: 32),
                 Text(
                   "Miktar ve Satış Birimi Ayarları",
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 16),
 
@@ -1283,12 +1420,15 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                           Expanded(
                             child: Text(
                               "Minimum Sipariş Miktarı:",
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(fontWeight: FontWeight.bold),
                             ),
                           ),
                           Chip(
                             label: Text("$_minQuantity $_selectedUnit"),
-                            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.primaryContainer,
                           ),
                         ],
                       ),
@@ -1313,12 +1453,15 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                           Expanded(
                             child: Text(
                               "Miktar Artış Adımı (Step):",
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(fontWeight: FontWeight.bold),
                             ),
                           ),
                           Chip(
                             label: Text("+$_stepSize $_selectedUnit"),
-                            backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.secondaryContainer,
                           ),
                         ],
                       ),
@@ -1330,10 +1473,22 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                           border: OutlineInputBorder(),
                         ),
                         items: const [
-                          DropdownMenuItem(value: 0.1, child: Text("0.10 (Hassas Tartı)")),
-                          DropdownMenuItem(value: 0.25, child: Text("0.25 (Çeyrek Kilo)")),
-                          DropdownMenuItem(value: 0.5, child: Text("0.50 (Yarım Kilo)")),
-                          DropdownMenuItem(value: 1.0, child: Text("1.00 (Tam Katları)")),
+                          DropdownMenuItem(
+                            value: 0.1,
+                            child: Text("0.10 (Hassas Tartı)"),
+                          ),
+                          DropdownMenuItem(
+                            value: 0.25,
+                            child: Text("0.25 (Çeyrek Kilo)"),
+                          ),
+                          DropdownMenuItem(
+                            value: 0.5,
+                            child: Text("0.50 (Yarım Kilo)"),
+                          ),
+                          DropdownMenuItem(
+                            value: 1.0,
+                            child: Text("1.00 (Tam Katları)"),
+                          ),
                         ],
                         onChanged: (val) {
                           setState(() {
@@ -1343,7 +1498,10 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                       ),
                     ],
                   ),
-                  crossFadeState: (_selectedUnit == "KG" || _selectedUnit == "LITRE" || _selectedUnit == "GR")
+                  crossFadeState:
+                      (_selectedUnit == "KG" ||
+                          _selectedUnit == "LITRE" ||
+                          _selectedUnit == "GR")
                       ? CrossFadeState.showSecond
                       : CrossFadeState.showFirst,
                   duration: const Duration(milliseconds: 250),
@@ -1357,7 +1515,9 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                 const SizedBox(height: 8),
                 SwitchListTile(
                   title: const Text("Stok Takip Et"),
-                  subtitle: const Text("Aktif edilmezse ürün sınırsız stokta görünür."),
+                  subtitle: const Text(
+                    "Aktif edilmezse ürün sınırsız stokta görünür.",
+                  ),
                   value: _initialTrackStock,
                   contentPadding: EdgeInsets.zero,
                   onChanged: (val) {
@@ -1372,7 +1532,9 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                     Expanded(
                       child: TextFormField(
                         controller: _initialPriceController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
                         decoration: const InputDecoration(
                           labelText: "Satış Fiyatı (₺)",
                           border: OutlineInputBorder(),
@@ -1380,7 +1542,8 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                         ),
                         validator: (v) {
                           if (v == null || v.isEmpty) return "Zorunlu alan";
-                          if (double.tryParse(v) == null) return "Geçerli bir sayı girin.";
+                          if (double.tryParse(v) == null)
+                            return "Geçerli bir sayı girin.";
                           return null;
                         },
                       ),
@@ -1398,7 +1561,8 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                           validator: (v) {
                             if (_initialTrackStock) {
                               if (v == null || v.isEmpty) return "Zorunlu alan";
-                              if (int.tryParse(v) == null) return "Geçerli bir tam sayı girin.";
+                              if (int.tryParse(v) == null)
+                                return "Geçerli bir tam sayı girin.";
                             }
                             return null;
                           },
@@ -1452,12 +1616,14 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
         query,
         page: _catalogPage,
         limit: 20,
-        category: _selectedCategories.isNotEmpty ? _selectedCategories.join(',') : null,
+        category: _selectedCategories.isNotEmpty
+            ? _selectedCategories.join(',')
+            : null,
         brand: _selectedBrands.isNotEmpty ? _selectedBrands.join(',') : null,
         // The backend might not support the `inventoryFilter` yet, but we will apply it locally if needed,
-        // or just pass it to the API if it's supported. 
+        // or just pass it to the API if it's supported.
       );
-      
+
       if (mounted) {
         setState(() {
           if (isLoadMore) {
@@ -1471,7 +1637,10 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Arama hatası: $e"), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text("Arama hatası: $e"),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -1498,7 +1667,10 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
             return AlertDialog(
               title: Text(
                 "Katalogdan Ürün Ekle\n${product.name}",
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               content: Form(
                 key: dialogFormKey,
@@ -1507,22 +1679,28 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                   children: [
                     TextFormField(
                       controller: priceController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       decoration: const InputDecoration(
                         labelText: "Satış Fiyatı (₺)",
                         border: OutlineInputBorder(),
                         prefixText: "₺ ",
                       ),
                       validator: (val) {
-                        if (val == null || val.isEmpty) return "Fiyat girmelisiniz.";
-                        if (double.tryParse(val) == null) return "Geçerli bir sayı girin.";
+                        if (val == null || val.isEmpty)
+                          return "Fiyat girmelisiniz.";
+                        if (double.tryParse(val) == null)
+                          return "Geçerli bir sayı girin.";
                         return null;
                       },
                     ),
                     const SizedBox(height: 12),
                     SwitchListTile(
                       title: const Text("Stok Takip Et"),
-                      subtitle: const Text("Aktif edilmezse ürün sınırsız stokta görünür."),
+                      subtitle: const Text(
+                        "Aktif edilmezse ürün sınırsız stokta görünür.",
+                      ),
                       value: trackStock,
                       contentPadding: EdgeInsets.zero,
                       onChanged: (val) {
@@ -1542,8 +1720,10 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                         ),
                         validator: (val) {
                           if (trackStock) {
-                            if (val == null || val.isEmpty) return "Stok girmelisiniz.";
-                            if (int.tryParse(val) == null) return "Geçerli bir tam sayı girin.";
+                            if (val == null || val.isEmpty)
+                              return "Stok girmelisiniz.";
+                            if (int.tryParse(val) == null)
+                              return "Geçerli bir tam sayı girin.";
                           }
                           return null;
                         },
@@ -1562,7 +1742,9 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                     if (!dialogFormKey.currentState!.validate()) return;
 
                     final price = double.parse(priceController.text);
-                    final stock = trackStock ? int.parse(stockController.text) : null;
+                    final stock = trackStock
+                        ? int.parse(stockController.text)
+                        : null;
 
                     Navigator.pop(ctx); // Close dialog
 
@@ -1572,17 +1754,21 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                     });
 
                     try {
-                      await ref.read(productControllerProvider.notifier).addProductFromCatalog(
-                        product.barcode,
-                        price,
-                        stock,
-                        trackStock,
-                      );
+                      await ref
+                          .read(productControllerProvider.notifier)
+                          .addProductFromCatalog(
+                            product.barcode,
+                            price,
+                            stock,
+                            trackStock,
+                          );
 
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text("Ürün envanterinize başarıyla eklendi!"),
+                            content: Text(
+                              "Ürün envanterinize başarıyla eklendi!",
+                            ),
                             backgroundColor: Colors.green,
                           ),
                         );
@@ -1640,7 +1826,9 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
               const SizedBox(height: 16),
               TextFormField(
                 controller: priceController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 decoration: const InputDecoration(
                   labelText: "Satış Fiyatı (₺)",
                   border: OutlineInputBorder(),
@@ -1648,7 +1836,8 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                 ),
                 validator: (val) {
                   if (val == null || val.isEmpty) return "Fiyat girmelisiniz.";
-                  if (double.tryParse(val) == null) return "Geçerli bir sayı girin.";
+                  if (double.tryParse(val) == null)
+                    return "Geçerli bir sayı girin.";
                   return null;
                 },
               ),
@@ -1674,7 +1863,9 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
               if (!dialogFormKey.currentState!.validate()) return;
 
               final price = double.parse(priceController.text);
-              final stock = stockController.text.isNotEmpty ? int.parse(stockController.text) : null;
+              final stock = stockController.text.isNotEmpty
+                  ? int.parse(stockController.text)
+                  : null;
 
               Navigator.pop(ctx);
 
@@ -1685,20 +1876,24 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
               try {
                 final repo = ref.read(merchantProductRepositoryProvider);
                 final items = _selectedCatalogProductIds.map((id) {
-                  final prod = _catalogSearchResults.firstWhere((p) => p.id == id);
+                  final prod = _catalogSearchResults.firstWhere(
+                    (p) => p.id == id,
+                  );
                   return {
                     'barcode': prod.barcode,
                     'price': price,
                     'stock': stock ?? 0,
                   };
                 }).toList();
-                
+
                 await repo.bulkAddFromCatalog(items);
 
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text("Seçili ürünler envanterinize başarıyla eklendi!"),
+                      content: Text(
+                        "Seçili ürünler envanterinize başarıyla eklendi!",
+                      ),
                       backgroundColor: Colors.green,
                     ),
                   );
@@ -1726,7 +1921,10 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
                 }
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+            ),
             child: const Text("Envantere Ekle"),
           ),
         ],
@@ -1736,7 +1934,7 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
 
   Future<void> _createCustomProduct(String shopType) async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     setState(() {
       _isCatalogLoading = true;
     });
@@ -1749,45 +1947,86 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
             ? _descController.text.trim()
             : "${_brandController.text.trim()} • ${_categoryController.text.trim()}",
         'price': double.tryParse(_initialPriceController.text) ?? 0.0,
-        'stock': _initialTrackStock ? (int.tryParse(_initialStockController.text) ?? 0) : null,
+        'stock': _initialTrackStock
+            ? (int.tryParse(_initialStockController.text) ?? 0)
+            : null,
         'trackStock': _initialTrackStock,
         'imageUrl': _imageUrlController.text.trim(),
         'isActive': true,
         'categoryId': _selectedCategoryId,
         'categoryName': _categoryController.text.trim(),
         'unit': _selectedUnit,
-        'minQuantity': (_selectedUnit == "KG" || _selectedUnit == "LITRE" || _selectedUnit == "GR") ? _minQuantity : 1.0,
-        'stepSize': (_selectedUnit == "KG" || _selectedUnit == "LITRE" || _selectedUnit == "GR") ? _stepSize : 1.0,
+        'minQuantity':
+            (_selectedUnit == "KG" ||
+                _selectedUnit == "LITRE" ||
+                _selectedUnit == "GR")
+            ? _minQuantity
+            : 1.0,
+        'stepSize':
+            (_selectedUnit == "KG" ||
+                _selectedUnit == "LITRE" ||
+                _selectedUnit == "GR")
+            ? _stepSize
+            : 1.0,
       };
 
       if (shopType == 'RESTAURANT') {
-        payload['preparationTime'] = int.tryParse(_preparationTimeController.text) ?? 0;
+        payload['preparationTime'] =
+            int.tryParse(_preparationTimeController.text) ?? 0;
+        payload['optionGroups'] = _customOptionGroups;
       } else if (shopType == 'MARKET') {
         payload['barcode'] = _barcodeController.text.trim();
         payload['brand'] = _brandController.text.trim();
-        payload['stockQuantity'] = _initialTrackStock ? (int.tryParse(_initialStockController.text) ?? 0) : 0;
-        payload['weightOrVolume'] = _weightOrVolumeController.text.trim().isNotEmpty ? _weightOrVolumeController.text.trim() : null;
+        payload['stockQuantity'] = _initialTrackStock
+            ? (int.tryParse(_initialStockController.text) ?? 0)
+            : 0;
+        payload['weightOrVolume'] =
+            _weightOrVolumeController.text.trim().isNotEmpty
+            ? _weightOrVolumeController.text.trim()
+            : null;
       } else if (shopType == 'WATER') {
-        payload['barcode'] = _barcodeController.text.trim().isNotEmpty ? _barcodeController.text.trim() : null;
-        payload['brand'] = _brandController.text.trim().isNotEmpty ? _brandController.text.trim() : null;
-        payload['stockQuantity'] = _initialTrackStock ? (int.tryParse(_initialStockController.text) ?? 0) : 0;
-        payload['weightOrVolume'] = _weightOrVolumeController.text.trim().isNotEmpty ? _weightOrVolumeController.text.trim() : null;
+        payload['barcode'] = _barcodeController.text.trim().isNotEmpty
+            ? _barcodeController.text.trim()
+            : null;
+        payload['brand'] = _brandController.text.trim().isNotEmpty
+            ? _brandController.text.trim()
+            : null;
+        payload['stockQuantity'] = _initialTrackStock
+            ? (int.tryParse(_initialStockController.text) ?? 0)
+            : 0;
+        payload['weightOrVolume'] =
+            _weightOrVolumeController.text.trim().isNotEmpty
+            ? _weightOrVolumeController.text.trim()
+            : null;
         payload['hasDeposit'] = _hasDeposit;
         if (_hasDeposit) {
-          payload['depositPrice'] = double.tryParse(_depositPriceController.text) ?? 0.0;
+          payload['depositPrice'] =
+              double.tryParse(_depositPriceController.text) ?? 0.0;
         }
       } else {
-        payload['barcode'] = _barcodeController.text.trim().isNotEmpty ? _barcodeController.text.trim() : null;
-        payload['brand'] = _brandController.text.trim().isNotEmpty ? _brandController.text.trim() : null;
-        payload['stockQuantity'] = _initialTrackStock ? (int.tryParse(_initialStockController.text) ?? 0) : 0;
-        payload['weightOrVolume'] = _weightOrVolumeController.text.trim().isNotEmpty ? _weightOrVolumeController.text.trim() : null;
+        payload['barcode'] = _barcodeController.text.trim().isNotEmpty
+            ? _barcodeController.text.trim()
+            : null;
+        payload['brand'] = _brandController.text.trim().isNotEmpty
+            ? _brandController.text.trim()
+            : null;
+        payload['stockQuantity'] = _initialTrackStock
+            ? (int.tryParse(_initialStockController.text) ?? 0)
+            : 0;
+        payload['weightOrVolume'] =
+            _weightOrVolumeController.text.trim().isNotEmpty
+            ? _weightOrVolumeController.text.trim()
+            : null;
       }
 
       await ref.read(productControllerProvider.notifier).addProduct(payload);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Ürün başarıyla eklendi!"), backgroundColor: Colors.green)
+          const SnackBar(
+            content: Text("Ürün başarıyla eklendi!"),
+            backgroundColor: Colors.green,
+          ),
         );
         _formKey.currentState!.reset();
         _barcodeController.clear();
@@ -1808,13 +2047,14 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
           _minQuantity = 1.0;
           _stepSize = 1.0;
           _initialTrackStock = false;
+          _customOptionGroups = [];
         });
         _tabController.animateTo(0);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Hata: $e"), backgroundColor: Colors.red)
+          SnackBar(content: Text("Hata: $e"), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -1858,9 +2098,15 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
               final val = double.tryParse(controller.text);
               if (val != null) {
                 if (type == 'price') {
-                  ref.read(productControllerProvider.notifier).updateProduct(p.id, {'price': val});
+                  ref.read(productControllerProvider.notifier).updateProduct(
+                    p.id,
+                    {'price': val},
+                  );
                 } else {
-                  ref.read(productControllerProvider.notifier).updateProduct(p.id, {'stock': val.toInt()});
+                  ref.read(productControllerProvider.notifier).updateProduct(
+                    p.id,
+                    {'stock': val.toInt()},
+                  );
                 }
               }
               Navigator.pop(ctx);
@@ -1886,10 +2132,15 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
         _isInventoryActionLoading = true;
       });
       try {
-        await ref.read(productControllerProvider.notifier).updateProduct(p.id, payload);
+        await ref
+            .read(productControllerProvider.notifier)
+            .updateProduct(p.id, payload);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Ürün başarıyla güncellendi!"), backgroundColor: Colors.green),
+            const SnackBar(
+              content: Text("Ürün başarıyla güncellendi!"),
+              backgroundColor: Colors.green,
+            ),
           );
         }
       } catch (e) {
@@ -1906,6 +2157,323 @@ class _MerchantProductListPageState extends ConsumerState<MerchantProductListPag
         }
       }
     }
+  }
+
+  // --- RESTAURANT OPTION GROUPS UI HELPERS ---
+  Widget _buildOptionGroupsEditor(
+    List<Map<String, dynamic>> groups,
+    VoidCallback onChanged,
+  ) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              "Seçenek Grupları ve Ekstralar",
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            TextButton.icon(
+              onPressed: () => _showAddOptionGroupDialog(groups, onChanged),
+              icon: const Icon(Icons.add_circle_outline),
+              label: const Text("Grup Ekle"),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (groups.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(16),
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[200]!),
+            ),
+            child: const Center(
+              child: Text(
+                "Bu ürün için henüz bir seçenek grubu eklenmemiş. (Soslar, İçecekler vb.)",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey, fontSize: 13),
+              ),
+            ),
+          ),
+        ...groups.asMap().entries.map((entry) {
+          final idx = entry.key;
+          final group = entry.value;
+          final List<dynamic> options = group['options'] ?? [];
+
+          return Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            elevation: 1,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: Colors.grey[300]!),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.list_alt,
+                        color: Colors.blueGrey,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          group['name'] ?? '',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        "(Min: ${group['minSelections']}, Max: ${group['maxSelections']})",
+                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          color: Colors.red,
+                          size: 20,
+                        ),
+                        onPressed: () {
+                          groups.removeAt(idx);
+                          onChanged();
+                        },
+                      ),
+                    ],
+                  ),
+                  const Divider(),
+                  ...options.asMap().entries.map((optEntry) {
+                    final optIdx = optEntry.key;
+                    final opt = optEntry.value;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4.0),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.arrow_right,
+                            size: 16,
+                            color: Colors.grey,
+                          ),
+                          Expanded(
+                            child: Text(
+                              "${opt['name']} (+${(opt['price'] ?? 0.0).toStringAsFixed(2)} ₺)",
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.remove_circle_outline,
+                              color: Colors.grey,
+                              size: 16,
+                            ),
+                            onPressed: () {
+                              options.removeAt(optIdx);
+                              onChanged();
+                            },
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  const SizedBox(height: 4),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      style: TextButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      onPressed: () => _showAddOptionDialog(options, onChanged),
+                      icon: const Icon(Icons.add, size: 16),
+                      label: const Text(
+                        "Seçenek Ekle",
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      ],
+    );
+  }
+
+  void _showAddOptionGroupDialog(
+    List<Map<String, dynamic>> groups,
+    VoidCallback onChanged,
+  ) {
+    final nameController = TextEditingController();
+    final minController = TextEditingController(text: "0");
+    final maxController = TextEditingController(text: "1");
+    final dialogFormKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text(
+          "Yeni Seçenek Grubu",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: Form(
+          key: dialogFormKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: "Grup Adı (Sos Seçimi, İçecekler)",
+                  border: OutlineInputBorder(),
+                ),
+                validator: (v) =>
+                    (v == null || v.isEmpty) ? "Zorunlu alan" : null,
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: minController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: "Minimum Seçim",
+                        border: OutlineInputBorder(),
+                        helperText: "0 = İsteğe bağlı",
+                      ),
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return "Zorunlu";
+                        if (int.tryParse(v) == null) return "Sayı girin";
+                        return null;
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: maxController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: "Maksimum Seçim",
+                        border: OutlineInputBorder(),
+                        helperText: "1 = Tekli, >1 = Çoklu",
+                      ),
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return "Zorunlu";
+                        if (int.tryParse(v) == null) return "Sayı girin";
+                        return null;
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("İptal"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (!dialogFormKey.currentState!.validate()) return;
+              groups.add({
+                'name': nameController.text.trim(),
+                'minSelections': int.parse(minController.text),
+                'maxSelections': int.parse(maxController.text),
+                'options': <Map<String, dynamic>>[],
+              });
+              Navigator.pop(ctx);
+              onChanged();
+            },
+            child: const Text("Ekle"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddOptionDialog(List<dynamic> options, VoidCallback onChanged) {
+    final nameController = TextEditingController();
+    final priceController = TextEditingController(text: "0");
+    final dialogFormKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text(
+          "Yeni Seçenek",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: Form(
+          key: dialogFormKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: "Seçenek Adı (Ketçap, Büyük Boy)",
+                  border: OutlineInputBorder(),
+                ),
+                validator: (v) =>
+                    (v == null || v.isEmpty) ? "Zorunlu alan" : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: priceController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: const InputDecoration(
+                  labelText: "Fiyat Farkı (₺) - Opsiyonel",
+                  border: OutlineInputBorder(),
+                  prefixText: "₺ ",
+                ),
+                validator: (v) {
+                  if (v == null || v.isEmpty) return "Zorunlu";
+                  if (double.tryParse(v) == null) return "Sayı girin";
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("İptal"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (!dialogFormKey.currentState!.validate()) return;
+              options.add({
+                'name': nameController.text.trim(),
+                'price': double.parse(priceController.text),
+                'isActive': true,
+              });
+              Navigator.pop(ctx);
+              onChanged();
+            },
+            child: const Text("Ekle"),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -1939,14 +2507,15 @@ class _MultiSelectFilterSheet extends StatefulWidget {
   });
 
   @override
-  State<_MultiSelectFilterSheet> createState() => _MultiSelectFilterSheetState();
+  State<_MultiSelectFilterSheet> createState() =>
+      _MultiSelectFilterSheetState();
 }
 
 class _MultiSelectFilterSheetState extends State<_MultiSelectFilterSheet> {
   final TextEditingController _searchController = TextEditingController();
   List<String> _filteredItems = [];
   late List<String> _currentSelections;
-  
+
   // Pagination variables
   List<String> _displayedItems = [];
   final int _pageSize = 20;
@@ -2004,7 +2573,10 @@ class _MultiSelectFilterSheetState extends State<_MultiSelectFilterSheet> {
                 children: [
                   Text(
                     widget.title,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const Spacer(),
                   IconButton(
@@ -2024,7 +2596,10 @@ class _MultiSelectFilterSheetState extends State<_MultiSelectFilterSheet> {
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 0,
+                  ),
                 ),
                 onChanged: _filter,
               ),
@@ -2033,7 +2608,8 @@ class _MultiSelectFilterSheetState extends State<_MultiSelectFilterSheet> {
             Expanded(
               child: NotificationListener<ScrollNotification>(
                 onNotification: (ScrollNotification scrollInfo) {
-                  if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 200) {
+                  if (scrollInfo.metrics.pixels >=
+                      scrollInfo.metrics.maxScrollExtent - 200) {
                     _loadMore();
                   }
                   return false;
@@ -2045,8 +2621,17 @@ class _MultiSelectFilterSheetState extends State<_MultiSelectFilterSheet> {
                     if (index == 0) {
                       final isSelected = _currentSelections.isEmpty;
                       return ListTile(
-                        title: Text("Tümünü Temizle", style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
-                        trailing: isSelected ? const Icon(Icons.check, color: Colors.green) : null,
+                        title: Text(
+                          "Tümünü Temizle",
+                          style: TextStyle(
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          ),
+                        ),
+                        trailing: isSelected
+                            ? const Icon(Icons.check, color: Colors.green)
+                            : null,
                         onTap: () {
                           setState(() {
                             _currentSelections.clear();
@@ -2063,11 +2648,18 @@ class _MultiSelectFilterSheetState extends State<_MultiSelectFilterSheet> {
                       }
                       return const SizedBox.shrink();
                     }
-                    
+
                     final item = _displayedItems[index - 1];
                     final isSelected = _currentSelections.contains(item);
                     return CheckboxListTile(
-                      title: Text(item, style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+                      title: Text(
+                        item,
+                        style: TextStyle(
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ),
+                      ),
                       value: isSelected,
                       activeColor: Colors.green.shade500,
                       onChanged: (val) {
@@ -2096,9 +2688,14 @@ class _MultiSelectFilterSheetState extends State<_MultiSelectFilterSheet> {
                   backgroundColor: Colors.green.shade500,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                child: const Text("Uygula", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                child: const Text(
+                  "Uygula",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
               ),
             ),
           ],
@@ -2138,6 +2735,7 @@ class _EditProductDialogState extends State<_EditProductDialog> {
   late bool _trackStock;
   String? _selectedCategoryId;
   String _selectedCategoryName = "";
+  late List<Map<String, dynamic>> _dialogOptionGroups;
 
   final List<String> _units = ["ADET", "KG", "LITRE", "PAKET", "DEMET", "GR"];
 
@@ -2145,18 +2743,48 @@ class _EditProductDialogState extends State<_EditProductDialog> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.product.name);
-    _descController = TextEditingController(text: widget.product.description ?? '');
-    _priceController = TextEditingController(text: widget.product.price.toString());
-    _stockController = TextEditingController(text: (widget.product.stock ?? 0).toString());
-    _barcodeController = TextEditingController(text: widget.product.barcode ?? '');
+    _descController = TextEditingController(
+      text: widget.product.description ?? '',
+    );
+    _priceController = TextEditingController(
+      text: widget.product.price.toString(),
+    );
+    _stockController = TextEditingController(
+      text: (widget.product.stock ?? 0).toString(),
+    );
+    _barcodeController = TextEditingController(
+      text: widget.product.barcode ?? '',
+    );
     _brandController = TextEditingController(text: widget.product.brand ?? '');
-    _weightOrVolumeController = TextEditingController(text: widget.product.weightOrVolume ?? '');
-    _prepTimeController = TextEditingController(text: (widget.product.preparationTime ?? 0).toString());
+    _weightOrVolumeController = TextEditingController(
+      text: widget.product.weightOrVolume ?? '',
+    );
+    _prepTimeController = TextEditingController(
+      text: (widget.product.preparationTime ?? 0).toString(),
+    );
     _selectedUnit = widget.product.unit;
     _minQuantity = widget.product.minQuantity;
     _stepSize = widget.product.stepSize;
     _trackStock = widget.product.trackStock;
     _selectedCategoryId = widget.product.categoryId;
+    _dialogOptionGroups = widget.product.optionGroups
+        .map(
+          (g) => {
+            'name': g.name,
+            'minSelections': g.minSelections,
+            'maxSelections': g.maxSelections,
+            'options': g.options
+                .map(
+                  (o) => {
+                    'name': o.name,
+                    'price': o.price,
+                    'isActive': o.isActive,
+                  },
+                )
+                .toList(),
+          },
+        )
+        .toList();
   }
 
   @override
@@ -2179,7 +2807,10 @@ class _EditProductDialogState extends State<_EditProductDialog> {
     final isMarket = widget.shopType == 'MARKET';
 
     return AlertDialog(
-      title: const Text("Ürünü Düzenle", style: TextStyle(fontWeight: FontWeight.bold)),
+      title: const Text(
+        "Ürünü Düzenle",
+        style: TextStyle(fontWeight: FontWeight.bold),
+      ),
       content: SizedBox(
         width: MediaQuery.of(context).size.width * 0.9,
         child: SingleChildScrollView(
@@ -2191,13 +2822,20 @@ class _EditProductDialogState extends State<_EditProductDialog> {
               children: [
                 TextFormField(
                   controller: _nameController,
-                  decoration: const InputDecoration(labelText: "Ürün Adı", border: OutlineInputBorder()),
-                  validator: (v) => (v == null || v.isEmpty) ? "Zorunlu alan" : null,
+                  decoration: const InputDecoration(
+                    labelText: "Ürün Adı",
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (v) =>
+                      (v == null || v.isEmpty) ? "Zorunlu alan" : null,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _descController,
-                  decoration: const InputDecoration(labelText: "Açıklama (Opsiyonel)", border: OutlineInputBorder()),
+                  decoration: const InputDecoration(
+                    labelText: "Açıklama (Opsiyonel)",
+                    border: OutlineInputBorder(),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 CascadingCategorySelector(
@@ -2212,7 +2850,9 @@ class _EditProductDialogState extends State<_EditProductDialog> {
                 const SizedBox(height: 12),
                 SwitchListTile(
                   title: const Text("Stok Takip Et"),
-                  subtitle: const Text("Aktif edilmezse ürün sınırsız stokta görünür."),
+                  subtitle: const Text(
+                    "Aktif edilmezse ürün sınırsız stokta görünür.",
+                  ),
                   value: _trackStock,
                   contentPadding: EdgeInsets.zero,
                   onChanged: (val) {
@@ -2227,11 +2867,18 @@ class _EditProductDialogState extends State<_EditProductDialog> {
                     Expanded(
                       child: TextFormField(
                         controller: _priceController,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        decoration: const InputDecoration(labelText: "Fiyat (₺)", border: OutlineInputBorder(), prefixText: "₺ "),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        decoration: const InputDecoration(
+                          labelText: "Fiyat (₺)",
+                          border: OutlineInputBorder(),
+                          prefixText: "₺ ",
+                        ),
                         validator: (v) {
                           if (v == null || v.isEmpty) return "Zorunlu alan";
-                          if (double.tryParse(v) == null) return "Geçerli sayı girin";
+                          if (double.tryParse(v) == null)
+                            return "Geçerli sayı girin";
                           return null;
                         },
                       ),
@@ -2242,11 +2889,15 @@ class _EditProductDialogState extends State<_EditProductDialog> {
                         child: TextFormField(
                           controller: _stockController,
                           keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(labelText: "Stok", border: OutlineInputBorder()),
+                          decoration: const InputDecoration(
+                            labelText: "Stok",
+                            border: OutlineInputBorder(),
+                          ),
                           validator: (v) {
                             if (_trackStock) {
                               if (v == null || v.isEmpty) return "Zorunlu alan";
-                              if (int.tryParse(v) == null) return "Geçerli tam sayı girin";
+                              if (int.tryParse(v) == null)
+                                return "Geçerli tam sayı girin";
                             }
                             return null;
                           },
@@ -2263,11 +2914,14 @@ class _EditProductDialogState extends State<_EditProductDialog> {
                         child: TextFormField(
                           controller: _barcodeController,
                           decoration: InputDecoration(
-                            labelText: isMarket ? "Barkod (Zorunlu)" : "Barkod (Opsiyonel)",
+                            labelText: isMarket
+                                ? "Barkod (Zorunlu)"
+                                : "Barkod (Opsiyonel)",
                             border: const OutlineInputBorder(),
                           ),
                           validator: (v) {
-                            if (isMarket && (v == null || v.isEmpty)) return "Zorunlu alan";
+                            if (isMarket && (v == null || v.isEmpty))
+                              return "Zorunlu alan";
                             return null;
                           },
                         ),
@@ -2277,11 +2931,14 @@ class _EditProductDialogState extends State<_EditProductDialog> {
                         child: TextFormField(
                           controller: _brandController,
                           decoration: InputDecoration(
-                            labelText: isMarket ? "Marka (Zorunlu)" : "Marka (Opsiyonel)",
+                            labelText: isMarket
+                                ? "Marka (Zorunlu)"
+                                : "Marka (Opsiyonel)",
                             border: const OutlineInputBorder(),
                           ),
                           validator: (v) {
-                            if (isMarket && (v == null || v.isEmpty)) return "Zorunlu alan";
+                            if (isMarket && (v == null || v.isEmpty))
+                              return "Zorunlu alan";
                             return null;
                           },
                         ),
@@ -2291,7 +2948,10 @@ class _EditProductDialogState extends State<_EditProductDialog> {
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _weightOrVolumeController,
-                    decoration: const InputDecoration(labelText: "Ağırlık veya Hacim (Örn: 1.5L, 500g)", border: OutlineInputBorder()),
+                    decoration: const InputDecoration(
+                      labelText: "Ağırlık veya Hacim (Örn: 1.5L, 500g)",
+                      border: OutlineInputBorder(),
+                    ),
                   ),
                   const SizedBox(height: 12),
                 ],
@@ -2299,7 +2959,11 @@ class _EditProductDialogState extends State<_EditProductDialog> {
                   TextFormField(
                     controller: _prepTimeController,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: "Hazırlanma Süresi (Dakika)", border: OutlineInputBorder(), suffixText: "dk"),
+                    decoration: const InputDecoration(
+                      labelText: "Hazırlanma Süresi (Dakika)",
+                      border: OutlineInputBorder(),
+                      suffixText: "dk",
+                    ),
                     validator: (v) {
                       if (v == null || v.isEmpty) return "Zorunlu";
                       if (int.tryParse(v) == null) return "Sayı girin";
@@ -2307,14 +2971,33 @@ class _EditProductDialogState extends State<_EditProductDialog> {
                     },
                   ),
                   const SizedBox(height: 12),
+                  const Divider(),
+                  _buildOptionGroupsEditor(_dialogOptionGroups, () {
+                    setState(() {});
+                  }),
+                  const SizedBox(height: 12),
                 ],
                 const Divider(),
-                Text("Miktar ve Satış Birimi Ayarları", style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                Text(
+                  "Miktar ve Satış Birimi Ayarları",
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 10),
                 DropdownButtonFormField<String>(
                   value: _selectedUnit,
-                  decoration: const InputDecoration(labelText: "Satış Birimi", border: OutlineInputBorder(), prefixIcon: Icon(Icons.scale_outlined)),
-                  items: _units.map((unit) => DropdownMenuItem(value: unit, child: Text(unit))).toList(),
+                  decoration: const InputDecoration(
+                    labelText: "Satış Birimi",
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.scale_outlined),
+                  ),
+                  items: _units
+                      .map(
+                        (unit) =>
+                            DropdownMenuItem(value: unit, child: Text(unit)),
+                      )
+                      .toList(),
                   onChanged: (val) {
                     setState(() {
                       _selectedUnit = val!;
@@ -2338,9 +3021,19 @@ class _EditProductDialogState extends State<_EditProductDialog> {
                     children: [
                       Row(
                         children: [
-                          Expanded(child: Text("Minimum Sipariş Miktarı:", style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold))),
+                          Expanded(
+                            child: Text(
+                              "Minimum Sipariş Miktarı:",
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
                           Chip(
-                            label: Text("$_minQuantity $_selectedUnit", style: const TextStyle(fontSize: 12)),
+                            label: Text(
+                              "$_minQuantity $_selectedUnit",
+                              style: const TextStyle(fontSize: 12),
+                            ),
                             backgroundColor: theme.colorScheme.primaryContainer,
                             padding: EdgeInsets.zero,
                           ),
@@ -2361,10 +3054,21 @@ class _EditProductDialogState extends State<_EditProductDialog> {
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          Expanded(child: Text("Miktar Artış Adımı (Step):", style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold))),
+                          Expanded(
+                            child: Text(
+                              "Miktar Artış Adımı (Step):",
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
                           Chip(
-                            label: Text("+$_stepSize $_selectedUnit", style: const TextStyle(fontSize: 12)),
-                            backgroundColor: theme.colorScheme.secondaryContainer,
+                            label: Text(
+                              "+$_stepSize $_selectedUnit",
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                            backgroundColor:
+                                theme.colorScheme.secondaryContainer,
                             padding: EdgeInsets.zero,
                           ),
                         ],
@@ -2372,12 +3076,27 @@ class _EditProductDialogState extends State<_EditProductDialog> {
                       const SizedBox(height: 4),
                       DropdownButtonFormField<double>(
                         value: _stepSize,
-                        decoration: const InputDecoration(labelText: "Artış Adımı", border: OutlineInputBorder()),
+                        decoration: const InputDecoration(
+                          labelText: "Artış Adımı",
+                          border: OutlineInputBorder(),
+                        ),
                         items: const [
-                          DropdownMenuItem(value: 0.1, child: Text("0.10 (Hassas Tartı)")),
-                          DropdownMenuItem(value: 0.25, child: Text("0.25 (Çeyrek Kilo)")),
-                          DropdownMenuItem(value: 0.5, child: Text("0.50 (Yarım Kilo)")),
-                          DropdownMenuItem(value: 1.0, child: Text("1.00 (Tam Katları)")),
+                          DropdownMenuItem(
+                            value: 0.1,
+                            child: Text("0.10 (Hassas Tartı)"),
+                          ),
+                          DropdownMenuItem(
+                            value: 0.25,
+                            child: Text("0.25 (Çeyrek Kilo)"),
+                          ),
+                          DropdownMenuItem(
+                            value: 0.5,
+                            child: Text("0.50 (Yarım Kilo)"),
+                          ),
+                          DropdownMenuItem(
+                            value: 1.0,
+                            child: Text("1.00 (Tam Katları)"),
+                          ),
                         ],
                         onChanged: (val) {
                           setState(() {
@@ -2387,7 +3106,10 @@ class _EditProductDialogState extends State<_EditProductDialog> {
                       ),
                     ],
                   ),
-                  crossFadeState: (_selectedUnit == "KG" || _selectedUnit == "LITRE" || _selectedUnit == "GR")
+                  crossFadeState:
+                      (_selectedUnit == "KG" ||
+                          _selectedUnit == "LITRE" ||
+                          _selectedUnit == "GR")
                       ? CrossFadeState.showSecond
                       : CrossFadeState.showFirst,
                   duration: const Duration(milliseconds: 250),
@@ -2398,7 +3120,10 @@ class _EditProductDialogState extends State<_EditProductDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text("İptal")),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text("İptal"),
+        ),
         ElevatedButton(
           onPressed: () {
             if (!_formKey.currentState!.validate()) return;
@@ -2406,22 +3131,45 @@ class _EditProductDialogState extends State<_EditProductDialog> {
               'name': _nameController.text.trim(),
               'description': _descController.text.trim(),
               'price': double.tryParse(_priceController.text) ?? 0.0,
-              'stock': _trackStock ? (int.tryParse(_stockController.text) ?? 0) : null,
+              'stock': _trackStock
+                  ? (int.tryParse(_stockController.text) ?? 0)
+                  : null,
               'trackStock': _trackStock,
               'unit': _selectedUnit,
-              'minQuantity': (_selectedUnit == "KG" || _selectedUnit == "LITRE" || _selectedUnit == "GR") ? _minQuantity : 1.0,
-              'stepSize': (_selectedUnit == "KG" || _selectedUnit == "LITRE" || _selectedUnit == "GR") ? _stepSize : 1.0,
+              'minQuantity':
+                  (_selectedUnit == "KG" ||
+                      _selectedUnit == "LITRE" ||
+                      _selectedUnit == "GR")
+                  ? _minQuantity
+                  : 1.0,
+              'stepSize':
+                  (_selectedUnit == "KG" ||
+                      _selectedUnit == "LITRE" ||
+                      _selectedUnit == "GR")
+                  ? _stepSize
+                  : 1.0,
               'categoryId': _selectedCategoryId,
               'categoryName': _selectedCategoryName,
             };
 
             if (!isRestaurant) {
-              payload['barcode'] = _barcodeController.text.trim().isNotEmpty ? _barcodeController.text.trim() : null;
-              payload['brand'] = _brandController.text.trim().isNotEmpty ? _brandController.text.trim() : null;
-              payload['stockQuantity'] = _trackStock ? (int.tryParse(_stockController.text) ?? 0) : 0;
-              payload['weightOrVolume'] = _weightOrVolumeController.text.trim().isNotEmpty ? _weightOrVolumeController.text.trim() : null;
+              payload['barcode'] = _barcodeController.text.trim().isNotEmpty
+                  ? _barcodeController.text.trim()
+                  : null;
+              payload['brand'] = _brandController.text.trim().isNotEmpty
+                  ? _brandController.text.trim()
+                  : null;
+              payload['stockQuantity'] = _trackStock
+                  ? (int.tryParse(_stockController.text) ?? 0)
+                  : 0;
+              payload['weightOrVolume'] =
+                  _weightOrVolumeController.text.trim().isNotEmpty
+                  ? _weightOrVolumeController.text.trim()
+                  : null;
             } else {
-              payload['preparationTime'] = int.tryParse(_prepTimeController.text) ?? 0;
+              payload['preparationTime'] =
+                  int.tryParse(_prepTimeController.text) ?? 0;
+              payload['optionGroups'] = _dialogOptionGroups;
             }
 
             Navigator.pop(context, payload);
@@ -2429,6 +3177,323 @@ class _EditProductDialogState extends State<_EditProductDialog> {
           child: const Text("Kaydet"),
         ),
       ],
+    );
+  }
+
+  // --- RESTAURANT OPTION GROUPS UI HELPERS ---
+  Widget _buildOptionGroupsEditor(
+    List<Map<String, dynamic>> groups,
+    VoidCallback onChanged,
+  ) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              "Seçenek Grupları ve Ekstralar",
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            TextButton.icon(
+              onPressed: () => _showAddOptionGroupDialog(groups, onChanged),
+              icon: const Icon(Icons.add_circle_outline),
+              label: const Text("Grup Ekle"),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (groups.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(16),
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[200]!),
+            ),
+            child: const Center(
+              child: Text(
+                "Bu ürün için henüz bir seçenek grubu eklenmemiş. (Soslar, İçecekler vb.)",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey, fontSize: 13),
+              ),
+            ),
+          ),
+        ...groups.asMap().entries.map((entry) {
+          final idx = entry.key;
+          final group = entry.value;
+          final List<dynamic> options = group['options'] ?? [];
+
+          return Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            elevation: 1,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: Colors.grey[300]!),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.list_alt,
+                        color: Colors.blueGrey,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          group['name'] ?? '',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        "(Min: ${group['minSelections']}, Max: ${group['maxSelections']})",
+                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          color: Colors.red,
+                          size: 20,
+                        ),
+                        onPressed: () {
+                          groups.removeAt(idx);
+                          onChanged();
+                        },
+                      ),
+                    ],
+                  ),
+                  const Divider(),
+                  ...options.asMap().entries.map((optEntry) {
+                    final optIdx = optEntry.key;
+                    final opt = optEntry.value;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4.0),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.arrow_right,
+                            size: 16,
+                            color: Colors.grey,
+                          ),
+                          Expanded(
+                            child: Text(
+                              "${opt['name']} (+${(opt['price'] ?? 0.0).toStringAsFixed(2)} ₺)",
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.remove_circle_outline,
+                              color: Colors.grey,
+                              size: 16,
+                            ),
+                            onPressed: () {
+                              options.removeAt(optIdx);
+                              onChanged();
+                            },
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  const SizedBox(height: 4),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      style: TextButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      onPressed: () => _showAddOptionDialog(options, onChanged),
+                      icon: const Icon(Icons.add, size: 16),
+                      label: const Text(
+                        "Seçenek Ekle",
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      ],
+    );
+  }
+
+  void _showAddOptionGroupDialog(
+    List<Map<String, dynamic>> groups,
+    VoidCallback onChanged,
+  ) {
+    final nameController = TextEditingController();
+    final minController = TextEditingController(text: "0");
+    final maxController = TextEditingController(text: "1");
+    final dialogFormKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text(
+          "Yeni Seçenek Grubu",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: Form(
+          key: dialogFormKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: "Grup Adı (Sos Seçimi, İçecekler)",
+                  border: OutlineInputBorder(),
+                ),
+                validator: (v) =>
+                    (v == null || v.isEmpty) ? "Zorunlu alan" : null,
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: minController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: "Minimum Seçim",
+                        border: OutlineInputBorder(),
+                        helperText: "0 = İsteğe bağlı",
+                      ),
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return "Zorunlu";
+                        if (int.tryParse(v) == null) return "Sayı girin";
+                        return null;
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: maxController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: "Maksimum Seçim",
+                        border: OutlineInputBorder(),
+                        helperText: "1 = Tekli, >1 = Çoklu",
+                      ),
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return "Zorunlu";
+                        if (int.tryParse(v) == null) return "Sayı girin";
+                        return null;
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("İptal"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (!dialogFormKey.currentState!.validate()) return;
+              groups.add({
+                'name': nameController.text.trim(),
+                'minSelections': int.parse(minController.text),
+                'maxSelections': int.parse(maxController.text),
+                'options': <Map<String, dynamic>>[],
+              });
+              Navigator.pop(ctx);
+              onChanged();
+            },
+            child: const Text("Ekle"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAddOptionDialog(List<dynamic> options, VoidCallback onChanged) {
+    final nameController = TextEditingController();
+    final priceController = TextEditingController(text: "0");
+    final dialogFormKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text(
+          "Yeni Seçenek",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: Form(
+          key: dialogFormKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: "Seçenek Adı (Ketçap, Büyük Boy)",
+                  border: OutlineInputBorder(),
+                ),
+                validator: (v) =>
+                    (v == null || v.isEmpty) ? "Zorunlu alan" : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: priceController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: const InputDecoration(
+                  labelText: "Fiyat Farkı (₺) - Opsiyonel",
+                  border: OutlineInputBorder(),
+                  prefixText: "₺ ",
+                ),
+                validator: (v) {
+                  if (v == null || v.isEmpty) return "Zorunlu";
+                  if (double.tryParse(v) == null) return "Sayı girin";
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("İptal"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (!dialogFormKey.currentState!.validate()) return;
+              options.add({
+                'name': nameController.text.trim(),
+                'price': double.parse(priceController.text),
+                'isActive': true,
+              });
+              Navigator.pop(ctx);
+              onChanged();
+            },
+            child: const Text("Ekle"),
+          ),
+        ],
+      ),
     );
   }
 }

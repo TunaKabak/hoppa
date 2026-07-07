@@ -22,7 +22,8 @@ function formatProduct(product: any) {
         shopType: parent.shopType
       } : null
     } : null,
-    categoryId: cat ? cat.id : null
+    categoryId: cat ? cat.id : null,
+    optionGroups: product.optionGroups || []
   };
 }
 
@@ -45,7 +46,12 @@ export class ProductController {
           },
           unit: true,
           brand: true,
-          globalProduct: true
+          globalProduct: true,
+          optionGroups: {
+            include: {
+              options: true
+            }
+          }
         },
         orderBy: { createdAt: 'desc' }
       });
@@ -68,7 +74,7 @@ export class ProductController {
       const { 
         name, description, price, discountPrice, regularPrice, discountRate, stock, imageUrl, categoryId, categoryName,
         barcode, brand, stockQuantity, weightOrVolume, preparationTime, hasDeposit, depositPrice,
-        unit, minQuantity, stepSize, trackStock
+        unit, minQuantity, stepSize, trackStock, optionGroups
       } = req.body;
 
       // Smart Validation: Eğer dükkan MARKET kategorisindeyse ve barcode boşsa 400 hatası dön
@@ -205,7 +211,21 @@ export class ProductController {
           depositPrice: parsedDepositPrice,
           minQuantity: parsedMinQuantity,
           stepSize: parsedStepSize,
-          trackStock: parsedTrackStock
+          trackStock: parsedTrackStock,
+          optionGroups: optionGroups && Array.isArray(optionGroups) ? {
+            create: optionGroups.map((og: any) => ({
+              name: og.name,
+              minSelections: og.minSelections !== undefined ? parseInt(og.minSelections.toString()) : 0,
+              maxSelections: og.maxSelections !== undefined ? parseInt(og.maxSelections.toString()) : 1,
+              options: og.options && Array.isArray(og.options) ? {
+                create: og.options.map((opt: any) => ({
+                  name: opt.name,
+                  price: opt.price !== undefined ? parseFloat(opt.price.toString()) : 0.00,
+                  isActive: opt.isActive !== undefined ? (opt.isActive === true || opt.isActive === "true") : true
+                }))
+              } : undefined
+            }))
+          } : undefined
         },
         include: {
           category: {
@@ -213,7 +233,12 @@ export class ProductController {
           },
           unit: true,
           brand: true,
-          globalProduct: true
+          globalProduct: true,
+          optionGroups: {
+            include: {
+              options: true
+            }
+          }
         }
       });
 
@@ -240,7 +265,7 @@ export class ProductController {
       const { 
         name, description, price, discountPrice, regularPrice, discountRate, stock, imageUrl, isActive, categoryId, categoryName,
         barcode, brand, stockQuantity, weightOrVolume, preparationTime, hasDeposit, depositPrice,
-        unit, minQuantity, stepSize, trackStock
+        unit, minQuantity, stepSize, trackStock, optionGroups
       } = req.body;
 
       // Smart Validation: Eğer dükkan MARKET kategorisindeyse ve barcode boşsa 400 hatası dön
@@ -388,38 +413,66 @@ export class ProductController {
         }
       }
 
-      const updated = await prisma.product.update({
-        where: { id: productId },
-        data: { 
-          name, 
-          description, 
-          regularPrice: dbRegularPrice,
-          price: dbShownPrice,
-          discountRate: dbDiscountRate,
-          imageUrl, 
-          isActive, 
-          categoryId: resolvedCategoryId,
-          unitId,
-          brandId,
-          globalProductId: resolvedGlobalProductId,
-          barcode: barcode !== undefined ? (barcode || null) : undefined,
-          stockQuantity: parsedStockQty,
-          weightOrVolume: weightOrVolume !== undefined ? (weightOrVolume || null) : undefined,
-          preparationTime: preparationTime !== undefined ? parsedPrepTime : undefined,
-          hasDeposit: hasDeposit !== undefined ? parsedHasDeposit : undefined,
-          depositPrice: depositPrice !== undefined ? parsedDepositPrice : undefined,
-          minQuantity: parsedMinQuantity,
-          stepSize: parsedStepSize,
-          trackStock: parsedTrackStock
-        },
-        include: {
-          category: {
-            include: { parent: true }
-          },
-          unit: true,
-          brand: true,
-          globalProduct: true
+      const updated = await prisma.$transaction(async (tx) => {
+        if (optionGroups !== undefined) {
+          // Delete existing option groups for this product
+          await tx.productOptionGroup.deleteMany({
+            where: { productId }
+          });
         }
+
+        return await tx.product.update({
+          where: { id: productId },
+          data: { 
+            name, 
+            description, 
+            regularPrice: dbRegularPrice,
+            price: dbShownPrice,
+            discountRate: dbDiscountRate,
+            imageUrl, 
+            isActive, 
+            categoryId: resolvedCategoryId,
+            unitId,
+            brandId,
+            globalProductId: resolvedGlobalProductId,
+            barcode: barcode !== undefined ? (barcode || null) : undefined,
+            stockQuantity: parsedStockQty,
+            weightOrVolume: weightOrVolume !== undefined ? (weightOrVolume || null) : undefined,
+            preparationTime: preparationTime !== undefined ? parsedPrepTime : undefined,
+            hasDeposit: hasDeposit !== undefined ? parsedHasDeposit : undefined,
+            depositPrice: depositPrice !== undefined ? parsedDepositPrice : undefined,
+            minQuantity: parsedMinQuantity,
+            stepSize: parsedStepSize,
+            trackStock: parsedTrackStock,
+            optionGroups: optionGroups && Array.isArray(optionGroups) ? {
+              create: optionGroups.map((og: any) => ({
+                name: og.name,
+                minSelections: og.minSelections !== undefined ? parseInt(og.minSelections.toString()) : 0,
+                maxSelections: og.maxSelections !== undefined ? parseInt(og.maxSelections.toString()) : 1,
+                options: og.options && Array.isArray(og.options) ? {
+                  create: og.options.map((opt: any) => ({
+                    name: opt.name,
+                    price: opt.price !== undefined ? parseFloat(opt.price.toString()) : 0.00,
+                    isActive: opt.isActive !== undefined ? (opt.isActive === true || opt.isActive === "true") : true
+                  }))
+                } : undefined
+              }))
+            } : undefined
+          },
+          include: {
+            category: {
+              include: { parent: true }
+            },
+            unit: true,
+            brand: true,
+            globalProduct: true,
+            optionGroups: {
+              include: {
+                options: true
+              }
+            }
+          }
+        });
       });
 
       return res.status(200).json({ error: false, data: formatProduct(updated) });

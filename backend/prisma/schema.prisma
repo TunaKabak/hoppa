@@ -265,6 +265,7 @@ model Product {
 
   orderItems      OrderItem[]
   favoriteProducts FavoriteProduct[]
+  optionGroups    ProductOptionGroup[]
 
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
@@ -354,6 +355,8 @@ model OrderItem {
   
   quantity    Float
   unitPrice   Decimal  @db.Decimal(10, 2)
+
+  options     OrderItemOption[]
 }
 
 // Ödeme Yöntemleri
@@ -525,5 +528,50 @@ model BusinessCategory {
   order           Int      @default(0)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+// Ürün Seçenek Grubu (Örn: Sos Seçimi, Ekstra Malzemeler)
+model ProductOptionGroup {
+  id             String          @id @default(uuid())
+  productId      String
+  product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name           String          // Örn: "İçecek Seçimi"
+  minSelections  Int             @default(0) // 0 ise opsiyonel, 1 ise zorunlu
+  maxSelections  Int             @default(1) // Kaç adet seçilebilir (Örn: 1 ise tekli seçim - radio, >1 ise çoklu seçim - checkbox)
+  options        ProductOption[]
+
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([productId])
+}
+
+// Ürün Seçeneği (Örn: Coca-Cola, Ketçap, Ekstra Kaşar)
+model ProductOption {
+  id             String             @id @default(uuid())
+  optionGroupId  String
+  optionGroup    ProductOptionGroup @relation(fields: [optionGroupId], references: [id], onDelete: Cascade)
+  name           String             // Örn: "Kola"
+  price          Decimal            @db.Decimal(10, 2) @default(0.00) // Ekstra fiyat farkı
+  isActive       Boolean            @default(true)
+
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@index([optionGroupId])
+}
+
+// Sipariş Kalemine Eklenen Seçenekler (Seçim Özeti)
+model OrderItemOption {
+  id             String      @id @default(uuid())
+  orderItemId    String
+  orderItem      OrderItem   @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  name           String      // Seçenek ismi (Örn: "Ekstra Kaşar")
+  price          Decimal     @db.Decimal(10, 2) // Satın alındığı andaki fiyatı
+  optionId       String?     // Orijinal ProductOption id'si (opsiyonel, referans amaçlı)
+
+  createdAt      DateTime    @default(now())
+
+  @@index([orderItemId])
 }
 

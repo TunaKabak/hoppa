@@ -1,4 +1,5 @@
 import 'package:core_network/core_network.dart';
+import 'package:hoppa/shared/models/product.dart';
 
 class MerchantProduct {
   final String id;
@@ -24,6 +25,7 @@ class MerchantProduct {
   final bool trackStock; // YENİ
   final double regularPrice; // YENİ
   final int discountRate; // YENİ
+  final List<ProductOptionGroup> optionGroups; // YENİ
 
   MerchantProduct({
     required this.id,
@@ -49,12 +51,18 @@ class MerchantProduct {
     this.trackStock = false,
     required this.regularPrice,
     this.discountRate = 0,
+    this.optionGroups = const [],
   });
 
   factory MerchantProduct.fromMap(Map<String, dynamic> map) {
     final double priceVal = map['price'] != null ? (double.tryParse(map['price'].toString()) ?? 0.0) : 0.0;
     final double regularPriceVal = map['regularPrice'] != null ? (double.tryParse(map['regularPrice'].toString()) ?? priceVal) : priceVal;
     final int discountRateVal = map['discountRate'] as int? ?? 0;
+
+    var rawGroups = map['optionGroups'] as List<dynamic>? ?? [];
+    List<ProductOptionGroup> parsedGroups = rawGroups
+        .map((g) => ProductOptionGroup.fromMap(Map<String, dynamic>.from(g)))
+        .toList();
 
     return MerchantProduct(
       id: map['id'] ?? '',
@@ -80,6 +88,7 @@ class MerchantProduct {
       trackStock: map['trackStock'] as bool? ?? false,
       regularPrice: regularPriceVal,
       discountRate: discountRateVal,
+      optionGroups: parsedGroups,
     );
   }
 
@@ -106,6 +115,7 @@ class MerchantProduct {
       'trackStock': trackStock,
       'regularPrice': regularPrice,
       'discountRate': discountRate,
+      'optionGroups': optionGroups.map((g) => g.toMap()).toList(),
     };
   }
 }
