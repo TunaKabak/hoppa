@@ -12,7 +12,8 @@ void main() async {
   try {
     await dotenv.load(fileName: ".env");
   } catch (e) {
-    debugPrint("🚨 Warning: .env file not found: $e");
+    debugPrint("🚨 Warning: .env file not found, using fallback defaults: $e");
+    dotenv.testLoad(fileInput: 'LOCAL_IP=127.0.0.1');
   }
 
   // Use LOCAL_IP or API_URL from environment
