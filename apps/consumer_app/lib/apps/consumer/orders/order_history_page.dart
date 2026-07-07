@@ -1,0 +1,527 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:consumer_app/apps/consumer/repositories/consumer_order_repository.dart';
+import 'package:core_shared/shared/core/widgets/animated_sliding_toggle.dart';
+import 'package:core_shared/shared/models/order.dart' as model;
+import 'package:core_shared/shared/models/order_status.dart';
+import 'package:consumer_app/apps/consumer/orders/order_detail_page.dart';
+import 'package:core_shared/shared/models/business_type.dart';
+
+class OrderHistoryPage extends ConsumerStatefulWidget {
+  const OrderHistoryPage({super.key});
+
+  @override
+  ConsumerState<OrderHistoryPage> createState() => _OrderHistoryPageState();
+}
+
+class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage> {
+  // Filtreleme Durumu: 0 = Aktif, 1 = Geçmiş
+  int _selectedFilterIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Refresh the orders when page is opened
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.invalidate(consumerOrdersProvider);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const kPrimaryColor = Color(0xFF00A651);
+    final ordersAsync = ref.watch(consumerOrdersProvider);
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FA),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: const Text(
+          "Siparişlerim",
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
+        ),
+        centerTitle: true,
+        backgroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: Column(
+        children: [
+          // --- FİLTRELEME BUTONLARI (KAYMA EFEKTLİ COMPONENT) ---
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            color: Colors.white,
+            child: AnimatedSlidingToggle(
+              labels: const ["Aktif Siparişler", "Geçmiş Siparişler"],
+              selectedIndex: _selectedFilterIndex,
+              activeColor: kPrimaryColor,
+              onChanged: (index) =>
+                  setState(() => _selectedFilterIndex = index),
+            ),
+          ),
+
+          // --- SİPARİŞ LİSTESİ ---
+          Expanded(
+            child: ordersAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, stack) => Center(child: Text("Hata: $err")),
+              data: (allOrders) {
+                final filteredOrders = allOrders.where((order) {
+                  final s = OrderStatus.fromString(order.status);
+                  if (_selectedFilterIndex == 0) {
+                    return s.isActive;
+                  } else {
+                    return s.isCompleted;
+                  }
+                }).toList();
+
+                if (filteredOrders.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          _selectedFilterIndex == 0
+                              ? Icons.local_shipping_outlined
+                              : Icons.history,
+                          size: 80,
+                          color: Colors.grey[300],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          _selectedFilterIndex == 0
+                              ? "Aktif siparişiniz bulunmuyor."
+                              : "Geçmiş siparişiniz bulunmuyor.",
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: filteredOrders.length,
+                  separatorBuilder: (c, i) => const SizedBox(height: 16),
+                  itemBuilder: (context, index) {
+                    final order = filteredOrders[index];
+                    return _OrderCard(order: order);
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OrderCard extends ConsumerWidget {
+  final model.Order order;
+
+  const _OrderCard({required this.order});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final status = order.status;
+    final items = order.items;
+    final date = order.createdAt;
+    final formattedDate = DateFormat(
+      'dd MMM yyyy, HH:mm',
+      'tr_TR',
+    ).format(date);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: ExpansionTile(
+        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Business Logo
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: order.businessImageUrl != null && order.businessImageUrl!.isNotEmpty
+                    ? Image.network(
+                        order.businessImageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => _getFallbackIcon(order.businessType),
+                      )
+                    : _getFallbackIcon(order.businessType),
+              ),
+            ),
+            const SizedBox(width: 10),
+            // Business Name & Category / ID
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    order.businessName ?? 'Bilinmeyen İşletme',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: Colors.black87,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      // Category
+                      if (order.businessType != null) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE8F5E9),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            BusinessType.fromString(order.businessType!).label,
+                            style: const TextStyle(
+                              fontSize: 9,
+                              color: Color(0xFF2E7D32),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                      ],
+                      // Order ID
+                      Text(
+                        "#${order.id.length > 8 ? order.id.substring(order.id.length - 8) : order.id}",
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 8.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    formattedDate,
+                    style: TextStyle(color: Colors.grey[600], fontSize: 11),
+                  ),
+                  const SizedBox(height: 6),
+                  _buildStatusBadge(status),
+                ],
+              ),
+              Text(
+                "${order.totalAmount.toStringAsFixed(2)} ₺",
+                style: const TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                  color: Color(0xFF00A651),
+                ),
+              ),
+            ],
+          ),
+        ),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: const BoxDecoration(
+              border: Border(top: BorderSide(color: Color(0xFFEEEEEE))),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Sipariş Özeti",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                const SizedBox(height: 8),
+                ...items.map(
+                  (item) => Padding(
+                    padding: const EdgeInsets.only(bottom: 6.0),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            "${item.quantity}x",
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF00A651),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            item.name.isNotEmpty ? item.name : "Bilinmeyen Ürün",
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                        ),
+                        Text(
+                          "${item.price} ₺",
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                if (order.deliveryTime.isNotEmpty)
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.access_time,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        "Teslimat: ${order.deliveryTime}",
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                if (order.orderNote.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.note, size: 16, color: Colors.amber),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              order.orderNote,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                const SizedBox(height: 16),
+                if (order.status == OrderStatus.pending.value)
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () => _showCancelDialog(context, ref, order.id),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        "Siparişi İptal Et",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                if (order.status == OrderStatus.pending.value)
+                  const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => OrderDetailPage(order: order),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF00A651),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text(
+                      "Sipariş Detayı",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCancelDialog(BuildContext context, WidgetRef ref, String orderId) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Siparişi İptal Et"),
+          content: const Text("Bu siparişi iptal etmek istediğinize emin misiniz?"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Vazgeç"),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: () async {
+                Navigator.pop(context); // dialog'u kapat
+                try {
+                  await ref.read(consumerOrderRepositoryProvider).cancelOrder(orderId);
+                  ref.invalidate(consumerOrdersProvider);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Siparişiniz iptal edildi.")),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("İptal işlemi başarısız: $e")),
+                    );
+                  }
+                }
+              },
+              child: const Text("Evet, İptal Et"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildStatusBadge(String status) {
+    final s = OrderStatus.fromString(status);
+    final color = s.color;
+    final text = s.label;
+    final icon = s.icon;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _getFallbackIcon(String? typeStr) {
+    if (typeStr == null) return const Icon(Icons.store, color: Colors.grey, size: 20);
+    final type = BusinessType.fromString(typeStr);
+    IconData iconData;
+    switch (type) {
+      case BusinessType.market:
+        iconData = Icons.shopping_basket_rounded;
+        break;
+      case BusinessType.restaurant:
+        iconData = Icons.restaurant_rounded;
+        break;
+      case BusinessType.cafe:
+        iconData = Icons.local_cafe_rounded;
+        break;
+      case BusinessType.butcher:
+        iconData = Icons.flatware_rounded;
+        break;
+      case BusinessType.greengrocer:
+        iconData = Icons.eco_rounded;
+        break;
+      case BusinessType.bakery:
+        iconData = Icons.bakery_dining_rounded;
+        break;
+      case BusinessType.water:
+        iconData = Icons.local_drink_rounded;
+        break;
+      case BusinessType.nuts:
+        iconData = Icons.grain_rounded;
+        break;
+      case BusinessType.florist:
+        iconData = Icons.local_florist_rounded;
+        break;
+      case BusinessType.other:
+        iconData = Icons.store_rounded;
+        break;
+    }
+    return Icon(iconData, color: Colors.grey[600], size: 20);
+  }
+}
