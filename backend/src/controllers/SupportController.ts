@@ -185,4 +185,108 @@ export class SupportController {
       res.status(500).json({ error: true, message: "Hoppa Asistan şu anda uykuda. Lütfen daha sonra tekrar deneyiniz." });
     }
   }
+
+  public static async parseVoiceCommand(req: Request, res: Response): Promise<void> {
+    try {
+      const { message } = req.body;
+
+      if (!message) {
+        res.status(400).json({ error: true, message: "Komut alanı boş bırakılamaz." });
+        return;
+      }
+
+      const systemInstruction = `
+        Sen Hoppa uygulamasının sesli komut işleme servisisin. Kullanıcının Türkçe olarak verdiği sesli komutu analiz edip uygun eylemi (action) ve parametrelerini (parameters) JSON formatında döndürmelisin.
+        
+        Desteklenen Eylemler (Actions):
+        1. "ADD_TO_CART": Sepete ürün ekler. 
+           - Parametreler: { productName: string (aranacak ürün adı, örn: "süt", "ekmek"), quantity: number (varsayılan 1) }
+        2. "REMOVE_FROM_CART": Sepetten ürün çıkarır.
+           - Parametreler: { productName: string (örn: "süt") }
+        3. "CLEAR_CART": Sepeti tamamen temizler.
+           - Parametreler: Yok {}
+        4. "SEARCH_PRODUCT": Ürün arar.
+           - Parametreler: { query: string (aranacak kelime) }
+        5. "NAVIGATE": Belirli bir sayfaya yönlendirir.
+           - Parametreler: { target: "home" | "cart" | "profile" | "orders" | "support" }
+        6. "CHECKOUT": Ödeme/ödeme ekranına geçiş yapar.
+           - Parametreler: Yok {}
+        7. "CONFIRM_ORDER": Siparişi tamamlar/onaylar.
+           - Parametreler: Yok {}
+        8. "UNKNOWN": Komut anlaşılamadı veya yukarıdakilerden hiçbirine uymuyor.
+           - Parametreler: Yok {}
+           
+        DÖNÜŞ FORMATI:
+        Aşağıdaki JSON şemasına uygun tek bir JSON objesi döndür:
+        {
+          "action": "Eylem Adı (ADD_TO_CART, REMOVE_FROM_CART, CLEAR_CART, SEARCH_PRODUCT, NAVIGATE, CHECKOUT, CONFIRM_ORDER, UNKNOWN)",
+          "parameters": { ... },
+          "reply": "Kullanıcıya sesli veya yazılı verilecek Kıbrıs yerel ağzına yatkın sıcak, samimi ve profesyonel geri bildirim mesajı."
+        }
+      `;
+
+      if (!apiKey) {
+        res.status(200).json({
+          error: false,
+          data: {
+            action: "UNKNOWN",
+            parameters: {},
+            reply: "Hoppa Sesli Asistan şu anda uykuda. Lütfen daha sonra tekrar deneyiniz."
+          }
+        });
+        return;
+      }
+
+      const stableModel = "gemini-2.5-flash";
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${stableModel}:generateContent?key=${apiKey}`;
+      const payload = {
+        contents: [
+          {
+            parts: [{ text: message }]
+          }
+        ],
+        systemInstruction: {
+          parts: [{ text: systemInstruction }]
+        },
+        generationConfig: {
+          responseMimeType: "application/json"
+        }
+      };
+
+      const responseData = await SupportController.fetchWithRetry(geminiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      const aiResponseText = responseData.candidates?.[0]?.content?.parts?.[0]?.text;
+      
+      let parsedResponse = {
+        action: "UNKNOWN",
+        parameters: {},
+        reply: "Komutunuzu tam olarak anlayamadım sevgili dostum."
+      };
+
+      if (aiResponseText) {
+        try {
+          parsedResponse = JSON.parse(aiResponseText.trim());
+        } catch (parseError) {
+          console.error("Gemini JSON parse hatası:", parseError, aiResponseText);
+        }
+      }
+
+      res.status(200).json({
+        error: false,
+        message: "Sesli komut başarıyla işlendi.",
+        data: parsedResponse
+      });
+
+    } catch (error) {
+      console.error("Sesli Asistan Hatası:", error);
+      res.status(500).json({ 
+        error: true, 
+        message: "Sesli komut işlenirken bir hata oluştu." 
+      });
+    }
+  }
 }

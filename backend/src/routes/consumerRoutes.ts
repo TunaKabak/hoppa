@@ -52,6 +52,7 @@ router.get("/shops/:shopId/reviews", (req, res) => ReviewController.getShopRevie
 
 // Hoppa Assistant Chat
 router.post("/support/chat", (req, res) => SupportController.chatWithAssistant(req, res));
+router.post("/support/voice-command", (req, res) => SupportController.parseVoiceCommand(req, res));
 
 export default router;
 

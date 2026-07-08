@@ -14,6 +14,7 @@ import 'package:consumer_app/apps/consumer/business/business_provider.dart';
 import 'package:consumer_app/apps/consumer/home/search_page.dart';
 import 'package:core_auth/core_auth.dart';
 import 'package:core_shared/shared/core/services/notification_service.dart';
+import 'package:consumer_app/apps/consumer/main_layout/voice_assistant_dialog.dart';
 
 class MainLayoutPage extends ConsumerStatefulWidget {
   const MainLayoutPage({super.key});
@@ -87,6 +88,14 @@ class _MainLayoutPageState extends ConsumerState<MainLayoutPage> {
 
       // 2. Ana Sayfa (0) sekmesine git
       navProvider.setIndex(0);
+    }
+
+    void onFabLongPressed() {
+      showDialog(
+        context: context,
+        barrierDismissible: true,
+        builder: (context) => const VoiceAssistantDialog(),
+      );
     }
 
     // Eğer üstümüzde başka bir sayfa varsa (ör: ProductDetailPage),
@@ -177,6 +186,7 @@ class _MainLayoutPageState extends ConsumerState<MainLayoutPage> {
                           // ORTA BUTON (HOPPA)
                           AnimatedHoppaButton(
                             onTap: onFabPressed,
+                            onLongPress: onFabLongPressed,
                           ),
 
                           _buildCartNavItem(
@@ -281,7 +291,8 @@ class _MainLayoutPageState extends ConsumerState<MainLayoutPage> {
 
 class AnimatedHoppaButton extends StatefulWidget {
   final VoidCallback onTap;
-  const AnimatedHoppaButton({super.key, required this.onTap});
+  final VoidCallback? onLongPress;
+  const AnimatedHoppaButton({super.key, required this.onTap, this.onLongPress});
 
   @override
   State<AnimatedHoppaButton> createState() => _AnimatedHoppaButtonState();
@@ -328,6 +339,7 @@ class _AnimatedHoppaButtonState extends State<AnimatedHoppaButton>
         _glowController.stop();
         _glowController.value = 0.0;
       },
+      onLongPress: widget.onLongPress,
       onTap: widget.onTap,
       child: SizedBox(
         width: buttonSize,
