@@ -135,14 +135,34 @@ class _CourierDashboardPageState extends ConsumerState<CourierDashboardPage> {
                   value: _isOnDuty,
                   activeThumbColor: Colors.green,
                   onChanged: (val) async {
-                    setState(() {
-                      _isOnDuty = val;
-                    });
-                    if (_isOnDuty) {
-                      await _locationEngine.startTracking();
-                      _fetchActiveOrders();
-                    } else {
-                      await _locationEngine.stopTracking();
+                    try {
+                      await ref.read(apiClientProvider).put(
+                        '/api/couriers/toggle-duty',
+                        body: {'isActive': val},
+                      );
+                      
+                      setState(() {
+                        _isOnDuty = val;
+                      });
+
+                      if (_isOnDuty) {
+                        await _locationEngine.startTracking();
+                        _fetchActiveOrders();
+                      } else {
+                        await _locationEngine.stopTracking();
+                      }
+                    } catch (e) {
+                      if (!context.mounted) return;
+                      setState(() {
+                        _isOnDuty = !val;
+                      });
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text("Nöbet durumu güncellenemedi: $e"),
+                          backgroundColor: Colors.red,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
                     }
                   },
                 ),

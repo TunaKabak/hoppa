@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { PrismaClient, MerchantStatus } from "@prisma/client";
+import { PrismaClient, MerchantStatus, CourierStatus, VehicleType } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -90,6 +90,156 @@ export class SuperAdminController {
       return res.status(200).json({ error: false, data: result, message: "Satıcı durumu başarıyla güncellendi." });
     } catch (error: any) {
       console.error("[SuperAdminController.updateMerchantStatus] Error:", error);
+      return res.status(500).json({ error: true, message: "Sunucu hatası oluştu." });
+    }
+  }
+
+  /**
+   * GET /api/admin/couriers
+   * Bütün kuryeleri listeler. İsteğe bağlı olarak status ve isActive filtreleri alabilir.
+   */
+  async getCouriers(req: Request, res: Response) {
+    try {
+      const { status, isActive } = req.query;
+      const where: any = {};
+      if (status) {
+        where.status = status as any;
+      }
+      if (isActive !== undefined) {
+        where.isActive = isActive === "true";
+      }
+
+      const couriers = await prisma.courier.findMany({
+        where,
+        include: {
+          shops: {
+            include: {
+              shop: true
+            }
+          }
+        },
+        orderBy: {
+          createdAt: "desc"
+        }
+      });
+
+      return res.status(200).json({ error: false, data: couriers });
+    } catch (error: any) {
+      console.error("[SuperAdminController.getCouriers] Error:", error);
+      return res.status(500).json({ error: true, message: "Sunucu hatası oluştu." });
+    }
+  }
+
+  /**
+   * PUT /api/admin/couriers/:id/status
+   * Body: { status: CourierStatus, vehiclePlate?: string, vehicleType?: VehicleType, maxServiceDistanceKm?: number }
+   * Kuryenin durumunu ve temel özelliklerini günceller.
+   */
+  async updateCourierStatus(req: Request, res: Response) {
+    try {
+      const id = req.params.id as string;
+      const { status, vehiclePlate, vehicleType, maxServiceDistanceKm } = req.body;
+
+      if (!id || !status) {
+        return res.status(400).json({ error: true, message: "Eksik parametre." });
+      }
+
+      const courier = await prisma.courier.findUnique({ where: { id } });
+      if (!courier) {
+        return res.status(404).json({ error: true, message: "Kurye bulunamadı." });
+      }
+
+      const updatedCourier = await prisma.$transaction(async (tx) => {
+        const uCourier = await tx.courier.update({
+          where: { id },
+          data: {
+            status: status as CourierStatus,
+            ...(vehiclePlate !== undefined ? { vehiclePlate } : {}),
+            ...(vehicleType !== undefined ? { vehicleType } : {}),
+            ...(maxServiceDistanceKm !== undefined ? { maxServiceDistanceKm: parseFloat(maxServiceDistanceKm.toString()) } : {})
+          }
+        });
+
+        if (status === "APPROVED") {
+          await tx.user.update({
+            where: { id: courier.userId },
+            data: { role: "courier" }
+          });
+        }
+
+        return uCourier;
+      });
+
+      return res.status(200).json({ error: false, data: updatedCourier, message: "Kurye durumu başarıyla güncellendi." });
+    } catch (error: any) {
+      console.error("[SuperAdminController.updateCourierStatus] Error:", error);
+      return res.status(500).json({ error: true, message: "Sunucu hatası oluştu." });
+    }
+  }
+
+  /**
+   * POST /api/admin/couriers/:id/shops
+   * Body: { shopId: string }
+   * Kuryeyi belirli bir dükkana tanımlar (Dedicated courier).
+   */
+  async assignCourierToShop(req: Request, res: Response) {
+    try {
+      const courierId = req.params.id as string;
+      const { shopId } = req.body;
+
+      if (!courierId || !shopId) {
+        return res.status(400).json({ error: true, message: "Eksik parametre." });
+      }
+
+      // Kurye ve dükkanın varlığını kontrol et
+      const courier = await prisma.courier.findUnique({ where: { id: courierId } });
+      if (!courier) {
+        return res.status(404).json({ error: true, message: "Kurye bulunamadı." });
+      }
+
+      const shop = await prisma.shop.findUnique({ where: { id: shopId } });
+      if (!shop) {
+        return res.status(404).json({ error: true, message: "Dükkan bulunamadı." });
+      }
+
+      const assignment = await prisma.courierShop.upsert({
+        where: {
+          courierId_shopId: { courierId, shopId }
+        },
+        create: {
+          courierId,
+          shopId
+        },
+        update: {}
+      });
+
+      return res.status(200).json({ error: false, data: assignment, message: "Kurye dükkana başarıyla atandı." });
+    } catch (error: any) {
+      console.error("[SuperAdminController.assignCourierToShop] Error:", error);
+      return res.status(500).json({ error: true, message: "Sunucu hatası oluştu." });
+    }
+  }
+
+  /**
+   * DELETE /api/admin/couriers/:id/shops/:shopId
+   * Kuryenin dükkan atamasını kaldırır.
+   */
+  async removeCourierFromShop(req: Request, res: Response) {
+    try {
+      const courierId = req.params.id as string;
+      const shopId = req.params.shopId as string;
+
+      if (!courierId || !shopId) {
+        return res.status(400).json({ error: true, message: "Eksik parametre." });
+      }
+
+      await prisma.courierShop.deleteMany({
+        where: { courierId, shopId }
+      });
+
+      return res.status(200).json({ error: false, message: "Kurye dükkan ataması kaldırıldı." });
+    } catch (error: any) {
+      console.error("[SuperAdminController.removeCourierFromShop] Error:", error);
       return res.status(500).json({ error: true, message: "Sunucu hatası oluştu." });
     }
   }

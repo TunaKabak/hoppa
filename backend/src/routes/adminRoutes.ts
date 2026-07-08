@@ -22,6 +22,12 @@ router.use((req, res, next) => {
 router.get("/merchants/pending", (req, res) => superAdminController.getPendingMerchants(req, res));
 router.put("/merchants/:id/status", (req, res) => superAdminController.updateMerchantStatus(req, res));
 
+// Admin -> Courier Management
+router.get("/couriers", (req, res) => superAdminController.getCouriers(req, res));
+router.put("/couriers/:id/status", (req, res) => superAdminController.updateCourierStatus(req, res));
+router.post("/couriers/:id/shops", (req, res) => superAdminController.assignCourierToShop(req, res));
+router.delete("/couriers/:id/shops/:shopId", (req, res) => superAdminController.removeCourierFromShop(req, res));
+
 // Admin -> Business Category Management
 router.get("/business-categories", (req, res) => businessCategoryController.adminGetBusinessCategories(req, res));
 router.post("/business-categories", (req, res) => businessCategoryController.adminCreateBusinessCategory(req, res));

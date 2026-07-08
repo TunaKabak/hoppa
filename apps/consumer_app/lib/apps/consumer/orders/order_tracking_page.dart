@@ -16,7 +16,7 @@ final courierLocationStreamProvider = StreamProvider.family<CourierLocation?, St
   return supabase
       .from('CourierLocation')
       .stream(primaryKey: ['id'])
-      .eq('courierId', courierId)
+      .eq('id', courierId)
       .map((data) {
         if (data.isEmpty) {
           return null;
@@ -320,13 +320,17 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> with Tick
 
               final newLocation = LatLng(courierLocation.latitude, courierLocation.longitude);
               
-              // Trigger smooth animation and map frame update on new coordinate
+              // Trigger smooth animation and map frame update on new coordinate outside of the build phase
               if (_currentCourierLatLng == null || 
                   _newPosition?.latitude != newLocation.latitude ||
                   _newPosition?.longitude != newLocation.longitude) {
                 
-                _animateCourierMovement(newLocation, courierLocation.bearing);
-                _fitMapBounds(newLocation, destinationLatLng);
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    _animateCourierMovement(newLocation, courierLocation.bearing);
+                    _fitMapBounds(newLocation, destinationLatLng);
+                  }
+                });
               }
 
               final activeCourierLoc = _currentCourierLatLng ?? newLocation;

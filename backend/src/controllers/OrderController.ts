@@ -446,6 +446,77 @@ export class OrderController {
     }
   }
 
+  private async findBestCourier(shopId: string, shopLat: number, shopLng: number): Promise<any> {
+    const couriers = await prisma.courier.findMany({
+      where: {
+        status: "APPROVED",
+        isActive: true
+      },
+      include: {
+        shops: true,
+        locations: {
+          orderBy: { updatedAt: "desc" },
+          take: 1
+        },
+        orders: {
+          where: {
+            status: {
+              in: ["PREPARING", "ON_THE_WAY"]
+            }
+          }
+        }
+      }
+    });
+
+    const idleCouriers = couriers.filter(c => c.orders.length === 0);
+    if (idleCouriers.length === 0) {
+      return null;
+    }
+
+    const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+      const R = 6371; // km
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    };
+
+    const dedicatedIdle = idleCouriers.filter(c => c.shops.some(s => s.shopId === shopId));
+    if (dedicatedIdle.length > 0) {
+      let bestCourier = dedicatedIdle[0];
+      let minDistance = Infinity;
+      for (const courier of dedicatedIdle) {
+        if (courier.locations.length > 0) {
+          const dist = calculateDistance(shopLat, shopLng, courier.locations[0].latitude, courier.locations[0].longitude);
+          if (dist < minDistance) {
+            minDistance = dist;
+            bestCourier = courier;
+          }
+        }
+      }
+      return bestCourier;
+    }
+
+    let bestGeographicCourier = null;
+    let minGeographicDistance = Infinity;
+
+    for (const courier of idleCouriers) {
+      if (courier.locations.length > 0) {
+        const dist = calculateDistance(shopLat, shopLng, courier.locations[0].latitude, courier.locations[0].longitude);
+        if (dist <= courier.maxServiceDistanceKm && dist < minGeographicDistance) {
+          minGeographicDistance = dist;
+          bestGeographicCourier = courier;
+        }
+      }
+    }
+
+    return bestGeographicCourier;
+  }
+
   /**
    * Sipariş durumunun güncellenmesi (Satıcı/Yönetici için)
    */
@@ -500,30 +571,44 @@ export class OrderController {
       };
 
       if (upperStatus === "ON_THE_WAY") {
-        let courier = await prisma.courier.findFirst();
+        const shop = await prisma.shop.findUnique({
+          where: { id: order.shopId }
+        });
+        const shopLat = shop?.latitude || 35.1856;
+        const shopLng = shop?.longitude || 33.3823;
+
+        let courier = await this.findBestCourier(order.shopId, shopLat, shopLng);
+
+        // Müsait kurye yoksa mock kuryeyi fallback olarak kullan/oluştur
         if (!courier) {
-          let courierUser = await prisma.user.findUnique({
-            where: { phone: "+905555555555" }
+          courier = await prisma.courier.findFirst({
+            where: { phoneNumber: "+905555555555" }
           });
-          if (!courierUser) {
-            courierUser = await prisma.user.create({
+          if (!courier) {
+            let courierUser = await prisma.user.findUnique({
+              where: { phone: "+905555555555" }
+            });
+            if (!courierUser) {
+              courierUser = await prisma.user.create({
+                data: {
+                  phone: "+905555555555",
+                  role: "courier",
+                  name: "Süleyman",
+                  surname: "Kurye"
+                }
+              });
+            }
+            courier = await prisma.courier.create({
               data: {
-                phone: "+905555555555",
-                role: "courier",
-                name: "Süleyman",
-                surname: "Kurye"
+                userId: courierUser.id,
+                name: "Süleyman Kurye",
+                phoneNumber: "+905555555555",
+                vehiclePlate: "34 HO 9999",
+                isActive: true,
+                status: "APPROVED"
               }
             });
           }
-          courier = await prisma.courier.create({
-            data: {
-              userId: courierUser.id,
-              name: "Süleyman Kurye",
-              phoneNumber: "+905555555555",
-              vehiclePlate: "34 HO 9999",
-              isActive: true
-            }
-          });
         }
         updateData.courierId = courier.id;
       }
