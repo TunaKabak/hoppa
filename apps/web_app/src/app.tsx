@@ -92,7 +92,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
         name: '',
         phone: '',
         vehicle: 'MOTORCYCLE',
-        license: 'A'
+        license: 'YES'
     });
     const [courierLoading, setCourierLoading] = useState(false);
     const [courierError, setCourierError] = useState('');
@@ -1611,30 +1611,70 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                 </div>
 
                                                 <div>
-                                                    <label className="text-xs font-bold text-slate-500 mb-1.5 block">{t('partners_courier_form_vehicle')}</label>
-                                                    <select 
-                                                        value={courierForm.vehicle}
-                                                        onChange={(e) => setCourierForm(prev => ({ ...prev, vehicle: e.target.value }))}
-                                                        className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600"
-                                                    >
-                                                        <option value="MOTORCYCLE">{t('partners_courier_form_vehicle1')}</option>
-                                                        <option value="BICYCLE">{t('partners_courier_form_vehicle2')}</option>
-                                                        <option value="CAR">{t('partners_courier_form_vehicle3')}</option>
-                                                    </select>
+                                                    <label className="text-xs font-bold text-slate-500 mb-2 block">{t('partners_courier_form_vehicle')}</label>
+                                                    <div className="grid grid-cols-3 gap-3">
+                                                        {[
+                                                            { id: 'MOTORCYCLE', label: t('partners_courier_form_vehicle1'), icon: '🏍️' },
+                                                            { id: 'BICYCLE', label: t('partners_courier_form_vehicle2'), icon: '🚲' },
+                                                            { id: 'CAR', label: t('partners_courier_form_vehicle3'), icon: '🚗' }
+                                                        ].map(item => (
+                                                            <button
+                                                                key={item.id}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setCourierForm(prev => ({ 
+                                                                        ...prev, 
+                                                                        vehicle: item.id,
+                                                                        license: item.id === 'BICYCLE' ? 'NONE' : 'YES'
+                                                                    }));
+                                                                }}
+                                                                className={`p-4 rounded-2xl border text-center flex flex-col items-center justify-center transition-all duration-300 hover:scale-105 active:scale-95 ${
+                                                                    courierForm.vehicle === item.id
+                                                                        ? 'border-emerald-600 bg-emerald-50 text-emerald-700 shadow-md shadow-emerald-100 ring-2 ring-emerald-600/10'
+                                                                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                                                                }`}
+                                                            >
+                                                                <span className="text-2xl mb-1.5">{item.icon}</span>
+                                                                <span className="text-xs font-extrabold block">{item.label}</span>
+                                                            </button>
+                                                        ))}
+                                                    </div>
                                                 </div>
 
-                                                <div>
-                                                    <label className="text-xs font-bold text-slate-500 mb-1.5 block">{t('partners_courier_form_license')}</label>
-                                                    <select 
-                                                        value={courierForm.license}
-                                                        onChange={(e) => setCourierForm(prev => ({ ...prev, license: e.target.value }))}
-                                                        className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600"
-                                                    >
-                                                        <option value="A">{t('partners_courier_form_license1')}</option>
-                                                        <option value="B">{t('partners_courier_form_license2')}</option>
-                                                        <option value="NONE">{t('partners_courier_form_license3')}</option>
-                                                    </select>
-                                                </div>
+                                                {(courierForm.vehicle === 'MOTORCYCLE' || courierForm.vehicle === 'CAR') && (
+                                                    <div className="space-y-2">
+                                                        <label className="text-xs font-bold text-slate-500 block">Sürüş Ehliyetiniz Var mı?</label>
+                                                        <div className="grid grid-cols-2 gap-4">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setCourierForm(prev => ({ ...prev, license: 'YES' }))}
+                                                                className={`p-3 text-sm font-semibold rounded-xl border text-center transition-all ${
+                                                                    courierForm.license === 'YES'
+                                                                        ? 'border-emerald-600 bg-emerald-50 text-emerald-700 shadow-sm'
+                                                                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                                                                }`}
+                                                            >
+                                                                Evet, Var
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setCourierForm(prev => ({ ...prev, license: 'NO' }))}
+                                                                className={`p-3 text-sm font-semibold rounded-xl border text-center transition-all ${
+                                                                    courierForm.license === 'NO'
+                                                                        ? 'border-orange-500 bg-orange-50 text-orange-700 shadow-sm'
+                                                                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                                                                }`}
+                                                            >
+                                                                Hayır, Yok
+                                                            </button>
+                                                        </div>
+                                                        {courierForm.license === 'NO' && (
+                                                            <div className="text-amber-700 text-xs font-medium bg-amber-50 p-3 rounded-xl border border-amber-200 mt-2">
+                                                                ⚠️ Motorlu araçlar için geçerli bir ehliyetinizin olması zorunludur. Başvurunuz onaylanmayabilir.
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
 
                                                 <button 
                                                     type="submit" 
