@@ -1,24 +1,30 @@
-# Story 30: Canlı Destek Model Yükseltme ve Hata Giderme
+# Story 30: Canlı Destek ve Kurye Canlı Takip İyileştirmeleri
 
 ## 1. Giriş ve Sorun Tanımı
-Tüketici uygulamasında (**Consumer App**) yer alan "Canlı Destek Asistanı" (Hoppa Asistan) modülü çalışmamaktadır.
-Yapılan analiz sonucunda backend API servisinin (`SupportController.chatWithAssistant`) Gemini API'ye bağlanırken `gemini-1.5-flash` modelini kullandığı, ancak mevcut API anahtarı veya servis sağlayıcı bölgesinde bu modelin desteklenmeyerek **404 Not Found** hatası döndürdüğü tespit edilmiştir.
+1. **Canlı Destek Asistanı (Hoppa Asistan):**
+   - Gemini modelinin `gemini-2.5-flash` olarak güncellenmesi ve API yanıt formatının `data` sarmalıyla hizalanmasından sonra, asistanın promptlarında iyileştirme ihtiyacı doğmuştur.
+   - Asistanın kullanıcıya teknik/veritabanı UUID sipariş ID'lerini ifşa etmesi engellenmeli, birden fazla aktif sipariş olduğunda bunları akıllıca yönetebilmeli ve hitap tonu aşırı samimi ("canım" vb.) olmaktan çıkarılıp saygılı ama Kıbrıs sıcakkanlılığında resmiyet-samimiyet dengesine oturtulmalıdır.
+2. **Kurye Canlı Takip Sistemi:**
+   - Supabase Realtime ile entegre kurye konumu canlı takibi tüketici uygulamasında çalışmamaktadır. Bunun nedeni, Supabase veritabanında `CourierLocation` tablosunun Row-Level Security (RLS) politikasının aktif olup anonim okumalara izin vermemesidir.
 
 ## 2. Teknik Analiz ve Çözüm Planı
-Gemini API `ListModels` sorgusu ile API anahtarının yetkili olduğu modeller listelenmiş ve aşağıdaki aktif modeller doğrulanmıştır:
-- `models/gemini-2.5-flash` (Aktif & Önerilen)
-- `models/gemini-2.0-flash`
-- `models/gemini-3.5-flash`
-
-Çözüm olarak, backend üzerindeki `SupportController.ts` dosyasında kullanılan kararlı model ismi `gemini-1.5-flash` yerine `gemini-2.5-flash` olarak güncellenecek, böylece asistanın Kıbrıslı kimliği ve sipariş bağlamı enjeksiyonu özelliklerinin tekrar canlıya alınması sağlanacaktır.
+1. **SupportController.ts Prompt & Bağlam İyileştirmesi:**
+   - `prisma.order.findMany` ile kullanıcının PENDING, PREPARING, ON_THE_WAY, READY_FOR_PICKUP durumundaki tüm aktif siparişleri ve son geçmiş siparişi çekilerek bağlama aktarıldı.
+   - Sistem talimatlarına kullanıcıya ham sipariş ID'si verilmemesi ve "canım", "gülüm" gibi ifadelerin kesinlikle yasaklanması kuralları eklendi.
+2. **Kurye Takip RLS Kaldırılması:**
+   - PostgreSQL/Supabase katmanında `CourierLocation` tablosunun RLS özelliği devre dışı bırakılarak anonim harita aboneliklerinin stream dinleyebilmesi sağlandı (`ALTER TABLE "CourierLocation" DISABLE ROW LEVEL SECURITY;`).
 
 ## 3. Etki Analizi (Impact Analysis)
-- **Tüketici Uygulaması (Consumer App):** Canlı destek menüsünde "Üzgünüm, şu an bağlantıda bir sorun yaşıyorum" hatası yerine başarılı bir şekilde yapay zeka asistanı yanıtı alınacaktır.
-- **Backend (REST API):** `/api/consumer/support/chat` endpoint'i başarılı (200 OK) yanıt dönmeye başlayacaktır.
+- **Tüketici Uygulaması (Consumer App):** 
+  - Destek asistanı daha profesyonel, güvenli ve açıklayıcı yanıtlar verir.
+  - Sipariş takip haritasında kuryenin konumu canlı olarak akmaya başlar.
+- **Backend (REST API):**
+  - Destek endpoint'i birden fazla aktif siparişi kapsayacak şekilde güncellendi.
 
-## 4. Değişiklik Yapılacak Dosyalar
+## 4. Değişiklik Yapılan Dosyalar
 - `backend/src/controllers/SupportController.ts`
+- Database/Supabase RLS ayarları güncellendi.
 
 ## 5. Doğrulama (Verification)
-- TypeScript derleme doğrulaması (`npx tsc --noEmit` veya backend build).
-- Canlı destek asistanı endpoint'inin manuel veya otomatik entegrasyon testi.
+- TypeScript derleme doğrulaması (`npx tsc --noEmit`).
+- Kurye takip stream erişimi doğrulaması.

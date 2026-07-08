@@ -39,32 +39,66 @@ export class SupportController {
       }
 
       // 🚨 MÜKEMMEL AKILLI BAĞLAM ENJEKSİYONU (Context Injection):
-      // Kullanıcının varsa seçtiği veya son aktif siparişini veritabanından çekiyoruz
-      let orderContext = "Kullanıcının şu anda aktif bir siparişi bulunmamaktadır.";
-      if (activeOrderId) {
-        const order = await prisma.order.findUnique({
-          where: { id: activeOrderId },
-          include: {
-            shop: { select: { name: true } },
-            items: {
-              include: {
-                product: { select: { name: true } }
-              }
+      // Kullanıcının tüm aktif siparişlerini veritabanından çekiyoruz (Aynı anda birden fazla aktif sipariş olabilir)
+      const activeOrders = await prisma.order.findMany({
+        where: {
+          consumerId: userId,
+          status: {
+            in: ["PENDING", "PREPARING", "ON_THE_WAY", "READY_FOR_PICKUP"]
+          }
+        },
+        include: {
+          shop: { select: { name: true } },
+          items: {
+            include: {
+              product: { select: { name: true } }
             }
           }
-        });
+        },
+        orderBy: { createdAt: 'desc' }
+      });
 
-        if (order && order.consumerId === userId) {
-          orderContext = `
-            Kullanıcının aktif sipariş detayları:
-            - Sipariş ID: ${order.id}
-            - İşletme Adı: ${order.shop.name}
-            - Sipariş Durumu: ${order.status} (PENDING: Onay bekliyor, PREPARING: Hazırlanıyor, ON_THE_WAY: Kurye Yolda, READY_FOR_PICKUP: Gel Al Hazır, DELIVERED: Teslim edildi)
-            - Sipariş Verilme Zamanı: ${order.createdAt}
-            - Alınan Ürünler: ${order.items.map(i => `${i.product.name} (${i.quantity} adet)`).join(", ")}
-            - Ödeme Tipi: ${order.paymentMethod}
-          `;
-        }
+      // Son tamamlanan/iptal edilen geçmiş sipariş
+      const lastPastOrder = await prisma.order.findFirst({
+        where: {
+          consumerId: userId,
+          status: {
+            in: ["DELIVERED", "CANCELLED"]
+          }
+        },
+        include: {
+          shop: { select: { name: true } },
+          items: {
+            include: {
+              product: { select: { name: true } }
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      let orderContext = "";
+      if (activeOrders.length > 0) {
+        orderContext += "Kullanıcının aktif siparişleri:\n" + activeOrders.map((order, idx) => `
+          Sipariş #${idx + 1}:
+          - İşletme Adı: ${order.shop.name}
+          - Sipariş Durumu: ${order.status} (PENDING: Onay bekliyor, PREPARING: Hazırlanıyor, ON_THE_WAY: Kurye Yolda, READY_FOR_PICKUP: Gel Al Hazır)
+          - Sipariş Zamanı: ${order.createdAt}
+          - Ürünler: ${order.items.map(i => `${i.product.name} (${i.quantity} adet)`).join(", ")}
+          - Ödeme Tipi: ${order.paymentMethod}
+        `).join("\n");
+      } else {
+        orderContext += "Kullanıcının şu anda aktif bir siparişi bulunmamaktadır.\n";
+      }
+
+      if (lastPastOrder) {
+        orderContext += `\nKullanıcının son geçmiş siparişi:\n` + `
+          - İşletme Adı: ${lastPastOrder.shop.name}
+          - Sipariş Durumu: ${lastPastOrder.status} (DELIVERED: Teslim Edildi, CANCELLED: İptal Edildi)
+          - Sipariş Zamanı: ${lastPastOrder.createdAt}
+          - Ürünler: ${lastPastOrder.items.map(i => `${i.product.name} (${i.quantity} adet)`).join(", ")}
+          - İptal Nedeni (varsa): ${lastPastOrder.cancelReason || "Yok"}
+        `;
       }
 
       // Yapay zeka sistem talimatları (System Instruction)
@@ -74,10 +108,12 @@ export class SupportController {
         ${orderContext}
         
         KURALLAR:
-        1. Kullanıcının aktif siparişi "PREPARING" (Hazırlanıyor) aşamasındaysa ve iptal etmek istiyorsa, "Siparişiniz hazırlanmaya başladığı için otomatik iptal edemiyorum, ancak işletme ile görüşüp sizin için bilgi alabilirim" de.
-        2. Sipariş "PENDING" (Onay bekliyor) aşamasındaysa, otomatik iptal hakkı olduğunu belirt ve iptal tetikleme yönlendirmesi yap.
-        3. Sipariş gecikmişse ("ON_THE_WAY" durumunda ve süresi aşılmışsa), kuryenin canlı haritada ilerlediğini, gerekirse kurye ile direkt iletişime geçebileceğini belirt.
-        4. Kıbrıs yerel ifadelerini (örneğin sıcakkanlı bir selamlama: "Merhaba sevgili dostum, nasılsın?") dengeli ve profesyonel kullan. Asla resmiyetten kopma ama aşırı soğuk da davranma.
+        1. KESİNLİKLE UYULMASI GEREKEN GÜVENLİK KURALI: Kullanıcıya teknik/veritabanı sipariş ID'lerini (örn: UUID'ler, uzun hash kodları) doğrudan verme. Onlar yerine siparişleri işletme adlarıyla (örn: "Migros siparişiniz") veya "aktif siparişiniz" diyerek tanımla.
+        2. KESİNLİKLE UYULMASI GEREKEN HİTAP KURALI: Kullanıcıya hitap ederken "canım", "gülüm", "tatlım", "güzelim", "canısı" gibi laubali, aşırı samimi ya da profesyonellik dışı kelimeler KESİNLİKLE kullanma. Sıcakkanlı, nazik ama saygılı ve kibar bir hitap tercih et (örn: "sevgili dostum", "sayın müşterimiz", veya sadece ismini biliyorsan "Ahmet Bey" gibi). Resmiyet ve samimiyet dengesini koru.
+        3. Kullanıcının aktif siparişi "PREPARING" (Hazırlanıyor) aşamasındaysa ve iptal etmek istiyorsa, "Siparişiniz hazırlanmaya başladığı için otomatik iptal edemiyorum, ancak işletme ile görüşüp sizin için bilgi alabilirim" de.
+        4. Sipariş "PENDING" (Onay bekliyor) aşamasındaysa, otomatik iptal hakkı olduğunu belirt ve iptal tetikleme yönlendirmesi yap.
+        5. Sipariş gecikmişse ("ON_THE_WAY" durumunda ve süresi aşılmışsa), kuryenin canlı haritada ilerlediğini, gerekirse kurye ile direkt iletişime geçebileceğini belirt.
+        6. Kıbrıs yerel ifadelerini (örneğin sıcakkanlı bir selamlama: "Merhaba sevgili dostum, nasılsın?") dengeli ve profesyonel kullan. Asla resmiyetten kopma ama aşırı soğuk da davranma.
       `;
 
       if (!apiKey) {
