@@ -142,6 +142,7 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> with Tick
 
   @override
   Widget build(BuildContext context) {
+    const brandGreen = Color(0xFF00A651);
     final theme = Theme.of(context);
     final courierId = widget.order.courierId;
     
@@ -259,63 +260,97 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> with Tick
                       // Markers
                       MarkerLayer(
                         markers: [
-                          // Destination Marker
+                          // Destination (Delivery Address) Marker with Premium Pulsing House Badge
                           Marker(
                             point: destinationLatLng,
-                            width: 50,
-                            height: 50,
+                            width: 55,
+                            height: 55,
                             child: Stack(
                               alignment: Alignment.center,
                               children: [
+                                // Pulse ring
                                 Container(
-                                  width: 44,
-                                  height: 44,
+                                  width: 50,
+                                  height: 50,
                                   decoration: BoxDecoration(
-                                    color: Colors.green.withValues(alpha: 0.2),
+                                    color: Colors.red.withValues(alpha: 0.15),
                                     shape: BoxShape.circle,
                                   ),
                                 ),
-                                const Icon(
-                                  Icons.location_on,
-                                  color: Colors.red,
-                                  size: 40,
+                                // Main Pin badge
+                                Container(
+                                  width: 38,
+                                  height: 38,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.red, width: 2),
+                                    boxShadow: const [
+                                      BoxShadow(
+                                        color: Colors.black12,
+                                        blurRadius: 4,
+                                        offset: Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.home_rounded,
+                                    color: Colors.red,
+                                    size: 20,
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                          // Courier Marker
+                          // Courier Marker featuring rotating arrow and static Hoppa logo
                           Marker(
                             point: activeCourierLoc,
-                            width: 60,
-                            height: 60,
-                            child: Transform.rotate(
-                              angle: _currentBearing * math.pi / 180,
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  Container(
-                                    width: 46,
-                                    height: 46,
-                                    decoration: BoxDecoration(
-                                      color: theme.colorScheme.primary.withValues(alpha: 0.2),
-                                      shape: BoxShape.circle,
-                                      border: Border.all(color: Colors.white, width: 2),
-                                      boxShadow: const [
-                                        BoxShadow(
-                                          color: Colors.black26,
-                                          blurRadius: 6,
-                                          offset: Offset(0, 3),
-                                        ),
-                                      ],
+                            width: 65,
+                            height: 65,
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                // Rotating Direction Indicator (Arrow pointer)
+                                Transform.rotate(
+                                  angle: _currentBearing * math.pi / 180,
+                                  child: SizedBox(
+                                    width: 60,
+                                    height: 60,
+                                    child: Align(
+                                      alignment: Alignment.topCenter,
+                                      child: Icon(
+                                        Icons.navigation,
+                                        color: brandGreen,
+                                        size: 16,
+                                      ),
                                     ),
                                   ),
-                                  Icon(
-                                    Icons.motorcycle,
-                                    color: theme.colorScheme.primary,
-                                    size: 30,
+                                ),
+                                // Static (Non-rotating) Hoppa Logo Badge
+                                Container(
+                                  width: 42,
+                                  height: 42,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: brandGreen, width: 2),
+                                    boxShadow: const [
+                                      BoxShadow(
+                                        color: Colors.black26,
+                                        blurRadius: 6,
+                                        offset: Offset(0, 3),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
+                                  padding: const EdgeInsets.all(4),
+                                  child: ClipOval(
+                                    child: Image.asset(
+                                      'assets/images/hoppa_logo.png',
+                                      fit: BoxFit.contain,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],

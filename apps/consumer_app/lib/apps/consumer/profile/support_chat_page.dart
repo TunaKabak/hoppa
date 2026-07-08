@@ -5,16 +5,26 @@ import 'package:intl/intl.dart';
 import 'package:core_shared/shared/models/order.dart';
 import 'package:consumer_app/apps/consumer/repositories/consumer_order_repository.dart';
 import 'package:consumer_app/apps/consumer/repositories/support_repository.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
+
+class ChatOption {
+  final String id;
+  final String label;
+
+  ChatOption({required this.id, required this.label});
+}
 
 class MessageModel {
   final String text;
   final bool isUser;
   final DateTime time;
+  final List<ChatOption>? options;
 
   MessageModel({
     required this.text,
     required this.isUser,
     required this.time,
+    this.options,
   });
 }
 
@@ -31,6 +41,8 @@ class _SupportChatPageState extends ConsumerState<SupportChatPage> {
   final ScrollController _scrollController = ScrollController();
   bool _isTyping = false;
   Order? _activeOrder;
+  final stt.SpeechToText _speech = stt.SpeechToText();
+  bool _isListening = false;
 
   @override
   void initState() {
@@ -44,10 +56,43 @@ class _SupportChatPageState extends ConsumerState<SupportChatPage> {
       ),
     );
     _findActiveOrder();
+    _initSpeech();
+  }
+
+  void _initSpeech() async {
+    try {
+      await _speech.initialize(
+        onStatus: (status) => debugPrint('Speech status: $status'),
+        onError: (errorNotification) => debugPrint('Speech error: $errorNotification'),
+      );
+    } catch (e) {
+      debugPrint('Speech init failed: $e');
+    }
+  }
+
+  void _listen() async {
+    if (!_isListening) {
+      bool available = await _speech.initialize();
+      if (available) {
+        setState(() => _isListening = true);
+        _speech.listen(
+          onResult: (result) {
+            setState(() {
+              _inputController.text = result.recognizedWords;
+            });
+          },
+          localeId: 'tr_TR', // Turkish language support
+        );
+      }
+    } else {
+      setState(() => _isListening = false);
+      _speech.stop();
+    }
   }
 
   @override
   void dispose() {
+    _speech.stop();
     _inputController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -111,6 +156,14 @@ class _SupportChatPageState extends ConsumerState<SupportChatPage> {
       );
 
       final reply = response['reply'] as String? ?? "Şu anda yanıt veremiyorum.";
+      final optionsData = response['options'] as List<dynamic>?;
+      List<ChatOption>? options;
+      if (optionsData != null) {
+        options = optionsData.map((opt) => ChatOption(
+          id: opt['id'] as String,
+          label: opt['label'] as String,
+        )).toList();
+      }
       
       if (mounted) {
         setState(() {
@@ -119,6 +172,7 @@ class _SupportChatPageState extends ConsumerState<SupportChatPage> {
               text: reply,
               isUser: false,
               time: DateTime.now(),
+              options: options,
             ),
           );
           _isTyping = false;
@@ -271,53 +325,102 @@ class _SupportChatPageState extends ConsumerState<SupportChatPage> {
   Widget _buildMessageBubble(MessageModel msg, DateFormat timeFormat) {
     const brandGreen = Color(0xFF00A651);
     final isUser = msg.isUser;
+    final ordersAsync = ref.watch(consumerOrdersProvider);
 
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: isUser ? brandGreen : const Color(0xFFEFEFEF),
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: isUser ? const Radius.circular(16) : const Radius.circular(4),
-            bottomRight: isUser ? const Radius.circular(4) : const Radius.circular(16),
+      child: Column(
+        crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            margin: const EdgeInsets.only(bottom: 4),
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.75,
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: isUser ? brandGreen : const Color(0xFFEFEFEF),
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(16),
+                topRight: const Radius.circular(16),
+                bottomLeft: isUser ? const Radius.circular(16) : const Radius.circular(4),
+                bottomRight: isUser ? const Radius.circular(4) : const Radius.circular(16),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.02),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                )
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  msg.text,
+                  style: TextStyle(
+                    color: isUser ? Colors.white : Colors.black87,
+                    fontSize: 14,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  timeFormat.format(msg.time),
+                  style: TextStyle(
+                    color: isUser ? Colors.white.withOpacity(0.7) : Colors.grey[500],
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.02),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+          
+          // Render interactive options buttons under AI message bubble
+          if (!isUser && msg.options != null && msg.options!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 12, top: 4),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: msg.options!.map((opt) {
+                  return OutlinedButton(
+                    onPressed: () {
+                      // 1. Link selected order
+                      if (ordersAsync.value != null) {
+                        try {
+                          final selectedOrder = ordersAsync.value!.firstWhere((o) => o.id == opt.id);
+                          setState(() {
+                            _activeOrder = selectedOrder;
+                          });
+                        } catch (_) {}
+                      }
+                      // 2. Trigger message send
+                      _sendMessage("${opt.label} hakkında yardım istiyorum.");
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: brandGreen,
+                      side: const BorderSide(color: brandGreen, width: 1),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      backgroundColor: Colors.white,
+                    ),
+                    child: Text(
+                      opt.label,
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                  );
+                }).toList(),
+              ),
             )
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              msg.text,
-              style: TextStyle(
-                color: isUser ? Colors.white : Colors.black87,
-                fontSize: 14,
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              timeFormat.format(msg.time),
-              style: TextStyle(
-                color: isUser ? Colors.white.withOpacity(0.7) : Colors.grey[500],
-                fontSize: 10,
-              ),
-            ),
-          ],
-        ),
+          else
+            const SizedBox(height: 8),
+        ],
       ),
     );
   }
@@ -419,6 +522,13 @@ class _SupportChatPageState extends ConsumerState<SupportChatPage> {
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
                   borderSide: BorderSide.none,
+                ),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _isListening ? Icons.mic : Icons.mic_none,
+                    color: _isListening ? Colors.red : Colors.grey,
+                  ),
+                  onPressed: _listen,
                 ),
               ),
               onSubmitted: (val) => _sendMessage(val),
@@ -528,9 +638,7 @@ class _SupportChatPageState extends ConsumerState<SupportChatPage> {
                               ),
                             ),
                             Text(
-                              isDelivered 
-                                  ? "Teslim Edildi" 
-                                  : (isCancelled ? "İptal Edildi" : "Aktif Sipariş"),
+                              "${isDelivered ? 'Teslim Edildi' : (isCancelled ? 'İptal Edildi' : 'Aktif')} • ${DateFormat('dd.MM HH:mm').format(o.createdAt)}",
                               style: TextStyle(
                                 fontSize: 8,
                                 color: isSelected ? brandGreen.withOpacity(0.8) : Colors.grey[500],

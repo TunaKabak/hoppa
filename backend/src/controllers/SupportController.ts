@@ -163,12 +163,20 @@ export class SupportController {
         console.error("Görüşme loglama hatası:", logError);
       }
 
+      // Çoklu sipariş seçimi için seçenekleri hazırlıyoruz
+      const allOrders = [...activeOrders, ...(lastPastOrder ? [lastPastOrder] : [])];
+      const options = allOrders.length > 1 ? allOrders.map(o => ({
+        id: o.id,
+        label: `${o.shop.name} (${new Date(o.createdAt).toLocaleDateString('tr-TR', {day: '2-digit', month: 'long'})} ${new Date(o.createdAt).toLocaleTimeString('tr-TR', {hour: '2-digit', minute:'2-digit'})})`
+      })) : undefined;
+
       res.status(200).json({
         error: false,
         message: "Asistan yanıtı başarıyla oluşturuldu.",
         data: {
           reply: aiResponseText,
-          detectedOrderId: activeOrderId || null
+          detectedOrderId: activeOrderId || null,
+          options: options || null
         }
       });
 
