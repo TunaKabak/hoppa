@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:math' as math;
 
 import 'package:provider/provider.dart' as p;
 import 'package:consumer_app/apps/consumer/home/home_page.dart';
@@ -288,98 +289,120 @@ class AnimatedHoppaButton extends StatefulWidget {
 
 class _AnimatedHoppaButtonState extends State<AnimatedHoppaButton>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _glowScale;
-  late final Animation<double> _glowOpacity;
-  
+  late final AnimationController _glowController;
   bool _isPressed = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+    _glowController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2000),
-    )..repeat();
-
-    _glowScale = Tween<double>(begin: 1.0, end: 1.3).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.easeOut,
-      ),
-    );
-
-    _glowOpacity = Tween<double>(begin: 0.6, end: 0.0).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.easeOut,
-      ),
+      duration: const Duration(milliseconds: 1400), // Smooth 1.4s full rotation
     );
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _glowController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    // Responsive size: base is ~86 on a 375px wide screen (clamped between 78 and 102)
+    final buttonSize = (screenWidth * 0.23).clamp(78.0, 102.0);
+
     return GestureDetector(
-      onTapDown: (_) => setState(() => _isPressed = true),
-      onTapUp: (_) => setState(() => _isPressed = false),
-      onTapCancel: () => setState(() => _isPressed = false),
+      onTapDown: (_) {
+        setState(() => _isPressed = true);
+        _glowController.repeat(); // Continuous rotation
+      },
+      onTapUp: (_) {
+        setState(() => _isPressed = false);
+        _glowController.stop();
+        _glowController.value = 0.0;
+      },
+      onTapCancel: () {
+        setState(() => _isPressed = false);
+        _glowController.stop();
+        _glowController.value = 0.0;
+      },
       onTap: widget.onTap,
-      child: Transform.translate(
-        offset: const Offset(0, -14), // Shift upwards to overflow the bottom bar
-        child: AnimatedScale(
-          scale: _isPressed ? 0.92 : 1.0,
-          duration: const Duration(milliseconds: 150),
-          curve: Curves.easeInOut,
-          child: Stack(
-            alignment: Alignment.center,
-            clipBehavior: Clip.none,
-            children: [
-              // Pulsing Orange Glow/Ring
-              AnimatedBuilder(
-                animation: _controller,
-                builder: (context, child) {
-                  return Transform.scale(
-                    scale: _glowScale.value,
-                    child: Container(
-                      width: 66,
-                      height: 66,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: const Color(0xFFFF7043).withValues(alpha: _glowOpacity.value), // Soft Orange Border
-                          width: 3.5,
+      child: SizedBox(
+        width: buttonSize,
+        height: 70, // Conforms to bottom bar height constraints
+        child: OverflowBox(
+          minWidth: 0,
+          minHeight: 0,
+          maxWidth: buttonSize + 60, // Allow neon glow to overflow the layout box width
+          maxHeight: buttonSize + 60, // Allow neon glow to overflow the layout box height
+          alignment: Alignment.bottomCenter, // Aligns bottom of button with bottom of bar
+          child: Transform.translate(
+            offset: const Offset(0, 7), // Slide down slightly to sit deeper in the bar
+            child: AnimatedScale(
+              scale: _isPressed ? 0.92 : 1.0,
+              duration: const Duration(milliseconds: 150),
+              curve: Curves.easeInOut,
+              child: Stack(
+                alignment: Alignment.center,
+                clipBehavior: Clip.none,
+                children: [
+                  // Rotating Green and Orange Neon Glow (behind the button)
+                  if (_isPressed)
+                    AnimatedBuilder(
+                      animation: _glowController,
+                      builder: (context, child) {
+                        final angle = _glowController.value * 2 * math.pi;
+                        final dx = 10 * math.cos(angle);
+                        final dy = 10 * math.sin(angle);
+                        return Container(
+                          width: buttonSize - 8,
+                          height: buttonSize - 8,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              // Green Neon Glow (rotating)
+                              BoxShadow(
+                                color: const Color(0xFF00FF66).withValues(alpha: 0.35),
+                                blurRadius: 18,
+                                spreadRadius: 1,
+                                offset: Offset(dx, dy),
+                              ),
+                              // Orange Neon Glow (rotating on opposite side)
+                              BoxShadow(
+                                color: const Color(0xFFFF7043).withValues(alpha: 0.35),
+                                blurRadius: 18,
+                                spreadRadius: 1,
+                                offset: Offset(-dx, -dy),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  // Main Button Container
+                  Container(
+                    width: buttonSize,
+                    height: buttonSize,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 4,
+                          offset: const Offset(0, 1),
                         ),
-                      ),
+                      ],
                     ),
-                  );
-                },
-              ),
-              // Main Button Container
-              Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.12),
-                      blurRadius: 12,
-                      offset: const Offset(0, 5),
+                    child: Image.asset(
+                      'assets/images/hoppa_button.png',
+                      fit: BoxFit.contain,
                     ),
-                  ],
-                ),
-                child: Image.asset(
-                  'assets/images/hoppa_button.png',
-                  fit: BoxFit.contain,
-                ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
