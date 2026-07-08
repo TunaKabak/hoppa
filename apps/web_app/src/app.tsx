@@ -88,7 +88,50 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
     const [contactSubmitted, setContactSubmitted] = useState(false);
     const [partnerSubmitted, setPartnerSubmitted] = useState(false);
     const [courierSubmitted, setCourierSubmitted] = useState(false);
+    const [courierForm, setCourierForm] = useState({
+        name: '',
+        phone: '',
+        vehicle: 'MOTORCYCLE',
+        license: 'A'
+    });
+    const [courierLoading, setCourierLoading] = useState(false);
+    const [courierError, setCourierError] = useState('');
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+    const handleCourierSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setCourierLoading(true);
+        setCourierError('');
+        
+        try {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+            const response = await fetch(`${apiUrl}/api/couriers/apply`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: courierForm.name,
+                    phoneNumber: courierForm.phone,
+                    vehicleType: courierForm.vehicle,
+                    vehiclePlate: '',
+                    workingHours: null,
+                    maxServiceDistanceKm: 5.0
+                }),
+            });
+
+            const data = await response.json();
+            if (response.ok && !data.error) {
+                setCourierSubmitted(true);
+            } else {
+                setCourierError(data.message || 'Başvuru sırasında bir hata oluştu.');
+            }
+        } catch (err: any) {
+            setCourierError('Sunucuya bağlanılamadı. Lütfen internetinizi kontrol edin.');
+        } finally {
+            setCourierLoading(false);
+        }
+    };
 
     // Telefon Simülatörü State'leri
     const [simScreen, setSimScreen] = useState('splash'); // splash, categories, store_list, store_detail, product_detail, checkout, order_status
@@ -1533,40 +1576,76 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                 </p>
                                             </div>
                                         ) : (
-                                            <form onSubmit={(e) => { e.preventDefault(); setCourierSubmitted(true); }} className="space-y-4">
+                                            <form onSubmit={handleCourierSubmit} className="space-y-4">
                                                 <h4 className="font-extrabold text-lg text-slate-900 mb-2">{t('partners_courier_form_title')}</h4>
+
+                                                {courierError && (
+                                                    <div className="text-red-600 text-xs font-semibold bg-red-50 p-3 rounded-xl border border-red-100">
+                                                        {courierError}
+                                                    </div>
+                                                )}
 
                                                 <div className="grid grid-cols-2 gap-4">
                                                     <div>
                                                         <label className="text-xs font-bold text-slate-500 mb-1.5 block">{t('partners_courier_form_name')}</label>
-                                                        <input required type="text" placeholder={t('partners_courier_form_name_placeholder')} className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600" />
+                                                        <input 
+                                                            required 
+                                                            type="text" 
+                                                            value={courierForm.name}
+                                                            onChange={(e) => setCourierForm(prev => ({ ...prev, name: e.target.value }))}
+                                                            placeholder={t('partners_courier_form_name_placeholder')} 
+                                                            className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600" 
+                                                        />
                                                     </div>
                                                     <div>
                                                         <label className="text-xs font-bold text-slate-500 mb-1.5 block">{t('partners_courier_form_phone')}</label>
-                                                        <input required type="tel" placeholder={t('partners_courier_form_phone_placeholder')} className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600" />
+                                                        <input 
+                                                            required 
+                                                            type="tel" 
+                                                            value={courierForm.phone}
+                                                            onChange={(e) => setCourierForm(prev => ({ ...prev, phone: e.target.value }))}
+                                                            placeholder={t('partners_courier_form_phone_placeholder')} 
+                                                            className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600" 
+                                                        />
                                                     </div>
                                                 </div>
 
                                                 <div>
                                                     <label className="text-xs font-bold text-slate-500 mb-1.5 block">{t('partners_courier_form_vehicle')}</label>
-                                                    <select className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600">
-                                                        <option>{t('partners_courier_form_vehicle1')}</option>
-                                                        <option>{t('partners_courier_form_vehicle2')}</option>
-                                                        <option>{t('partners_courier_form_vehicle3')}</option>
+                                                    <select 
+                                                        value={courierForm.vehicle}
+                                                        onChange={(e) => setCourierForm(prev => ({ ...prev, vehicle: e.target.value }))}
+                                                        className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600"
+                                                    >
+                                                        <option value="MOTORCYCLE">{t('partners_courier_form_vehicle1')}</option>
+                                                        <option value="BICYCLE">{t('partners_courier_form_vehicle2')}</option>
+                                                        <option value="CAR">{t('partners_courier_form_vehicle3')}</option>
                                                     </select>
                                                 </div>
 
                                                 <div>
                                                     <label className="text-xs font-bold text-slate-500 mb-1.5 block">{t('partners_courier_form_license')}</label>
-                                                    <select className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600">
-                                                        <option>{t('partners_courier_form_license1')}</option>
-                                                        <option>{t('partners_courier_form_license2')}</option>
-                                                        <option>{t('partners_courier_form_license3')}</option>
+                                                    <select 
+                                                        value={courierForm.license}
+                                                        onChange={(e) => setCourierForm(prev => ({ ...prev, license: e.target.value }))}
+                                                        className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600"
+                                                    >
+                                                        <option value="A">{t('partners_courier_form_license1')}</option>
+                                                        <option value="B">{t('partners_courier_form_license2')}</option>
+                                                        <option value="NONE">{t('partners_courier_form_license3')}</option>
                                                     </select>
                                                 </div>
 
-                                                <button type="submit" className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-xl text-sm shadow-md transition-all">
-                                                    {t('partners_courier_form_btn')}
+                                                <button 
+                                                    type="submit" 
+                                                    disabled={courierLoading}
+                                                    className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-orange-400 text-white font-bold py-4 rounded-xl text-sm shadow-md transition-all flex items-center justify-center"
+                                                >
+                                                    {courierLoading ? (
+                                                        <span className="inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                                    ) : (
+                                                        t('partners_courier_form_btn')
+                                                    )}
                                                 </button>
                                             </form>
                                         )}
