@@ -11,8 +11,6 @@ import 'package:core_shared/shared/core/services/navigation_provider.dart'; // Y
 
 import 'package:consumer_app/apps/consumer/business/business_provider.dart';
 import 'package:consumer_app/apps/consumer/home/search_page.dart';
-import 'package:consumer_app/apps/consumer/services/customer_auth_service.dart';
-import 'package:core_network/core_network.dart';
 import 'package:core_auth/core_auth.dart';
 import 'package:core_shared/shared/core/services/notification_service.dart';
 
@@ -153,13 +151,9 @@ class _MainLayoutPageState extends ConsumerState<MainLayoutPage> {
                   ],
                 ),
                 child: SafeArea(
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(20),
-                    ),
-                    child: SizedBox(
-                      height: 70,
-                      child: Row(
+                  child: SizedBox(
+                    height: 70,
+                    child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
                           _buildNavItem(
@@ -180,26 +174,8 @@ class _MainLayoutPageState extends ConsumerState<MainLayoutPage> {
                           ),
 
                           // ORTA BUTON (HOPPA)
-                          GestureDetector(
+                          AnimatedHoppaButton(
                             onTap: onFabPressed,
-                            child: Container(
-                              width: 64,
-                              height: 64,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.08),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Image.asset(
-                                'assets/images/hoppa_button.png',
-                                fit: BoxFit.contain,
-                              ),
-                            ),
                           ),
 
                           _buildCartNavItem(
@@ -220,7 +196,6 @@ class _MainLayoutPageState extends ConsumerState<MainLayoutPage> {
                         ],
                       ),
                     ),
-                  ),
                 ),
               )
             : null, // Kategori seçiminde Null
@@ -298,6 +273,115 @@ class _MainLayoutPageState extends ConsumerState<MainLayoutPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class AnimatedHoppaButton extends StatefulWidget {
+  final VoidCallback onTap;
+  const AnimatedHoppaButton({super.key, required this.onTap});
+
+  @override
+  State<AnimatedHoppaButton> createState() => _AnimatedHoppaButtonState();
+}
+
+class _AnimatedHoppaButtonState extends State<AnimatedHoppaButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _glowScale;
+  late final Animation<double> _glowOpacity;
+  
+  bool _isPressed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat();
+
+    _glowScale = Tween<double>(begin: 1.0, end: 1.3).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeOut,
+      ),
+    );
+
+    _glowOpacity = Tween<double>(begin: 0.6, end: 0.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeOut,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) => setState(() => _isPressed = false),
+      onTapCancel: () => setState(() => _isPressed = false),
+      onTap: widget.onTap,
+      child: Transform.translate(
+        offset: const Offset(0, -14), // Shift upwards to overflow the bottom bar
+        child: AnimatedScale(
+          scale: _isPressed ? 0.92 : 1.0,
+          duration: const Duration(milliseconds: 150),
+          curve: Curves.easeInOut,
+          child: Stack(
+            alignment: Alignment.center,
+            clipBehavior: Clip.none,
+            children: [
+              // Pulsing Orange Glow/Ring
+              AnimatedBuilder(
+                animation: _controller,
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: _glowScale.value,
+                    child: Container(
+                      width: 66,
+                      height: 66,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFFFF7043).withValues(alpha: _glowOpacity.value), // Soft Orange Border
+                          width: 3.5,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+              // Main Button Container
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.12),
+                      blurRadius: 12,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: Image.asset(
+                  'assets/images/hoppa_button.png',
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
