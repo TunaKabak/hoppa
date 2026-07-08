@@ -10,7 +10,7 @@ import 'package:core_shared/shared/models/order.dart' as model;
 import 'package:core_shared/shared/models/courier_location.dart';
 
 // Tüketici tarafında kurye konumunu dinleyen Riverpod StreamProvider
-final courierLocationStreamProvider = StreamProvider.family<CourierLocation, String>((ref, courierId) {
+final courierLocationStreamProvider = StreamProvider.family<CourierLocation?, String>((ref, courierId) {
   final supabase = Supabase.instance.client;
 
   return supabase
@@ -19,7 +19,7 @@ final courierLocationStreamProvider = StreamProvider.family<CourierLocation, Str
       .eq('courierId', courierId)
       .map((data) {
         if (data.isEmpty) {
-          throw Exception("Kurye konumu bulunamadı.");
+          return null;
         }
         return CourierLocation.fromJson(data.first);
       });
@@ -219,6 +219,105 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> with Tick
               );
             },
             data: (courierLocation) {
+              if (courierLocation == null) {
+                return Stack(
+                  children: [
+                    FlutterMap(
+                      mapController: _mapController,
+                      options: MapOptions(
+                        initialCenter: destinationLatLng,
+                        initialZoom: 15,
+                      ),
+                      children: [
+                        TileLayer(
+                          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          userAgentPackageName: 'com.hoppa.app',
+                        ),
+                        MarkerLayer(
+                          markers: [
+                            // Destination (Delivery Address) Marker with Premium Pulsing House Badge
+                            Marker(
+                              point: destinationLatLng,
+                              width: 55,
+                              height: 55,
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  Container(
+                                    width: 50,
+                                    height: 50,
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.withValues(alpha: 0.15),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  Container(
+                                    width: 38,
+                                    height: 38,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.red, width: 2),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Colors.black12,
+                                          blurRadius: 4,
+                                          offset: Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: const Icon(
+                                      Icons.home_rounded,
+                                      color: Colors.red,
+                                      size: 20,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    Positioned(
+                      top: 50,
+                      left: 16,
+                      right: 16,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 8,
+                              offset: Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.info_outline, color: Colors.orange),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                "Kurye henüz yola çıkmadı. Konum paylaşımı bekleniyor...",
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey[700],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }
+
               final newLocation = LatLng(courierLocation.latitude, courierLocation.longitude);
               
               // Trigger smooth animation and map frame update on new coordinate
