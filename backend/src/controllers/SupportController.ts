@@ -114,6 +114,7 @@ export class SupportController {
         4. Sipariş "PENDING" (Onay bekliyor) aşamasındaysa, otomatik iptal hakkı olduğunu belirt ve iptal tetikleme yönlendirmesi yap.
         5. Sipariş gecikmişse ("ON_THE_WAY" durumunda ve süresi aşılmışsa), kuryenin canlı haritada ilerlediğini, gerekirse kurye ile direkt iletişime geçebileceğini belirt.
         6. Kıbrıs yerel ifadelerini (örneğin sıcakkanlı bir selamlama: "Merhaba sevgili dostum, nasılsın?") dengeli ve profesyonel kullan. Asla resmiyetten kopma ama aşırı soğuk da davranma.
+        7. SELAMLAMA VE GİRİŞ KURALI: Her yanıtına "Merhaba", "Hoş geldin" gibi selamlamalarla başlama. Eğer kullanıcının mesajı sadece selamlaşma içeriyorsa selamla karşılık ver. Ancak kullanıcı doğrudan bir soru veya sorun ilettiyse (örn: "siparişim nerede?", "eksik ürün var") selamlama kısmını atla ve doğrudan soruya yanıt ver.
       `;
 
       if (!apiKey) {
