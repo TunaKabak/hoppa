@@ -25,7 +25,11 @@ import {
     User,
     Menu,
     X,
-    ExternalLink
+    ExternalLink,
+    Mail,
+    ChevronDown,
+    Bike,
+    Car
 } from 'lucide-react';
 import { translations } from './translations';
 
@@ -91,15 +95,26 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
     const [courierForm, setCourierForm] = useState({
         name: '',
         phone: '',
-        vehicle: 'MOTORCYCLE',
-        license: 'YES'
+        email: '',
+        district: '',
+        vehicle: 'MOTORCYCLE', // MOTORCYCLE, CAR, COMPANY_MOTORCYCLE, BICYCLE
+        license: 'YES', // YES, NO
+        workingStyle: 'FULL_TIME' // FULL_TIME, PART_TIME
     });
+    const [showDistrictDropdown, setShowDistrictDropdown] = useState(false);
     const [courierLoading, setCourierLoading] = useState(false);
     const [courierError, setCourierError] = useState('');
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     const handleCourierSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // Bölge seçimi doğrulaması
+        if (!courierForm.district) {
+            setCourierError('Lütfen çalışmak istediğiniz bölgeyi seçiniz.');
+            return;
+        }
+
         setCourierLoading(true);
         setCourierError('');
         
@@ -113,10 +128,15 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                 body: JSON.stringify({
                     name: courierForm.name,
                     phoneNumber: courierForm.phone,
-                    vehicleType: courierForm.vehicle,
+                    vehicleType: courierForm.vehicle === 'COMPANY_MOTORCYCLE' ? 'MOTORCYCLE' : courierForm.vehicle,
                     vehiclePlate: '',
-                    workingHours: null,
-                    maxServiceDistanceKm: 5.0
+                    workingHours: {
+                        email: courierForm.email || null,
+                        district: courierForm.district,
+                        license: courierForm.license,
+                        workingStyle: courierForm.workingStyle
+                    },
+                    maxServiceDistanceKm: courierForm.vehicle === 'BICYCLE' ? 2.0 : 5.0
                 }),
             });
 
@@ -1564,10 +1584,27 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                 </div>
 
                                 <div className="lg:col-span-6">
-                                    <div className="bg-slate-50 p-8 rounded-3xl border border-slate-100 shadow-xl shadow-slate-100 text-left">
+                                    <div className="bg-white p-8 sm:p-10 rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-100/70 text-left relative overflow-visible">
+                                        <div className="w-16 h-16 bg-[#ecfdf5] text-[#10b981] rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-sm">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                <circle cx="5" cy="18" r="3" fill="#ecfdf5" />
+                                                <circle cx="19" cy="18" r="3" fill="#ecfdf5" />
+                                                <path d="M12 18V9a2 2 0 0 1 2-2h3" />
+                                                <path d="M8 18H5" />
+                                                <path d="M10 9H6.5a1.5 1.5 0 0 0 0 3H9" />
+                                            </svg>
+                                        </div>
+
+                                        <h3 className="text-2xl sm:text-3xl font-black text-slate-900 leading-tight text-center mb-2">
+                                            Kurye Başvuru Formu
+                                        </h3>
+                                        <p className="text-slate-400 text-xs sm:text-sm text-center mb-8 font-medium">
+                                            Hoppa ailesine katılarak yeşil ve akıllı lojistik ağının bir parçası ol.
+                                        </p>
+
                                         {courierSubmitted ? (
                                             <div className="text-center py-12 space-y-4">
-                                                <div className="w-16 h-16 bg-emerald-100 text-emerald-800 rounded-full flex items-center justify-center text-2xl mx-auto">
+                                                <div className="w-16 h-16 bg-emerald-100 text-emerald-800 rounded-full flex items-center justify-center text-2xl mx-auto shadow-inner">
                                                     ✓
                                                 </div>
                                                 <h4 className="text-xl font-bold text-slate-800">{t('partners_courier_success_title')}</h4>
@@ -1576,47 +1613,159 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                 </p>
                                             </div>
                                         ) : (
-                                            <form onSubmit={handleCourierSubmit} className="space-y-4">
-                                                <h4 className="font-extrabold text-lg text-slate-900 mb-2">{t('partners_courier_form_title')}</h4>
-
+                                            <form onSubmit={handleCourierSubmit} className="space-y-6">
                                                 {courierError && (
-                                                    <div className="text-red-600 text-xs font-semibold bg-red-50 p-3 rounded-xl border border-red-100">
+                                                    <div className="text-red-600 text-xs font-semibold bg-red-50 p-3 rounded-xl border border-red-100 animate-fade-in">
                                                         {courierError}
                                                     </div>
                                                 )}
 
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    <div>
-                                                        <label className="text-xs font-bold text-slate-500 mb-1.5 block">{t('partners_courier_form_name')}</label>
-                                                        <input 
-                                                            required 
-                                                            type="text" 
-                                                            value={courierForm.name}
-                                                            onChange={(e) => setCourierForm(prev => ({ ...prev, name: e.target.value }))}
-                                                            placeholder={t('partners_courier_form_name_placeholder')} 
-                                                            className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600" 
-                                                        />
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-xs font-bold text-slate-500 block">Adınız Soyadınız</label>
+                                                        <div className="relative">
+                                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                                                                <User size={18} />
+                                                            </div>
+                                                            <input 
+                                                                required 
+                                                                type="text" 
+                                                                value={courierForm.name}
+                                                                onChange={(e) => setCourierForm(prev => ({ ...prev, name: e.target.value }))}
+                                                                placeholder="Örn: Can Demir" 
+                                                                className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-105 rounded-2xl text-sm focus:outline-none focus:border-emerald-600 focus:bg-white transition-all text-slate-800 placeholder-slate-400 font-medium" 
+                                                            />
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <label className="text-xs font-bold text-slate-500 mb-1.5 block">{t('partners_courier_form_phone')}</label>
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-xs font-bold text-slate-500 block">Telefon Numaranız</label>
+                                                        <div className="relative">
+                                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                                                                <Phone size={18} />
+                                                            </div>
+                                                            <input 
+                                                                required 
+                                                                type="tel" 
+                                                                value={courierForm.phone}
+                                                                onChange={(e) => setCourierForm(prev => ({ ...prev, phone: e.target.value }))}
+                                                                placeholder="Örn: 0533..." 
+                                                                className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-105 rounded-2xl text-sm focus:outline-none focus:border-emerald-600 focus:bg-white transition-all text-slate-800 placeholder-slate-400 font-medium" 
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="space-y-1.5">
+                                                    <div className="flex justify-between items-center">
+                                                        <label className="text-xs font-bold text-slate-500 block">E-posta Adresiniz</label>
+                                                        <span className="text-[9px] font-bold text-slate-450 bg-slate-100 px-2 py-0.5 rounded-md tracking-wider">İSTEĞE BAĞLI</span>
+                                                    </div>
+                                                    <div className="relative">
+                                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                                                            <Mail size={18} />
+                                                        </div>
                                                         <input 
-                                                            required 
-                                                            type="tel" 
-                                                            value={courierForm.phone}
-                                                            onChange={(e) => setCourierForm(prev => ({ ...prev, phone: e.target.value }))}
-                                                            placeholder={t('partners_courier_form_phone_placeholder')} 
-                                                            className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600" 
+                                                            type="email" 
+                                                            value={courierForm.email}
+                                                            onChange={(e) => setCourierForm(prev => ({ ...prev, email: e.target.value }))}
+                                                            placeholder="Örn: can.demir@email.com (Sözleşme ve evrak gönderimleri için)" 
+                                                            className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-105 rounded-2xl text-sm focus:outline-none focus:border-emerald-600 focus:bg-white transition-all text-slate-800 placeholder-slate-400 font-medium" 
                                                         />
                                                     </div>
                                                 </div>
 
-                                                <div>
-                                                    <label className="text-xs font-bold text-slate-500 mb-2 block">{t('partners_courier_form_vehicle')}</label>
-                                                    <div className="grid grid-cols-3 gap-3">
+                                                <div className="space-y-1.5 relative">
+                                                    <label className="text-xs font-bold text-slate-500 block">Çalışmak İstediğiniz Bölge</label>
+                                                    <div className="relative">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setShowDistrictDropdown(!showDistrictDropdown)}
+                                                            className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-105 rounded-2xl text-sm focus:outline-none focus:border-emerald-600 focus:bg-white transition-all text-left flex items-center justify-between font-medium text-slate-700 hover:bg-slate-100/30"
+                                                        >
+                                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                                                                <MapPin size={18} />
+                                                            </div>
+                                                            <span className={courierForm.district ? 'text-slate-800 font-semibold' : 'text-slate-400'}>
+                                                                {courierForm.district || 'Bölge seçiniz...'}
+                                                            </span>
+                                                            <ChevronDown size={18} className={`text-slate-400 transition-transform ${showDistrictDropdown ? 'rotate-180' : ''}`} />
+                                                        </button>
+                                                        
+                                                        {showDistrictDropdown && (
+                                                            <>
+                                                                <div className="fixed inset-0 z-40" onClick={() => setShowDistrictDropdown(false)} />
+                                                                <div className="absolute left-0 right-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl z-50 py-2 max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
+                                                                    {['Lefkoşa', 'Girne', 'Gazimağusa', 'Güzelyurt', 'İskele', 'Lefke'].map(dist => (
+                                                                        <button
+                                                                            key={dist}
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                setCourierForm(prev => ({ ...prev, district: dist }));
+                                                                                setShowDistrictDropdown(false);
+                                                                            }}
+                                                                            className={`w-full px-5 py-3.5 text-left text-sm transition-colors flex items-center justify-between ${
+                                                                                courierForm.district === dist 
+                                                                                    ? 'bg-emerald-50 text-emerald-700 font-bold' 
+                                                                                    : 'text-slate-600 hover:bg-slate-50'
+                                                                            }`}
+                                                                        >
+                                                                            <span>{dist}</span>
+                                                                            {courierForm.district === dist && <Check size={16} className="text-emerald-600" />}
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    <label className="text-xs font-bold text-slate-500 block">Araç Tipi</label>
+                                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                                         {[
-                                                            { id: 'MOTORCYCLE', label: t('partners_courier_form_vehicle1'), icon: '🏍️' },
-                                                            { id: 'BICYCLE', label: t('partners_courier_form_vehicle2'), icon: '🚲' },
-                                                            { id: 'CAR', label: t('partners_courier_form_vehicle3'), icon: '🚗' }
+                                                            { 
+                                                                id: 'MOTORCYCLE', 
+                                                                label: 'Motosiklet', 
+                                                                sub: 'Kendi Aracım',
+                                                                icon: (
+                                                                    <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                                                        <circle cx="6" cy="18" r="3" />
+                                                                        <circle cx="18" cy="18" r="3" />
+                                                                        <path d="M12 18V9a2 2 0 0 1 2-2h3" />
+                                                                        <path d="M6 18H18" />
+                                                                        <path d="M9 9H5a1.5 1.5 0 0 0 0 3h3" />
+                                                                    </svg>
+                                                                )
+                                                            },
+                                                            { 
+                                                                id: 'CAR', 
+                                                                label: 'Araba', 
+                                                                sub: 'Kendi Aracım',
+                                                                icon: <Car size={32} />
+                                                            },
+                                                            { 
+                                                                id: 'COMPANY_MOTORCYCLE', 
+                                                                label: 'Araç İstiyorum', 
+                                                                sub: 'Şirket Motosu',
+                                                                icon: (
+                                                                    <div className="relative">
+                                                                        <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                                                            <circle cx="6" cy="18" r="3" />
+                                                                            <circle cx="18" cy="18" r="3" />
+                                                                            <path d="M12 18V9a2 2 0 0 1 2-2h3" />
+                                                                            <path d="M6 18H18" />
+                                                                            <path d="M9 9H5a1.5 1.5 0 0 0 0 3h3" />
+                                                                        </svg>
+                                                                        <Sparkles size={12} className="absolute -top-1.5 -right-1.5 text-emerald-500 fill-emerald-500 animate-pulse" />
+                                                                    </div>
+                                                                )
+                                                            },
+                                                            { 
+                                                                id: 'BICYCLE', 
+                                                                label: 'Bisiklet / E-Bike', 
+                                                                sub: 'Ehliyet Gerekmez',
+                                                                icon: <Bike size={32} />
+                                                            }
                                                         ].map(item => (
                                                             <button
                                                                 key={item.id}
@@ -1628,63 +1777,96 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                                         license: item.id === 'BICYCLE' ? 'NONE' : 'YES'
                                                                     }));
                                                                 }}
-                                                                className={`p-4 rounded-2xl border text-center flex flex-col items-center justify-center transition-all duration-300 hover:scale-105 active:scale-95 ${
+                                                                className={`p-4 rounded-2xl border text-center flex flex-col items-center justify-center transition-all duration-350 hover:scale-[1.04] active:scale-[0.98] ${
                                                                     courierForm.vehicle === item.id
-                                                                        ? 'border-emerald-600 bg-emerald-50 text-emerald-700 shadow-md shadow-emerald-100 ring-2 ring-emerald-600/10'
-                                                                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                                                                        ? 'border-emerald-600 bg-emerald-50/30 text-emerald-700 shadow-md shadow-emerald-50 ring-2 ring-emerald-600/10'
+                                                                        : 'border-slate-100 bg-slate-50/50 hover:bg-slate-50 text-slate-600 hover:border-slate-200'
                                                                 }`}
                                                             >
-                                                                <span className="text-2xl mb-1.5">{item.icon}</span>
-                                                                <span className="text-xs font-extrabold block">{item.label}</span>
+                                                                <span className="mb-2 block text-slate-500 group-hover:text-emerald-600">{item.icon}</span>
+                                                                <span className="text-xs font-bold block leading-tight text-slate-800">{item.label}</span>
+                                                                <span className="text-[9px] text-slate-400 mt-1 block font-medium leading-none">{item.sub}</span>
                                                             </button>
                                                         ))}
                                                     </div>
                                                 </div>
 
-                                                {(courierForm.vehicle === 'MOTORCYCLE' || courierForm.vehicle === 'CAR') && (
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                                    {/* Sürüş Ehliyeti Sorusu (Koşullu) */}
+                                                    {courierForm.vehicle !== 'BICYCLE' ? (
+                                                        <div className="space-y-2">
+                                                            <label className="text-xs font-bold text-slate-500 block">Sürüş Ehliyetiniz Var mı?</label>
+                                                            <div className="grid grid-cols-2 gap-3">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setCourierForm(prev => ({ ...prev, license: 'YES' }))}
+                                                                    className={`py-3.5 text-xs sm:text-sm font-semibold rounded-xl border text-center transition-all ${
+                                                                        courierForm.license === 'YES'
+                                                                            ? 'border-emerald-600 bg-emerald-50 text-emerald-700 shadow-sm font-bold'
+                                                                            : 'border-slate-105 bg-slate-50/30 text-slate-600 hover:border-slate-200'
+                                                                    }`}
+                                                                >
+                                                                    Evet, Var
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setCourierForm(prev => ({ ...prev, license: 'NO' }))}
+                                                                    className={`py-3.5 text-xs sm:text-sm font-semibold rounded-xl border text-center transition-all ${
+                                                                        courierForm.license === 'NO'
+                                                                            ? 'border-orange-500 bg-orange-50 text-orange-700 shadow-sm font-bold'
+                                                                            : 'border-slate-105 bg-slate-50/30 text-slate-600 hover:border-slate-200'
+                                                                    }`}
+                                                                >
+                                                                    Hayır, Yok
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="hidden sm:block"></div>
+                                                    )}
+
+                                                    {/* Çalışma Şekli Tercihi (Her Zaman Görünür) */}
                                                     <div className="space-y-2">
-                                                        <label className="text-xs font-bold text-slate-500 block">Sürüş Ehliyetiniz Var mı?</label>
-                                                        <div className="grid grid-cols-2 gap-4">
+                                                        <label className="text-xs font-bold text-slate-500 block">Çalışma Şekli Tercihi</label>
+                                                        <div className="grid grid-cols-2 gap-3">
                                                             <button
                                                                 type="button"
-                                                                onClick={() => setCourierForm(prev => ({ ...prev, license: 'YES' }))}
-                                                                className={`p-3 text-sm font-semibold rounded-xl border text-center transition-all ${
-                                                                    courierForm.license === 'YES'
-                                                                        ? 'border-emerald-600 bg-emerald-50 text-emerald-700 shadow-sm'
-                                                                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                                                                onClick={() => setCourierForm(prev => ({ ...prev, workingStyle: 'FULL_TIME' }))}
+                                                                className={`py-3.5 text-xs sm:text-sm font-semibold rounded-xl border text-center transition-all ${
+                                                                    courierForm.workingStyle === 'FULL_TIME'
+                                                                        ? 'border-emerald-600 bg-emerald-50 text-emerald-750 shadow-sm font-bold'
+                                                                        : 'border-slate-105 bg-slate-50/30 text-slate-600 hover:border-slate-200'
                                                                 }`}
                                                             >
-                                                                Evet, Var
+                                                                Full-Time
                                                             </button>
                                                             <button
                                                                 type="button"
-                                                                onClick={() => setCourierForm(prev => ({ ...prev, license: 'NO' }))}
-                                                                className={`p-3 text-sm font-semibold rounded-xl border text-center transition-all ${
-                                                                    courierForm.license === 'NO'
-                                                                        ? 'border-orange-500 bg-orange-50 text-orange-700 shadow-sm'
-                                                                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                                                                onClick={() => setCourierForm(prev => ({ ...prev, workingStyle: 'PART_TIME' }))}
+                                                                className={`py-3.5 text-xs sm:text-sm font-semibold rounded-xl border text-center transition-all ${
+                                                                    courierForm.workingStyle === 'PART_TIME'
+                                                                        ? 'border-emerald-600 bg-emerald-50 text-emerald-750 shadow-sm font-bold'
+                                                                        : 'border-slate-105 bg-slate-50/30 text-slate-600 hover:border-slate-200'
                                                                 }`}
                                                             >
-                                                                Hayır, Yok
+                                                                Part-Time
                                                             </button>
                                                         </div>
-                                                        {courierForm.license === 'NO' && (
-                                                            <div className="text-amber-700 text-xs font-medium bg-amber-50 p-3 rounded-xl border border-amber-200 mt-2">
-                                                                ⚠️ Motorlu araçlar için geçerli bir ehliyetinizin olması zorunludur. Başvurunuz onaylanmayabilir.
-                                                            </div>
-                                                        )}
                                                     </div>
-                                                )}
+                                                </div>
 
                                                 <button 
                                                     type="submit" 
                                                     disabled={courierLoading}
-                                                    className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-orange-400 text-white font-bold py-4 rounded-xl text-sm shadow-md transition-all flex items-center justify-center"
+                                                    className="w-full bg-[#f97316] hover:bg-[#ea580c] disabled:bg-orange-400 text-white font-extrabold py-4 rounded-2xl text-base shadow-xl shadow-orange-500/20 transition-all duration-300 hover:scale-[1.01] active:scale-95 flex items-center justify-center space-x-2"
                                                 >
                                                     {courierLoading ? (
                                                         <span className="inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
                                                     ) : (
-                                                        t('partners_courier_form_btn')
+                                                        <>
+                                                            <span>Kurye Başvurusunu Gönder</span>
+                                                            <span className="text-sm">▷</span>
+                                                        </>
                                                     )}
                                                 </button>
                                             </form>
