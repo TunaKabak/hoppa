@@ -145,6 +145,7 @@ model Shop {
   reviewCount      Int       @default(0)   // Cache alan: Toplam yorum sayısı
   reviews          Review[]
   allowedPaymentMethods PaymentMethod[] @default([CASH_ON_DELIVERY, CARD_ON_DELIVERY, ONLINE_PAYMENT])
+  couriers         CourierShop[]
 
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
@@ -448,16 +449,58 @@ model DeviceToken {
   @@index([merchantId])
 }
 
+enum CourierStatus {
+  APPLIED
+  INTERVIEWING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum VehicleType {
+  BICYCLE
+  MOTORCYCLE
+  CAR
+  FOOT
+}
+
 model Courier {
-  id           String           @id @default(uuid())
-  userId       String           @unique
-  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name         String
-  phoneNumber  String           @unique
-  vehiclePlate String?
-  isActive     Boolean          @default(true) // Nöbette mi? (On Duty)
-  locations    CourierLocation[]
-  orders       Order[]
+  id                    String           @id @default(uuid())
+  userId                String           @unique
+  user                  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                  String
+  phoneNumber           String           @unique
+  vehiclePlate          String?
+  vehicleType           VehicleType      @default(MOTORCYCLE)
+  status                CourierStatus    @default(APPLIED)
+  isActive              Boolean          @default(false) // Nöbette mi? (On Duty)
+  
+  // Çalışma saatleri JSON: [{"day": 1, "start": "09:00", "end": "18:00"}]
+  workingHours          Json?
+  
+  // Maksimum hizmet mesafesi (km)
+  maxServiceDistanceKm  Float            @default(5.0)
+  
+  shops                 CourierShop[]
+  locations             CourierLocation[]
+  orders                Order[]
+  
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @default(now()) @updatedAt
+}
+
+model CourierShop {
+  id        String   @id @default(uuid())
+  courierId String
+  courier   Courier  @relation(fields: [courierId], references: [id], onDelete: Cascade)
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  
+  @@unique([courierId, shopId])
+  @@index([courierId])
+  @@index([shopId])
 }
 
 model CourierLocation {

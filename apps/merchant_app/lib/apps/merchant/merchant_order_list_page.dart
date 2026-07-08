@@ -5,7 +5,6 @@ import 'package:core_shared/shared/models/order.dart' as model;
 import 'package:core_shared/shared/models/order_status.dart';
 import 'package:merchant_app/apps/merchant/merchant_main_layout.dart';
 import 'package:merchant_app/apps/merchant/repositories/merchant_order_repository.dart';
-import 'package:core_auth/core_auth.dart';
 
 class MerchantOrderListPage extends ConsumerStatefulWidget {
   final String? businessId;
@@ -399,6 +398,33 @@ class _MerchantOrderListPageState extends ConsumerState<MerchantOrderListPage> {
                     ),
                   ],
                 ),
+                if (order.courierName != null && order.courierName!.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.green.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.delivery_dining, color: Colors.green.shade700),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            "Atanan Kurye: ${order.courierName} ${order.courierVehiclePlate != null && order.courierVehiclePlate!.isNotEmpty ? '(${order.courierVehiclePlate})' : ''}",
+                            style: TextStyle(
+                              color: Colors.green.shade900,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 16),
 
                 // BUTONLAR (Dinamik)
