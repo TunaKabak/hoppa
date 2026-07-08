@@ -1450,7 +1450,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
             </section>
 
             {/* İŞ ORTAKLARI VE KURYELER İÇİN ÖZEL BAŞVURU SEKMESİ */}
-            <section id="partners" className="py-24 bg-white scroll-animate">
+            <section id="partners" className="relative z-20 py-24 bg-white scroll-animate">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
                     <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
@@ -1946,7 +1946,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
             </section>
 
             {/* İLETİŞİM & LOKAL DESTEK */}
-            <section id="contact" className="py-20 bg-slate-50 border-t border-slate-100 scroll-animate">
+            <section id="contact" className="relative z-10 py-20 bg-slate-50 border-t border-slate-100 scroll-animate">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
 
