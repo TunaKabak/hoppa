@@ -115,6 +115,12 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
             return;
         }
 
+        // Ehliyet doğrulaması (motorlu araçlar için)
+        if (courierForm.vehicle !== 'BICYCLE' && courierForm.license === 'NO') {
+            setCourierError('Seçtiğiniz motorlu aracı kullanabilmek için geçerli bir sürüş ehliyetinizin olması zorunludur.');
+            return;
+        }
+
         setCourierLoading(true);
         setCourierError('');
         
@@ -1853,10 +1859,28 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                     </div>
                                                 </div>
 
+                                                {/* Motorlu Araç & Ehliyet Yok Uyarısı */}
+                                                {courierForm.vehicle !== 'BICYCLE' && courierForm.license === 'NO' && (
+                                                    <div className="bg-[#fffbeb] border border-amber-200 rounded-2xl p-4 sm:p-5 flex items-start space-x-3 text-left">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-[#d97706] shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+                                                            <line x1="12" y1="9" x2="12" y2="13"/>
+                                                            <line x1="12" y1="17" x2="12.01" y2="17"/>
+                                                        </svg>
+                                                        <span className="text-xs sm:text-sm font-semibold text-amber-800 leading-relaxed">
+                                                            Seçtiğiniz motorlu aracı kullanabilmek için geçerli bir sürüş ehliyetinizin olması zorunludur.
+                                                        </span>
+                                                    </div>
+                                                )}
+
                                                 <button 
                                                     type="submit" 
-                                                    disabled={courierLoading}
-                                                    className="w-full bg-[#f97316] hover:bg-[#ea580c] disabled:bg-orange-400 text-white font-extrabold py-4 rounded-2xl text-base shadow-xl shadow-orange-500/20 transition-all duration-300 hover:scale-[1.01] active:scale-95 flex items-center justify-center space-x-2"
+                                                    disabled={courierLoading || (courierForm.vehicle !== 'BICYCLE' && courierForm.license === 'NO')}
+                                                    className={`w-full font-extrabold py-4 rounded-2xl text-base flex items-center justify-center space-x-2 transition-all duration-300 ${
+                                                        courierLoading || (courierForm.vehicle !== 'BICYCLE' && courierForm.license === 'NO')
+                                                            ? 'bg-[#cbd5e1] text-slate-400 cursor-not-allowed shadow-none'
+                                                            : 'bg-[#f97316] hover:bg-[#ea580c] text-white shadow-xl shadow-orange-500/20 hover:scale-[1.01] active:scale-95'
+                                                    }`}
                                                 >
                                                     {courierLoading ? (
                                                         <span className="inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
