@@ -20,7 +20,7 @@ class SupportRepository {
           if (activeOrderId != null) 'activeOrderId': activeOrderId,
         },
       );
-      return response;
+      return response['data'] as Map<String, dynamic>? ?? {};
     } catch (e) {
       print("sendMessageToAssistant error: $e");
       rethrow;
