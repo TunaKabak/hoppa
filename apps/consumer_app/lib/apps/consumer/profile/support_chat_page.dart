@@ -55,7 +55,7 @@ class _SupportChatPageState extends ConsumerState<SupportChatPage> {
 
   void _findActiveOrder() {
     final ordersAsync = ref.read(consumerOrdersProvider);
-    if (ordersAsync.value != null) {
+    if (ordersAsync.value != null && ordersAsync.value!.isNotEmpty) {
       for (var o in ordersAsync.value!) {
         // Active orders: pending, preparing, onWay, readyForPickup
         if (o.status == 'pending' || 
@@ -65,9 +65,13 @@ class _SupportChatPageState extends ConsumerState<SupportChatPage> {
           setState(() {
             _activeOrder = o;
           });
-          break;
+          return;
         }
       }
+      // Fallback: Default to the most recent order (delivered or cancelled)
+      setState(() {
+        _activeOrder = ordersAsync.value!.first;
+      });
     }
   }
 
@@ -142,6 +146,16 @@ class _SupportChatPageState extends ConsumerState<SupportChatPage> {
   Widget build(BuildContext context) {
     const brandGreen = Color(0xFF00A651);
     final timeFormat = DateFormat('HH:mm');
+    final ordersAsync = ref.watch(consumerOrdersProvider);
+
+    // Auto-select first order if none is selected yet
+    if (_activeOrder == null && ordersAsync.value != null && ordersAsync.value!.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _activeOrder == null) {
+          _findActiveOrder();
+        }
+      });
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -200,6 +214,9 @@ class _SupportChatPageState extends ConsumerState<SupportChatPage> {
         color: const Color(0xFFF9FBF9), // Soft background color
         child: Column(
           children: [
+            // Sipariş seçim listesi (Çoklu sipariş desteği için)
+            _buildOrderSelectionList(ordersAsync.value),
+
             // Active Order context info banner if exists
             if (_activeOrder != null)
               Container(
@@ -211,7 +228,7 @@ class _SupportChatPageState extends ConsumerState<SupportChatPage> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        "Aktif Sipariş Bağlantısı Kuruldu: #${_activeOrder!.id.substring(0, math.min(8, _activeOrder!.id.length))}",
+                        "Sipariş Bağlantısı Kuruldu: ${_activeOrder!.businessName ?? 'İşletme'} (#${_activeOrder!.id.substring(0, math.min(8, _activeOrder!.id.length))})",
                         style: const TextStyle(
                           color: brandGreen,
                           fontWeight: FontWeight.w600,
@@ -414,6 +431,118 @@ class _SupportChatPageState extends ConsumerState<SupportChatPage> {
             child: IconButton(
               icon: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
               onPressed: () => _sendMessage(_inputController.text),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOrderSelectionList(List<Order>? orders) {
+    if (orders == null || orders.isEmpty) return const SizedBox.shrink();
+    
+    // Take the 5 most recent orders to keep the selection simple
+    final recentOrders = orders.take(5).toList();
+    if (recentOrders.isEmpty) return const SizedBox.shrink();
+
+    const brandGreen = Color(0xFF00A651);
+
+    return Container(
+      height: 78,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(color: Colors.grey[200]!, width: 1),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              "Destek Almak İstediğiniz Sipariş:",
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[600],
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Expanded(
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              itemCount: recentOrders.length,
+              itemBuilder: (context, index) {
+                final o = recentOrders[index];
+                final isSelected = _activeOrder?.id == o.id;
+                final isDelivered = o.status == 'delivered';
+                final isCancelled = o.status == 'cancelled';
+                
+                Color statusColor = Colors.orange;
+                if (isDelivered) statusColor = brandGreen;
+                if (isCancelled) statusColor = Colors.red;
+
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _activeOrder = o;
+                    });
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isSelected ? brandGreen.withOpacity(0.08) : Colors.grey[50],
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isSelected ? brandGreen : Colors.grey[200]!,
+                        width: isSelected ? 1.5 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isDelivered 
+                              ? Icons.check_circle_outline 
+                              : (isCancelled ? Icons.cancel_outlined : Icons.pedal_bike),
+                          size: 14,
+                          color: isSelected ? brandGreen : statusColor,
+                        ),
+                        const SizedBox(width: 6),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              o.businessName ?? "İşletme",
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: isSelected ? brandGreen : Colors.black87,
+                              ),
+                            ),
+                            Text(
+                              isDelivered 
+                                  ? "Teslim Edildi" 
+                                  : (isCancelled ? "İptal Edildi" : "Aktif Sipariş"),
+                              style: TextStyle(
+                                fontSize: 8,
+                                color: isSelected ? brandGreen.withOpacity(0.8) : Colors.grey[500],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ],
