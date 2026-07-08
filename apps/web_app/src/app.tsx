@@ -1791,9 +1791,9 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                     </div>
                                                 </div>
 
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                                <div className={`grid grid-cols-1 ${courierForm.vehicle === 'BICYCLE' ? '' : 'sm:grid-cols-2'} gap-6`}>
                                                     {/* Sürüş Ehliyeti Sorusu (Koşullu) */}
-                                                    {courierForm.vehicle !== 'BICYCLE' ? (
+                                                    {courierForm.vehicle !== 'BICYCLE' && (
                                                         <div className="space-y-2">
                                                             <label className="text-xs font-bold text-slate-500 block">Sürüş Ehliyetiniz Var mı?</label>
                                                             <div className="grid grid-cols-2 gap-3">
@@ -1821,8 +1821,6 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                                 </button>
                                                             </div>
                                                         </div>
-                                                    ) : (
-                                                        <div className="hidden sm:block"></div>
                                                     )}
 
                                                     {/* Çalışma Şekli Tercihi (Her Zaman Görünür) */}
