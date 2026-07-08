@@ -128,8 +128,11 @@ export class SupportController {
 
       res.status(200).json({
         error: false,
-        reply: aiResponseText,
-        detectedOrderId: activeOrderId || null
+        message: "Asistan yanıtı başarıyla oluşturuldu.",
+        data: {
+          reply: aiResponseText,
+          detectedOrderId: activeOrderId || null
+        }
       });
 
     } catch (error) {
