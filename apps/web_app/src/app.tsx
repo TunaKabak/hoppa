@@ -1512,7 +1512,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                 </div>
 
                                 <div className="lg:col-span-6">
-                                    <div className="bg-slate-50 p-8 rounded-3xl border border-slate-100 shadow-xl shadow-slate-100 text-left">
+                                    <div className="bg-slate-50 p-8 rounded-3xl border border-slate-100 shadow-xl shadow-slate-100 text-left relative overflow-visible z-10">
                                         {partnerSubmitted ? (
                                             <div className="text-center py-12 space-y-4">
                                                 <div className="w-16 h-16 bg-emerald-100 text-emerald-800 rounded-full flex items-center justify-center text-2xl mx-auto">
@@ -1563,7 +1563,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                         {showMerchantCategoryDropdown && (
                                                             <>
                                                                 <div className="fixed inset-0 z-40" onClick={() => setShowMerchantCategoryDropdown(false)} />
-                                                                <div className="absolute left-0 right-0 bottom-full mb-2 bg-white border border-slate-100 rounded-2xl shadow-2xl z-50 py-2 max-h-60 overflow-y-auto animate-in fade-in slide-in-from-bottom-2 duration-200">
+                                                                <div className="absolute left-0 right-0 top-full mt-2 bg-white border border-slate-100 rounded-2xl shadow-2xl z-50 py-2 max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200">
                                                                     {[
                                                                         'partners_merchant_form_cat1',
                                                                         'partners_merchant_form_cat2',

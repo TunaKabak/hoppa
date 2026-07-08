@@ -183,23 +183,21 @@ class _MainLayoutPageState extends ConsumerState<MainLayoutPage> {
                           GestureDetector(
                             onTap: onFabPressed,
                             child: Container(
-                              width: 56,
-                              height: 56,
+                              width: 64,
+                              height: 64,
                               decoration: BoxDecoration(
-                                color: primaryColor,
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: primaryColor.withValues(alpha: 0.3),
-                                    blurRadius: 8,
+                                    color: Colors.black.withValues(alpha: 0.08),
+                                    blurRadius: 10,
                                     offset: const Offset(0, 4),
                                   ),
                                 ],
                               ),
-                              child: const Icon(
-                                Icons.grid_view_rounded,
-                                color: Colors.white,
-                                size: 28,
+                              child: Image.asset(
+                                'assets/images/hoppa_button.png',
+                                fit: BoxFit.contain,
                               ),
                             ),
                           ),
