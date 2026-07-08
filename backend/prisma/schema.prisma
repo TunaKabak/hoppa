@@ -36,6 +36,7 @@ model User {
   favoriteProducts FavoriteProduct[]
   favoriteShops    FavoriteShop[]
   reviews          Review[]
+  chatLogs         AssistantChatLog[]
   courier          Courier?
 }
 
@@ -574,4 +575,18 @@ model OrderItemOption {
 
   @@index([orderItemId])
 }
+
+// Canlı Destek Yapay Zeka Asistanı Görüşme Logları
+model AssistantChatLog {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message       String
+  reply         String
+  activeOrderId String?
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+}
+
 

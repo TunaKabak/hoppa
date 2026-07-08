@@ -89,8 +89,8 @@ export class SupportController {
         return;
       }
 
-      // Gemini 1.5 Flash API Payload hazırlığı
-      const stableModel = "gemini-1.5-flash";
+      // Gemini 2.5 Flash API Payload hazırlığı
+      const stableModel = "gemini-2.5-flash";
       const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${stableModel}:generateContent?key=${apiKey}`;
       const payload = {
         contents: [
@@ -111,6 +111,20 @@ export class SupportController {
       });
 
       const aiResponseText = responseData.candidates?.[0]?.content?.parts?.[0]?.text || "Şu anda size yardımcı olamıyorum, lütfen biraz sonra tekrar deneyin.";
+
+      // 💾 Canlı destek görüşmesini veri tabanına logluyoruz
+      try {
+        await prisma.assistantChatLog.create({
+          data: {
+            userId,
+            message,
+            reply: aiResponseText,
+            activeOrderId: activeOrderId || null
+          }
+        });
+      } catch (logError) {
+        console.error("Görüşme loglama hatası:", logError);
+      }
 
       res.status(200).json({
         error: false,
