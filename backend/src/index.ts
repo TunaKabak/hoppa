@@ -46,10 +46,17 @@ import mediaRoutes from "./routes/media.routes";
 import notificationRoutes from "./routes/notificationRoutes";
 import courierRoutes from "./routes/courierRoutes";
 import publicRoutes from "./routes/publicRoutes";
-import { otpRateLimiter } from "./middlewares/RateLimiter";
+import helmet from "helmet";
+import { otpRateLimiter, globalRateLimiter, handshakeRateLimiter } from "./middlewares/RateLimiter";
+import { validateBody } from "./middlewares/ValidateMiddleware";
+import { handshakeMiddleware } from "./middlewares/HandshakeMiddleware";
+import { requestOtpSchema, verifyOtpSchema } from "./types/schemas";
 
 const app = express();
 const port = process.env.PORT || 3000;
+
+app.use(helmet());
+app.use(globalRateLimiter);
 
 // Statically serve the local uploads directory for development fallback
 app.use("/uploads", express.static(path.join(__dirname, "../public/uploads")));
@@ -79,8 +86,9 @@ const authController = new AuthController();
 const merchantAuthController = new MerchantAuthController();
 
 // --- Consumer Auth Routes (OTP tabanlı) ---
-app.post("/api/auth/request-otp", otpRateLimiter, (req, res) => authController.requestOtp(req, res));
-app.post("/api/auth/verify-otp", (req, res) => authController.verifyOtp(req, res));
+app.post("/api/auth/handshake", handshakeRateLimiter, (req, res) => authController.handshake(req, res));
+app.post("/api/auth/request-otp", handshakeMiddleware, otpRateLimiter, validateBody(requestOtpSchema), (req, res) => authController.requestOtp(req, res));
+app.post("/api/auth/verify-otp", validateBody(verifyOtpSchema), (req, res) => authController.verifyOtp(req, res));
 app.get("/api/auth/check-phone/:phone", (req, res) => authController.checkPhoneExists(req, res));
 
 // --- Merchant Auth Routes (E-posta + Şifre tabanlı) ---

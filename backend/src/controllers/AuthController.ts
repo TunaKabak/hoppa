@@ -109,4 +109,17 @@ export class AuthController {
       res.status(500).json({ error: true, message: "Sunucu hatası." });
     }
   }
+
+  /**
+   * POST /api/auth/handshake
+   */
+  public async handshake(req: Request, res: Response): Promise<void> {
+    try {
+      const token = JwtUtils.generateHandshakeToken();
+      res.status(200).json({ error: false, data: { handshakeToken: token } });
+    } catch (error: any) {
+      console.error("[AuthController] Handshake hatası:", error);
+      res.status(500).json({ error: true, message: "Handshake başlatılamadı." });
+    }
+  }
 }
