@@ -32,6 +32,7 @@ import {
     Car
 } from 'lucide-react';
 import { translations } from './translations';
+import { legalTexts } from './legalTexts';
 
 // Mock Veritabanı - Uygulama simülatörü ve sayfa için
 const CATEGORIES = [
@@ -55,6 +56,7 @@ const PRODUCTS = [
 export default function App({ initialTab = 'user' }: { initialTab?: string }) {
     // Tanıtım Sayfası State'leri
     const [locale, setLocale] = useState<'tr' | 'en' | 'ru'>('tr');
+    const [activeLegalDoc, setActiveLegalDoc] = useState<'privacy' | 'kvkk' | 'cookie' | null>(null);
 
     useEffect(() => {
         const saved = localStorage.getItem('hoppa_locale');
@@ -62,6 +64,17 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
             setLocale(saved);
         }
     }, []);
+
+    useEffect(() => {
+        if (activeLegalDoc) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, [activeLegalDoc]);
 
     const changeLocale = (lang: 'tr' | 'en' | 'ru') => {
         setLocale(lang);
@@ -2108,14 +2121,109 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                     <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 space-y-4 sm:space-y-0">
                         <span>{t('footer_rights')}</span>
                         <div className="flex space-x-4">
-                            <a href="#privacy" className="hover:text-slate-200 transition-colors">{t('footer_link_privacy')}</a>
-                            <a href="#data-protection" className="hover:text-slate-200 transition-colors">{t('footer_link_kvkk')}</a>
-                            <a href="#cookie-policy" className="hover:text-slate-200 transition-colors">{t('footer_link_cookie')}</a>
+                            <a 
+                                href="#privacy" 
+                                onClick={(e) => { e.preventDefault(); setActiveLegalDoc('privacy'); }}
+                                className="hover:text-slate-200 transition-colors"
+                            >
+                                {t('footer_link_privacy')}
+                            </a>
+                            <a 
+                                href="#data-protection" 
+                                onClick={(e) => { e.preventDefault(); setActiveLegalDoc('kvkk'); }}
+                                className="hover:text-slate-200 transition-colors"
+                            >
+                                {t('footer_link_kvkk')}
+                            </a>
+                            <a 
+                                href="#cookie-policy" 
+                                onClick={(e) => { e.preventDefault(); setActiveLegalDoc('cookie'); }}
+                                className="hover:text-slate-200 transition-colors"
+                            >
+                                {t('footer_link_cookie')}
+                            </a>
                         </div>
                     </div>
 
                 </div>
             </footer>
+
+            {/* Legal Document Modal */}
+            {activeLegalDoc && (() => {
+                const doc = legalTexts[locale][activeLegalDoc];
+                const closeText = locale === 'en' ? 'Close' : locale === 'ru' ? 'Закрыть' : 'Kapat';
+                const subBadgeText = locale === 'en' 
+                    ? 'TRNC & TR Personal Data Protection Compliance' 
+                    : locale === 'ru' 
+                    ? 'Соответствие законам ТРСК и ТР о защите персональных данных' 
+                    : 'KKTC & TC Kişisel Veri Mevzuatı Uyumu';
+                
+                return (
+                    <div 
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in"
+                        onClick={() => setActiveLegalDoc(null)}
+                    >
+                        <div 
+                            className="relative w-full max-w-3xl max-h-[85vh] bg-slate-900 text-slate-100 rounded-3xl border border-slate-800 shadow-2xl flex flex-col overflow-hidden animate-scale-up"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Header */}
+                            <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-gradient-to-r from-slate-900 via-slate-900 to-slate-850">
+                                <div className="flex items-center space-x-3">
+                                    <div className="p-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                                        <ShieldCheck className="w-6 h-6 text-emerald-500" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-extrabold text-white tracking-tight">
+                                            {doc.title}
+                                        </h3>
+                                        <p className="text-[10px] md:text-xs text-slate-400 font-medium mt-0.5">
+                                            {subBadgeText}
+                                        </p>
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={() => setActiveLegalDoc(null)}
+                                    className="text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 p-2 rounded-full transition-all duration-200 hover:rotate-90"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            {/* Content */}
+                            <div className="p-6 overflow-y-auto space-y-6 text-sm leading-relaxed text-slate-350 legal-scrollbar bg-slate-900/50">
+                                {doc.sections.map((section, idx) => (
+                                    <div key={idx} className="space-y-3">
+                                        {section.title && (
+                                            <h4 className="text-sm font-bold text-white uppercase tracking-wider border-l-2 border-emerald-500 pl-3">
+                                                {section.title}
+                                            </h4>
+                                        )}
+                                        <div className="space-y-2.5 pl-3">
+                                            {section.text.map((para, pIdx) => (
+                                                <p key={pIdx} className="text-slate-300 text-xs md:text-sm font-normal">
+                                                    {para}
+                                                </p>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Footer */}
+                            <div className="px-6 py-4 bg-slate-950/80 border-t border-slate-850 flex items-center justify-between text-[10px] md:text-xs text-slate-500">
+                                <span className="font-semibold tracking-wide">Hoppa Technology and Consultant Limited</span>
+                                <button
+                                    onClick={() => setActiveLegalDoc(null)}
+                                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-2.5 rounded-xl transition-all duration-250 hover:scale-102 hover:shadow-lg hover:shadow-emerald-500/10 text-xs"
+                                >
+                                    {closeText}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
 
         </div>
     );

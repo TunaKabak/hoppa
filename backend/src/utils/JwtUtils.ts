@@ -12,6 +12,14 @@ export class JwtUtils {
     );
   }
 
+  public static generateHandshakeToken(): string {
+    return jwt.sign(
+      { type: "handshake" },
+      JWT_SECRET,
+      { expiresIn: "5m" }
+    );
+  }
+
   public static verifyToken(token: string): any {
     try {
       return jwt.verify(token, JWT_SECRET);
