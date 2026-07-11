@@ -6,6 +6,7 @@ class BusinessCategory {
   final String? badge;
   final String? avgDeliveryTime;
   final String? subtitle;
+  final String? imageUrl;
   final bool isActive;
   final int order;
   final int? shopCount;
@@ -18,6 +19,7 @@ class BusinessCategory {
     this.badge,
     this.avgDeliveryTime,
     this.subtitle,
+    this.imageUrl,
     this.isActive = true,
     this.order = 0,
     this.shopCount,
@@ -32,6 +34,7 @@ class BusinessCategory {
       badge: json['badge'] as String?,
       avgDeliveryTime: json['avgDeliveryTime'] as String?,
       subtitle: json['subtitle'] as String?,
+      imageUrl: json['imageUrl'] as String?,
       isActive: json['isActive'] as bool? ?? true,
       order: json['order'] as int? ?? 0,
       shopCount: json['shopCount'] as int?,
@@ -47,6 +50,7 @@ class BusinessCategory {
       'badge': badge,
       'avgDeliveryTime': avgDeliveryTime,
       'subtitle': subtitle,
+      'imageUrl': imageUrl,
       'isActive': isActive,
       'order': order,
       'shopCount': shopCount,

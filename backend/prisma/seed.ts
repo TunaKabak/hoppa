@@ -881,14 +881,14 @@ async function main() {
 
   // 8.5. SEED BUSINESS CATEGORIES
   const businessCategories = [
-    { name: "Market", icon: "shopping_basket", color: "#00A651", subtitle: "Market alışverişi", avgDeliveryTime: "20-30 dk", badge: "popular", order: 0 },
-    { name: "Restoran", icon: "restaurant", color: "#FF6B00", subtitle: "Yemek siparişi", avgDeliveryTime: "25-35 dk", badge: "popular", order: 1 },
-    { name: "Su", icon: "water_drop", color: "#2196F3", subtitle: "Su ve içecek", avgDeliveryTime: "15-25 dk", badge: null, order: 2 },
-    { name: "Kuruyemiş", icon: "grain", color: "#795548", subtitle: "Kuruyemiş çeşitleri", avgDeliveryTime: "20-30 dk", badge: "new", order: 3 },
-    { name: "Kahve", icon: "coffee", color: "#4E342E", subtitle: "Kahve ve içecek", avgDeliveryTime: "15-20 dk", badge: null, order: 4 },
-    { name: "Çiçek", icon: "local_florist", color: "#E91E63", subtitle: "Çiçek siparişi", avgDeliveryTime: "30-45 dk", badge: null, order: 5 },
-    { name: "Manav", icon: "grain", color: "#4CAF50", subtitle: "Taze meyve ve sebze", avgDeliveryTime: "15-25 dk", badge: null, order: 6 },
-    { name: "Kasap", icon: "restaurant", color: "#F44336", subtitle: "Taze et ürünleri", avgDeliveryTime: "20-30 dk", badge: "popular", order: 7 },
+    { name: "Market", icon: "shopping_basket", color: "#00A651", subtitle: "Market alışverişi", avgDeliveryTime: "20-30 dk", badge: "popular", imageUrl: "/uploads/market_bg.png", order: 0 },
+    { name: "Restoran", icon: "restaurant", color: "#FF6B00", subtitle: "Yemek siparişi", avgDeliveryTime: "25-35 dk", badge: "popular", imageUrl: "/uploads/restaurant_bg.png", order: 1 },
+    { name: "Su", icon: "water_drop", color: "#2196F3", subtitle: "Su ve içecek", avgDeliveryTime: "15-25 dk", badge: null, imageUrl: "/uploads/su_bg.png", order: 2 },
+    { name: "Kuruyemiş", icon: "grain", color: "#795548", subtitle: "Kuruyemiş çeşitleri", avgDeliveryTime: "20-30 dk", badge: "new", imageUrl: "/uploads/kuruyemis_bg.png", order: 3 },
+    { name: "Kahve", icon: "coffee", color: "#4E342E", subtitle: "Kahve ve içecek", avgDeliveryTime: "15-20 dk", badge: null, imageUrl: "/uploads/kahve_bg.png", order: 4 },
+    { name: "Çiçek", icon: "local_florist", color: "#E91E63", subtitle: "Çiçek siparişi", avgDeliveryTime: "30-45 dk", badge: null, imageUrl: "/uploads/cicek_bg.png", order: 5 },
+    { name: "Manav", icon: "grain", color: "#4CAF50", subtitle: "Taze meyve ve sebze", avgDeliveryTime: "15-25 dk", badge: null, imageUrl: "/uploads/manav_bg.png", order: 6 },
+    { name: "Kasap", icon: "restaurant", color: "#F44336", subtitle: "Taze et ürünleri", avgDeliveryTime: "20-30 dk", badge: "popular", imageUrl: "/uploads/kasap_bg.png", order: 7 },
   ];
 
   for (const cat of businessCategories) {
@@ -900,6 +900,7 @@ async function main() {
         subtitle: cat.subtitle,
         avgDeliveryTime: cat.avgDeliveryTime,
         badge: cat.badge,
+        imageUrl: cat.imageUrl,
         order: cat.order,
       },
       create: {
@@ -909,6 +910,7 @@ async function main() {
         subtitle: cat.subtitle,
         avgDeliveryTime: cat.avgDeliveryTime,
         badge: cat.badge ?? null,
+        imageUrl: cat.imageUrl,
         order: cat.order,
       },
     });

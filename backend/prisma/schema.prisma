@@ -568,6 +568,7 @@ model BusinessCategory {
   badge           String?  // e.g., "popular", "new"
   avgDeliveryTime String?  // e.g., "20-30 dk"
   subtitle        String?  // e.g., "Market alışverişi"
+  imageUrl        String?
   isActive        Boolean  @default(true)
   order           Int      @default(0)
   createdAt       DateTime @default(now())

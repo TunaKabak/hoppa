@@ -130,14 +130,18 @@ class ApiClient {
     String endpoint, {
     Map<String, dynamic>? body,
     bool requiresAuth = true,
+    Map<String, String>? headers,
   }) async {
     try {
       final uri = Uri.parse('$baseUrl$endpoint');
-      final headers = await _buildHeaders(requiresAuth);
+      final builtHeaders = await _buildHeaders(requiresAuth);
+      if (headers != null) {
+        builtHeaders.addAll(headers);
+      }
 
       final response = await _client.post(
         uri,
-        headers: headers,
+        headers: builtHeaders,
         body: body != null ? jsonEncode(body) : null,
       ).timeout(
         const Duration(seconds: 10),

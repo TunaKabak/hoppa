@@ -203,10 +203,24 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
         
         try {
             const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+            
+            // 1. Handshake token al
+            const handshakeRes = await fetch(`${apiUrl}/api/auth/handshake`, {
+                method: 'POST'
+            });
+            const handshakeData = await handshakeRes.json();
+            const handshakeToken = handshakeData?.data?.handshakeToken;
+
+            if (!handshakeToken) {
+                throw new Error('Güvenlik doğrulaması başlatılamadı. Lütfen tekrar deneyin.');
+            }
+
+            // 2. Handshake token ile kurye başvurusu yap
             const response = await fetch(`${apiUrl}/api/couriers/apply`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'x-handshake-token': handshakeToken
                 },
                 body: JSON.stringify({
                     name: courierForm.name,

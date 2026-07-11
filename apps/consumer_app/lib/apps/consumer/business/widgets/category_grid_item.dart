@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:consumer_app/apps/consumer/business/widgets/category_badge.dart';
 
 class CategoryGridItem extends StatefulWidget {
@@ -99,6 +100,7 @@ class _CategoryGridItemState extends State<CategoryGridItem>
     final isClosed =
         widget.badge?.toLowerCase() == 'closed' ||
         widget.badge?.toLowerCase() == 'kapalı';
+    final catColor = widget.category['color'] as Color? ?? Colors.green;
 
     return FadeTransition(
       opacity: _fadeAnimation,
@@ -113,194 +115,171 @@ class _CategoryGridItemState extends State<CategoryGridItem>
             onTap: isClosed ? null : _handleTap,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 150),
-              transform: Matrix4.identity()..scale(_isPressed ? 0.95 : 1.0),
+              transform: Matrix4.diagonal3Values(_isPressed ? 0.95 : 1.0, _isPressed ? 0.95 : 1.0, 1.0),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: catColor.withValues(alpha: 0.12),
+                  width: 1.5,
+                ),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white,
+                    catColor.withValues(alpha: 0.06),
+                    catColor.withValues(alpha: 0.15),
+                  ],
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: _isPressed
-                        ? Colors.black.withValues(alpha: 0.08)
-                        : Colors.black.withValues(alpha: 0.05),
-                    blurRadius: _isPressed ? 8 : 10,
-                    offset: Offset(0, _isPressed ? 2 : 4),
+                    color: catColor.withValues(alpha: _isPressed ? 0.08 : 0.04),
+                    blurRadius: _isPressed ? 12 : 8,
+                    offset: Offset(0, _isPressed ? 4 : 6),
                   ),
                 ],
-                border: widget.isFeatured
-                    ? null
-                    : Border.all(color: Colors.grey.shade100),
-                image: widget.isFeatured && widget.backgroundImage != null
-                    ? DecorationImage(
-                        image: AssetImage(widget.backgroundImage!),
-                        fit: BoxFit.cover,
-                      )
-                    : null,
               ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: isClosed ? null : _handleTap,
-                  borderRadius: BorderRadius.circular(16),
-                  splashColor:
-                      (widget.category['color'] as Color?)?.withValues(alpha: 0.2) ??
-                      Colors.blue.withValues(alpha: 0.2),
-                  highlightColor:
-                      (widget.category['color'] as Color?)?.withValues(alpha: 0.1) ??
-                      Colors.blue.withValues(alpha: 0.1),
-                  child: Stack(
-                    children: [
-                      // Gradient overlay for featured items
-                      if (widget.isFeatured)
-                        Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Colors.black.withValues(alpha: 0.3),
-                                Colors.black.withValues(alpha: 0.6),
-                              ],
-                            ),
-                          ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(18),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: isClosed ? null : _handleTap,
+                    borderRadius: BorderRadius.circular(18),
+                    splashColor: catColor.withValues(alpha: 0.2),
+                    highlightColor: catColor.withValues(alpha: 0.1),
+                    child: Stack(
+                      children: [
+                        // Background image or icon fallback positioned in the bottom-right corner
+                        Positioned(
+                          right: -8,
+                          bottom: -8,
+                          child: widget.backgroundImage != null
+                              ? (widget.backgroundImage!.startsWith('http')
+                                  ? Image.network(
+                                      widget.backgroundImage!,
+                                      width: 82,
+                                      height: 82,
+                                      fit: BoxFit.contain,
+                                      errorBuilder: (context, error, stackTrace) =>
+                                          Padding(
+                                            padding: const EdgeInsets.all(12),
+                                            child: Icon(
+                                              widget.category['icon'] as IconData,
+                                              size: 64,
+                                              color: catColor.withValues(alpha: 0.15),
+                                            ),
+                                          ),
+                                    )
+                                  : Image.asset(
+                                      widget.backgroundImage!,
+                                      width: 82,
+                                      height: 82,
+                                      fit: BoxFit.contain,
+                                    ))
+                              : Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Icon(
+                                    widget.category['icon'] as IconData,
+                                    size: 64,
+                                    color: catColor.withValues(alpha: 0.15),
+                                  ),
+                                ),
                         ),
 
-                      // Closed overlay
-                      if (isClosed)
-                        Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            color: Colors.black.withValues(alpha: 0.5),
-                          ),
-                        ),
-
-                      // Content
-                      Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Icon for non-featured items
-                            if (!widget.isFeatured) ...[
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: (widget.category['color'] as Color)
-                                      .withValues(alpha: 0.1),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  widget.category['icon'] as IconData,
-                                  size: 26,
-                                  color: widget.category['color'] as Color,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                            ],
-
-                            // Category name
-                            Text(
-                              catName,
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: widget.isFeatured ? 22 : 13,
-                                color: widget.isFeatured
-                                    ? Colors.white
-                                    : Colors.black,
-                                shadows: widget.isFeatured
-                                    ? [
-                                        const Shadow(
-                                          color: Colors.black45,
-                                          blurRadius: 4,
-                                          offset: Offset(0, 2),
-                                        ),
-                                      ]
-                                    : null,
-                              ),
-                            ),
-
-                            // Subtitle
-                            if (widget.subtitle != null &&
-                                !widget.isFeatured) ...[
-                              const SizedBox(height: 2),
-                              Text(
-                                widget.subtitle!,
-                                textAlign: TextAlign.center,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 9,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ],
-
-                            // Category info (business count, delivery time)
-                            if ((widget.businessCount != null ||
-                                    widget.avgDeliveryTime != null) &&
-                                !widget.isFeatured) ...[
-                              const SizedBox(height: 4),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
+                        // Content on the left
+                        Padding(
+                          padding: const EdgeInsets.all(14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  if (widget.businessCount != null) ...[
-                                    Icon(
-                                      Icons.store,
-                                      size: 10,
-                                      color: Colors.grey[500],
+                                  Text(
+                                    catName,
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                      color: Colors.black87,
+                                      height: 1.2,
                                     ),
-                                    const SizedBox(width: 2),
-                                    Text(
-                                      '${widget.businessCount}',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                  ],
-                                  if (widget.businessCount != null &&
-                                      widget.avgDeliveryTime != null)
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                      ),
+                                  ),
+                                  if (widget.subtitle != null) ...[
+                                    const SizedBox(height: 3),
+                                    SizedBox(
+                                      width: 95, // Limit text width to prevent overlap with the image on the right
                                       child: Text(
-                                        '•',
-                                        style: TextStyle(
-                                          color: Colors.grey[400],
+                                        widget.subtitle!,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 9.5,
+                                          color: Colors.black54,
+                                          fontWeight: FontWeight.w500,
+                                          height: 1.2,
                                         ),
-                                      ),
-                                    ),
-                                  if (widget.avgDeliveryTime != null) ...[
-                                    Icon(
-                                      Icons.access_time,
-                                      size: 10,
-                                      color: Colors.grey[500],
-                                    ),
-                                    const SizedBox(width: 2),
-                                    Text(
-                                      widget.avgDeliveryTime!,
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.grey[600],
                                       ),
                                     ),
                                   ],
                                 ],
                               ),
+                              
+                              // Average delivery time badge
+                              if (widget.avgDeliveryTime != null)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.85),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: catColor.withValues(alpha: 0.3),
+                                      width: 0.8,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.access_time_filled_rounded,
+                                        size: 10,
+                                        color: catColor,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        widget.avgDeliveryTime!,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                             ],
-                          ],
+                          ),
                         ),
-                      ),
 
-                      // Badge
-                      if (widget.badge != null)
-                        CategoryBadge(badgeType: widget.badge!),
-                    ],
+                        // Closed overlay
+                        if (isClosed)
+                          Container(
+                            color: Colors.black.withValues(alpha: 0.4),
+                            child: const Center(
+                              child: Icon(
+                                Icons.do_not_disturb_on_rounded,
+                                color: Colors.white,
+                                size: 32,
+                              ),
+                            ),
+                          ),
+
+                        // Badge
+                        if (widget.badge != null)
+                          CategoryBadge(badgeType: widget.badge!),
+                      ],
+                    ),
                   ),
                 ),
               ),
