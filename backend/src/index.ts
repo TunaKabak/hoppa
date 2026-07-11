@@ -51,6 +51,7 @@ import { otpRateLimiter, globalRateLimiter, handshakeRateLimiter } from "./middl
 import { validateBody } from "./middlewares/ValidateMiddleware";
 import { handshakeMiddleware } from "./middlewares/HandshakeMiddleware";
 import { requestOtpSchema, verifyOtpSchema } from "./types/schemas";
+import { initCronJobs } from "./utils/cronJobs";
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -161,4 +162,5 @@ app.get('/mock-3d-secure/callback', async (req: Request, res: Response) => {
 // Sunucuyu Başlat
 app.listen(port, () => {
   console.log(`[Server] Hoppa Backend API listening at http://localhost:${port}`);
+  initCronJobs();
 });
