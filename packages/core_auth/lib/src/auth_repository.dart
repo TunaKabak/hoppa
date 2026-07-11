@@ -69,9 +69,22 @@ class AuthRepository implements IAuthRepository {
 
   @override
   Future<void> requestOtp(String phoneNumber) async {
+    // 1. Handshake token talep et
+    final handshakeResponse = await _apiClient.post(
+      '/api/auth/handshake',
+      requiresAuth: false,
+    );
+
+    final handshakeToken = handshakeResponse['data']?['handshakeToken']?.toString();
+    if (handshakeToken == null) {
+      throw Exception('Handshake token alınamadı.');
+    }
+
+    // 2. Handshake token'ı başlık olarak göndererek OTP talep et
     await _apiClient.post(
       '/api/auth/request-otp',
       body: {'phoneNumber': phoneNumber},
+      headers: {'x-handshake-token': handshakeToken},
       requiresAuth: false,
     );
   }

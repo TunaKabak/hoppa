@@ -136,10 +136,8 @@ class SelectionCategoryPage extends rp.ConsumerWidget {
                             itemBuilder: (context, index) {
                               final cat = categoriesList[index];
                               final catName = cat.name;
-                              final isFeatured = _featuredImages.containsKey(
-                                catName,
-                              );
-                              final bgImage = _featuredImages[catName];
+                              final isFeatured = cat.imageUrl != null || _featuredImages.containsKey(catName);
+                              final bgImage = cat.imageUrl ?? _featuredImages[catName];
 
                               final catMap = {
                                 'name': cat.name,
@@ -148,6 +146,7 @@ class SelectionCategoryPage extends rp.ConsumerWidget {
                                 'badge': cat.badge,
                                 'avgDeliveryTime': cat.avgDeliveryTime,
                                 'subtitle': cat.subtitle,
+                                'imageUrl': cat.imageUrl,
                               };
 
                               return CategoryGridItem(

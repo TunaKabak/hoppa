@@ -14,11 +14,21 @@ function getShopTypeForCategory(catName: string): string | null {
   return null;
 }
 
-async function enrichCategoryWithMetrics(cat: any) {
+async function enrichCategoryWithMetrics(cat: any, req?: Request) {
   const shopType = getShopTypeForCategory(cat.name);
+
+  // Prepend base URL to imageUrl if it is a relative path
+  let imageUrl = cat.imageUrl;
+  if (imageUrl && imageUrl.startsWith("/") && req) {
+    const protocol = req.headers["x-forwarded-proto"] || req.protocol;
+    const baseUrl = `${protocol}://${req.get("host")}`;
+    imageUrl = `${baseUrl}${imageUrl}`;
+  }
+
   if (!shopType) {
     return {
       ...cat,
+      imageUrl,
       shopCount: 0
     };
   }
@@ -83,6 +93,7 @@ async function enrichCategoryWithMetrics(cat: any) {
     ...cat,
     avgDeliveryTime,
     badge,
+    imageUrl,
     shopCount
   };
 }
@@ -96,7 +107,7 @@ export class BusinessCategoryController {
         orderBy: { order: "asc" },
       });
 
-      const enriched = await Promise.all(categories.map(c => enrichCategoryWithMetrics(c)));
+      const enriched = await Promise.all(categories.map(c => enrichCategoryWithMetrics(c, req)));
       return res.status(200).json({ error: false, data: enriched });
     } catch (error: any) {
       return res.status(500).json({ error: true, message: error.message });
@@ -110,7 +121,7 @@ export class BusinessCategoryController {
         orderBy: { order: "asc" },
       });
 
-      const enriched = await Promise.all(categories.map(c => enrichCategoryWithMetrics(c)));
+      const enriched = await Promise.all(categories.map(c => enrichCategoryWithMetrics(c, req)));
       return res.status(200).json({ error: false, data: enriched });
     } catch (error: any) {
       return res.status(500).json({ error: true, message: error.message });
@@ -120,7 +131,7 @@ export class BusinessCategoryController {
   // Admin-facing: Create a new category
   async adminCreateBusinessCategory(req: Request, res: Response) {
     try {
-      const { name, icon, color, badge, avgDeliveryTime, subtitle, isActive, order } = req.body;
+      const { name, icon, color, badge, avgDeliveryTime, subtitle, imageUrl, isActive, order } = req.body;
       
       if (!name || !icon || !color) {
         return res.status(400).json({ error: true, message: "Kategori adı, ikon ve renk alanları zorunludur." });
@@ -142,6 +153,7 @@ export class BusinessCategoryController {
           badge: badge || null,
           avgDeliveryTime: avgDeliveryTime || null,
           subtitle: subtitle || null,
+          imageUrl: imageUrl || null,
           isActive: isActive !== undefined ? isActive : true,
           order: order !== undefined ? Number(order) : 0,
         }
@@ -157,7 +169,7 @@ export class BusinessCategoryController {
   async adminUpdateBusinessCategory(req: Request, res: Response) {
     try {
       const id = req.params.id as string;
-      const { name, icon, color, badge, avgDeliveryTime, subtitle, isActive, order } = req.body;
+      const { name, icon, color, badge, avgDeliveryTime, subtitle, imageUrl, isActive, order } = req.body;
 
       const category = await prisma.businessCategory.findUnique({
         where: { id }
@@ -184,6 +196,7 @@ export class BusinessCategoryController {
           badge: badge === null ? null : (badge ?? undefined),
           avgDeliveryTime: avgDeliveryTime === null ? null : (avgDeliveryTime ?? undefined),
           subtitle: subtitle === null ? null : (subtitle ?? undefined),
+          imageUrl: imageUrl === null ? null : (imageUrl ?? undefined),
           isActive: isActive !== undefined ? isActive : undefined,
           order: order !== undefined ? Number(order) : undefined,
         }
