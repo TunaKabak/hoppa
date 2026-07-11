@@ -915,6 +915,60 @@ async function main() {
   }
   console.log("✅ Business Categories Seeded successfully.");
 
+  // 8.6. SEED VEHICLE OPTIONS
+  const vehicleOptions = [
+    { 
+      code: "MOTORCYCLE", 
+      nameTr: "Motosiklet", nameEn: "Motorcycle", nameRu: "Мотоцикл",
+      subTr: "Kendi Aracım", subEn: "My Own", subRu: "Свой",
+      isActive: true 
+    },
+    { 
+      code: "CAR", 
+      nameTr: "Araba", nameEn: "Car", nameRu: "Автомобиль",
+      subTr: "Kendi Aracım", subEn: "My Own", subRu: "Свой",
+      isActive: true 
+    },
+    { 
+      code: "COMPANY_MOTORCYCLE", 
+      nameTr: "Araç İstiyorum", nameEn: "Vehicle Wanted", nameRu: "Нужен transport",
+      subTr: "Şirket Motosu", subEn: "Company Motorcycle", subRu: "Мотоцикл компании",
+      isActive: false 
+    },
+    { 
+      code: "BICYCLE", 
+      nameTr: "Bisiklet / E-Bike", nameEn: "Bicycle / E-Bike", nameRu: "Велосипед / Электровелосипед",
+      subTr: "Ehliyet Gerekmez", subEn: "No License Required", subRu: "Права не нужны",
+      isActive: true 
+    }
+  ];
+
+  for (const opt of vehicleOptions) {
+    await prisma.vehicleOption.upsert({
+      where: { code: opt.code },
+      update: {
+        nameTr: opt.nameTr,
+        nameEn: opt.nameEn,
+        nameRu: opt.nameRu,
+        subTr: opt.subTr,
+        subEn: opt.subEn,
+        subRu: opt.subRu,
+        isActive: opt.isActive
+      },
+      create: {
+        code: opt.code,
+        nameTr: opt.nameTr,
+        nameEn: opt.nameEn,
+        nameRu: opt.nameRu,
+        subTr: opt.subTr,
+        subEn: opt.subEn,
+        subRu: opt.subRu,
+        isActive: opt.isActive
+      }
+    });
+  }
+  console.log("✅ Vehicle Options Seeded successfully.");
+
   // 9. SUPABASE REALTIME REPLİKASYONUNU AKTİF ET
   try {
     await prisma.$executeRawUnsafe(

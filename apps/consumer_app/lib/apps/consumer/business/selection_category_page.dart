@@ -16,6 +16,12 @@ class SelectionCategoryPage extends rp.ConsumerWidget {
   static const Map<String, String> _featuredImages = {
     'Market': 'assets/images/market_bg.png',
     'Restoran': 'assets/images/restaurant_bg.png',
+    'Su': 'assets/images/su_bg.png',
+    'Kuruyemiş': 'assets/images/kuruyemis_bg.png',
+    'Kahve': 'assets/images/kahve_bg.png',
+    'Çiçek': 'assets/images/cicek_bg.png',
+    'Manav': 'assets/images/manav_bg.png',
+    'Kasap': 'assets/images/kasap_bg.png',
   };
 
   IconData _getIconData(String iconName) {
