@@ -632,4 +632,20 @@ model AssistantChatLog {
   @@index([userId])
 }
 
+// Araç seçenekleri ve durum yönetimi tablosu
+model VehicleOption {
+  id        String   @id @default(uuid())
+  code      String   @unique // MOTORCYCLE, CAR, COMPANY_MOTORCYCLE, BICYCLE
+  nameTr    String
+  nameEn    String
+  nameRu    String
+  subTr     String?
+  subEn     String?
+  subRu     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+
 

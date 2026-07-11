@@ -63,3 +63,11 @@ flutter:
   assets:
     - .env
     - assets/images/hoppa_button.png
+    - assets/images/market_bg.png
+    - assets/images/restaurant_bg.png
+    - assets/images/su_bg.png
+    - assets/images/kuruyemis_bg.png
+    - assets/images/kahve_bg.png
+    - assets/images/cicek_bg.png
+    - assets/images/manav_bg.png
+    - assets/images/kasap_bg.png

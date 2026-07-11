@@ -6,6 +6,7 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:core_auth/core_auth.dart';
 import 'dart:math' as math;
 
+import 'package:permission_handler/permission_handler.dart';
 import 'package:core_shared/shared/core/services/navigation_provider.dart';
 import 'package:core_shared/shared/models/business_product.dart';
 import 'package:core_shared/shared/models/cart_item.dart';
@@ -50,8 +51,11 @@ class _VoiceAssistantDialogState extends ConsumerState<VoiceAssistantDialog>
       duration: const Duration(milliseconds: 2000),
     );
 
-    _initSpeech();
     _startTypewriter(_assistantReply);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _startListening();
+    });
   }
 
   @override
@@ -63,50 +67,103 @@ class _VoiceAssistantDialogState extends ConsumerState<VoiceAssistantDialog>
     super.dispose();
   }
 
-  void _initSpeech() async {
-    try {
-      bool available = await _speech.initialize(
-        onStatus: (status) {
-          debugPrint('Voice STT Status: $status');
-          if (status == 'done' || status == 'notListening') {
-            if (_isListening) {
-              _onSpeechFinished();
-            }
-          }
-        },
-        onError: (errorNotification) {
-          debugPrint('Voice STT Error: $errorNotification');
-          _onSpeechFinished();
-        },
-      );
-      if (available && mounted) {
-        _startListening();
-      }
-    } catch (e) {
-      debugPrint('STT Init error: $e');
-    }
-  }
-
   void _startListening() async {
     if (_isThinking) return;
     _typewriterTimer?.cancel();
     setState(() {
       _isListening = true;
       _wordsSpoken = "";
-      _displayedReply = "";
+      _displayedReply = "Mikrofon başlatılıyor...";
     });
 
     _pulseController.repeat(reverse: true);
     _rotationController.repeat();
 
-    await _speech.listen(
-      onResult: (result) {
+    try {
+      // Request microphone permission manually using permission_handler
+      var permissionStatus = await Permission.microphone.status;
+      if (!permissionStatus.isGranted) {
+        if (permissionStatus.isPermanentlyDenied) {
+          if (mounted) {
+            setState(() {
+              _isListening = false;
+              _displayedReply = "Mikrofon izni kalıcı olarak reddedilmiş. Lütfen ayarlardan izin verin.";
+            });
+            _pulseController.stop();
+            _rotationController.stop();
+          }
+          await openAppSettings();
+          return;
+        }
+
+        final requestedStatus = await Permission.microphone.request();
+        if (!requestedStatus.isGranted) {
+          if (mounted) {
+            setState(() {
+              _isListening = false;
+              _displayedReply = "Sesli komut kullanabilmek için mikrofon izni vermeniz gerekmektedir.";
+            });
+            _pulseController.stop();
+            _rotationController.stop();
+          }
+          return;
+        }
+      }
+
+      bool available = await _speech.initialize(
+        onStatus: (status) {
+          debugPrint('Voice STT Status: $status');
+          if (mounted) {
+            setState(() {
+              _displayedReply = "Durum: $status\nKonuşmanızı bekliyorum...";
+            });
+          }
+        },
+        onError: (errorNotification) {
+          debugPrint('Voice STT Error: $errorNotification');
+          if (mounted) {
+            setState(() {
+              _isListening = false;
+              _displayedReply = "Mikrofon Hatası: ${errorNotification.errorMsg}\n(Kalıcı mı: ${errorNotification.permanent})";
+            });
+            _pulseController.stop();
+            _rotationController.stop();
+          }
+        },
+      );
+
+      if (available && mounted) {
+        await _speech.listen(
+          onResult: (result) {
+            setState(() {
+              _wordsSpoken = result.recognizedWords;
+            });
+            if (result.finalResult) {
+              _onSpeechFinished();
+            }
+          },
+          listenOptions: stt.SpeechListenOptions(
+            localeId: 'tr_TR',
+            listenMode: stt.ListenMode.confirmation,
+            cancelOnError: false,
+            partialResults: true,
+          ),
+        );
+      } else if (mounted) {
         setState(() {
-          _wordsSpoken = result.recognizedWords;
+          _isListening = false;
+          _displayedReply = "Mikrofon başlatılamadı. Cihazınızda ses tanıma hizmeti bulunamadı veya izin verilmedi.";
         });
-      },
-      localeId: 'tr_TR',
-    );
+      }
+    } catch (e) {
+      debugPrint("STT Listen error: $e");
+      if (mounted) {
+        setState(() {
+          _isListening = false;
+          _displayedReply = "Başlatılamadı: $e";
+        });
+      }
+    }
   }
 
   void _onSpeechFinished() {
@@ -121,6 +178,11 @@ class _VoiceAssistantDialogState extends ConsumerState<VoiceAssistantDialog>
 
     if (_wordsSpoken.isNotEmpty) {
       _processCommand(_wordsSpoken);
+    } else {
+      setState(() {
+        _assistantReply = "Herhangi bir komut algılanamadı sevgili dostum. Tekrar konuşmak için mikrofona dokunabilirsin.";
+      });
+      _startTypewriter(_assistantReply);
     }
   }
 

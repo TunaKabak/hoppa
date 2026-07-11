@@ -227,4 +227,21 @@ export class CourierController {
       res.status(500).json({ error: true, message: error.message || "Nöbet durumu güncellenemedi." });
     }
   }
+
+  /**
+   * Kurye araç seçeneklerini getirir
+   * GET /api/couriers/vehicle-options
+   */
+  public async getVehicleOptions(req: Request, res: Response): Promise<void> {
+    try {
+      const options = await prisma.vehicleOption.findMany({
+        orderBy: { createdAt: "asc" }
+      });
+      res.status(200).json({ error: false, data: options });
+    } catch (error: any) {
+      console.error("Araç seçenekleri getirme hatası:", error);
+      res.status(500).json({ error: true, message: error.message || "Araç seçenekleri getirilemedi." });
+    }
+  }
 }
+

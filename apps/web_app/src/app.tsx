@@ -108,6 +108,68 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
     const [courierError, setCourierError] = useState('');
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+    const [vehicleOptions, setVehicleOptions] = useState<any[]>([]);
+    const [loadingVehicles, setLoadingVehicles] = useState(true);
+
+    useEffect(() => {
+        const fetchVehicleOptions = async () => {
+            try {
+                const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+                const res = await fetch(`${apiUrl}/api/couriers/vehicle-options`);
+                const data = await res.json();
+                if (!data.error && data.data) {
+                    setVehicleOptions(data.data.filter((opt: any) => opt.isActive));
+                } else {
+                    throw new Error("API error");
+                }
+            } catch (err) {
+                console.error("Failed to fetch vehicle options, loading fallbacks:", err);
+                setVehicleOptions([
+                    { code: 'MOTORCYCLE', nameTr: 'Motosiklet', nameEn: 'Motorcycle', nameRu: 'Мотоцикл', subTr: 'Kendi Aracım', subEn: 'My Own', subRu: 'Свой' },
+                    { code: 'CAR', nameTr: 'Araba', nameEn: 'Car', nameRu: 'Автомобиль', subTr: 'Kendi Aracım', subEn: 'My Own', subRu: 'Свой' },
+                    { code: 'BICYCLE', nameTr: 'Bisiklet / E-Bike', nameEn: 'Bicycle / E-Bike', nameRu: 'Велосипед / Электровелосипед', subTr: 'Ehliyet Gerekmez', subEn: 'No License Required', subRu: 'Права не нужны' }
+                ]);
+            } finally {
+                setLoadingVehicles(false);
+            }
+        };
+        fetchVehicleOptions();
+    }, []);
+
+    const getVehicleIcon = (code: string) => {
+        switch (code) {
+            case 'MOTORCYCLE':
+                return (
+                    <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="6" cy="18" r="3" />
+                        <circle cx="18" cy="18" r="3" />
+                        <path d="M12 18V9a2 2 0 0 1 2-2h3" />
+                        <path d="M6 18H18" />
+                        <path d="M9 9H5a1.5 1.5 0 0 0 0 3h3" />
+                    </svg>
+                );
+            case 'CAR':
+                return <Car size={32} />;
+            case 'COMPANY_MOTORCYCLE':
+                return (
+                    <div className="relative">
+                        <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="6" cy="18" r="3" />
+                            <circle cx="18" cy="18" r="3" />
+                            <path d="M12 18V9a2 2 0 0 1 2-2h3" />
+                            <path d="M6 18H18" />
+                            <path d="M9 9H5a1.5 1.5 0 0 0 0 3h3" />
+                        </svg>
+                        <Sparkles size={12} className="absolute -top-1.5 -right-1.5 text-emerald-500 fill-emerald-500 animate-pulse" />
+                    </div>
+                );
+            case 'BICYCLE':
+                return <Bike size={32} />;
+            default:
+                return <Bike size={32} />;
+        }
+    };
+
     const handleCourierSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
@@ -1770,72 +1832,32 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                 <div className="space-y-2">
                                                     <label className="text-xs font-bold text-slate-500 block">Araç Tipi</label>
                                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                                        {[
-                                                            { 
-                                                                id: 'MOTORCYCLE', 
-                                                                label: 'Motosiklet', 
-                                                                sub: 'Kendi Aracım',
-                                                                icon: (
-                                                                    <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                                                        <circle cx="6" cy="18" r="3" />
-                                                                        <circle cx="18" cy="18" r="3" />
-                                                                        <path d="M12 18V9a2 2 0 0 1 2-2h3" />
-                                                                        <path d="M6 18H18" />
-                                                                        <path d="M9 9H5a1.5 1.5 0 0 0 0 3h3" />
-                                                                    </svg>
-                                                                )
-                                                            },
-                                                            { 
-                                                                id: 'CAR', 
-                                                                label: 'Araba', 
-                                                                sub: 'Kendi Aracım',
-                                                                icon: <Car size={32} />
-                                                            },
-                                                            { 
-                                                                id: 'COMPANY_MOTORCYCLE', 
-                                                                label: 'Araç İstiyorum', 
-                                                                sub: 'Şirket Motosu',
-                                                                icon: (
-                                                                    <div className="relative">
-                                                                        <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                                                            <circle cx="6" cy="18" r="3" />
-                                                                            <circle cx="18" cy="18" r="3" />
-                                                                            <path d="M12 18V9a2 2 0 0 1 2-2h3" />
-                                                                            <path d="M6 18H18" />
-                                                                            <path d="M9 9H5a1.5 1.5 0 0 0 0 3h3" />
-                                                                        </svg>
-                                                                        <Sparkles size={12} className="absolute -top-1.5 -right-1.5 text-emerald-500 fill-emerald-500 animate-pulse" />
-                                                                    </div>
-                                                                )
-                                                            },
-                                                            { 
-                                                                id: 'BICYCLE', 
-                                                                label: 'Bisiklet / E-Bike', 
-                                                                sub: 'Ehliyet Gerekmez',
-                                                                icon: <Bike size={32} />
-                                                            }
-                                                        ].map(item => (
-                                                            <button
-                                                                key={item.id}
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    setCourierForm(prev => ({ 
-                                                                        ...prev, 
-                                                                        vehicle: item.id,
-                                                                        license: item.id === 'BICYCLE' ? 'NONE' : 'YES'
-                                                                    }));
-                                                                }}
-                                                                className={`p-4 rounded-2xl border text-center flex flex-col items-center justify-center transition-all duration-350 hover:scale-[1.04] active:scale-[0.98] ${
-                                                                    courierForm.vehicle === item.id
-                                                                        ? 'border-emerald-600 bg-emerald-50/30 text-emerald-700 shadow-md shadow-emerald-50 ring-2 ring-emerald-600/10'
-                                                                        : 'border-slate-100 bg-slate-50/50 hover:bg-slate-50 text-slate-600 hover:border-slate-200'
-                                                                }`}
-                                                            >
-                                                                <span className="mb-2 block text-slate-500 group-hover:text-emerald-600">{item.icon}</span>
-                                                                <span className="text-xs font-bold block leading-tight text-slate-800">{item.label}</span>
-                                                                <span className="text-[9px] text-slate-400 mt-1 block font-medium leading-none">{item.sub}</span>
-                                                            </button>
-                                                        ))}
+                                                        {vehicleOptions.map(item => {
+                                                            const label = locale === 'tr' ? item.nameTr : locale === 'ru' ? item.nameRu : item.nameEn;
+                                                            const sub = locale === 'tr' ? item.subTr : locale === 'ru' ? item.subRu : item.subEn;
+                                                            return (
+                                                                <button
+                                                                    key={item.code}
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setCourierForm(prev => ({ 
+                                                                            ...prev, 
+                                                                            vehicle: item.code,
+                                                                            license: item.code === 'BICYCLE' ? 'NONE' : 'YES'
+                                                                        }));
+                                                                    }}
+                                                                    className={`p-4 rounded-2xl border text-center flex flex-col items-center justify-center transition-all duration-350 hover:scale-[1.04] active:scale-[0.98] ${
+                                                                        courierForm.vehicle === item.code
+                                                                            ? 'border-emerald-600 bg-emerald-50/30 text-emerald-700 shadow-md shadow-emerald-50 ring-2 ring-emerald-600/10'
+                                                                            : 'border-slate-100 bg-slate-50/50 hover:bg-slate-50 text-slate-600 hover:border-slate-200'
+                                                                    }`}
+                                                                >
+                                                                    <span className="mb-2 block text-slate-500 group-hover:text-emerald-600">{getVehicleIcon(item.code)}</span>
+                                                                    <span className="text-xs font-bold block leading-tight text-slate-800">{label}</span>
+                                                                    <span className="text-[9px] text-slate-400 mt-1 block font-medium leading-none">{sub}</span>
+                                                                </button>
+                                                            );
+                                                        })}
                                                     </div>
                                                 </div>
 
