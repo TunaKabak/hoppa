@@ -7,6 +7,7 @@ import 'package:consumer_app/apps/consumer/repositories/address_repository.dart'
 import 'package:core_shared/shared/models/address.dart';
 import 'package:core_shared/shared/core/data/kktc_districts.dart';
 import 'package:consumer_app/apps/consumer/providers/consumer_location_controller.dart';
+import 'package:core_auth/core_auth.dart';
 
 class AddAddressPage extends ConsumerStatefulWidget {
   final Address? addressToEdit; // Düzenlenecek adres (Opsiyonel)

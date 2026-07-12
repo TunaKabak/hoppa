@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:core_network/core_network.dart';
 import 'auth_repository.dart';
 import 'auth_state.dart';
+import 'auth_user.dart';
 
 class AuthController extends Notifier<AuthState> {
   @override
