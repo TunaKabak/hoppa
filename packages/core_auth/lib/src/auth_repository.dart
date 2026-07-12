@@ -12,6 +12,7 @@ abstract class IAuthRepository {
   });
   Future<AuthUser?> checkAuthStatus();
   Future<void> logout();
+  Future<void> saveUserLocal(AuthUser user);
 
   /// Merchant için e-posta + şifre ile giriş.
   /// Başarılı ise JWT kaydeder ve [AuthUser] (merchant bilgileriyle) döndürür.
@@ -211,6 +212,11 @@ class AuthRepository implements IAuthRepository {
   Future<void> logout() async {
     await _apiClient.deleteToken();
     await _clearUser();
+  }
+
+  @override
+  Future<void> saveUserLocal(AuthUser user) async {
+    await _saveUser(user);
   }
 
   // --- Local Consumer User Storage ---

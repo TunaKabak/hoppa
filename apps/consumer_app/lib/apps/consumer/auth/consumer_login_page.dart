@@ -9,7 +9,8 @@ import 'widgets/auth_text_field.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
-  const LoginPage({super.key});
+  final bool fromCheckout;
+  const LoginPage({super.key, this.fromCheckout = false});
 
   @override
   ConsumerState<LoginPage> createState() => _LoginPageState();
@@ -75,8 +76,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
   }
 
   void _guestLogin() {
-    ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Bu özellik henüz aktif değil.")));
+    Navigator.pop(context);
   }
 
   void _loginWithGoogle() {
@@ -105,8 +105,8 @@ class _LoginPageState extends ConsumerState<LoginPage>
             builder: (context) => OtpVerifyPage(
               verificationId: "", // Eskiden kalma, kullanılmayacak
               phoneNumber: next.phoneNumber,
-              firstName: '',
-              lastName: '',
+              firstName: widget.fromCheckout ? 'checkout' : '',
+              lastName: widget.fromCheckout ? 'checkout' : '',
             ),
           ),
         );

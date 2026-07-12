@@ -12,6 +12,7 @@ import 'package:consumer_app/apps/consumer/product/product_detail_page.dart';
 import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository.dart';
 import 'package:core_shared/shared/models/shop_category_data.dart';
 import 'package:consumer_app/apps/consumer/home/widgets/campaign_carousel.dart';
+import 'package:consumer_app/apps/consumer/widgets/hoppa_dialog.dart';
 
 class ModernShopDetailPage extends ConsumerStatefulWidget {
   final Business shop;
@@ -64,37 +65,42 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
   }
 
   void _changeBusiness() {
+    final cart = ref.read(cartProvider);
+    if (cart.items.isEmpty) {
+      ref.read(selectedCatalogCategoryProvider.notifier).state = 'Tümü';
+      ref.read(selectedCatalogSubCategoryProvider.notifier).state = 'Tümü';
+      ref.read(selectedCatalogSortOptionProvider.notifier).state = 'Önerilen';
+      ref.read(catalogSearchQueryProvider.notifier).state = '';
+      p.Provider.of<BusinessProvider>(
+        context,
+        listen: false,
+      ).clearBusiness();
+      return;
+    }
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("İşletmeyi Değiştir"),
-        content: const Text(
-          "Farklı bir işletmeye geçerseniz, mevcut sepetiniz temizlenecektir. Devam etmek istiyor musunuz?",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("İptal", style: TextStyle(color: Colors.grey)),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ref.read(cartProvider.notifier).clearCart();
-              ref.read(selectedCatalogCategoryProvider.notifier).state = 'Tümü';
-              ref.read(selectedCatalogSubCategoryProvider.notifier).state = 'Tümü';
-              ref.read(selectedCatalogSortOptionProvider.notifier).state = 'Önerilen';
-              ref.read(catalogSearchQueryProvider.notifier).state = '';
-              p.Provider.of<BusinessProvider>(
-                context,
-                listen: false,
-              ).clearBusiness();
-            },
-            child: const Text(
-              "Değiştir",
-              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
+      builder: (context) => HoppaDialog(
+        icon: Icons.warning_amber_rounded,
+        iconColor: Colors.orange,
+        title: "İşletmeyi Değiştir",
+        content: "Farklı bir işletmeye geçerseniz, mevcut sepetiniz temizlenecektir. Devam etmek istiyor musunuz?",
+        cancelText: "İptal",
+        confirmText: "Evet, Değiştir",
+        isDestructive: true,
+        onCancel: () => Navigator.pop(context),
+        onConfirm: () {
+          Navigator.pop(context);
+          ref.read(cartProvider.notifier).clearCart();
+          ref.read(selectedCatalogCategoryProvider.notifier).state = 'Tümü';
+          ref.read(selectedCatalogSubCategoryProvider.notifier).state = 'Tümü';
+          ref.read(selectedCatalogSortOptionProvider.notifier).state = 'Önerilen';
+          ref.read(catalogSearchQueryProvider.notifier).state = '';
+          p.Provider.of<BusinessProvider>(
+            context,
+            listen: false,
+          ).clearBusiness();
+        },
       ),
     );
   }
@@ -521,7 +527,9 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                                     ),
                                     const SizedBox(width: 2),
                                     Text(
-                                      "${widget.shop.averageRating.toStringAsFixed(1)} (${widget.shop.reviewCount}) • Min: ₺${widget.shop.minBasketAmount.toStringAsFixed(0)} • Teslimat: ₺${widget.shop.baseDeliveryFee.toStringAsFixed(0)} • ${widget.shop.openingTime}-${widget.shop.closingTime}",
+                                      widget.shop.reviewCount == 0
+                                          ? "Değerlendirme Yok • Min: ₺${widget.shop.minBasketAmount.toStringAsFixed(0)} • Teslimat: ₺${widget.shop.baseDeliveryFee.toStringAsFixed(0)} • ${widget.shop.openingTime}-${widget.shop.closingTime}"
+                                          : "${widget.shop.averageRating.toStringAsFixed(1)} (${widget.shop.reviewCount}) • Min: ₺${widget.shop.minBasketAmount.toStringAsFixed(0)} • Teslimat: ₺${widget.shop.baseDeliveryFee.toStringAsFixed(0)} • ${widget.shop.openingTime}-${widget.shop.closingTime}",
                                       style: const TextStyle(
                                         color: Colors.white70,
                                         fontSize: 10,

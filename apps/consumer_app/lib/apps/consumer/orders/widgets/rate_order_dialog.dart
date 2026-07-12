@@ -15,9 +15,18 @@ class RateOrderDialog extends ConsumerStatefulWidget {
 
 class _RateOrderDialogState extends ConsumerState<RateOrderDialog> {
   int _selectedRating = 0;
+  int _selectedServiceRating = 0;
+  int _selectedSpeedRating = 0;
+  int _selectedTasteRating = 0;
+  
   final TextEditingController _commentController = TextEditingController();
   bool _isSubmitting = false;
   String? _errorMessage;
+
+  bool get _hasTasteRating {
+    final type = widget.order.businessType?.toUpperCase() ?? 'RESTAURANT';
+    return type == 'RESTAURANT' || type == 'CAFE' || type == 'FOOD';
+  }
 
   @override
   void dispose() {
@@ -28,7 +37,7 @@ class _RateOrderDialogState extends ConsumerState<RateOrderDialog> {
   Future<void> _submitReview() async {
     if (_selectedRating < 1 || _selectedRating > 5) {
       setState(() {
-        _errorMessage = "Lütfen 1 ile 5 arasında bir puan seçin.";
+        _errorMessage = "Lütfen genel bir değerlendirme puanı seçin.";
       });
       return;
     }
@@ -46,6 +55,9 @@ class _RateOrderDialogState extends ConsumerState<RateOrderDialog> {
         comment: _commentController.text.trim().isEmpty 
             ? null 
             : _commentController.text.trim(),
+        serviceRating: _selectedServiceRating > 0 ? _selectedServiceRating : null,
+        speedRating: _selectedSpeedRating > 0 ? _selectedSpeedRating : null,
+        tasteRating: _hasTasteRating && _selectedTasteRating > 0 ? _selectedTasteRating : null,
       );
 
       // Refresh order list so order.review is no longer null
@@ -112,16 +124,24 @@ class _RateOrderDialogState extends ConsumerState<RateOrderDialog> {
               ),
               const SizedBox(height: 8),
               Text(
-                "Siparişiniz teslim edildi. Deneyiminizi puanlayarak bize yardımcı olabilirsiniz.",
+                "Deneyiminizi detaylı olarak puanlayarak bize yardımcı olabilirsiniz.",
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 13,
                   color: Colors.grey[600],
                 ),
               ),
               const SizedBox(height: 24),
 
-              // Interactive Stars Row
+              // Genel Puan Başlığı
+              const Text(
+                "Genel Deneyiminiz",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+              const SizedBox(height: 8),
+
+              // Interactive Stars Row (Genel Puan)
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(5, (index) {
@@ -150,7 +170,25 @@ class _RateOrderDialogState extends ConsumerState<RateOrderDialog> {
                   );
                 }),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 8),
+
+              // Detaylı Puanlama Satırları
+              _buildSubRatingRow("Servis Kalitesi", _selectedServiceRating, (val) {
+                setState(() => _selectedServiceRating = val);
+              }),
+              _buildSubRatingRow("Teslimat Hızı", _selectedSpeedRating, (val) {
+                setState(() => _selectedSpeedRating = val);
+              }),
+              if (_hasTasteRating)
+                _buildSubRatingRow("Lezzet", _selectedTasteRating, (val) {
+                  setState(() => _selectedTasteRating = val);
+                }),
+
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 16),
 
               // Comment Field
               TextField(
@@ -241,6 +279,38 @@ class _RateOrderDialogState extends ConsumerState<RateOrderDialog> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSubRatingRow(String label, int currentRating, Function(int) onTap) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.black87),
+          ),
+          Row(
+            children: List.generate(5, (index) {
+              final starIndex = index + 1;
+              final isSelected = starIndex <= currentRating;
+              return GestureDetector(
+                onTap: () => onTap(starIndex),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                  child: Icon(
+                    isSelected ? Icons.star_rounded : Icons.star_outline_rounded,
+                    color: isSelected ? Colors.amber[600] : Colors.grey[350],
+                    size: 28,
+                  ),
+                ),
+              );
+            }),
+          ),
+        ],
       ),
     );
   }

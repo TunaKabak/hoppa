@@ -215,7 +215,7 @@ class _CartPageState extends ConsumerState<CartPage> {
                         rootNavigator: true,
                       ).push(
                         MaterialPageRoute(
-                          builder: (context) => const LoginPage(),
+                          builder: (context) => const LoginPage(fromCheckout: true),
                         ),
                       );
                     } else {

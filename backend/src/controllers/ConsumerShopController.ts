@@ -27,6 +27,30 @@ function formatProduct(product: any) {
   };
 }
 
+function enrichShopWithTags(shop: any) {
+  if (!shop) return null;
+  const tags: string[] = [];
+  if (shop.reviewCount > 0) {
+    if (shop.avgSpeedRating >= 4.5) {
+      tags.push("Hızlı Teslimat");
+    }
+    if (shop.avgServiceRating >= 4.5) {
+      tags.push("Kaliteli Hizmet");
+    }
+    const isRestaurant = shop.type === "RESTAURANT" || shop.type === "Cafe";
+    if (shop.avgTasteRating >= 4.5) {
+      tags.push(isRestaurant ? "Efsane Lezzet" : "Taze Ürünler");
+    }
+    if (shop.averageRating >= 4.7) {
+      tags.push("Müşteri Favorisi");
+    }
+  }
+  return {
+    ...shop,
+    tags
+  };
+}
+
 export class ConsumerShopController {
 
   // Tüketiciler için sadece AKTİF dükkanları getirir (mesafe filtresi ve onaylı satıcı kontrolü ile)
@@ -46,6 +70,8 @@ export class ConsumerShopController {
         }
       });
 
+      const enrichedShops = shops.map(enrichShopWithTags);
+
       // Eğer koordinatlar gönderildiyse mesafe bazlı filtreleme yap (Haversine)
       if (latitude && longitude) {
         const userLat = Number(latitude);
@@ -53,7 +79,7 @@ export class ConsumerShopController {
         const filterRadius = radius ? Number(radius) : null;
 
         if (!isNaN(userLat) && !isNaN(userLng)) {
-          const filteredShops = shops.filter(shop => {
+          const filteredShops = enrichedShops.filter((shop: any) => {
             // Lokasyonu girilmemiş dükkanlar için fallback olarak her durumda göster
             if (shop.latitude === null || shop.longitude === null) {
               return true;
@@ -80,7 +106,7 @@ export class ConsumerShopController {
       }
 
       // Fallback: Koordinatlar yoksa veya geçersizse tüm dükkanları getir
-      return res.status(200).json({ error: false, data: shops });
+      return res.status(200).json({ error: false, data: enrichedShops });
     } catch (error: any) {
       return res.status(500).json({ error: true, message: error.message });
     }
@@ -260,6 +286,7 @@ export class ConsumerShopController {
           ]
         }
       });
+      const enrichedShops = shops.map(enrichShopWithTags);
 
       // 3. Ürünleri Ara
       const products = await prisma.product.findMany({
@@ -299,7 +326,7 @@ export class ConsumerShopController {
         error: false,
         data: {
           categories: formattedCategories,
-          shops,
+          shops: enrichedShops,
           products: formattedProducts
         }
       });

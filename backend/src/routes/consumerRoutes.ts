@@ -8,6 +8,9 @@ import { CategoryController } from "../controllers/CategoryController";
 import { ReviewController } from "../controllers/ReviewController";
 import { SupportController } from "../controllers/SupportController";
 import { BusinessCategoryController } from "../controllers/BusinessCategoryController";
+import { ProfileController } from "../controllers/ProfileController";
+import { SavedCardController } from "../controllers/SavedCardController";
+import { CouponController } from "../controllers/CouponController";
 
 const router = Router();
 const consumerShopController = new ConsumerShopController();
@@ -16,6 +19,8 @@ const addressController = new AddressController();
 const favoritesController = new FavoritesController();
 const categoryController = new CategoryController();
 const businessCategoryController = new BusinessCategoryController();
+const savedCardController = new SavedCardController();
+const couponController = new CouponController();
 
 // --- Public / Optional Auth Endpoints (Misafir Modu Gezinti) ---
 router.get("/shops", optionalAuthMiddleware, (req: Request, res: Response) => consumerShopController.getActiveShops(req, res));
@@ -28,6 +33,19 @@ router.get("/search/global", optionalAuthMiddleware, (req: Request, res: Respons
 
 // --- Authenticated Consumer Endpoints ---
 router.use(authMiddleware);
+
+// Profile Operations
+router.get("/profile", (req: Request, res: Response) => ProfileController.getProfile(req, res));
+router.put("/profile", (req: Request, res: Response) => ProfileController.updateProfile(req, res));
+
+// Saved Cards Operations
+router.get("/cards", (req: Request, res: Response) => savedCardController.getCards(req, res));
+router.post("/cards", (req: Request, res: Response) => savedCardController.createCard(req, res));
+router.delete("/cards/:id", (req: Request, res: Response) => savedCardController.deleteCard(req, res));
+
+// Coupon Operations
+router.get("/coupons", (req: Request, res: Response) => couponController.getCoupons(req, res));
+router.post("/coupons/apply", (req: Request, res: Response) => couponController.applyCoupon(req, res));
 
 // Favorites Operations
 router.get("/favorites/products", (req: Request, res: Response) => favoritesController.getFavoriteProducts(req, res));
@@ -47,6 +65,7 @@ router.delete("/addresses/:id", (req: Request, res: Response) => addressControll
 
 // Review Operations
 router.post("/reviews", (req: Request, res: Response) => ReviewController.createReview(req, res));
+router.get("/reviews/my", (req: Request, res: Response) => ReviewController.getMyReviews(req, res));
 router.get("/shops/:shopId/reviews", (req: Request, res: Response) => ReviewController.getShopReviews(req, res));
 
 // Hoppa Assistant Chat

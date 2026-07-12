@@ -29,6 +29,11 @@ model User {
   createdAt DateTime  @default(now())
   lastLogin DateTime  @default(now())
   
+  // Bildirim Ayarları Tercihleri
+  notifyOrderStatus Boolean @default(true)
+  notifyCampaigns   Boolean @default(true)
+  notifyNews        Boolean @default(true)
+  
   // Tüketici İlişkileri
   addresses    Address[]
   orders       Order[]
@@ -38,6 +43,8 @@ model User {
   reviews          Review[]
   chatLogs         AssistantChatLog[]
   courier          Courier?
+  savedCards       SavedCard[]
+  couponUsages     CouponUsage[]
 }
 
 enum Role {
@@ -143,9 +150,13 @@ model Shop {
   favoriteShops    FavoriteShop[]
   averageRating    Float     @default(5.0) // Cache alan: Puan ortalaması
   reviewCount      Int       @default(0)   // Cache alan: Toplam yorum sayısı
+  avgServiceRating Float     @default(5.0)
+  avgSpeedRating   Float     @default(5.0)
+  avgTasteRating   Float     @default(5.0)
   reviews          Review[]
   allowedPaymentMethods PaymentMethod[] @default([CASH_ON_DELIVERY, CARD_ON_DELIVERY, ONLINE_PAYMENT])
   couriers         CourierShop[]
+  coupons          CouponShop[]
 
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
@@ -342,6 +353,7 @@ model Order {
   dontRingBell    Boolean     @default(false)
   leaveAtDoor     Boolean     @default(false)
   review          Review?
+  couponUsage     CouponUsage?
 
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
@@ -544,10 +556,13 @@ model FavoriteShop {
 }
 
 model Review {
-  id        String   @id @default(uuid())
-  rating    Int
-  comment   String?  @db.VarChar(500)
-  createdAt DateTime @default(now())
+  id            String   @id @default(uuid())
+  rating        Int
+  comment       String?  @db.VarChar(500)
+  serviceRating Int?
+  speedRating   Int?
+  tasteRating   Int?
+  createdAt     DateTime @default(now())
 
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -646,6 +661,71 @@ model VehicleOption {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model SavedCard {
+  id               String   @id @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  cardTitle        String   // Örn: "Maaş Kartım", "Bonus"
+  cardHolderName   String
+  cardNumberHidden String   // Örn: "4355 24** **** 4321"
+  cardToken        String   // Ödeme sağlayıcısından dönen token
+  cardType         String   // Visa, Mastercard, Troy vb.
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Coupon {
+  id                String       @id @default(uuid())
+  code              String       @unique // Örn: "HOPPA100", "WELCOME50"
+  title             String
+  description       String?
+  discountType      String       // "PERCENTAGE" veya "FIXED"
+  discountValue     Float
+  minOrderAmount    Float        @default(0.0)
+  maxDiscountAmount Float?
+  startDate         DateTime
+  endDate           DateTime
+  isActive          Boolean      @default(true)
+  isSystemCoupon    Boolean      @default(true) // true ise Hoppa, false ise dükkan kuponu
+  creatorShopId     String?      // Dükkan özelindeyse dükkan ID'si
+
+  allowedShops      CouponShop[]
+  usages            CouponUsage[]
+  
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+}
+
+model CouponShop {
+  id       String @id @default(uuid())
+  couponId String
+  coupon   Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  shopId   String
+  shop     Shop   @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([couponId, shopId])
+  @@index([couponId])
+  @@index([shopId])
+}
+
+model CouponUsage {
+  id       String   @id @default(uuid())
+  couponId String
+  coupon   Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId  String   @unique
+  order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  usedAt   DateTime @default(now())
+
+  @@index([couponId])
+  @@index([userId])
 }
 
 

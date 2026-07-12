@@ -9,7 +9,7 @@ export class ReviewController {
   public static async createReview(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.user!.id;
-      const { orderId, rating, comment } = req.body;
+      const { orderId, rating, comment, serviceRating, speedRating, tasteRating } = req.body;
 
       if (!orderId || !rating || rating < 1 || rating > 5) {
         res.status(400).json({ error: true, message: "Geçersiz puanlama veya eksik sipariş ID." });
@@ -42,6 +42,9 @@ export class ReviewController {
           data: {
             rating: Number(rating),
             comment,
+            serviceRating: serviceRating ? Number(serviceRating) : null,
+            speedRating: speedRating ? Number(speedRating) : null,
+            tasteRating: tasteRating ? Number(tasteRating) : null,
             userId,
             shopId: order.shopId,
             orderId
@@ -51,18 +54,39 @@ export class ReviewController {
         // 2. Dükkanın mevcut istatistiklerini çek
         const shop = await tx.shop.findUnique({
           where: { id: order.shopId },
-          select: { averageRating: true, reviewCount: true }
+          select: { 
+            averageRating: true, 
+            reviewCount: true,
+            avgServiceRating: true,
+            avgSpeedRating: true,
+            avgTasteRating: true
+          }
         });
 
         if (shop) {
           const newCount = shop.reviewCount + 1;
           const newRating = ((shop.averageRating * shop.reviewCount) + Number(rating)) / newCount;
+          
+          const newServiceRating = serviceRating 
+            ? ((shop.avgServiceRating * shop.reviewCount) + Number(serviceRating)) / newCount 
+            : shop.avgServiceRating;
+
+          const newSpeedRating = speedRating 
+            ? ((shop.avgSpeedRating * shop.reviewCount) + Number(speedRating)) / newCount 
+            : shop.avgSpeedRating;
+
+          const newTasteRating = tasteRating 
+            ? ((shop.avgTasteRating * shop.reviewCount) + Number(tasteRating)) / newCount 
+            : shop.avgTasteRating;
 
           // 3. Dükkanı güncelle
           await tx.shop.update({
             where: { id: order.shopId },
             data: {
               averageRating: parseFloat(newRating.toFixed(2)),
+              avgServiceRating: parseFloat(newServiceRating.toFixed(2)),
+              avgSpeedRating: parseFloat(newSpeedRating.toFixed(2)),
+              avgTasteRating: parseFloat(newTasteRating.toFixed(2)),
               reviewCount: newCount
             }
           });
@@ -93,6 +117,24 @@ export class ReviewController {
     } catch (error) {
       console.error("Yorum getirme hatası:", error);
       res.status(500).json({ error: true, message: "Yorumlar getirilirken hata oluştu." });
+    }
+  }
+
+  // 3. Tüketicinin Kendi Değerlendirmelerini Getir
+  public static async getMyReviews(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      const reviews = await prisma.review.findMany({
+        where: { userId },
+        include: {
+          shop: { select: { id: true, name: true, imageUrl: true, type: true } }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+      res.status(200).json({ error: false, data: reviews });
+    } catch (error) {
+      console.error("Kendi yorumlarını getirme hatası:", error);
+      res.status(500).json({ error: true, message: "Değerlendirmeleriniz getirilirken hata oluştu." });
     }
   }
 }
