@@ -112,7 +112,7 @@ class _OtpVerifyPageState extends ConsumerState<OtpVerifyPage> {
     final authState = ref.watch(authControllerProvider);
     final _isLoading = authState is AuthLoading;
 
-    ref.listen<AuthState>(authControllerProvider, (previous, next) {
+    ref.listen<AuthState>(authControllerProvider, (previous, next) async {
       if (!mounted) return;
       if (next is AuthError) {
         _otpController.clear();
