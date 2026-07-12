@@ -12,6 +12,9 @@ class ConsumerReviewRepository {
     required String orderId,
     required int rating,
     String? comment,
+    int? serviceRating,
+    int? speedRating,
+    int? tasteRating,
   }) async {
     try {
       final response = await _apiClient.post(
@@ -20,6 +23,9 @@ class ConsumerReviewRepository {
           'orderId': orderId,
           'rating': rating,
           if (comment != null && comment.isNotEmpty) 'comment': comment,
+          if (serviceRating != null) 'serviceRating': serviceRating,
+          if (speedRating != null) 'speedRating': speedRating,
+          if (tasteRating != null) 'tasteRating': tasteRating,
         },
       );
       return response;

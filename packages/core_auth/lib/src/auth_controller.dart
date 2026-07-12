@@ -133,6 +133,12 @@ class AuthController extends Notifier<AuthState> {
       rethrow;
     }
   }
+
+  Future<void> updateUserData(AuthUser updatedUser) async {
+    final repo = ref.read(authRepositoryProvider);
+    await repo.saveUserLocal(updatedUser);
+    state = AuthAuthenticated(updatedUser);
+  }
 }
 
 

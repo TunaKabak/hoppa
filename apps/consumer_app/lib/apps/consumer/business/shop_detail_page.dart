@@ -527,7 +527,9 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                                     ),
                                     const SizedBox(width: 2),
                                     Text(
-                                      "${widget.shop.averageRating.toStringAsFixed(1)} (${widget.shop.reviewCount}) • Min: ₺${widget.shop.minBasketAmount.toStringAsFixed(0)} • Teslimat: ₺${widget.shop.baseDeliveryFee.toStringAsFixed(0)} • ${widget.shop.openingTime}-${widget.shop.closingTime}",
+                                      widget.shop.reviewCount == 0
+                                          ? "Değerlendirme Yok • Min: ₺${widget.shop.minBasketAmount.toStringAsFixed(0)} • Teslimat: ₺${widget.shop.baseDeliveryFee.toStringAsFixed(0)} • ${widget.shop.openingTime}-${widget.shop.closingTime}"
+                                          : "${widget.shop.averageRating.toStringAsFixed(1)} (${widget.shop.reviewCount}) • Min: ₺${widget.shop.minBasketAmount.toStringAsFixed(0)} • Teslimat: ₺${widget.shop.baseDeliveryFee.toStringAsFixed(0)} • ${widget.shop.openingTime}-${widget.shop.closingTime}",
                                       style: const TextStyle(
                                         color: Colors.white70,
                                         fontSize: 10,

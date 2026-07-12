@@ -5,10 +5,10 @@ import 'package:core_shared/shared/models/address.dart';
 import 'package:consumer_app/apps/consumer/address/add_address_page.dart';
 import 'package:provider/provider.dart' as p;
 import 'package:consumer_app/apps/consumer/address/delivery_provider.dart';
+import 'package:core_auth/core_auth.dart';
 
 class AddressListPage extends ConsumerWidget {
   final bool isSelectionMode;
-  // YENİ: Seçim yapıldığında çalışacak fonksiyon (Opsiyonel)
   final Function(Address)? onAddressSelected;
 
   const AddressListPage({
@@ -22,6 +22,14 @@ class AddressListPage extends ConsumerWidget {
     final theme = Theme.of(context);
     final deliveryProvider = p.Provider.of<DeliveryProvider>(context, listen: true);
     final selectedAddress = deliveryProvider.selectedAddress;
+
+    final authState = ref.watch(authControllerProvider);
+    final bool isGuest = authState is! AuthAuthenticated;
+
+    final addressesToShow = <Address>[];
+    if (isGuest && selectedAddress != null) {
+      addressesToShow.add(selectedAddress);
+    }
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -40,141 +48,18 @@ class AddressListPage extends ConsumerWidget {
       body: Column(
         children: [
           Expanded(
-            child: ref.watch(addressesProvider).when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Center(
-                child: Text(
-                  "Hatalar yüklenemedi: $err",
-                  style: const TextStyle(color: Colors.red),
-                ),
-              ),
-              data: (addresses) {
-                if (addresses.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.location_off,
-                          size: 80,
-                          color: Colors.grey[300],
-                        ),
-                        const SizedBox(height: 10),
-                        const Text(
-                          "Kayıtlı adresiniz yok.",
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                      ],
+            child: isGuest
+                ? _buildListContent(context, ref, addressesToShow, selectedAddress, isGuest, deliveryProvider, theme)
+                : ref.watch(addressesProvider).when(
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                    error: (err, stack) => Center(
+                      child: Text(
+                        "Hatalar yüklenemedi: $err",
+                        style: const TextStyle(color: Colors.red),
+                      ),
                     ),
-                  );
-                }
-
-                return ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: addresses.length,
-                  itemBuilder: (context, index) {
-                    final address = addresses[index];
-                    final isSelected = selectedAddress?.id == address.id;
-                    return Card(
-                      elevation: isSelected ? 2 : 0,
-                      shadowColor: isSelected ? theme.primaryColor.withValues(alpha: 0.1) : Colors.transparent,
-                      color: isSelected
-                          ? theme.primaryColor.withValues(alpha: 0.12)
-                          : theme.cardTheme.color,
-                      margin: const EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(
-                          color: isSelected ? theme.primaryColor : (theme.dividerColor ?? Colors.grey.shade200),
-                          width: isSelected ? 2.5 : 1.0,
-                        ),
-                      ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.all(12),
-                        leading: CircleAvatar(
-                          backgroundColor: isSelected
-                              ? theme.primaryColor.withValues(alpha: 0.2)
-                              : theme.primaryColor.withValues(alpha: 0.1),
-                          child: Icon(
-                            _getIconForTitle(address.title),
-                            color: theme.primaryColor,
-                          ),
-                        ),
-                        title: Text(
-                          address.title,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: isSelected ? theme.primaryColor : null,
-                          ),
-                        ),
-                        subtitle: Text(
-                          "${address.city}, ${address.district}\n${address.fullDetails}",
-                          style: TextStyle(
-                            color: isSelected ? Colors.grey.shade800 : Colors.grey.shade600,
-                            fontSize: 13,
-                          ),
-                        ),
-                        trailing: isSelectionMode
-                            ? Icon(
-                                isSelected ? Icons.check_circle_rounded : Icons.check_circle_outline,
-                                color: isSelected ? theme.primaryColor : Colors.grey,
-                                size: 26,
-                              )
-                            : Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (isSelected)
-                                    Padding(
-                                      padding: const EdgeInsets.only(right: 8.0),
-                                      child: Icon(Icons.check_circle_rounded, color: theme.primaryColor, size: 24),
-                                    ),
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.edit,
-                                      color: Colors.blue,
-                                    ),
-                                    onPressed: () async {
-                                      final updated = await Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => AddAddressPage(
-                                            addressToEdit: address,
-                                          ),
-                                        ),
-                                      );
-                                      if (updated != null) {
-                                        ref.invalidate(addressesProvider);
-                                      }
-                                    },
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.delete_outline,
-                                      color: Colors.red,
-                                    ),
-                                    onPressed: () => _showDeleteConfirmation(
-                                      context,
-                                      ref,
-                                      address.id,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                        onTap: () {
-                          if (isSelectionMode) {
-                            if (onAddressSelected != null) {
-                              onAddressSelected!(address);
-                            } else {
-                              Navigator.pop(context, address);
-                            }
-                          }
-                        },
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
+                    data: (addresses) => _buildListContent(context, ref, addresses, selectedAddress, isGuest, deliveryProvider, theme),
+                  ),
           ),
 
           // SABİT ALT BUTON
@@ -184,7 +69,7 @@ class AddressListPage extends ConsumerWidget {
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
+                  color: Colors.black.withOpacity(0.05),
                   blurRadius: 10,
                   offset: const Offset(0, -5),
                 ),
@@ -203,7 +88,11 @@ class AddressListPage extends ConsumerWidget {
                       ),
                     );
                     if (newAddress != null) {
-                      ref.invalidate(addressesProvider);
+                      if (isGuest) {
+                        await deliveryProvider.setAddress(newAddress as Address);
+                      } else {
+                        ref.invalidate(addressesProvider);
+                      }
                     }
                   },
                   style: ElevatedButton.styleFrom(
@@ -225,6 +114,154 @@ class AddressListPage extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildListContent(
+    BuildContext context,
+    WidgetRef ref,
+    List<Address> addresses,
+    Address? selectedAddress,
+    bool isGuest,
+    DeliveryProvider deliveryProvider,
+    ThemeData theme,
+  ) {
+    if (addresses.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.location_off,
+              size: 80,
+              color: Colors.grey[300],
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              "Kayıtlı adresiniz yok.",
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: addresses.length,
+      itemBuilder: (context, index) {
+        final address = addresses[index];
+        final isSelected = selectedAddress?.id == address.id;
+        return Card(
+          elevation: isSelected ? 2 : 0,
+          shadowColor: isSelected ? theme.primaryColor.withOpacity(0.1) : Colors.transparent,
+          color: isSelected
+              ? theme.primaryColor.withOpacity(0.12)
+              : theme.cardTheme.color,
+          margin: const EdgeInsets.only(bottom: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+              color: isSelected ? theme.primaryColor : (theme.dividerColor ?? Colors.grey.shade200),
+              width: isSelected ? 2.5 : 1.0,
+            ),
+          ),
+          child: ListTile(
+            contentPadding: const EdgeInsets.all(12),
+            leading: CircleAvatar(
+              backgroundColor: isSelected
+                  ? theme.primaryColor.withOpacity(0.2)
+                  : theme.primaryColor.withOpacity(0.1),
+              child: Icon(
+                _getIconForTitle(address.title),
+                color: theme.primaryColor,
+              ),
+            ),
+            title: Text(
+              address.title,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: isSelected ? theme.primaryColor : null,
+              ),
+            ),
+            subtitle: Text(
+              "${address.city}, ${address.district}\n${address.fullDetails}",
+              style: TextStyle(
+                color: isSelected ? Colors.grey.shade800 : Colors.grey.shade600,
+                fontSize: 13,
+              ),
+            ),
+            trailing: isSelectionMode
+                ? Icon(
+                    isSelected ? Icons.check_circle_rounded : Icons.check_circle_outline,
+                    color: isSelected ? theme.primaryColor : Colors.grey,
+                    size: 26,
+                  )
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isSelected)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: Icon(Icons.check_circle_rounded, color: theme.primaryColor, size: 24),
+                        ),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.edit,
+                          color: Colors.blue,
+                        ),
+                        onPressed: () async {
+                          final updated = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AddAddressPage(
+                                addressToEdit: address,
+                              ),
+                            ),
+                          );
+                          if (updated != null) {
+                            if (isGuest) {
+                              await deliveryProvider.setAddress(updated as Address);
+                            } else {
+                              ref.invalidate(addressesProvider);
+                            }
+                          }
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          color: Colors.red,
+                        ),
+                        onPressed: () {
+                          if (isGuest) {
+                            _showGuestDeleteConfirmation(context, deliveryProvider);
+                          } else {
+                            _showDeleteConfirmation(context, ref, address.id);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+            onTap: () async {
+              if (isSelectionMode) {
+                if (onAddressSelected != null) {
+                  onAddressSelected!(address);
+                } else {
+                  Navigator.pop(context, address);
+                }
+              } else {
+                await deliveryProvider.setAddress(address);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Varsayılan teslimat adresi güncellendi.")),
+                  );
+                }
+              }
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -263,6 +300,37 @@ class AddressListPage extends ConsumerWidget {
                     ),
                   );
                 }
+              }
+            },
+            child: const Text(
+              "Sil",
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showGuestDeleteConfirmation(BuildContext context, DeliveryProvider deliveryProvider) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("Adresi Sil"),
+        content: const Text("Bu adresi silmek istediğinize emin misiniz?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("İptal", style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await deliveryProvider.clearAddress();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Adres başarıyla silindi.")),
+                );
               }
             },
             child: const Text(

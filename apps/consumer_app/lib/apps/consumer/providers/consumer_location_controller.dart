@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:latlong2/latlong.dart';
 
 class ConsumerLocationResult {
   final String address;
@@ -144,6 +146,7 @@ class ConsumerLocationNotifier extends AsyncNotifier<String?> {
       ];
       final address = combinedParts.isEmpty ? "Bilinmeyen Konum" : combinedParts.join(", ");
       
+      ref.read(consumerCoordinatesProvider.notifier).state = LatLng(position.latitude, position.longitude);
       state = AsyncData(address);
       return ConsumerLocationResult(
         address: address,
@@ -163,3 +166,5 @@ class ConsumerLocationNotifier extends AsyncNotifier<String?> {
 final consumerLocationProvider = AsyncNotifierProvider<ConsumerLocationNotifier, String?>(
   ConsumerLocationNotifier.new,
 );
+
+final consumerCoordinatesProvider = StateProvider<LatLng?>((ref) => null);

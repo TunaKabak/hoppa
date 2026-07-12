@@ -4,7 +4,12 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:core_auth/core_auth.dart';
+import 'package:provider/provider.dart' as p;
+import 'package:consumer_app/apps/consumer/address/delivery_provider.dart';
+import 'package:consumer_app/apps/consumer/repositories/address_repository.dart';
+import 'package:consumer_app/apps/consumer/checkout/checkout_page.dart';
 import 'widgets/auth_layout.dart';
+import 'name_surname_input_page.dart';
 
 class OtpVerifyPage extends ConsumerStatefulWidget {
   final String verificationId; // Eskiden kalma, doğrudan param olarak durabilir
@@ -120,8 +125,46 @@ class _OtpVerifyPageState extends ConsumerState<OtpVerifyPage> {
           ),
         );
       } else if (next is AuthAuthenticated) {
-        // Giriş yapıldı, anasayfaya dön veya yönlendir.
-        Navigator.popUntil(context, (route) => route.isFirst);
+        final user = next.user;
+        
+        // Check if user has default placeholder names or new signup flag
+        final bool isNew = user.name == 'Misafir' && user.surname == 'Kullanıcı';
+        final bool fromCheckout = widget.firstName == 'checkout' || widget.lastName == 'checkout';
+        
+        if (isNew) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => NameSurnameInputPage(
+                fromCheckout: fromCheckout,
+              ),
+            ),
+          );
+        } else {
+          // Existing user login: auto-migrate guest address if exists
+          final deliveryProvider = p.Provider.of<DeliveryProvider>(context, listen: false);
+          final guestAddress = deliveryProvider.selectedAddress;
+          
+          if (guestAddress != null && guestAddress.id.startsWith('guest')) {
+            try {
+              final addressRepo = ref.read(addressRepositoryProvider);
+              final savedAddress = await addressRepo.createAddress(guestAddress);
+              await deliveryProvider.setAddress(savedAddress);
+            } catch (e) {
+              debugPrint("Guest address migration failed: $e");
+            }
+          }
+          
+          if (fromCheckout) {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => const CheckoutPage()),
+              (route) => route.isFirst,
+            );
+          } else {
+            Navigator.popUntil(context, (route) => route.isFirst);
+          }
+        }
       }
     });
 

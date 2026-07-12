@@ -25,6 +25,7 @@ class Business {
   final double averageRating;
   final int reviewCount;
   final List<String> allowedPaymentMethods;
+  final List<String> tags; // YENİ: Dinamik işletme etiketleri
 
   Business({
     required this.id,
@@ -50,6 +51,7 @@ class Business {
     this.averageRating = 5.0,
     this.reviewCount = 0,
     this.allowedPaymentMethods = const ['CASH_ON_DELIVERY', 'CARD_ON_DELIVERY', 'ONLINE_PAYMENT'],
+    this.tags = const [],
   });
 
   factory Business.fromMap(Map<String, dynamic> data, String id) {
@@ -83,6 +85,7 @@ class Business {
       averageRating: (data['averageRating'] ?? 5.0).toDouble(),
       reviewCount: data['reviewCount'] ?? 0,
       allowedPaymentMethods: List<String>.from(data['allowedPaymentMethods'] ?? const ['CASH_ON_DELIVERY', 'CARD_ON_DELIVERY', 'ONLINE_PAYMENT']),
+      tags: List<String>.from(data['tags'] ?? []),
     );
   }
 
@@ -110,6 +113,7 @@ class Business {
       'averageRating': averageRating,
       'reviewCount': reviewCount,
       'allowedPaymentMethods': allowedPaymentMethods,
+      'tags': tags,
     };
   }
 
@@ -137,6 +141,7 @@ class Business {
     double? averageRating,
     int? reviewCount,
     List<String>? allowedPaymentMethods,
+    List<String>? tags,
   }) {
     return Business(
       id: id ?? this.id,
@@ -162,6 +167,7 @@ class Business {
       averageRating: averageRating ?? this.averageRating,
       reviewCount: reviewCount ?? this.reviewCount,
       allowedPaymentMethods: allowedPaymentMethods ?? this.allowedPaymentMethods,
+      tags: tags ?? this.tags,
     );
   }
 }

@@ -11,6 +11,10 @@ import 'package:consumer_app/apps/consumer/favorites/favorites_page.dart';
 import 'package:consumer_app/apps/consumer/cart/cart_provider.dart';
 import 'package:consumer_app/apps/consumer/profile/support_chat_page.dart';
 import 'package:consumer_app/apps/consumer/widgets/hoppa_dialog.dart';
+import 'language_selection_page.dart';
+import 'notification_settings_page.dart';
+import 'saved_cards_page.dart';
+import 'my_reviews_page.dart';
 
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
@@ -46,15 +50,21 @@ class ProfilePage extends ConsumerWidget {
     final bool isGuest = authState is! AuthAuthenticated;
     final AuthUser? user = isGuest ? null : authState.user;
 
+    const kPrimaryColor = Color(0xFF00A651);
+    const kSecondaryColor = Color(0xFFE95D22);
+
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         title: Text(
           t.translate('profile_title'),
           style: theme.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.bold,
+            color: Colors.black87,
           ),
         ),
+        backgroundColor: Colors.white,
+        elevation: 0,
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -65,20 +75,19 @@ class ProfilePage extends ConsumerWidget {
             if (isGuest)
               // MİSAFİR GÖRÜNÜMÜ: Giriş Yap Butonu
               Container(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      theme.primaryColor,
-                      theme.primaryColor.withValues(alpha: 0.8),
-                    ],
+                  gradient: const LinearGradient(
+                    colors: [kPrimaryColor, kSecondaryColor],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                      color: theme.primaryColor.withValues(alpha: 0.3),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
+                      color: kPrimaryColor.withOpacity(0.2),
+                      blurRadius: 15,
+                      offset: const Offset(0, 8),
                     ),
                   ],
                 ),
@@ -86,26 +95,29 @@ class ProfilePage extends ConsumerWidget {
                   children: [
                     const Icon(
                       Icons.account_circle,
-                      size: 60,
+                      size: 70,
                       color: Colors.white,
                     ),
                     const SizedBox(height: 12),
                     const Text(
-                      "Hoşgeldiniz!",
+                      "Hoppa Dünyasına Hoş Geldiniz! 👋",
+                      textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+                    const SizedBox(height: 8),
                     const Text(
-                      "Siparişlerinizi takip etmek ve kampanyalardan yararlanmak için giriş yapın.",
+                      "Siparişlerinizi takip etmek, kuponlarınızı kullanmak ve kayıtlı kartlarınızla hızlı ödeme yapmak için hemen giriş yapın.",
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white70, fontSize: 12),
+                      style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
+                      height: 50,
                       child: ElevatedButton(
                         onPressed: () {
                           Navigator.of(context, rootNavigator: true).push(
@@ -116,43 +128,59 @@ class ProfilePage extends ConsumerWidget {
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
-                          foregroundColor: theme.primaryColor,
+                          foregroundColor: kPrimaryColor,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(14),
                           ),
+                          elevation: 0,
                         ),
-                        child: const Text("Giriş Yap / Üye Ol"),
+                        child: const Text(
+                          "Giriş Yap / Üye Ol",
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                        ),
                       ),
                     ),
                   ],
                 ),
               )
             else
-              // LOGGED IN KULLANICI GÖRÜNÜMÜ
+              // LOGGED IN KULLANICI GÖRÜNÜMÜ: Modern Premium Kart
               Container(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
+                  gradient: const LinearGradient(
+                    colors: [kPrimaryColor, kSecondaryColor],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 10,
+                      color: kPrimaryColor.withOpacity(0.15),
+                      blurRadius: 15,
+                      offset: const Offset(0, 8),
                     ),
                   ],
                 ),
                 child: Row(
                   children: [
-                    CircleAvatar(
-                      radius: 30,
-                      backgroundColor: theme.primaryColor.withValues(alpha: 0.1),
-                      child: Icon(
-                        Icons.person,
-                        size: 30,
-                        color: theme.primaryColor,
+                    Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: CircleAvatar(
+                        radius: 32,
+                        backgroundColor: Colors.grey.shade100,
+                        child: const Icon(
+                          Icons.person,
+                          size: 36,
+                          color: kPrimaryColor,
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 18),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -161,16 +189,31 @@ class ProfilePage extends ConsumerWidget {
                             user?.displayName ?? user?.phone ?? 'Kullanıcı',
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: 16,
+                              fontSize: 18,
+                              color: Colors.white,
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            "Doğrulanmış Hesap ✅",
-                            style: TextStyle(
-                              color: Colors.green,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.verified, color: Colors.white, size: 14),
+                                SizedBox(width: 4),
+                                Text(
+                                  "Onaylı Üye",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -180,65 +223,31 @@ class ProfilePage extends ConsumerWidget {
                 ),
               ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 28),
 
             // DİL SEÇİMİ
-            Container(
-              decoration: BoxDecoration(
-                color: theme.cardTheme.color,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: theme.dividerColor),
-              ),
-              child: ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
+            _buildMenuItem(
+              context,
+              icon: Icons.language_rounded,
+              iconColor: Colors.blue,
+              title: t.translate('language_settings'),
+              trailingText: languageProvider.currentLocale.languageCode == 'tr' ? 'Türkçe' : 'English',
+              onTap: () {
+                Navigator.of(context, rootNavigator: true).push(
+                  MaterialPageRoute(
+                    builder: (context) => const LanguageSelectionPage(),
                   ),
-                  child: const Icon(
-                    Icons.language,
-                    color: Colors.blue,
-                    size: 22,
-                  ),
-                ),
-                title: Text(
-                  t.translate('language_settings'),
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      languageProvider.currentLocale.languageCode == 'tr'
-                          ? 'Türkçe'
-                          : 'English',
-                      style: const TextStyle(
-                        color: Colors.grey,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Icon(Icons.swap_horiz, color: Colors.grey),
-                  ],
-                ),
-                onTap: () {
-                  if (languageProvider.currentLocale.languageCode == 'tr') {
-                    languageProvider.changeLanguage(const Locale('en', 'US'));
-                  } else {
-                    languageProvider.changeLanguage(const Locale('tr', 'TR'));
-                  }
-                },
-              ),
+                );
+              },
             ),
 
             const SizedBox(height: 12),
 
+            // FAVORİLERİM
             _buildMenuItem(
               context,
-              icon: Icons.favorite_border,
+              icon: Icons.favorite_rounded,
+              iconColor: Colors.redAccent,
               title: "Favorilerim",
               onTap: () {
                 if (isGuest) {
@@ -246,8 +255,7 @@ class ProfilePage extends ConsumerWidget {
                     MaterialPageRoute(builder: (context) => const LoginPage()),
                   );
                 } else {
-                  Navigator.push(
-                    context,
+                  Navigator.of(context, rootNavigator: true).push(
                     MaterialPageRoute(
                       builder: (context) => const FavoritesPage(),
                     ),
@@ -255,10 +263,14 @@ class ProfilePage extends ConsumerWidget {
                 }
               },
             ),
+
             const SizedBox(height: 12),
+
+            // SİPARİŞLERİM
             _buildMenuItem(
               context,
-              icon: Icons.shopping_bag_outlined,
+              icon: Icons.shopping_bag_rounded,
+              iconColor: Colors.amber.shade800,
               title: t.translate('my_orders'),
               onTap: () {
                 if (isGuest) {
@@ -266,8 +278,7 @@ class ProfilePage extends ConsumerWidget {
                     MaterialPageRoute(builder: (context) => const LoginPage()),
                   );
                 } else {
-                  Navigator.push(
-                    context,
+                  Navigator.of(context, rootNavigator: true).push(
                     MaterialPageRoute(
                       builder: (context) => const OrderHistoryPage(),
                     ),
@@ -275,28 +286,88 @@ class ProfilePage extends ConsumerWidget {
                 }
               },
             ),
+
             const SizedBox(height: 12),
+
+            // ADRESLERİM
             _buildMenuItem(
               context,
-              icon: Icons.location_on_outlined,
+              icon: Icons.location_on_rounded,
+              iconColor: Colors.teal,
               title: t.translate('my_addresses'),
               onTap: () {
-                Navigator.push(
-                  context,
+                Navigator.of(context, rootNavigator: true).push(
                   MaterialPageRoute(
                     builder: (context) => const AddressListPage(),
                   ),
                 );
               },
             ),
+
             const SizedBox(height: 12),
+
+            // DEĞERLENDİRMELERİM (Yorumlarım)
+            if (!isGuest) ...[
+              _buildMenuItem(
+                context,
+                icon: Icons.rate_review_rounded,
+                iconColor: Colors.orange,
+                title: "Değerlendirmelerim",
+                onTap: () {
+                  Navigator.of(context, rootNavigator: true).push(
+                    MaterialPageRoute(
+                      builder: (context) => const MyReviewsPage(),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            // KAYITLI KARTLARIM
+            if (!isGuest) ...[
+              _buildMenuItem(
+                context,
+                icon: Icons.credit_card_rounded,
+                iconColor: Colors.deepPurple,
+                title: "Kayıtlı Kartlarım",
+                onTap: () {
+                  Navigator.of(context, rootNavigator: true).push(
+                    MaterialPageRoute(
+                      builder: (context) => const SavedCardsPage(),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            // BİLDİRİM AYARLARI
+            if (!isGuest) ...[
+              _buildMenuItem(
+                context,
+                icon: Icons.notifications_rounded,
+                iconColor: Colors.pink,
+                title: "Bildirim Ayarları",
+                onTap: () {
+                  Navigator.of(context, rootNavigator: true).push(
+                    MaterialPageRoute(
+                      builder: (context) => const NotificationSettingsPage(),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            // CANLI DESTEK
             _buildMenuItem(
               context,
-              icon: Icons.headset_mic_outlined,
+              icon: Icons.headset_mic_rounded,
+              iconColor: Colors.indigo,
               title: t.translate('live_support'),
               onTap: () {
-                Navigator.push(
-                  context,
+                Navigator.of(context, rootNavigator: true).push(
                   MaterialPageRoute(
                     builder: (context) => const SupportChatPage(),
                   ),
@@ -306,19 +377,23 @@ class ProfilePage extends ConsumerWidget {
 
             const SizedBox(height: 40),
 
+            // ÇIKIŞ YAP BUTONU
             if (!isGuest)
               SizedBox(
                 width: double.infinity,
-                height: 50,
+                height: 56,
                 child: OutlinedButton.icon(
                   onPressed: () => _showLogoutDialog(context, ref),
-                  icon: const Icon(Icons.logout),
-                  label: Text(t.translate('logout')),
+                  icon: const Icon(Icons.logout_rounded),
+                  label: Text(
+                    t.translate('logout'),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.red,
-                    side: const BorderSide(color: Colors.red),
+                    side: const BorderSide(color: Colors.red, width: 1.5),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(16),
                     ),
                   ),
                 ),
@@ -334,29 +409,55 @@ class ProfilePage extends ConsumerWidget {
   Widget _buildMenuItem(
     BuildContext context, {
     required IconData icon,
+    required Color iconColor,
     required String title,
+    String? trailingText,
     required VoidCallback onTap,
   }) {
     final theme = Theme.of(context);
-    return ListTile(
-      onTap: onTap,
-      tileColor: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF8F9FA),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(icon, color: Colors.black87, size: 22),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
       ),
-      title: Text(
-        title,
-        style: theme.textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.bold,
+      child: ListTile(
+        onTap: onTap,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        leading: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: iconColor.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: iconColor, size: 22),
+        ),
+        title: Text(
+          title,
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (trailingText != null)
+              Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: Text(
+                  trailingText,
+                  style: const TextStyle(
+                    color: Colors.grey,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+          ],
         ),
       ),
-      trailing: const Icon(Icons.chevron_right, color: Colors.grey),
     );
   }
 }

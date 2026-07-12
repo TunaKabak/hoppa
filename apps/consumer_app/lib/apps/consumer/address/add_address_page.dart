@@ -28,10 +28,11 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
 
   bool _isLoading = false;
   bool _isLocationGetting = false;
+  bool _isSatellite = false;
   double _latitude = 35.1856; // Default: Nicosia
   double _longitude = 33.3823;
 
-  final List<String> _cities = kKktcDistricts.keys.toList();
+  final List<String> _cities = kKktcDistricts.keys.toList()..sort();
   final List<String> _quickTitles = ['Ev', 'İş', 'Diğer'];
   String _selectedQuickTitle = '';
 
@@ -186,41 +187,53 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
 
   void _saveAddress() async {
     if (!_formKey.currentState!.validate()) return;
-
     if (_selectedCity == null || _selectedDistrict == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Lütfen Şehir ve Bölge seçiniz"),
-          backgroundColor: Colors.red,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text("Lütfen şehir ve bölge seçiniz"),
+        backgroundColor: Colors.red,
+      ));
       return;
     }
 
     setState(() => _isLoading = true);
 
     try {
-      final addressData = Address(
-        id: widget.addressToEdit?.id ?? '', // Eğer düzenleme ise ID'yi koru
-        title: _titleController.text,
-        city: _selectedCity!,
-        district: _selectedDistrict!,
-        fullDetails: _detailsController.text,
-        latitude: _latitude,
-        longitude: _longitude,
-      );
+      final authState = ref.read(authControllerProvider);
+      final bool isGuest = authState is! AuthAuthenticated;
 
-      final repo = ref.read(addressRepositoryProvider);
       Address savedAddress;
-      if (widget.addressToEdit != null) {
-        // GÜNCELLEME
-        savedAddress = await repo.updateAddress(addressData);
+      if (isGuest) {
+        // Guest mode bypasses backend
+        savedAddress = Address(
+          id: widget.addressToEdit?.id ?? 'guest_${DateTime.now().millisecondsSinceEpoch}',
+          title: _titleController.text,
+          city: _selectedCity!,
+          district: _selectedDistrict!,
+          fullDetails: _detailsController.text,
+          latitude: _latitude,
+          longitude: _longitude,
+        );
       } else {
-        // YENİ EKLEME
-        savedAddress = await repo.createAddress(addressData);
-      }
+        final addressData = Address(
+          id: widget.addressToEdit?.id ?? '', // Eğer düzenleme ise ID'yi koru
+          title: _titleController.text,
+          city: _selectedCity!,
+          district: _selectedDistrict!,
+          fullDetails: _detailsController.text,
+          latitude: _latitude,
+          longitude: _longitude,
+        );
 
-      ref.invalidate(addressesProvider);
+        final repo = ref.read(addressRepositoryProvider);
+        if (widget.addressToEdit != null) {
+          // GÜNCELLEME
+          savedAddress = await repo.updateAddress(addressData);
+        } else {
+          // YENİ EKLEME
+          savedAddress = await repo.createAddress(addressData);
+        }
+        ref.invalidate(addressesProvider);
+      }
 
       if (mounted) {
         Navigator.pop(context, savedAddress); // Güncellenen datayı geri dön
@@ -295,8 +308,9 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
                     ),
                     children: [
                       TileLayer(
-                        urlTemplate:
-                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        urlTemplate: _isSatellite
+                            ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                            : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                         userAgentPackageName: 'com.kktc.market',
                       ),
                       // Marker Layer KALDIRILDI, yerine Stack içinde sabit ikon var
@@ -312,6 +326,24 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
                         Icons.location_on,
                         color: Colors.red,
                         size: 50,
+                      ),
+                    ),
+                  ),
+                  // Katman Seçim Butonu
+                  Positioned(
+                    top: 16,
+                    right: 16,
+                    child: FloatingActionButton.small(
+                      heroTag: "btn_map_layer",
+                      backgroundColor: Colors.white,
+                      onPressed: () {
+                        setState(() {
+                          _isSatellite = !_isSatellite;
+                        });
+                      },
+                      child: Icon(
+                        _isSatellite ? Icons.map_outlined : Icons.satellite_alt_outlined,
+                        color: theme.primaryColor,
                       ),
                     ),
                   ),
@@ -494,24 +526,24 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: DropdownButtonHideUnderline(
-                                child: DropdownButton<String>(
-                                  isExpanded: true,
-                                  value: _selectedDistrict,
-                                  hint: const Text("Bölge"),
-                                  items: _selectedCity == null
-                                      ? []
-                                      : kKktcDistricts[_selectedCity]!
-                                          .map(
-                                            (dist) => DropdownMenuItem(
-                                              value: dist,
-                                              child: Text(dist),
-                                            ),
-                                          )
-                                          .toList(),
-                                  onChanged: _selectedCity == null
-                                      ? null
-                                      : (val) => setState(() => _selectedDistrict = val),
-                                ),
+                                  child: DropdownButton<String>(
+                                    isExpanded: true,
+                                    value: _selectedDistrict,
+                                    hint: const Text("Bölge"),
+                                    items: _selectedCity == null
+                                        ? []
+                                        : (List<String>.from(kKktcDistricts[_selectedCity]!)..sort())
+                                            .map(
+                                              (dist) => DropdownMenuItem(
+                                                value: dist,
+                                                child: Text(dist),
+                                              ),
+                                            )
+                                            .toList(),
+                                    onChanged: _selectedCity == null
+                                        ? null
+                                        : (val) => setState(() => _selectedDistrict = val),
+                                  ),
                               ),
                             ),
                           ),

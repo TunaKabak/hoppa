@@ -622,6 +622,34 @@ class BusinessSelectionPage extends ConsumerWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
+                  if (business.tags.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: business.tags.map((tag) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF00A651).withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: const Color(0xFF00A651).withOpacity(0.2),
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            tag,
+                            style: const TextStyle(
+                              color: Color(0xFF00A651),
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
 
                   const SizedBox(height: 12),
                   const Divider(height: 1, color: Color(0xFFEEEEEE)),

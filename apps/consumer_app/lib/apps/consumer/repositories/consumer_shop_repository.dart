@@ -9,6 +9,7 @@ import 'package:core_shared/shared/models/shop_category_data.dart';
 import 'package:core_shared/shared/models/category_model.dart';
 import 'package:core_shared/shared/models/campaign.dart';
 import 'package:core_shared/shared/models/business_category.dart';
+import 'package:consumer_app/apps/consumer/providers/consumer_location_controller.dart';
 
 class ConsumerShopRepository {
   final ApiClient _apiClient;
@@ -94,8 +95,12 @@ class ConsumerShopRepository {
     return url.startsWith('http://') || url.startsWith('https://');
   }
 
-  Future<List<Business>> getShops() async {
-    final response = await _apiClient.get('/api/consumer/shops');
+  Future<List<Business>> getShops({double? latitude, double? longitude}) async {
+    String endpoint = '/api/consumer/shops';
+    if (latitude != null && longitude != null) {
+      endpoint += '?latitude=$latitude&longitude=$longitude';
+    }
+    final response = await _apiClient.get(endpoint);
     final data = response['data'] as List<dynamic>?;
     if (data == null) return [];
     return data.map((json) {
@@ -463,7 +468,11 @@ final shopLifecyclePollingProvider = Provider.autoDispose<void>((ref) {
 });
 
 final consumerShopsProvider = FutureProvider<List<Business>>((ref) async {
-  return ref.watch(consumerShopRepositoryProvider).getShops();
+  final coords = ref.watch(consumerCoordinatesProvider);
+  return ref.watch(consumerShopRepositoryProvider).getShops(
+    latitude: coords?.latitude,
+    longitude: coords?.longitude,
+  );
 });
 
 final shopProductsProvider = FutureProvider.family<List<BusinessProduct>, String>((ref, shopId) async {

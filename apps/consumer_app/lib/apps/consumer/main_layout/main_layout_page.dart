@@ -9,6 +9,7 @@ import 'package:consumer_app/apps/consumer/cart/cart_page.dart';
 import 'package:consumer_app/apps/consumer/cart/cart_provider.dart';
 import 'package:consumer_app/apps/consumer/profile/profile_page.dart';
 import 'package:core_shared/shared/core/services/navigation_provider.dart'; // YENİ
+import 'package:consumer_app/apps/consumer/providers/consumer_location_controller.dart';
 
 import 'package:consumer_app/apps/consumer/business/business_provider.dart';
 import 'package:consumer_app/apps/consumer/home/search_page.dart';
@@ -59,6 +60,11 @@ class _MainLayoutPageState extends ConsumerState<MainLayoutPage> {
         final apiClient = ref.read(apiClientProvider);
         final notificationService = NotificationService(apiClient);
         notificationService.initialize();
+
+        // Otomatik konum alma ve yetkilendirme
+        ref.read(consumerLocationProvider.notifier).determineLocation().catchError((e) {
+          debugPrint("Startup location retrieval failed: $e");
+        });
       }
     });
   }

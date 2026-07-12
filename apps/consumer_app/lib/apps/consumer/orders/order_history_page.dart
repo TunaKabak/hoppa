@@ -7,6 +7,9 @@ import 'package:core_shared/shared/models/order.dart' as model;
 import 'package:core_shared/shared/models/order_status.dart';
 import 'package:consumer_app/apps/consumer/orders/order_detail_page.dart';
 import 'package:core_shared/shared/models/business_type.dart';
+import 'package:provider/provider.dart' as p;
+import 'package:core_shared/shared/core/services/navigation_provider.dart';
+import 'package:consumer_app/apps/consumer/business/business_provider.dart';
 
 class OrderHistoryPage extends ConsumerStatefulWidget {
   const OrderHistoryPage({super.key});
@@ -18,6 +21,10 @@ class OrderHistoryPage extends ConsumerStatefulWidget {
 class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage> {
   // Filtreleme Durumu: 0 = Aktif, 1 = Geçmiş
   int _selectedFilterIndex = 0;
+  
+  // Tarih Filtresi
+  String _dateFilterType = '3_months'; // '3_months', '6_months', '1_year', 'all', 'custom'
+  DateTimeRange? _customDateRange;
 
   @override
   void initState() {
@@ -26,6 +33,43 @@ class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.invalidate(consumerOrdersProvider);
     });
+  }
+
+  Widget _buildDateFilterChip(String label, String value) {
+    final isSelected = _dateFilterType == value;
+    const kPrimaryColor = Color(0xFF00A651);
+    
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      selectedColor: kPrimaryColor.withOpacity(0.12),
+      checkmarkColor: kPrimaryColor,
+      labelStyle: TextStyle(
+        color: isSelected ? kPrimaryColor : Colors.black87,
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      ),
+      onSelected: (selected) async {
+        if (value == 'custom') {
+          final picked = await showDateRangePicker(
+            context: context,
+            firstDate: DateTime(2020),
+            lastDate: DateTime.now().add(const Duration(days: 1)),
+            currentDate: DateTime.now(),
+            initialDateRange: _customDateRange,
+          );
+          if (picked != null) {
+            setState(() {
+              _dateFilterType = 'custom';
+              _customDateRange = picked;
+            });
+          }
+        } else {
+          setState(() {
+            _dateFilterType = value;
+          });
+        }
+      },
+    );
   }
 
   @override
@@ -63,6 +107,34 @@ class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage> {
             ),
           ),
 
+          // --- TARİH FİLTRELERİ ROW ---
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            color: Colors.white,
+            alignment: Alignment.centerLeft,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _buildDateFilterChip("Son 3 Ay", '3_months'),
+                  const SizedBox(width: 8),
+                  _buildDateFilterChip("Son 6 Ay", '6_months'),
+                  const SizedBox(width: 8),
+                  _buildDateFilterChip("Son 1 Yıl", '1_year'),
+                  const SizedBox(width: 8),
+                  _buildDateFilterChip("Tümü", 'all'),
+                  const SizedBox(width: 8),
+                  _buildDateFilterChip(
+                    _customDateRange != null
+                        ? "${DateFormat('dd.MM').format(_customDateRange!.start)} - ${DateFormat('dd.MM').format(_customDateRange!.end)}"
+                        : "Özel Tarih",
+                    'custom',
+                  ),
+                ],
+              ),
+            ),
+          ),
+
           // --- SİPARİŞ LİSTESİ ---
           Expanded(
             child: ordersAsync.when(
@@ -78,39 +150,93 @@ class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage> {
                   }
                 }).toList();
 
-                if (filteredOrders.isEmpty) {
+                // Tarih Filtresi Uygula
+                final now = DateTime.now();
+                final dateFilteredOrders = filteredOrders.where((order) {
+                  final orderDate = order.createdAt;
+                  switch (_dateFilterType) {
+                    case '3_months':
+                      final threeMonthsAgo = now.subtract(const Duration(days: 90));
+                      return orderDate.isAfter(threeMonthsAgo);
+                    case '6_months':
+                      final sixMonthsAgo = now.subtract(const Duration(days: 180));
+                      return orderDate.isAfter(sixMonthsAgo);
+                    case '1_year':
+                      final oneYearAgo = now.subtract(const Duration(days: 365));
+                      return orderDate.isAfter(oneYearAgo);
+                    case 'custom':
+                      if (_customDateRange == null) return true;
+                      return orderDate.isAfter(_customDateRange!.start.subtract(const Duration(seconds: 1))) &&
+                             orderDate.isBefore(_customDateRange!.end.add(const Duration(days: 1)));
+                    case 'all':
+                    default:
+                      return true;
+                  }
+                }).toList();
+
+                if (dateFilteredOrders.isEmpty) {
                   return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          _selectedFilterIndex == 0
-                              ? Icons.local_shipping_outlined
-                              : Icons.history,
-                          size: 80,
-                          color: Colors.grey[300],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          _selectedFilterIndex == 0
-                              ? "Aktif siparişiniz bulunmuyor."
-                              : "Geçmiş siparişiniz bulunmuyor.",
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 16,
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            _selectedFilterIndex == 0
+                                ? Icons.local_shipping_outlined
+                                : Icons.history,
+                            size: 80,
+                            color: Colors.grey[300],
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 16),
+                          Text(
+                            _selectedFilterIndex == 0
+                                ? "Aktif siparişiniz bulunmuyor."
+                                : "Geçmiş siparişiniz bulunmuyor.",
+                            style: const TextStyle(
+                              color: Colors.grey,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          SizedBox(
+                            width: 200,
+                            height: 48,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                final nav = p.Provider.of<NavigationProvider>(context, listen: false);
+                                final biz = p.Provider.of<BusinessProvider>(context, listen: false);
+                                biz.clearCategory();
+                                biz.clearBusiness();
+                                nav.setIndex(0);
+                                Navigator.popUntil(context, (route) => route.isFirst);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: kPrimaryColor,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 0,
+                              ),
+                              child: const Text(
+                                "Alışverişe Başla",
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 }
 
                 return ListView.separated(
                   padding: const EdgeInsets.all(16),
-                  itemCount: filteredOrders.length,
+                  itemCount: dateFilteredOrders.length,
                   separatorBuilder: (c, i) => const SizedBox(height: 16),
                   itemBuilder: (context, index) {
-                    final order = filteredOrders[index];
+                    final order = dateFilteredOrders[index];
                     return _OrderCard(order: order);
                   },
                 );

@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { OtpService } from "../services/OtpService";
 import { prisma } from "../config/db";
 import { JwtUtils } from "../utils/JwtUtils";
+import { CouponController } from "./CouponController";
 
 const otpService = new OtpService();
 
@@ -53,20 +54,34 @@ export class AuthController {
         return;
       }
 
-      // OTP geçerli, Prisma ile User'ı bul veya oluştur (upsert)
-      const user = await prisma.user.upsert({
-        where: { phone: phoneNumber },
-        create: {
-          phone: phoneNumber,
-          name: name || "Misafir", // Varsayılan değerler
-          surname: surname || "Kullanıcı"
-        },
-        update: {
-          lastLogin: new Date(),
-          ...(name && { name }),
-          ...(surname && { surname })
-        }
+      // Check if user exists to detect isNewUser
+      let user = await prisma.user.findUnique({
+        where: { phone: phoneNumber }
       });
+      
+      let isNewUser = false;
+      if (!user) {
+        isNewUser = true;
+        user = await prisma.user.create({
+          data: {
+            phone: phoneNumber,
+            name: name || "Misafir",
+            surname: surname || "Kullanıcı"
+          }
+        });
+        
+        // Auto-provision a welcome coupon for the new user
+        await CouponController.provisionWelcomeCoupon(user.id);
+      } else {
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            lastLogin: new Date(),
+            ...(name && { name }),
+            ...(surname && { surname })
+          }
+        });
+      }
 
       const token = JwtUtils.generateToken(user.id, user.role);
 
@@ -75,7 +90,8 @@ export class AuthController {
         data: {
           message: "Oturum başarıyla açıldı.",
           token: token,
-          user: user
+          user: user,
+          isNewUser: isNewUser || (user.name === "Misafir" && user.surname === "Kullanıcı")
         }
       });
     } catch (error: any) {
