@@ -125,11 +125,7 @@ class _CategoryGridItemState extends State<CategoryGridItem>
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [
-                    Colors.white,
-                    catColor.withValues(alpha: 0.06),
-                    catColor.withValues(alpha: 0.15),
-                  ],
+                  colors: _getCardGradient(catName),
                 ),
                 boxShadow: [
                   BoxShadow(
@@ -155,44 +151,28 @@ class _CategoryGridItemState extends State<CategoryGridItem>
                           right: -8,
                           bottom: -8,
                           child: widget.backgroundImage != null
-                              ? ShaderMask(
-                                  shaderCallback: (bounds) {
-                                    return RadialGradient(
-                                      center: Alignment.bottomRight,
-                                      radius: 1.1,
-                                      colors: [
-                                        Colors.black,
-                                        Colors.black.withValues(alpha: 0.95),
-                                        Colors.black.withValues(alpha: 0.2),
-                                        Colors.transparent,
-                                      ],
-                                      stops: const [0.0, 0.4, 0.8, 1.0],
-                                    ).createShader(bounds);
-                                  },
-                                  blendMode: BlendMode.dstIn,
-                                  child: widget.backgroundImage!.startsWith('http')
-                                      ? Image.network(
-                                          widget.backgroundImage!,
-                                          width: 82,
-                                          height: 82,
-                                          fit: BoxFit.contain,
-                                          errorBuilder: (context, error, stackTrace) =>
-                                              Padding(
-                                                padding: const EdgeInsets.all(12),
-                                                child: Icon(
-                                                  widget.category['icon'] as IconData,
-                                                  size: 64,
-                                                  color: catColor.withValues(alpha: 0.15),
-                                                ),
-                                              ),
-                                        )
-                                      : Image.asset(
-                                          widget.backgroundImage!,
-                                          width: 82,
-                                          height: 82,
-                                          fit: BoxFit.contain,
-                                        ),
-                                )
+                              ? (widget.backgroundImage!.startsWith('http')
+                                  ? Image.network(
+                                      widget.backgroundImage!,
+                                      width: 82,
+                                      height: 82,
+                                      fit: BoxFit.contain,
+                                      errorBuilder: (context, error, stackTrace) =>
+                                          Padding(
+                                            padding: const EdgeInsets.all(12),
+                                            child: Icon(
+                                              widget.category['icon'] as IconData,
+                                              size: 64,
+                                              color: catColor.withValues(alpha: 0.15),
+                                            ),
+                                          ),
+                                    )
+                                  : Image.asset(
+                                      widget.backgroundImage!,
+                                      width: 82,
+                                      height: 82,
+                                      fit: BoxFit.contain,
+                                    ))
                               : Padding(
                                   padding: const EdgeInsets.all(12),
                                   child: Icon(
@@ -304,5 +284,31 @@ class _CategoryGridItemState extends State<CategoryGridItem>
         ),
       ),
     );
+  }
+
+  List<Color> _getCardGradient(String categoryName) {
+    switch (categoryName.toLowerCase()) {
+      case 'market':
+        return const [Color(0xFFF2FBF6), Color(0xFFE1F7EB)];
+      case 'restoran':
+        return const [Color(0xFFFFF8F2), Color(0xFFFFECE1)];
+      case 'su':
+        return const [Color(0xFFF2F9FF), Color(0xFFE1F0FF)];
+      case 'kuruyemiş':
+        return const [Color(0xFFFAF6F2), Color(0xFFEFE3D8)];
+      case 'kahve':
+        return const [Color(0xFFFAF6F5), Color(0xFFF0E5DF)];
+      case 'çiçek':
+        return const [Color(0xFFFFF2F6), Color(0xFFFFE1EC)];
+      case 'manav':
+        return const [Color(0xFFF6FBF2), Color(0xFFE7F7DF)];
+      case 'kasap':
+        return const [Color(0xFFFFF2F2), Color(0xFFFFE1E1)];
+      default:
+        return [
+          Colors.white,
+          widget.category['color'] as Color? ?? Colors.green,
+        ];
+    }
   }
 }

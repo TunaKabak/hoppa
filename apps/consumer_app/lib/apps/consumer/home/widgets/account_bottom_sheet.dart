@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:core_auth/core_auth.dart';
 import 'package:consumer_app/apps/consumer/address/address_list_page.dart';
 import 'package:consumer_app/apps/consumer/orders/order_history_page.dart';
+import 'package:consumer_app/apps/consumer/auth/consumer_login_page.dart';
 
 class AccountBottomSheet extends ConsumerWidget {
   const AccountBottomSheet({Key? key}) : super(key: key);
@@ -20,12 +21,13 @@ class AccountBottomSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final authState = ref.watch(authControllerProvider);
+    final isGuest = authState is! AuthAuthenticated;
     
     String displayName = "Kullanıcı Profilim";
     String phone = "";
     String firstLetter = "U";
 
-    if (authState is AuthAuthenticated) {
+    if (!isGuest) {
       final user = authState.user;
       displayName = user.displayName;
       phone = user.phone;
@@ -63,119 +65,191 @@ class AccountBottomSheet extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
 
-          // Kullanıcı Bilgi Bölümü
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 32,
-                backgroundColor: theme.colorScheme.primaryContainer,
-                child: Text(
-                  firstLetter,
-                  style: TextStyle(
-                    fontSize: 24, 
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.primary,
+          if (isGuest) ...[
+            // MİSAFİR KULLANICI GÖRÜNÜMÜ
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 32,
+                  backgroundColor: Colors.grey.shade100,
+                  child: Icon(
+                    Icons.account_circle_outlined,
+                    size: 36,
+                    color: Colors.grey.shade600,
                   ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      displayName,
-                      style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                    ),
-                    if (phone.isNotEmpty) ...[
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Misafir Kullanıcı",
+                        style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                      ),
                       const SizedBox(height: 4),
                       Text(
-                        phone,
-                        style: theme.textTheme.bodyMedium?.copyWith(
+                        "Adresleriniz ve siparişleriniz için giriş yapın",
+                        style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
-                  ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            const Divider(),
+            const SizedBox(height: 20),
+            Text(
+              "Sipariş geçmişinizi incelemek, adreslerinizi kaydetmek ve tüm Hoppa fırsatlarından tam olarak yararlanabilmek için lütfen giriş yapın.",
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade600,
+                height: 1.4,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00A651), // Hoppa Green
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          const Divider(),
-          const SizedBox(height: 12),
-
-          // Seçenekler Listesi (Modern List Tiles)
-          _buildMenuTile(
-            icon: Icons.location_on_outlined,
-            title: "Kayıtlı Adreslerim",
-            subtitle: "Teslimat adreslerini yönet",
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const AddressListPage()),
-              );
-            },
-            theme: theme,
-          ),
-          _buildMenuTile(
-            icon: Icons.history,
-            title: "Sipariş Geçmişim",
-            subtitle: "Eski siparişlerini incele",
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const OrderHistoryPage()),
-              );
-            },
-            theme: theme,
-          ),
-          _buildMenuTile(
-            icon: Icons.payment_outlined,
-            title: "Kayıtlı Kartlarım",
-            subtitle: "Ödeme yöntemlerini düzenle",
-            onTap: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Bu özellik yakında eklenecektir.")),
-              );
-            },
-            theme: theme,
-          ),
-          _buildMenuTile(
-            icon: Icons.notifications_none_outlined,
-            title: "Bildirim Ayarları",
-            subtitle: "Hangi bildirimleri almak istersin?",
-            onTap: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Bu özellik yakında eklenecektir.")),
-              );
-            },
-            theme: theme,
-          ),
-          const SizedBox(height: 16),
-          
-          // Çıkış Yap Butonu (Kırmızı Vurgulu)
-          ElevatedButton.icon(
-            onPressed: () async {
-              Navigator.pop(context);
-              await ref.read(authControllerProvider.notifier).logout();
-            },
-            icon: const Icon(Icons.logout),
-            label: const Text("Çıkış Yap"),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: theme.colorScheme.errorContainer,
-              foregroundColor: theme.colorScheme.onErrorContainer,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                );
+              },
+              child: const Text(
+                "Giriş Yap / Üye Ol",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
-          ),
+            const SizedBox(height: 8),
+          ] else ...[
+            // GİRİŞ YAPMIŞ KULLANICI GÖRÜNÜMÜ
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 32,
+                  backgroundColor: theme.colorScheme.primaryContainer,
+                  child: Text(
+                    firstLetter,
+                    style: TextStyle(
+                      fontSize: 24, 
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        displayName,
+                        style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      if (phone.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          phone,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            const Divider(),
+            const SizedBox(height: 12),
+
+            // Seçenekler Listesi (Modern List Tiles)
+            _buildMenuTile(
+              icon: Icons.location_on_outlined,
+              title: "Kayıtlı Adreslerim",
+              subtitle: "Teslimat adreslerini yönet",
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AddressListPage()),
+                );
+              },
+              theme: theme,
+            ),
+            _buildMenuTile(
+              icon: Icons.history,
+              title: "Sipariş Geçmişim",
+              subtitle: "Eski siparişlerini incele",
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const OrderHistoryPage()),
+                );
+              },
+              theme: theme,
+            ),
+            _buildMenuTile(
+              icon: Icons.payment_outlined,
+              title: "Kayıtlı Kartlarım",
+              subtitle: "Ödeme yöntemlerini düzenle",
+              onTap: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Bu özellik yakında eklenecektir.")),
+                );
+              },
+              theme: theme,
+            ),
+            _buildMenuTile(
+              icon: Icons.notifications_none_outlined,
+              title: "Bildirim Ayarları",
+              subtitle: "Hangi bildirimleri almak istersin?",
+              onTap: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Bu özellik yakında eklenecektir.")),
+                );
+              },
+              theme: theme,
+            ),
+            const SizedBox(height: 16),
+            
+            // Çıkış Yap Butonu
+            ElevatedButton.icon(
+              onPressed: () async {
+                Navigator.pop(context);
+                await ref.read(authControllerProvider.notifier).logout();
+              },
+              icon: const Icon(Icons.logout),
+              label: const Text("Çıkış Yap"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.errorContainer,
+                foregroundColor: theme.colorScheme.onErrorContainer,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
