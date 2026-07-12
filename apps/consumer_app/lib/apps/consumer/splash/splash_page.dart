@@ -36,6 +36,8 @@ class _SplashPageState extends State<SplashPage> {
       _isRetrying = true;
     });
 
+    final startTime = DateTime.now();
+
     // 1. Adım: Cihazın internet bağlantısı var mı? (Hızlı DNS Sorgusu)
     final hasInternet = await _checkPhysicalConnection();
     if (!hasInternet) {
@@ -50,7 +52,13 @@ class _SplashPageState extends State<SplashPage> {
       return;
     }
 
-    // 3. Adım: Her şey yolundaysa uygulamaya geçiş yap
+    // 3. Adım: Her şey yolundaysa minimum bekleme süresini (2 saniye) tamamla ve uygulamaya geçiş yap
+    final elapsed = DateTime.now().difference(startTime);
+    const minDuration = Duration(seconds: 2);
+    if (elapsed < minDuration) {
+      await Future.delayed(minDuration - elapsed);
+    }
+
     _proceedToApp();
   }
 

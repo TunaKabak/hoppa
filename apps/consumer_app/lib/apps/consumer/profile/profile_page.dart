@@ -10,7 +10,7 @@ import 'package:consumer_app/apps/consumer/auth/consumer_login_page.dart';
 import 'package:consumer_app/apps/consumer/favorites/favorites_page.dart';
 import 'package:consumer_app/apps/consumer/cart/cart_provider.dart';
 import 'package:consumer_app/apps/consumer/profile/support_chat_page.dart';
-import 'package:core_shared/shared/core/services/database_seeder.dart';
+import 'package:consumer_app/apps/consumer/widgets/hoppa_dialog.dart';
 
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
@@ -18,30 +18,20 @@ class ProfilePage extends ConsumerWidget {
   void _showLogoutDialog(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text("Çıkış Yap"),
-        content: const Text(
-          "Hesabınızdan çıkış yapmak istediğinize emin misiniz?",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Vazgeç", style: TextStyle(color: Colors.grey)),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ref.read(authControllerProvider.notifier).logout();
-              ref.read(cartProvider.notifier).clearCart();
-            },
-            child: const Text(
-              "Evet, Çıkış Yap",
-              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
+      builder: (context) => HoppaDialog(
+        icon: Icons.logout_rounded,
+        iconColor: Colors.red,
+        title: "Çıkış Yap",
+        content: "Hesabınızdan çıkış yapmak istediğinize emin misiniz?",
+        cancelText: "Vazgeç",
+        confirmText: "Evet, Çıkış Yap",
+        isDestructive: true,
+        onCancel: () => Navigator.pop(context),
+        onConfirm: () {
+          Navigator.pop(context);
+          ref.read(authControllerProvider.notifier).logout();
+          ref.read(cartProvider.notifier).clearCart();
+        },
       ),
     );
   }
@@ -335,99 +325,6 @@ class ProfilePage extends ConsumerWidget {
               ),
 
             const SizedBox(height: 40),
-
-            // GELİŞTİRİCİ ARAÇLARI
-            const Divider(),
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Text(
-                "Geliştirici Araçları",
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-            ListTile(
-              leading: const Icon(Icons.refresh, color: Colors.orange),
-              title: const Text("Veritabanını Sıfırla ve Yükle"),
-              subtitle: const Text(
-                "Tüm verileri siler ve örnek veri yükler.",
-                style: TextStyle(fontSize: 10),
-              ),
-              onTap: () async {
-                bool confirm =
-                    await showDialog(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: const Text("Dikkat"),
-                        content: const Text(
-                          "Tüm veritabanı silinecek ve yeniden oluşturulacak. Devam etmek istiyor musunuz?",
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(ctx, false),
-                            child: const Text("Hayır"),
-                          ),
-                          TextButton(
-                            onPressed: () => Navigator.pop(ctx, true),
-                            child: const Text("Evet"),
-                          ),
-                        ],
-                      ),
-                    ) ??
-                    false;
-
-                if (!confirm) return;
-
-                if (context.mounted) {
-                  showDialog(
-                    context: context,
-                    barrierDismissible: false,
-                    builder: (ctx) => const Center(
-                      child: Card(
-                        margin: EdgeInsets.all(50),
-                        child: Padding(
-                          padding: EdgeInsets.all(24.0),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              CircularProgressIndicator(),
-                              SizedBox(height: 16),
-                              Text("Veritabanı Oluşturuluyor..."),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }
-
-                try {
-                  await DatabaseSeeder().seedSystem();
-                  if (context.mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Veritabanı başarıyla yenilendi!"),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text("Hata oluştu: $e"),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                }
-              },
-            ),
           ],
         ),
       ),

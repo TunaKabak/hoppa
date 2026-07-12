@@ -495,13 +495,20 @@ class _SelectionHeader extends rp.ConsumerWidget {
                   Consumer<DeliveryProvider>(
                     builder: (context, provider, _) => GestureDetector(
                       onTap: () async {
-                        final address = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const AddressListPage(isSelectionMode: true),
-                          ),
-                        );
-                        if (address != null) provider.setAddress(address);
+                        if (isGuest) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const LoginPage()),
+                          );
+                        } else {
+                          final address = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const AddressListPage(isSelectionMode: true),
+                            ),
+                          );
+                          if (address != null) provider.setAddress(address);
+                        }
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

@@ -8,6 +8,8 @@ import 'package:consumer_app/apps/consumer/address/address_list_page.dart';
 import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository.dart';
 import 'package:consumer_app/apps/consumer/home/widgets/account_bottom_sheet.dart';
 import 'package:latlong2/latlong.dart'; // Mesafe hesaplama için
+import 'package:core_auth/core_auth.dart';
+import 'package:consumer_app/apps/consumer/auth/consumer_login_page.dart';
 
 class BusinessSelectionPage extends ConsumerWidget {
   final String? category; // Artık İşletme Türü veya Kategori filtresi olabilir
@@ -76,6 +78,8 @@ class BusinessSelectionPage extends ConsumerWidget {
       body: p.Consumer<DeliveryProvider>(
         builder: (context, deliveryProvider, child) {
           final address = deliveryProvider.selectedAddress;
+          final authState = ref.watch(authControllerProvider);
+          final isGuest = authState is! AuthAuthenticated;
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -83,84 +87,142 @@ class BusinessSelectionPage extends ConsumerWidget {
               // --- ADRES KARTI ---
               Container(
                 color: Colors.white,
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                child: GestureDetector(
-                  onTap: () async {
-                    final selectedAddress = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            const AddressListPage(isSelectionMode: true),
-                      ),
-                    );
-                    if (selectedAddress != null) {
-                      deliveryProvider.setAddress(selectedAddress);
-                    }
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFBFBFB),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade300),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xFFF3FAF6), // Soft mint green tint
+                        Colors.white,
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.location_on,
-                          color: kPrimaryColor,
-                          size: 24,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                address != null
-                                    ? "Teslimat: ${address.title}"
-                                    : "Teslimat Adresi Seçin",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                  color: Colors.grey.shade800,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(16),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      splashColor: kPrimaryColor.withValues(alpha: 0.1),
+                      onTap: () async {
+                        if (isGuest) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const LoginPage()),
+                          );
+                        } else {
+                          final selectedAddress = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const AddressListPage(isSelectionMode: true),
+                            ),
+                          );
+                          if (selectedAddress != null) {
+                            deliveryProvider.setAddress(selectedAddress);
+                          }
+                        }
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Row(
+                          children: [
+                            // Circular Location Icon Badge
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: kPrimaryColor.withValues(alpha: 0.08),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.location_on_rounded,
+                                color: kPrimaryColor,
+                                size: 22,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            // Address Info text
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    address != null
+                                        ? "Teslimat: ${address.title}"
+                                        : (isGuest ? "Nereye Gönderilsin?" : "Teslimat Adresi Seçin"),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      fontFamily: 'Poppins',
+                                      color: Colors.grey.shade900,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    address != null
+                                        ? "${address.district}, ${address.city}"
+                                        : (isGuest ? "Adres girmek için lütfen giriş yapın" : "Lütfen bir teslimat adresi belirtin"),
+                                    style: TextStyle(
+                                      color: Colors.grey.shade600,
+                                      fontSize: 12,
+                                      fontFamily: 'Inter',
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // Navigation Caret or Guest Badge
+                            if (isGuest) ...[
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFECE5), // Soft orange tint
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      "Giriş Yapın",
+                                      style: TextStyle(
+                                        color: Color(0xFFE95D22), // Hoppa Orange
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11,
+                                        fontFamily: 'Inter',
+                                      ),
+                                    ),
+                                    SizedBox(width: 2),
+                                    Icon(
+                                      Icons.chevron_right_rounded,
+                                      color: Color(0xFFE95D22),
+                                      size: 14,
+                                    ),
+                                  ],
                                 ),
                               ),
-                              if (address != null)
-                                Text(
-                                  "${address.district}, ${address.city}",
-                                  style: TextStyle(
-                                    color: Colors.grey.shade600,
-                                    fontSize: 12,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                            ] else ...[
+                              const Icon(
+                                Icons.keyboard_arrow_down_rounded,
+                                color: Colors.grey,
+                              ),
                             ],
-                          ),
+                          ],
                         ),
-                        const Icon(
-                          Icons.keyboard_arrow_down,
-                          color: Colors.grey,
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  category != null
-                      ? "$category Listesi"
-                      : "Yakındaki İşletmeler",
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
                   ),
                 ),
               ),
@@ -284,46 +346,89 @@ class BusinessSelectionPage extends ConsumerWidget {
                       });
                     }
 
-                    return RefreshIndicator(
-                      onRefresh: () async {
-                        ref.invalidate(consumerShopsProvider);
-                        await ref.read(consumerShopsProvider.future);
-                      },
-                      child: ListView.builder(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                category != null
+                                    ? "$category Listesi"
+                                    : "Yakındaki İşletmeler",
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: kPrimaryColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  "${businesses.length} İşletme",
+                                  style: const TextStyle(
+                                    color: kPrimaryColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        itemCount: businesses.length,
-                      itemBuilder: (context, index) {
-                        final business = businesses[index];
+                        Expanded(
+                          child: RefreshIndicator(
+                            onRefresh: () async {
+                              ref.invalidate(consumerShopsProvider);
+                              await ref.read(consumerShopsProvider.future);
+                            },
+                            child: ListView.builder(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              itemCount: businesses.length,
+                              itemBuilder: (context, index) {
+                                final business = businesses[index];
 
-                        // Mesafeyi hesaplayıp karta gönderelim
-                        String? distanceText;
-                        if (address != null) {
-                          if (business.latitude == 0 && business.longitude == 0) {
-                            distanceText = "Mesafe\nBilinmiyor";
-                          } else {
-                            final Distance distance = const Distance();
-                            final double km =
-                                distance.as(
-                                  LengthUnit.Meter,
-                                  LatLng(address.latitude, address.longitude),
-                                  LatLng(business.latitude, business.longitude),
-                                ) /
-                                1000.0;
-                            distanceText = "${km.toStringAsFixed(1)} km";
-                          }
-                        }
+                                // Mesafeyi hesaplayıp karta gönderelim
+                                String? distanceText;
+                                if (address != null) {
+                                  if (business.latitude == 0 && business.longitude == 0) {
+                                    distanceText = "Mesafe\nBilinmiyor";
+                                  } else {
+                                    const distance = Distance();
+                                    final double km =
+                                        distance.as(
+                                          LengthUnit.Meter,
+                                          LatLng(address.latitude, address.longitude),
+                                          LatLng(business.latitude, business.longitude),
+                                        ) /
+                                        1000.0;
+                                    distanceText = "${km.toStringAsFixed(1)} km";
+                                  }
+                                }
 
-                        return _buildCompactBusinessCard(
-                          context,
-                          ref,
-                          business,
-                          distanceText,
-                        );
-                      },
-                    ),
+                                return _buildCompactBusinessCard(
+                                  context,
+                                  ref,
+                                  business,
+                                  distanceText,
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
                     );
                   },
                 ),
