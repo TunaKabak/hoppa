@@ -37,3 +37,24 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction):
 
   next();
 };
+
+export const optionalAuthMiddleware = (req: Request, res: Response, next: NextFunction): void => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    next();
+    return;
+  }
+
+  const token = authHeader.split(" ")[1];
+  const decodedToken = JwtUtils.verifyToken(token);
+
+  if (decodedToken) {
+    req.user = {
+      id: decodedToken.id,
+      role: decodedToken.role?.toLowerCase(),
+    };
+  }
+
+  next();
+};

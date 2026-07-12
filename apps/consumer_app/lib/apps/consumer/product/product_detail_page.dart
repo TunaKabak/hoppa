@@ -12,6 +12,7 @@ import 'package:provider/provider.dart' as p;
 import 'package:consumer_app/apps/consumer/favorites/favorite_provider.dart';
 import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository.dart';
 import 'package:core_shared/shared/core/utils/quantity_formatter.dart';
+import 'package:consumer_app/apps/consumer/cart/cart_validation.dart';
 
 class ProductDetailPage extends ConsumerStatefulWidget {
   final BusinessProduct businessProduct;
@@ -457,6 +458,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
           _buildCounterButton(
             icon: Icons.add,
             onTap: isClosed ? null : () {
+              if (!CartValidation.checkLoginAndAddress(context, ref)) return;
               _handleCartAction(() async {
                 await Future.delayed(const Duration(milliseconds: 200));
                 try {
@@ -486,6 +488,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
           onPressed: (_isActionLoading || isClosed)
               ? null
               : () {
+                  if (!CartValidation.checkLoginAndAddress(context, ref)) return;
                   _handleCartAction(() async {
                     try {
                       ref.read(cartProvider.notifier).addToCart(widget.businessProduct);

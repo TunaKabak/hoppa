@@ -9,6 +9,7 @@ import 'package:consumer_app/apps/consumer/auth/consumer_login_page.dart';
 import 'package:core_auth/core_auth.dart';
 import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository.dart';
 import 'package:core_shared/shared/core/utils/quantity_formatter.dart';
+import 'package:consumer_app/apps/consumer/cart/cart_validation.dart';
 
 class ModernProductCard extends ConsumerWidget {
   final BusinessProduct businessProduct;
@@ -545,6 +546,7 @@ class ModernProductCard extends ConsumerWidget {
   }
 
   void _handleAdd(BuildContext context, WidgetRef ref) {
+    if (!CartValidation.checkLoginAndAddress(context, ref)) return;
     try {
       ref.read(cartProvider.notifier).addToCart(businessProduct);
     } catch (e) {

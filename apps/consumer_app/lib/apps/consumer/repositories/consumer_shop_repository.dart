@@ -151,6 +151,81 @@ class ConsumerShopRepository {
     return {'category': rootName, 'subCategory': subName};
   }
 
+  BusinessProduct _parseBusinessProduct(Map<String, dynamic> json, String shopId) {
+    final id = json['id'] as String? ?? '';
+    final name = json['name'] as String? ?? '';
+    final description = json['description'] as String? ?? '';
+    final price = json['price'] != null ? double.tryParse(json['price'].toString()) ?? 0.0 : 0.0;
+    final stock = json['stock'] != null ? (int.tryParse(json['stock'].toString()) ?? 0).toDouble() : 0.0;
+    final isActive = json['isActive'] as bool? ?? true;
+    
+    final imageUrl = json['imageUrl'] as String? ?? '';
+    final validImageUrl = _isValidImageUrl(imageUrl)
+        ? imageUrl
+        : 'https://via.placeholder.com/150';
+
+    final String categoryId = json['categoryId']?.toString() ?? json['category']?['id']?.toString() ?? '';
+    final String rawCategoryName = json['category']?['name']?.toString() ?? '';
+    final String normName = _normalizeCategoryName(rawCategoryName);
+    
+    String categoryName = 'Genel';
+    String subCategoryName = 'Tümü';
+    
+    if (_categoryMappings.containsKey(categoryId)) {
+      final mapping = _categoryMappings[categoryId]!;
+      categoryName = mapping['category']!;
+      subCategoryName = mapping['subCategory']!;
+    } else if (_categoryMappings.containsKey(normName)) {
+      final mapping = _categoryMappings[normName]!;
+      categoryName = mapping['category']!;
+      subCategoryName = mapping['subCategory']!;
+    } else {
+      final catInfo = _parseCategoryHierarchy(json['category']);
+      categoryName = catInfo['category']!;
+      subCategoryName = catInfo['subCategory']!;
+    }
+
+    final trackStock = json['trackStock'] as bool? ?? false;
+    final stockQuantity = json['stockQuantity'] as int? ?? 0;
+
+    final double regularPriceVal = json['regularPrice'] != null ? (double.tryParse(json['regularPrice'].toString()) ?? price) : price;
+    final int discountRateVal = json['discountRate'] as int? ?? 0;
+
+    final productMap = {
+      'barcode': json['barcode'] ?? id,
+      'name': name,
+      'brand': json['brand'] ?? 'Hoppa',
+      'category': categoryName,
+      'subCategory': subCategoryName,
+      'imageUrl': validImageUrl,
+      'isWeighted': json['unit'] == 'KG' || json['unit'] == 'LITRE' || json['unit'] == 'GR' || (json['isWeighted'] == true),
+      'description': description,
+      'unit': json['unit'] ?? 'ADET',
+      'minQuantity': json['minQuantity'] != null ? double.tryParse(json['minQuantity'].toString()) : null,
+      'stepSize': json['stepSize'] != null ? double.tryParse(json['stepSize'].toString()) : null,
+      'regularPrice': regularPriceVal,
+      'shownPrice': price,
+      'discountRate': discountRateVal,
+      'sku': json['sku'],
+      'prettyName': json['prettyName'],
+    };
+
+    final map = {
+      'businessId': shopId,
+      'productBarcode': json['barcode'] ?? id,
+      'price': price,
+      'stock': stock,
+      'isAvailable': isActive,
+      'trackStock': trackStock,
+      'stockQuantity': stockQuantity,
+      'regularPrice': regularPriceVal,
+      'discountRate': discountRateVal,
+      'product_details': productMap,
+    };
+
+    return BusinessProduct.fromMap(map, id);
+  }
+
   Future<List<BusinessProduct>> getShopProducts(String shopId) async {
     if (_lastCachedShopId != shopId || _categoryMappings.isEmpty) {
       try {
@@ -167,80 +242,68 @@ class ConsumerShopRepository {
     final response = await _apiClient.get('/api/consumer/shops/$shopId/products');
     final data = response['data'] as List<dynamic>?;
     if (data == null) return [];
-    return data.map((json) {
-      final id = json['id'] as String? ?? '';
-      final name = json['name'] as String? ?? '';
-      final description = json['description'] as String? ?? '';
-      final price = json['price'] != null ? double.tryParse(json['price'].toString()) ?? 0.0 : 0.0;
-      final stock = json['stock'] != null ? (int.tryParse(json['stock'].toString()) ?? 0).toDouble() : 0.0;
-      final isActive = json['isActive'] as bool? ?? true;
-      
-      final imageUrl = json['imageUrl'] as String? ?? '';
-      final validImageUrl = _isValidImageUrl(imageUrl)
-          ? imageUrl
-          : 'https://via.placeholder.com/150';
+    return data.map((json) => _parseBusinessProduct(Map<String, dynamic>.from(json), shopId)).toList();
+  }
 
-      final String categoryId = json['categoryId']?.toString() ?? json['category']?['id']?.toString() ?? '';
-      final String rawCategoryName = json['category']?['name']?.toString() ?? '';
-      final String normName = _normalizeCategoryName(rawCategoryName);
-      
-      String categoryName = 'Genel';
-      String subCategoryName = 'Tümü';
-      
-      if (_categoryMappings.containsKey(categoryId)) {
-        final mapping = _categoryMappings[categoryId]!;
-        categoryName = mapping['category']!;
-        subCategoryName = mapping['subCategory']!;
-      } else if (_categoryMappings.containsKey(normName)) {
-        final mapping = _categoryMappings[normName]!;
-        categoryName = mapping['category']!;
-        subCategoryName = mapping['subCategory']!;
-      } else {
-        final catInfo = _parseCategoryHierarchy(json['category']);
-        categoryName = catInfo['category']!;
-        subCategoryName = catInfo['subCategory']!;
+  Future<GlobalSearchResult> globalSearch(String query) async {
+    if (query.trim().isEmpty) {
+      return GlobalSearchResult(categories: [], shops: [], products: []);
+    }
+
+    final response = await _apiClient.get(
+      '/api/consumer/search/global?q=${Uri.encodeComponent(query)}',
+    );
+    final data = response['data'] as Map<String, dynamic>?;
+    if (data == null) {
+      return GlobalSearchResult(categories: [], shops: [], products: []);
+    }
+
+    final catList = data['categories'] as List<dynamic>? ?? [];
+    final shopList = data['shops'] as List<dynamic>? ?? [];
+    final prodList = data['products'] as List<dynamic>? ?? [];
+
+    final categories = catList
+        .map((json) => BusinessCategory.fromJson(Map<String, dynamic>.from(json)))
+        .toList();
+        
+    final shops = shopList.map((json) {
+      final id = json['id'] as String? ?? '';
+      final map = Map<String, dynamic>.from(json);
+
+      map['logoUrl'] = _isValidImageUrl(json['imageUrl'])
+          ? json['imageUrl']
+          : 'https://via.placeholder.com/150';
+      map['headerImageUrl'] = _isValidImageUrl(json['headerImageUrl'])
+          ? json['headerImageUrl']
+          : 'https://via.placeholder.com/150';
+      map['isOpen'] = json['isActive'] ?? true;
+      map['minBasketAmount'] = json['minOrderAmount'] != null
+          ? double.tryParse(json['minOrderAmount'].toString()) ?? 0.0
+          : 0.0;
+      map['deliveryRadius'] = json['deliveryRadiusKm'] != null
+          ? (json['deliveryRadiusKm'] as num).toDouble()
+          : 5.0;
+      map['averageRating'] = json['averageRating'] != null
+          ? double.tryParse(json['averageRating'].toString()) ?? 5.0
+          : 5.0;
+      map['reviewCount'] = json['reviewCount'] as int? ?? 0;
+
+      if (json['type'] != null) {
+        map['type'] = json['type'].toString().toLowerCase();
       }
 
-      final trackStock = json['trackStock'] as bool? ?? false;
-      final stockQuantity = json['stockQuantity'] as int? ?? 0;
-
-      final double regularPriceVal = json['regularPrice'] != null ? (double.tryParse(json['regularPrice'].toString()) ?? price) : price;
-      final int discountRateVal = json['discountRate'] as int? ?? 0;
-
-      final productMap = {
-        'barcode': json['barcode'] ?? id,
-        'name': name,
-        'brand': json['brand'] ?? 'Hoppa',
-        'category': categoryName,
-        'subCategory': subCategoryName,
-        'imageUrl': validImageUrl,
-        'isWeighted': json['unit'] == 'KG' || json['unit'] == 'LITRE' || json['unit'] == 'GR' || (json['isWeighted'] == true),
-        'description': description,
-        'unit': json['unit'] ?? 'ADET',
-        'minQuantity': json['minQuantity'] != null ? double.tryParse(json['minQuantity'].toString()) : null,
-        'stepSize': json['stepSize'] != null ? double.tryParse(json['stepSize'].toString()) : null,
-        'regularPrice': regularPriceVal,
-        'shownPrice': price,
-        'discountRate': discountRateVal,
-        'sku': json['sku'],
-        'prettyName': json['prettyName'],
-      };
-
-      final map = {
-        'businessId': shopId,
-        'productBarcode': json['barcode'] ?? id,
-        'price': price,
-        'stock': stock,
-        'isAvailable': isActive,
-        'trackStock': trackStock,
-        'stockQuantity': stockQuantity,
-        'regularPrice': regularPriceVal,
-        'discountRate': discountRateVal,
-        'product_details': productMap,
-      };
-
-      return BusinessProduct.fromMap(map, id);
+      return Business.fromMap(map, id);
     }).toList();
+
+    final products = prodList
+        .map((json) => _parseBusinessProduct(Map<String, dynamic>.from(json), json['shopId'] as String? ?? ''))
+        .toList();
+
+    return GlobalSearchResult(
+      categories: categories,
+      shops: shops,
+      products: products,
+    );
   }
 
   Future<List<Map<String, dynamic>>> getFavoriteProducts(List<String> productIds) async {
@@ -503,5 +566,22 @@ final filteredShopProductsProvider = Provider.family<AsyncValue<List<BusinessPro
 
 final businessCategoriesProvider = FutureProvider<List<BusinessCategory>>((ref) async {
   return ref.watch(consumerShopRepositoryProvider).getBusinessCategories();
+});
+
+class GlobalSearchResult {
+  final List<BusinessCategory> categories;
+  final List<Business> shops;
+  final List<BusinessProduct> products;
+
+  GlobalSearchResult({
+    required this.categories,
+    required this.shops,
+    required this.products,
+  });
+}
+
+final globalSearchProvider = FutureProvider<GlobalSearchResult>((ref) async {
+  final query = ref.watch(catalogSearchQueryProvider);
+  return ref.watch(consumerShopRepositoryProvider).globalSearch(query);
 });
 

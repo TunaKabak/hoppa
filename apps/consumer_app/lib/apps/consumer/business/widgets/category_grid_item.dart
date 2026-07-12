@@ -155,28 +155,44 @@ class _CategoryGridItemState extends State<CategoryGridItem>
                           right: -8,
                           bottom: -8,
                           child: widget.backgroundImage != null
-                              ? (widget.backgroundImage!.startsWith('http')
-                                  ? Image.network(
-                                      widget.backgroundImage!,
-                                      width: 82,
-                                      height: 82,
-                                      fit: BoxFit.contain,
-                                      errorBuilder: (context, error, stackTrace) =>
-                                          Padding(
-                                            padding: const EdgeInsets.all(12),
-                                            child: Icon(
-                                              widget.category['icon'] as IconData,
-                                              size: 64,
-                                              color: catColor.withValues(alpha: 0.15),
-                                            ),
-                                          ),
-                                    )
-                                  : Image.asset(
-                                      widget.backgroundImage!,
-                                      width: 82,
-                                      height: 82,
-                                      fit: BoxFit.contain,
-                                    ))
+                              ? ShaderMask(
+                                  shaderCallback: (bounds) {
+                                    return RadialGradient(
+                                      center: Alignment.bottomRight,
+                                      radius: 1.1,
+                                      colors: [
+                                        Colors.black,
+                                        Colors.black.withValues(alpha: 0.95),
+                                        Colors.black.withValues(alpha: 0.2),
+                                        Colors.transparent,
+                                      ],
+                                      stops: const [0.0, 0.4, 0.8, 1.0],
+                                    ).createShader(bounds);
+                                  },
+                                  blendMode: BlendMode.dstIn,
+                                  child: widget.backgroundImage!.startsWith('http')
+                                      ? Image.network(
+                                          widget.backgroundImage!,
+                                          width: 82,
+                                          height: 82,
+                                          fit: BoxFit.contain,
+                                          errorBuilder: (context, error, stackTrace) =>
+                                              Padding(
+                                                padding: const EdgeInsets.all(12),
+                                                child: Icon(
+                                                  widget.category['icon'] as IconData,
+                                                  size: 64,
+                                                  color: catColor.withValues(alpha: 0.15),
+                                                ),
+                                              ),
+                                        )
+                                      : Image.asset(
+                                          widget.backgroundImage!,
+                                          width: 82,
+                                          height: 82,
+                                          fit: BoxFit.contain,
+                                        ),
+                                )
                               : Padding(
                                   padding: const EdgeInsets.all(12),
                                   child: Icon(

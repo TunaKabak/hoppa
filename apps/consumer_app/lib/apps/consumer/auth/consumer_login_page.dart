@@ -116,7 +116,15 @@ class _LoginPageState extends ConsumerState<LoginPage>
     const kPrimaryColor = Color(0xFF00A651);
     const kSecondaryColor = Color(0xFFE95D22);
 
+    final canPop = Navigator.canPop(context);
+
     return AuthLayout(
+      leading: canPop
+          ? IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.black87),
+              onPressed: () => Navigator.pop(context),
+            )
+          : null,
       // Enable glass effect for the card container
       enableGlass: true,
       child: FadeTransition(
