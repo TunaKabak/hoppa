@@ -64,6 +64,18 @@ class _CheckoutPageState extends State<CheckoutPage> {
     _deliverySlots = _generateTimeSlots(8, 22, 120); // 08:00 - 22:00, 2 saatlik
     _pickupSlots = _generateTimeSlots(8, 22, 30); // 08:00 - 22:00, 30 dakikalık
 
+    final businessProvider = Provider.of<BusinessProvider>(context, listen: false);
+    final selectedBusiness = businessProvider.selectedBusiness;
+    if (selectedBusiness != null) {
+      final hasDelivery = selectedBusiness.allowedFulfillmentModels.contains('PLATFORM_DELIVERY') ||
+                          selectedBusiness.allowedFulfillmentModels.contains('SELF_DELIVERY');
+      final hasPickup = selectedBusiness.allowedFulfillmentModels.contains('PICKUP');
+
+      if (!hasDelivery && hasPickup) {
+        _isPickUp = true;
+      }
+    }
+
     final deliveryProvider = Provider.of<DeliveryProvider>(
       context,
       listen: false,
@@ -249,6 +261,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   @override
   Widget build(BuildContext context) {
+    final businessProvider = Provider.of<BusinessProvider>(context);
+    final selectedBusiness = businessProvider.selectedBusiness;
+    final hasDelivery = selectedBusiness?.allowedFulfillmentModels.contains('PLATFORM_DELIVERY') == true ||
+                        selectedBusiness?.allowedFulfillmentModels.contains('SELF_DELIVERY') == true;
+    final hasPickup = selectedBusiness?.allowedFulfillmentModels.contains('PICKUP') == true;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
@@ -274,16 +292,52 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     Icons.local_shipping_outlined,
                   ),
                   const SizedBox(height: 12),
-                  AnimatedSlidingToggle(
-                    labels: const ["Eve Teslim", "Gel Al"],
-                    selectedIndex: _isPickUp ? 1 : 0,
-                    activeColor: kPrimaryColor,
-                    onChanged: (index) => setState(() {
-                      _isPickUp = index == 1;
-                      // Yöntem değişince saat seçimini sıfırla, çünkü listeler farklı
-                      _selectedTimeSlot = null;
-                    }),
-                  ),
+                  if (hasDelivery && hasPickup) ...[
+                    AnimatedSlidingToggle(
+                      labels: const ["Eve Teslim", "Gel Al"],
+                      selectedIndex: _isPickUp ? 1 : 0,
+                      activeColor: kPrimaryColor,
+                      onChanged: (index) => setState(() {
+                        _isPickUp = index == 1;
+                        // Yöntem değişince saat seçimini sıfırla, çünkü listeler farklı
+                        _selectedTimeSlot = null;
+                      }),
+                    ),
+                  ] else ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: kPrimaryColor.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: kPrimaryColor.withValues(alpha: 0.2),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            hasPickup ? Icons.store_outlined : Icons.local_shipping_outlined,
+                            color: kPrimaryColor,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              hasPickup
+                                  ? "Bu işletme yalnızca Gel-Al (Müşteri Alımı) yöntemiyle hizmet vermektedir."
+                                  : "Bu işletme yalnızca Eve Teslimat yöntemiyle hizmet vermektedir.",
+                              style: TextStyle(
+                                color: kPrimaryColor.withValues(alpha: 0.9),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
 
                   const SizedBox(height: 24),
 

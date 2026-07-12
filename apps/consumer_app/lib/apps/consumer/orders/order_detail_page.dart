@@ -102,9 +102,10 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
         !_hasPromptedRating) {
       _hasPromptedRating = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        showDialog(
+        showModalBottomSheet(
           context: context,
-          barrierDismissible: true,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
           builder: (context) => RateOrderDialog(order: order),
         );
       });

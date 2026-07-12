@@ -165,6 +165,19 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
         };
       }
 
+      final businessProvider = p.Provider.of<BusinessProvider>(context, listen: false);
+      final selectedBusiness = businessProvider.selectedBusiness;
+      String fulfillmentModel = 'PLATFORM_DELIVERY';
+      if (widget.isPickUp) {
+        fulfillmentModel = 'PICKUP';
+      } else {
+        if (selectedBusiness?.allowedFulfillmentModels.contains('SELF_DELIVERY') == true) {
+          fulfillmentModel = 'SELF_DELIVERY';
+        } else {
+          fulfillmentModel = 'PLATFORM_DELIVERY';
+        }
+      }
+
       final orderData = {
         'shopId': cartState.currentBusinessId,
         'items': cartState.items.map((item) => {
@@ -178,6 +191,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
         if (cardDetails != null) 'cardDetails': cardDetails,
         'dontRingBell': _dontRingBell,
         'leaveAtDoor': _leaveAtDoor,
+        'fulfillmentModel': fulfillmentModel,
       };
 
       final result = await orderRepo.createOrder(orderData);

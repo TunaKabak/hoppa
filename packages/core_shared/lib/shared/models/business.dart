@@ -25,6 +25,7 @@ class Business {
   final double averageRating;
   final int reviewCount;
   final List<String> allowedPaymentMethods;
+  final List<String> allowedFulfillmentModels;
   final List<String> tags; // YENİ: Dinamik işletme etiketleri
 
   Business({
@@ -51,6 +52,7 @@ class Business {
     this.averageRating = 5.0,
     this.reviewCount = 0,
     this.allowedPaymentMethods = const ['CASH_ON_DELIVERY', 'CARD_ON_DELIVERY', 'ONLINE_PAYMENT'],
+    this.allowedFulfillmentModels = const ['PLATFORM_DELIVERY', 'PICKUP'],
     this.tags = const [],
   });
 
@@ -85,6 +87,7 @@ class Business {
       averageRating: (data['averageRating'] ?? 5.0).toDouble(),
       reviewCount: data['reviewCount'] ?? 0,
       allowedPaymentMethods: List<String>.from(data['allowedPaymentMethods'] ?? const ['CASH_ON_DELIVERY', 'CARD_ON_DELIVERY', 'ONLINE_PAYMENT']),
+      allowedFulfillmentModels: List<String>.from(data['allowedFulfillmentModels'] ?? const ['PLATFORM_DELIVERY', 'PICKUP']),
       tags: List<String>.from(data['tags'] ?? []),
     );
   }
@@ -113,6 +116,7 @@ class Business {
       'averageRating': averageRating,
       'reviewCount': reviewCount,
       'allowedPaymentMethods': allowedPaymentMethods,
+      'allowedFulfillmentModels': allowedFulfillmentModels,
       'tags': tags,
     };
   }
@@ -141,6 +145,7 @@ class Business {
     double? averageRating,
     int? reviewCount,
     List<String>? allowedPaymentMethods,
+    List<String>? allowedFulfillmentModels,
     List<String>? tags,
   }) {
     return Business(
@@ -167,6 +172,7 @@ class Business {
       averageRating: averageRating ?? this.averageRating,
       reviewCount: reviewCount ?? this.reviewCount,
       allowedPaymentMethods: allowedPaymentMethods ?? this.allowedPaymentMethods,
+      allowedFulfillmentModels: allowedFulfillmentModels ?? this.allowedFulfillmentModels,
       tags: tags ?? this.tags,
     );
   }

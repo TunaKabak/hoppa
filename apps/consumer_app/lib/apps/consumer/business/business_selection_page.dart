@@ -622,32 +622,68 @@ class BusinessSelectionPage extends ConsumerWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  if (business.tags.isNotEmpty) ...[
+                  if (business.tags.isNotEmpty || business.allowedFulfillmentModels.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 6,
                       runSpacing: 4,
-                      children: business.tags.map((tag) {
-                        return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF00A651).withOpacity(0.08),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: const Color(0xFF00A651).withOpacity(0.2),
-                              width: 1,
+                      children: [
+                        ...business.allowedFulfillmentModels.map((model) {
+                          String label = "";
+                          Color badgeColor = Colors.blue;
+                          if (model == 'PLATFORM_DELIVERY') {
+                            label = "Hoppa Kuryesi";
+                            badgeColor = const Color(0xFF00A651);
+                          } else if (model == 'SELF_DELIVERY') {
+                            label = "Esnaf Teslimatı";
+                            badgeColor = Colors.orange;
+                          } else if (model == 'PICKUP') {
+                            label = "Gel-Al";
+                            badgeColor = Colors.purple;
+                          }
+                          if (label.isEmpty) return const SizedBox.shrink();
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: badgeColor.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: badgeColor.withValues(alpha: 0.2),
+                                width: 1,
+                              ),
                             ),
-                          ),
-                          child: Text(
-                            tag,
-                            style: const TextStyle(
-                              color: Color(0xFF00A651),
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
+                            child: Text(
+                              label,
+                              style: TextStyle(
+                                color: badgeColor,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
-                        );
-                      }).toList(),
+                          );
+                        }),
+                        ...business.tags.map((tag) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF00A651).withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: const Color(0xFF00A651).withValues(alpha: 0.2),
+                                width: 1,
+                              ),
+                            ),
+                            child: Text(
+                              tag,
+                              style: const TextStyle(
+                                color: Color(0xFF00A651),
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          );
+                        }),
+                      ],
                     ),
                   ],
 

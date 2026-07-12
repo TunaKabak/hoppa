@@ -526,24 +526,66 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                                       size: 14,
                                     ),
                                     const SizedBox(width: 2),
-                                    Text(
-                                      widget.shop.reviewCount == 0
-                                          ? "Değerlendirme Yok • Min: ₺${widget.shop.minBasketAmount.toStringAsFixed(0)} • Teslimat: ₺${widget.shop.baseDeliveryFee.toStringAsFixed(0)} • ${widget.shop.openingTime}-${widget.shop.closingTime}"
-                                          : "${widget.shop.averageRating.toStringAsFixed(1)} (${widget.shop.reviewCount}) • Min: ₺${widget.shop.minBasketAmount.toStringAsFixed(0)} • Teslimat: ₺${widget.shop.baseDeliveryFee.toStringAsFixed(0)} • ${widget.shop.openingTime}-${widget.shop.closingTime}",
-                                      style: const TextStyle(
-                                        color: Colors.white70,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        shadows: [
-                                          Shadow(
-                                            color: Colors.black45,
-                                            offset: Offset(0, 1),
-                                            blurRadius: 2,
-                                          ),
-                                        ],
+                                    Expanded(
+                                      child: Text(
+                                        widget.shop.reviewCount == 0
+                                            ? "Değerlendirme Yok • Min: ₺${widget.shop.minBasketAmount.toStringAsFixed(0)} • Teslimat: ₺${widget.shop.baseDeliveryFee.toStringAsFixed(0)} • ${widget.shop.openingTime}-${widget.shop.closingTime}"
+                                            : "${widget.shop.averageRating.toStringAsFixed(1)} (${widget.shop.reviewCount}) • Min: ₺${widget.shop.minBasketAmount.toStringAsFixed(0)} • Teslimat: ₺${widget.shop.baseDeliveryFee.toStringAsFixed(0)} • ${widget.shop.openingTime}-${widget.shop.closingTime}",
+                                        style: const TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          shadows: [
+                                            Shadow(
+                                              color: Colors.black45,
+                                              offset: Offset(0, 1),
+                                              blurRadius: 2,
+                                            ),
+                                          ],
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
                                   ],
+                                ),
+                                const SizedBox(height: 4),
+                                Wrap(
+                                  spacing: 4,
+                                  runSpacing: 2,
+                                  children: widget.shop.allowedFulfillmentModels.map((model) {
+                                    String label = "";
+                                    Color badgeColor = Colors.blue;
+                                    if (model == 'PLATFORM_DELIVERY') {
+                                      label = "Hoppa Kuryesi";
+                                      badgeColor = const Color(0xFF00A651);
+                                    } else if (model == 'SELF_DELIVERY') {
+                                      label = "Esnaf Teslimatı";
+                                      badgeColor = Colors.orange;
+                                    } else if (model == 'PICKUP') {
+                                      label = "Gel-Al";
+                                      badgeColor = Colors.purple;
+                                    }
+                                    if (label.isEmpty) return const SizedBox.shrink();
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black45,
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(
+                                          color: badgeColor.withValues(alpha: 0.5),
+                                          width: 0.5,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        label,
+                                        style: TextStyle(
+                                          color: badgeColor,
+                                          fontSize: 8,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
                                 ),
                               ],
                             ),

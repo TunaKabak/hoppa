@@ -8,6 +8,7 @@ import 'package:core_shared/shared/models/address.dart';
 import 'package:core_shared/shared/core/data/kktc_districts.dart';
 import 'package:consumer_app/apps/consumer/providers/consumer_location_controller.dart';
 import 'package:core_auth/core_auth.dart';
+import 'package:provider/provider.dart' as p;
 
 class AddAddressPage extends ConsumerStatefulWidget {
   final Address? addressToEdit; // Düzenlenecek adres (Opsiyonel)
@@ -30,6 +31,8 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
   bool _isLoading = false;
   bool _isLocationGetting = false;
   bool _isSatellite = false;
+  bool _isLocationVerified = false;
+  bool _isDragging = false;
   double _latitude = 35.1856; // Default: Nicosia
   double _longitude = 33.3823;
 
@@ -40,6 +43,7 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
   @override
   void initState() {
     super.initState();
+    _isLocationVerified = widget.addressToEdit != null;
 
     // EĞER DÜZENLEME MODUYSA VERİLERİ DOLDUR
     if (widget.addressToEdit != null) {
@@ -84,7 +88,6 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
           _latitude = result.latitude;
           _longitude = result.longitude;
           
-          // Dropdown Mismatch Protection (Safe Assignment)
           if (_cities.contains(result.city)) {
             _selectedCity = result.city;
             if (kKktcDistricts[result.city]!.contains(result.district)) {
@@ -144,7 +147,6 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
           }
         }
 
-        // Apply Unnamed Road filtering
         String street = place.thoroughfare ?? '';
         String number = place.subThoroughfare ?? '';
         if (street.toLowerCase().contains("unnamed road")) {
@@ -166,10 +168,7 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
               _detailsController.text = "$street $number".trim();
             }
           }
-
-          debugPrint("📍 ADRES ÇÖZÜMLENDİ: $foundCity, $street");
         } else {
-          // Dropdown Mismatch Protection
           if (mounted) {
             setState(() {
               _selectedCity = null;
@@ -204,7 +203,6 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
 
       Address savedAddress;
       if (isGuest) {
-        // Guest mode bypasses backend
         savedAddress = Address(
           id: widget.addressToEdit?.id ?? 'guest_${DateTime.now().millisecondsSinceEpoch}',
           title: _titleController.text,
@@ -216,7 +214,7 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
         );
       } else {
         final addressData = Address(
-          id: widget.addressToEdit?.id ?? '', // Eğer düzenleme ise ID'yi koru
+          id: widget.addressToEdit?.id ?? '',
           title: _titleController.text,
           city: _selectedCity!,
           district: _selectedDistrict!,
@@ -227,17 +225,15 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
 
         final repo = ref.read(addressRepositoryProvider);
         if (widget.addressToEdit != null) {
-          // GÜNCELLEME
           savedAddress = await repo.updateAddress(addressData);
         } else {
-          // YENİ EKLEME
           savedAddress = await repo.createAddress(addressData);
         }
         ref.invalidate(addressesProvider);
       }
 
       if (mounted) {
-        Navigator.pop(context, savedAddress); // Güncellenen datayı geri dön
+        Navigator.pop(context, savedAddress);
       }
     } catch (e) {
       if (mounted) {
@@ -277,79 +273,93 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
         centerTitle: true,
         leading: const BackButton(),
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // --- HARİTA ---
-            SizedBox(
-              height: 250,
-              width: double.infinity,
-              child: Stack(
-                children: [
-                  FlutterMap(
-                    mapController: _mapController,
-                    options: MapOptions(
-                      initialCenter: LatLng(_latitude, _longitude),
-                      initialZoom: 15.0,
-                      onPositionChanged: (position, hasGesture) {
-                        if (hasGesture) {
-                          _latitude = position.center.latitude;
-                          _longitude = position.center.longitude;
-                        }
-                      },
-                      onMapEvent: (event) {
-                        if (event is MapEventMoveEnd &&
-                            event.source != MapEventSource.mapController) {
+      body: Column(
+        children: [
+          // --- HARİTA BÖLÜMÜ ---
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            height: _isLocationVerified ? 180 : (MediaQuery.of(context).size.height - 250),
+            width: double.infinity,
+            child: Stack(
+              children: [
+                FlutterMap(
+                  mapController: _mapController,
+                  options: MapOptions(
+                    initialCenter: LatLng(_latitude, _longitude),
+                    initialZoom: 15.0,
+                    interactionOptions: InteractionOptions(
+                      flags: _isLocationVerified
+                          ? InteractiveFlag.none
+                          : InteractiveFlag.all,
+                    ),
+                    onPositionChanged: (position, hasGesture) {
+                      if (hasGesture) {
+                        _latitude = position.center.latitude;
+                        _longitude = position.center.longitude;
+                      }
+                    },
+                    onMapEvent: (event) {
+                      if (event is MapEventMoveStart) {
+                        setState(() {
+                          _isDragging = true;
+                        });
+                      } else if (event is MapEventMoveEnd) {
+                        setState(() {
+                          _isDragging = false;
+                        });
+                        if (event.source != MapEventSource.mapController) {
                           _resolveAddress(
                             event.camera.center.latitude,
                             event.camera.center.longitude,
                           );
                         }
-                      },
-                    ),
-                    children: [
-                      TileLayer(
-                        urlTemplate: _isSatellite
-                            ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-                            : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.kktc.market',
-                      ),
-                      // Marker Layer KALDIRILDI, yerine Stack içinde sabit ikon var
-                    ],
+                      }
+                    },
                   ),
-                  // ORTA NOKTA PİNİ
-                  const Center(
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        bottom: 40,
-                      ), // Pinin ucu merkeze gelsin diye yukarı kaydırıyoruz
-                      child: Icon(
-                        Icons.location_on,
-                        color: Colors.red,
-                        size: 50,
-                      ),
+                  children: [
+                    TileLayer(
+                      urlTemplate: _isSatellite
+                          ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+                          : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName: 'com.kktc.market',
+                    ),
+                  ],
+                ),
+                // ANIMATED CENTER PIN
+                Center(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    curve: Curves.easeOut,
+                    transform: Matrix4.translationValues(0, _isDragging ? -35 : -20, 0),
+                    child: const Icon(
+                      Icons.location_on,
+                      color: Colors.red,
+                      size: 50,
                     ),
                   ),
-                  // Katman Seçim Butonu
+                ),
+                // Katman Seçim Butonu
+                Positioned(
+                  top: 16,
+                  right: 16,
+                  child: FloatingActionButton.small(
+                    heroTag: "btn_map_layer",
+                    backgroundColor: Colors.white,
+                    onPressed: () {
+                      setState(() {
+                        _isSatellite = !_isSatellite;
+                      });
+                    },
+                    child: Icon(
+                      _isSatellite ? Icons.map_outlined : Icons.satellite_alt_outlined,
+                      color: theme.primaryColor,
+                    ),
+                  ),
+                ),
+                if (!_isLocationVerified)
                   Positioned(
-                    top: 16,
-                    right: 16,
-                    child: FloatingActionButton.small(
-                      heroTag: "btn_map_layer",
-                      backgroundColor: Colors.white,
-                      onPressed: () {
-                        setState(() {
-                          _isSatellite = !_isSatellite;
-                        });
-                      },
-                      child: Icon(
-                        _isSatellite ? Icons.map_outlined : Icons.satellite_alt_outlined,
-                        color: theme.primaryColor,
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 50,
+                    bottom: 16,
                     right: 16,
                     child: FloatingActionButton(
                       heroTag: "btn_location",
@@ -365,266 +375,275 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
                           : Icon(Icons.my_location, color: theme.primaryColor),
                     ),
                   ),
-                ],
-              ),
+              ],
             ),
+          ),
 
-            // --- FORM ---
-            Transform.translate(
-              offset: const Offset(0, -20),
-              child: Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8F9FA),
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(24),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, -5),
-                    ),
-                  ],
-                ),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        "Adres Başlığı",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
+          // --- ALT BÖLÜM: FORM VEYA DOĞRULAMA BUTONU ---
+          Expanded(
+            child: _isLocationVerified
+                ? SingleChildScrollView(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF8F9FA),
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(24),
                         ),
                       ),
-                      const SizedBox(height: 12),
-
-                      // Title Chips
-                      Row(
-                        children: _quickTitles.map((title) {
-                          final isSelected = _selectedQuickTitle == title;
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: FilterChip(
-                              label: Text(title),
-                              selected: isSelected,
-                              selectedColor: theme.primaryColor.withValues(alpha: 
-                                0.2,
-                              ),
-                              checkmarkColor: theme.primaryColor,
-                              labelStyle: TextStyle(
-                                color: isSelected
-                                    ? theme.primaryColor
-                                    : Colors.black87,
-                                fontWeight: isSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                              ),
-                              onSelected: (_) => _selectQuickTitle(title),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                                side: BorderSide(
-                                  color: isSelected
-                                      ? theme.primaryColor
-                                      : Colors.grey.shade300,
-                                ),
-                              ),
-                              showCheckmark: false,
-                              avatar: isSelected
-                                  ? Icon(
-                                      Icons.check,
-                                      size: 16,
-                                      color: theme.primaryColor,
-                                    )
-                                  : null,
-                            ),
-                          );
-                        }).toList(),
-                      ),
-
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _titleController,
-                        decoration: InputDecoration(
-                          hintText: "Örn: Evim, İş Yerim",
-                          border: theme.inputDecorationTheme.border,
-                          enabledBorder:
-                              theme.inputDecorationTheme.enabledBorder,
-                          focusedBorder:
-                              theme.inputDecorationTheme.focusedBorder,
-                          filled: true,
-                          fillColor: Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 14,
-                          ),
-                        ),
-                        validator: (v) => v!.isEmpty ? "Başlık giriniz" : null,
-                        onChanged: (val) {
-                          if (!_quickTitles.contains(val)) {
-                            setState(() => _selectedQuickTitle = '');
-                          }
-                        },
-                      ),
-
-                      const SizedBox(height: 24),
-                      const Text(
-                        "Lokasyon Bilgileri",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton<String>(
-                                  isExpanded: true,
-                                  value: _selectedCity,
-                                  hint: const Text("Şehir"),
-                                  items: _cities
-                                      .map(
-                                        (city) => DropdownMenuItem(
-                                          value: city,
-                                          child: Text(city),
-                                        ),
-                                      )
-                                      .toList(),
-                                  onChanged: (val) {
-                                    if (val != null) {
-                                      setState(() {
-                                        _selectedCity = val;
-                                        _selectedDistrict =
-                                            kKktcDistricts[val]!.first;
-                                      });
-                                    }
-                                  },
-                                ),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "Adres Başlığı",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: DropdownButtonHideUnderline(
-                                  child: DropdownButton<String>(
-                                    isExpanded: true,
-                                    value: _selectedDistrict,
-                                    hint: const Text("Bölge"),
-                                    items: _selectedCity == null
-                                        ? []
-                                        : (List<String>.from(kKktcDistricts[_selectedCity]!)..sort())
-                                            .map(
-                                              (dist) => DropdownMenuItem(
-                                                value: dist,
-                                                child: Text(dist),
-                                              ),
-                                            )
-                                            .toList(),
-                                    onChanged: _selectedCity == null
-                                        ? null
-                                        : (val) => setState(() => _selectedDistrict = val),
+                            const SizedBox(height: 12),
+
+                            Row(
+                              children: _quickTitles.map((title) {
+                                final isSelected = _selectedQuickTitle == title;
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: FilterChip(
+                                    label: Text(title),
+                                    selected: isSelected,
+                                    selectedColor: theme.primaryColor.withValues(alpha: 0.2),
+                                    checkmarkColor: theme.primaryColor,
+                                    labelStyle: TextStyle(
+                                      color: isSelected
+                                          ? theme.primaryColor
+                                          : Colors.black87,
+                                      fontWeight: isSelected
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                    ),
+                                    onSelected: (_) => _selectQuickTitle(title),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(20),
+                                      side: BorderSide(
+                                        color: isSelected
+                                            ? theme.primaryColor
+                                            : Colors.grey.shade300,
+                                      ),
+                                    ),
+                                    showCheckmark: false,
+                                    avatar: isSelected
+                                        ? Icon(
+                                            Icons.check,
+                                            size: 16,
+                                            color: theme.primaryColor,
+                                          )
+                                        : null,
                                   ),
+                                );
+                              }).toList(),
+                            ),
+
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              controller: _titleController,
+                              decoration: InputDecoration(
+                                hintText: "Örn: Evim, İş Yerim",
+                                border: theme.inputDecorationTheme.border,
+                                enabledBorder: theme.inputDecorationTheme.enabledBorder,
+                                focusedBorder: theme.inputDecorationTheme.focusedBorder,
+                                filled: true,
+                                fillColor: Colors.white,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 14,
+                                ),
+                              ),
+                              validator: (v) => v!.isEmpty ? "Başlık giriniz" : null,
+                              onChanged: (val) {
+                                if (!_quickTitles.contains(val)) {
+                                  setState(() => _selectedQuickTitle = '');
+                                }
+                              },
+                            ),
+
+                            const SizedBox(height: 24),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  "Lokasyon Bilgileri",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                TextButton.icon(
+                                  onPressed: () {
+                                    setState(() {
+                                      _isLocationVerified = false;
+                                    });
+                                  },
+                                  icon: const Icon(Icons.edit_location_alt_outlined, size: 16),
+                                  label: const Text(
+                                    "Konumu Değiştir",
+                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                  ),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: theme.primaryColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: Colors.grey.shade300),
+                                    ),
+                                    child: DropdownButtonHideUnderline(
+                                      child: DropdownButton<String>(
+                                        isExpanded: true,
+                                        value: _selectedCity,
+                                        hint: const Text("Şehir"),
+                                        items: _cities.map((city) => DropdownMenuItem(value: city, child: Text(city))).toList(),
+                                        onChanged: (val) {
+                                          if (val != null) {
+                                            setState(() {
+                                              _selectedCity = val;
+                                              _selectedDistrict = kKktcDistricts[val]!.first;
+                                            });
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: Colors.grey.shade300),
+                                    ),
+                                    child: DropdownButtonHideUnderline(
+                                      child: DropdownButton<String>(
+                                        isExpanded: true,
+                                        value: _selectedDistrict,
+                                        hint: const Text("Bölge"),
+                                        items: _selectedCity == null
+                                            ? []
+                                            : (List<String>.from(kKktcDistricts[_selectedCity]!)..sort())
+                                                .map((dist) => DropdownMenuItem(value: dist, child: Text(dist)))
+                                                .toList(),
+                                        onChanged: _selectedCity == null
+                                            ? null
+                                            : (val) => setState(() => _selectedDistrict = val),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _detailsController,
+                              maxLines: 3,
+                              decoration: InputDecoration(
+                                hintText: "Sokak adı, bina no, daire no ve tarif...",
+                                border: theme.inputDecorationTheme.border,
+                                enabledBorder: theme.inputDecorationTheme.enabledBorder,
+                                focusedBorder: theme.inputDecorationTheme.focusedBorder,
+                                filled: true,
+                                fillColor: Colors.white,
+                                contentPadding: const EdgeInsets.all(16),
+                                suffixIcon: null,
+                              ),
+                              validator: (v) => v!.isEmpty ? "Adres detayı giriniz" : null,
+                            ),
+
+                            const SizedBox(height: 32),
+
+                            SizedBox(
+                              width: double.infinity,
+                              height: 56,
+                              child: ElevatedButton(
+                                onPressed: _isLoading ? null : _saveAddress,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: theme.primaryColor,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  elevation: 4,
+                                  shadowColor: theme.primaryColor.withValues(alpha: 0.4),
+                                ),
+                                child: _isLoading
+                                    ? const CircularProgressIndicator(color: Colors.white)
+                                    : Text(
+                                        isEditing ? "Değişiklikleri Kaydet" : "Adresi Kaydet",
+                                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                      ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )
+                : Container(
+                    padding: const EdgeInsets.all(24),
+                    color: Colors.white,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text(
+                            "İşaretçi pinini tam adresinizin üzerine getirin.",
+                            style: TextStyle(color: Colors.black54, fontSize: 14, fontWeight: FontWeight.w500),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 56,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                setState(() {
+                                  _isLocationVerified = true;
+                                });
+                              },
+                              style: ElevatedButton.styleFrom(
+                                  backgroundColor: theme.primaryColor,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  elevation: 4,
+                                  shadowColor: theme.primaryColor.withValues(alpha: 0.3),
+                              ),
+                              child: const Text(
+                                "Konumu Doğrula",
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                               ),
                             ),
                           ),
                         ],
                       ),
-
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _detailsController,
-                        maxLines: 3,
-                        decoration: InputDecoration(
-                          hintText: "Sokak adı, bina no, daire no ve tarif...",
-                          border: theme.inputDecorationTheme.border,
-                          enabledBorder:
-                              theme.inputDecorationTheme.enabledBorder,
-                          focusedBorder:
-                              theme.inputDecorationTheme.focusedBorder,
-                          filled: true,
-                          fillColor: Colors.white,
-                          contentPadding: const EdgeInsets.all(16),
-                          suffixIcon: _isLocationGetting
-                              ? const SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child: Padding(
-                                    padding: EdgeInsets.all(12.0),
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  ),
-                                )
-                              : IconButton(
-                                  icon: const Icon(Icons.my_location),
-                                  onPressed: _fetchAndSetLocation,
-                                  tooltip: "Konumumu Bul",
-                                  color: theme.primaryColor,
-                                ),
-                        ),
-                        validator: (v) =>
-                            v!.isEmpty ? "Adres detayı giriniz" : null,
-                      ),
-
-                      const SizedBox(height: 32),
-
-                      SizedBox(
-                        width: double.infinity,
-                        height: 56,
-                        child: ElevatedButton(
-                          onPressed: _isLoading ? null : _saveAddress,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: theme.primaryColor,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            elevation: 4,
-                            shadowColor: theme.primaryColor.withValues(alpha: 0.4),
-                          ),
-                          child: _isLoading
-                              ? const CircularProgressIndicator(
-                                  color: Colors.white,
-                                )
-                              : Text(
-                                  isEditing
-                                      ? "Değişiklikleri Kaydet"
-                                      : "Adresi Kaydet",
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

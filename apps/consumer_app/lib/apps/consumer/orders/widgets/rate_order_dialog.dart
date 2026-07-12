@@ -86,198 +86,208 @@ class _RateOrderDialogState extends ConsumerState<RateOrderDialog> {
   Widget build(BuildContext context) {
     const brandGreen = Color(0xFF00A651);
 
-    return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20.0),
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(24.0),
+        ),
       ),
-      elevation: 8,
+      padding: EdgeInsets.only(
+        top: 12,
+        left: 24,
+        right: 24,
+        bottom: 24 + MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Header Icon & Text
-              Center(
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: brandGreen.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.rate_review_outlined,
-                    color: brandGreen,
-                    size: 36,
-                  ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const SizedBox(height: 16),
-              const Text(
-                "Siparişi Değerlendir",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+            ),
+            Center(
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: brandGreen.withAlpha(26), // equivalent to withOpacity(0.1) but avoids precision warnings
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.rate_review_outlined,
+                  color: brandGreen,
+                  size: 36,
                 ),
               ),
-              const SizedBox(height: 8),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              "Siparişi Değerlendir",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              "Deneyiminizi detaylı olarak puanlayarak bize yardımcı olabilirsiniz.",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            const Text(
+              "Genel Deneyiminiz",
+              textAlign: TextAlign.center,
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(5, (index) {
+                final starIndex = index + 1;
+                final isSelected = starIndex <= _selectedRating;
+                
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedRating = starIndex;
+                    });
+                  },
+                  child: AnimatedScale(
+                    scale: isSelected ? 1.2 : 1.0,
+                    duration: const Duration(milliseconds: 150),
+                    curve: Curves.easeOutBack,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                      child: Icon(
+                        isSelected ? Icons.star_rounded : Icons.star_outline_rounded,
+                        color: isSelected ? Colors.amber[600] : Colors.grey[400],
+                        size: 40,
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 8),
+
+            _buildSubRatingRow("Servis Kalitesi", _selectedServiceRating, (val) {
+              setState(() => _selectedServiceRating = val);
+            }),
+            _buildSubRatingRow("Teslimat Hızı", _selectedSpeedRating, (val) {
+              setState(() => _selectedSpeedRating = val);
+            }),
+            if (_hasTasteRating)
+              _buildSubRatingRow("Lezzet", _selectedTasteRating, (val) {
+                setState(() => _selectedTasteRating = val);
+              }),
+
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 16),
+
+            TextField(
+              controller: _commentController,
+              maxLength: 500,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: "Yorumunuzu buraya yazabilirsiniz (İsteğe bağlı)...",
+                hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey[300]!),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: brandGreen, width: 1.5),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
+            ),
+
+            if (_errorMessage != null) ...[
+              const SizedBox(height: 12),
               Text(
-                "Deneyiminizi detaylı olarak puanlayarak bize yardımcı olabilirsiniz.",
+                _errorMessage!,
+                style: const TextStyle(color: Colors.red, fontSize: 12),
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey[600],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Genel Puan Başlığı
-              const Text(
-                "Genel Deneyiminiz",
-                textAlign: TextAlign.center,
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-              ),
-              const SizedBox(height: 8),
-
-              // Interactive Stars Row (Genel Puan)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(5, (index) {
-                  final starIndex = index + 1;
-                  final isSelected = starIndex <= _selectedRating;
-                  
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _selectedRating = starIndex;
-                      });
-                    },
-                    child: AnimatedScale(
-                      scale: isSelected ? 1.2 : 1.0,
-                      duration: const Duration(milliseconds: 150),
-                      curve: Curves.easeOutBack,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                        child: Icon(
-                          isSelected ? Icons.star_rounded : Icons.star_outline_rounded,
-                          color: isSelected ? Colors.amber[600] : Colors.grey[400],
-                          size: 40,
-                        ),
-                      ),
-                    ),
-                  );
-                }),
-              ),
-              const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 8),
-
-              // Detaylı Puanlama Satırları
-              _buildSubRatingRow("Servis Kalitesi", _selectedServiceRating, (val) {
-                setState(() => _selectedServiceRating = val);
-              }),
-              _buildSubRatingRow("Teslimat Hızı", _selectedSpeedRating, (val) {
-                setState(() => _selectedSpeedRating = val);
-              }),
-              if (_hasTasteRating)
-                _buildSubRatingRow("Lezzet", _selectedTasteRating, (val) {
-                  setState(() => _selectedTasteRating = val);
-                }),
-
-              const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 16),
-
-              // Comment Field
-              TextField(
-                controller: _commentController,
-                maxLength: 500,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: "Yorumunuzu buraya yazabilirsiniz (İsteğe bağlı)...",
-                  hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey[300]!),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: brandGreen, width: 1.5),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                ),
-              ),
-
-              if (_errorMessage != null) ...[
-                const SizedBox(height: 12),
-                Text(
-                  _errorMessage!,
-                  style: const TextStyle(color: Colors.red, fontSize: 12),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-
-              const SizedBox(height: 20),
-
-              // Action Buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        side: BorderSide(color: Colors.grey[300]!),
-                      ),
-                      child: Text(
-                        "Kapat",
-                        style: TextStyle(color: Colors.grey[600]),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: (_selectedRating == 0 || _isSubmitting)
-                          ? null
-                          : _submitReview,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: brandGreen,
-                        foregroundColor: Colors.white,
-                        disabledBackgroundColor: Colors.grey[300],
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: _isSubmitting
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : const Text(
-                              "Gönder",
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                    ),
-                  ),
-                ],
               ),
             ],
-          ),
+
+            const SizedBox(height: 20),
+
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      side: BorderSide(color: Colors.grey[300]!),
+                    ),
+                    child: Text(
+                      "Kapat",
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: (_selectedRating == 0 || _isSubmitting)
+                        ? null
+                        : _submitReview,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: brandGreen,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: Colors.grey[300],
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: _isSubmitting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text(
+                            "Gönder",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

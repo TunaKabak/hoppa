@@ -50,6 +50,10 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
   bool _supportsOnline = true;
   bool _supportsCash = true;
   bool _supportsCard = true;
+
+  bool _supportsPlatformDelivery = true;
+  bool _supportsSelfDelivery = false;
+  bool _supportsPickup = true;
   
   final List<String> _deliveryTimeOptions = ['15-30 dk', '30-45 dk', '45-60 dk', '60+ dk'];
   // Delivery Radius & Polygon
@@ -212,6 +216,11 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
     _supportsOnline = allowed.contains('ONLINE_PAYMENT');
     _supportsCash = allowed.contains('CASH_ON_DELIVERY');
     _supportsCard = allowed.contains('CARD_ON_DELIVERY');
+
+    final allowedModels = shop.allowedFulfillmentModels ?? ['PLATFORM_DELIVERY', 'PICKUP'];
+    _supportsPlatformDelivery = allowedModels.contains('PLATFORM_DELIVERY');
+    _supportsSelfDelivery = allowedModels.contains('SELF_DELIVERY');
+    _supportsPickup = allowedModels.contains('PICKUP');
     
     if (_deliveryTimeOptions.contains(shop.deliveryTime)) {
       _selectedDeliveryTime = shop.deliveryTime!;
@@ -323,6 +332,16 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
       return;
     }
 
+    if (!_supportsPlatformDelivery && !_supportsSelfDelivery && !_supportsPickup) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("En az bir teslimat/hizmet yöntemi kabul edilmelidir."),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     final combinedAddress = [
       _addressController.text.trim(),
       _districtController.text.trim(),
@@ -354,6 +373,11 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
           if (_supportsOnline) 'ONLINE_PAYMENT',
           if (_supportsCash) 'CASH_ON_DELIVERY',
           if (_supportsCard) 'CARD_ON_DELIVERY',
+        ],
+        'allowedFulfillmentModels': [
+          if (_supportsPlatformDelivery) 'PLATFORM_DELIVERY',
+          if (_supportsSelfDelivery) 'SELF_DELIVERY',
+          if (_supportsPickup) 'PICKUP',
         ],
       });
 
@@ -761,6 +785,42 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
             onChanged: (val) {
               setState(() {
                 _supportsCard = val;
+              });
+            },
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            "Teslimat ve Hizmet Seçenekleri",
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            title: const Text("Hoppa Kuryesi (Platform Teslimatı)"),
+            subtitle: const Text("Siparişleri bağımsız Hoppa kuryeleri taşır. Kuryesi olmayan işletmeler için idealdir."),
+            value: _supportsPlatformDelivery,
+            onChanged: (val) {
+              setState(() {
+                _supportsPlatformDelivery = val;
+              });
+            },
+          ),
+          SwitchListTile(
+            title: const Text("İşletme Kuryesi (Esnaf Teslimatı)"),
+            subtitle: const Text("Siparişleri kendi moto-kurye ekibiniz veya kuryeleriniz taşır."),
+            value: _supportsSelfDelivery,
+            onChanged: (val) {
+              setState(() {
+                _supportsSelfDelivery = val;
+              });
+            },
+          ),
+          SwitchListTile(
+            title: const Text("Gel-Al (Müşteri Alımı)"),
+            subtitle: const Text("Müşteriler siparişi uygulama üzerinden verip dükkandan kendileri teslim alır."),
+            value: _supportsPickup,
+            onChanged: (val) {
+              setState(() {
+                _supportsPickup = val;
               });
             },
           ),
