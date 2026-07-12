@@ -17,7 +17,7 @@ export class OrderController {
         return res.status(401).json({ error: true, message: "Kullanıcı bilgisi eksik veya yetkisiz." });
       }
 
-      const { shopId, items, deliveryAddress, addressId, notes, paymentMethod, cardDetails, dontRingBell, leaveAtDoor } = req.body;
+      const { shopId, items, deliveryAddress, addressId, notes, paymentMethod, cardDetails, dontRingBell, leaveAtDoor, fulfillmentModel } = req.body;
 
       if (!shopId) {
         return res.status(400).json({ error: true, message: "Dükkan bilgisi (shopId) zorunludur." });
@@ -49,6 +49,16 @@ export class OrderController {
             message: `Bu işletme seçtiğiniz ödeme yöntemini (${paymentMethod}) kabul etmemektedir.`
           });
         }
+      }
+
+      // Teslimat Tipi (Fulfillment Model) Kontrolü
+      const chosenFulfillment = fulfillmentModel || "PLATFORM_DELIVERY";
+      const shopAllowedModels = (shop as any).allowedFulfillmentModels || ["PLATFORM_DELIVERY", "PICKUP"];
+      if (!shopAllowedModels.includes(chosenFulfillment)) {
+        return res.status(400).json({
+          error: true,
+          message: `Bu işletme seçtiğiniz teslimat/hizmet yöntemini (${chosenFulfillment}) desteklememektedir.`
+        });
       }
 
       // GMT+3 Zaman Dilimi Kontrolü
@@ -245,6 +255,7 @@ export class OrderController {
 
         // Backend Delivery Fee Calculation via Campaign Engine
         const deliveryResult = await campaignService.calculateDeliveryFee(consumerId, shop, totalAmount);
+        const finalDeliveryFee = chosenFulfillment === "PICKUP" ? 0 : deliveryResult.fee;
 
         const createdOrder = await tx.order.create({
           data: {
@@ -253,8 +264,9 @@ export class OrderController {
             addressId: finalAddressId,
             deliveryAddress: snapshotAddress, // immutable adres snapshot'ı
             totalAmount,
-            deliveryFee: deliveryResult.fee,
+            deliveryFee: finalDeliveryFee,
             status: "PENDING",
+            fulfillmentModel: chosenFulfillment as any,
             customerNote: notes || null,
             paymentMethod: method,
             paymentStatus: "PENDING",

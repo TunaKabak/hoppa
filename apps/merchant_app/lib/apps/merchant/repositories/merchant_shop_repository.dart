@@ -27,6 +27,7 @@ class MerchantShop {
   final double? freeDeliveryThreshold;
   final List<dynamic>? deliveryPolygon;
   final List<String>? allowedPaymentMethods;
+  final List<String>? allowedFulfillmentModels;
 
   MerchantShop({
     required this.id,
@@ -53,6 +54,7 @@ class MerchantShop {
     this.freeDeliveryThreshold,
     this.deliveryPolygon,
     this.allowedPaymentMethods,
+    this.allowedFulfillmentModels,
   });
 
   factory MerchantShop.fromMap(Map<String, dynamic> map) {
@@ -82,6 +84,7 @@ class MerchantShop {
       freeDeliveryThreshold: map['freeDeliveryThreshold'] != null ? (map['freeDeliveryThreshold'] as num).toDouble() : null,
       deliveryPolygon: map['deliveryPolygon'] != null ? List<dynamic>.from(map['deliveryPolygon']) : null,
       allowedPaymentMethods: map['allowedPaymentMethods'] != null ? List<String>.from(map['allowedPaymentMethods']) : null,
+      allowedFulfillmentModels: map['allowedFulfillmentModels'] != null ? List<String>.from(map['allowedFulfillmentModels']) : null,
     );
   }
 
@@ -109,6 +112,7 @@ class MerchantShop {
       'freeDeliveryThreshold': freeDeliveryThreshold,
       'deliveryPolygon': deliveryPolygon,
       'allowedPaymentMethods': allowedPaymentMethods,
+      'allowedFulfillmentModels': allowedFulfillmentModels,
     };
   }
 }

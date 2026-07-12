@@ -59,7 +59,7 @@ export class ShopController {
         deliveryRadiusKm, deliveryPolygon, workingHours, minOrderAmount, minimumOrderAmount, imageUrl, headerImageUrl,
         taxNumber, businessPhone, identityNumber,
         deliveryPricingType, baseDeliveryFee, deliveryFeePerKm, freeDeliveryThreshold, deliveryTime,
-        allowedPaymentMethods
+        allowedPaymentMethods, allowedFulfillmentModels
       } = req.body;
 
       if (allowedPaymentMethods !== undefined) {
@@ -70,6 +70,18 @@ export class ShopController {
         for (const m of allowedPaymentMethods) {
           if (!validMethods.includes(m)) {
             return res.status(400).json({ error: true, message: `Geçersiz ödeme yöntemi: ${m}` });
+          }
+        }
+      }
+
+      if (allowedFulfillmentModels !== undefined) {
+        if (!Array.isArray(allowedFulfillmentModels) || allowedFulfillmentModels.length === 0) {
+          return res.status(400).json({ error: true, message: "En az bir teslimat/hizmet yöntemi kabul edilmelidir." });
+        }
+        const validModels = ["PLATFORM_DELIVERY", "SELF_DELIVERY", "PICKUP"];
+        for (const m of allowedFulfillmentModels) {
+          if (!validModels.includes(m)) {
+            return res.status(400).json({ error: true, message: `Geçersiz teslimat yöntemi: ${m}` });
           }
         }
       }
@@ -101,6 +113,7 @@ export class ShopController {
           headerImageUrl,
           taxNumber,
           allowedPaymentMethods,
+          allowedFulfillmentModels,
           ...(Object.keys(merchantUpdate).length > 0 ? {
             merchant: {
               update: merchantUpdate
