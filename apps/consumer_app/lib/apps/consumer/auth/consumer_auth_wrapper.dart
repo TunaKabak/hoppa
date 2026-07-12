@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 import 'package:core_auth/core_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:consumer_app/apps/consumer/auth/consumer_login_page.dart';
 import 'package:consumer_app/apps/consumer/main_layout/main_layout_page.dart';
 import 'package:consumer_app/apps/consumer/address/delivery_provider.dart';
 import 'package:consumer_app/apps/consumer/providers/consumer_location_controller.dart';
@@ -35,13 +34,7 @@ class ConsumerAuthWrapper extends ConsumerWidget {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    if (authState is AuthAuthenticated) {
-      // Başarıyla giriş yapıldı, JWT token elimizde.
-      return const MainLayoutPage();
-    }
-
-    // Diğer tüm durumlarda (AuthInitial, AuthError vs.) login ekranı gösteriliyor
-    // (Böylece OtpVerifyPage gibi Navigator katmanları poplandığında en altta doğru durumla karşılaşılır)
-    return const LoginPage();
+    // Hem giriş yapmış olan hem de giriş yapmamış (guest) kullanıcıları MainLayoutPage'e yönlendiriyoruz.
+    return const MainLayoutPage();
   }
 }

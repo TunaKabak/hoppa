@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:provider/provider.dart' as p;
+import 'package:google_fonts/google_fonts.dart';
+import 'package:core_shared/shared/models/business.dart';
+import 'package:core_shared/shared/models/business_type.dart';
 import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository.dart';
 import 'package:consumer_app/apps/consumer/home/widgets/modern_product_card.dart';
 import 'package:core_shared/shared/core/services/navigation_provider.dart';
@@ -58,6 +61,29 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     super.dispose();
   }
 
+  String _getCategoryNameFromShopType(BusinessType type) {
+    switch (type) {
+      case BusinessType.restaurant:
+        return 'Restoran';
+      case BusinessType.market:
+        return 'Market';
+      case BusinessType.water:
+        return 'Su';
+      case BusinessType.florist:
+        return 'Çiçek';
+      case BusinessType.greengrocer:
+        return 'Manav';
+      case BusinessType.butcher:
+        return 'Kasap';
+      case BusinessType.nuts:
+        return 'Kuruyemiş';
+      case BusinessType.cafe:
+        return 'Kahve';
+      default:
+        return 'Market';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -73,7 +99,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           focusNode: _focusNode,
           autofocus: true,
           decoration: InputDecoration(
-            hintText: 'Ürün, kategori veya marka ara...',
+            hintText: 'Ürün, kategori veya dükkan ara...',
             hintStyle: TextStyle(color: Colors.grey.shade400),
             border: InputBorder.none,
           ),
@@ -112,15 +138,6 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     final businessProvider = p.Provider.of<BusinessProvider>(context, listen: false);
     final selectedBusiness = businessProvider.selectedBusiness;
 
-    if (selectedBusiness == null) {
-      return const Center(
-        child: Text(
-          "Lütfen önce bir işletme seçin.",
-          style: TextStyle(color: Colors.grey, fontSize: 16),
-        ),
-      );
-    }
-
     if (_query.isEmpty) {
       return Center(
         child: Column(
@@ -137,18 +154,84 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       );
     }
 
-    final productsAsync = ref.watch(filteredShopProductsProvider(selectedBusiness.id));
+    // --- CASE 1: BUSINESS SELECTED (Search inside business catalog) ---
+    if (selectedBusiness != null) {
+      final productsAsync = ref.watch(filteredShopProductsProvider(selectedBusiness.id));
 
-    return productsAsync.when(
+      return productsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) => const Center(
+          child: Text(
+            "Ürünler yüklenirken bir hata oluştu.",
+            style: TextStyle(color: Colors.red),
+          ),
+        ),
+        data: (results) {
+          if (results.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.search_off, size: 80, color: Colors.grey.shade200),
+                  const SizedBox(height: 16),
+                  const Text(
+                    "Sonuç bulunamadı.",
+                    style: TextStyle(color: Colors.grey, fontSize: 16),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: results.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final product = results[index];
+
+              return SizedBox(
+                height: 120,
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            ProductDetailPage(businessProduct: product),
+                      ),
+                    );
+                  },
+                  child: ModernProductCard(
+                    businessProduct: product,
+                    isListView: true,
+                    campaign: null,
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      );
+    }
+
+    // --- CASE 2: GLOBAL SEARCH (Search categories, shops, and products globally) ---
+    final searchAsync = ref.watch(globalSearchProvider);
+
+    return searchAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (err, stack) => const Center(
         child: Text(
-          "Ürünler yüklenirken bir hata oluştu.",
+          "Arama sonuçları yüklenirken bir hata oluştu.",
           style: TextStyle(color: Colors.red),
         ),
       ),
       data: (results) {
-        if (results.isEmpty) {
+        final hasCats = results.categories.isNotEmpty;
+        final hasShops = results.shops.isNotEmpty;
+        final hasProds = results.products.isNotEmpty;
+
+        if (!hasCats && !hasShops && !hasProds) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -164,33 +247,188 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           );
         }
 
-        return ListView.separated(
+        return ListView(
           padding: const EdgeInsets.all(16),
-          itemCount: results.length,
-          separatorBuilder: (context, index) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            final product = results[index];
+          children: [
+            // 1. KATEGORİLER
+            if (hasCats) ...[
+              Text(
+                "Kategoriler",
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 48,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: results.categories.length,
+                  separatorBuilder: (context, index) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final cat = results.categories[index];
+                    return ActionChip(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      backgroundColor: Colors.grey.shade50,
+                      side: BorderSide(color: Colors.grey.shade200),
+                      label: Text(
+                        cat.name,
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      onPressed: () {
+                        // Kategoriye git
+                        businessProvider.setCategory(cat.name);
+                        p.Provider.of<NavigationProvider>(context, listen: false).setIndex(0);
+                      },
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
 
-            return SizedBox(
-              height: 120,
-              child: GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          ProductDetailPage(businessProduct: product),
+            // 2. İŞLETMELER
+            if (hasShops) ...[
+              Text(
+                "İşletmeler",
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 10),
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: results.shops.length,
+                separatorBuilder: (context, index) => const SizedBox(height: 10),
+                itemBuilder: (context, index) {
+                  final shop = results.shops[index];
+                  return ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(color: Colors.grey.shade100),
+                    ),
+                    tileColor: Colors.grey.shade50,
+                    leading: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        shop.logoUrl,
+                        width: 48,
+                        height: 48,
+                        fit: BoxFit.cover,
+                        errorBuilder: (c, o, s) => Container(
+                          width: 48,
+                          height: 48,
+                          color: Colors.grey.shade200,
+                          child: const Icon(Icons.store, color: Colors.grey),
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      shop.name,
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                    subtitle: Row(
+                      children: [
+                        const Icon(Icons.star, color: Colors.amber, size: 14),
+                        const SizedBox(width: 2),
+                        Text(
+                          shop.averageRating.toStringAsFixed(1),
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.access_time, color: Colors.grey, size: 13),
+                        const SizedBox(width: 2),
+                        Text(
+                          "${shop.deliveryRadius.toStringAsFixed(0)} km",
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ],
+                    ),
+                    onTap: () {
+                      // Dükkana git
+                      final String typeName = _getCategoryNameFromShopType(shop.type);
+                      businessProvider.setCategory(typeName);
+                      businessProvider.selectBusiness(shop);
+                      p.Provider.of<NavigationProvider>(context, listen: false).setIndex(0);
+                    },
+                  );
+                },
+              ),
+              const SizedBox(height: 24),
+            ],
+
+            // 3. ÜRÜNLER
+            if (hasProds) ...[
+              Text(
+                "Ürünler",
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 10),
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: results.products.length,
+                separatorBuilder: (context, index) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final product = results.products[index];
+                  return SizedBox(
+                    height: 120,
+                    child: GestureDetector(
+                      onTap: () {
+                        // Ürünün ait olduğu dükkanı bulalım
+                        final shop = results.shops.firstWhere(
+                          (s) => s.id == product.businessId,
+                          orElse: () => Business.fromMap({
+                            'name': 'İşletme',
+                            'imageUrl': 'https://via.placeholder.com/150',
+                            'headerImageUrl': 'https://via.placeholder.com/150',
+                            'minOrderAmount': 0,
+                            'deliveryRadiusKm': 5,
+                            'averageRating': 5,
+                            'reviewCount': 0,
+                            'type': 'market',
+                            'isActive': true,
+                          }, product.businessId),
+                        );
+                        final String typeName = _getCategoryNameFromShopType(shop.type);
+                        businessProvider.setCategory(typeName);
+                        businessProvider.selectBusiness(shop);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ProductDetailPage(businessProduct: product),
+                          ),
+                        );
+                      },
+                      child: ModernProductCard(
+                        businessProduct: product,
+                        isListView: true,
+                        campaign: null,
+                      ),
                     ),
                   );
                 },
-                child: ModernProductCard(
-                  businessProduct: product,
-                  isListView: true,
-                  campaign: null,
-                ),
               ),
-            );
-          },
+            ],
+          ],
         );
       },
     );

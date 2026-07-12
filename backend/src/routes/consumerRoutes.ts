@@ -1,5 +1,4 @@
-import { Router } from "express";
-import { authMiddleware } from "../middlewares/AuthMiddleware";
+import { authMiddleware, optionalAuthMiddleware } from "../middlewares/AuthMiddleware";
 import { ConsumerShopController } from "../controllers/ConsumerShopController";
 import { OrderController } from "../controllers/OrderController";
 import { AddressController } from "../controllers/AddressController";
@@ -17,23 +16,22 @@ const favoritesController = new FavoritesController();
 const categoryController = new CategoryController();
 const businessCategoryController = new BusinessCategoryController();
 
-// Consumer endpoints: Kimliği doğrulanmış tüm kullanıcılar (user, merchant vs. fark etmez) bu bilgileri çekebilir
+// --- Public / Optional Auth Endpoints (Misafir Modu Gezinti) ---
+router.get("/shops", optionalAuthMiddleware, (req, res) => consumerShopController.getActiveShops(req, res));
+router.get("/shops/:shopId/products", optionalAuthMiddleware, (req, res) => consumerShopController.getShopProducts(req, res));
+router.get("/shops/:shopId/categories", optionalAuthMiddleware, (req, res) => consumerShopController.getShopActiveCategories(req, res));
+router.get("/campaigns", optionalAuthMiddleware, (req, res) => consumerShopController.getCampaigns(req, res));
+router.get("/categories", optionalAuthMiddleware, (req, res) => categoryController.getCategories(req, res));
+router.get("/business-categories", optionalAuthMiddleware, (req, res) => businessCategoryController.getBusinessCategories(req, res));
+router.get("/search/global", optionalAuthMiddleware, (req, res) => consumerShopController.globalSearch(req, res));
+
+// --- Authenticated Consumer Endpoints ---
 router.use(authMiddleware);
 
 // Favorites Operations
 router.get("/favorites/products", (req, res) => favoritesController.getFavoriteProducts(req, res));
 router.post("/favorites/products", (req, res) => favoritesController.getFavoriteProducts(req, res));
 router.post("/favorites/products/toggle", (req, res) => favoritesController.toggleFavoriteProduct(req, res));
-
-// Browse Shops and Products
-router.get("/shops", (req, res) => consumerShopController.getActiveShops(req, res));
-router.get("/shops/:shopId/products", (req, res) => consumerShopController.getShopProducts(req, res));
-router.get("/shops/:shopId/categories", (req, res) => consumerShopController.getShopActiveCategories(req, res));
-router.get("/campaigns", (req, res) => consumerShopController.getCampaigns(req, res));
-
-// Category Operations
-router.get("/categories", (req, res) => categoryController.getCategories(req, res));
-router.get("/business-categories", (req, res) => businessCategoryController.getBusinessCategories(req, res));
 
 // Order Operations
 router.post("/orders", (req, res) => orderController.createOrder(req, res));

@@ -232,4 +232,80 @@ export class ConsumerShopController {
       return res.status(500).json({ error: true, message: error.message || "Kampanyalar listelenirken hata oluştu." });
     }
   }
+
+  // Global Arama: Kategori, Dükkan ve Ürünleri arar
+  async globalSearch(req: Request, res: Response) {
+    try {
+      const q = req.query.q as string || "";
+      if (!q.trim()) {
+        return res.status(200).json({ error: false, data: { categories: [], shops: [], products: [] } });
+      }
+
+      // 1. İşletme Kategorilerini Ara
+      const categories = await prisma.businessCategory.findMany({
+        where: {
+          isActive: true,
+          name: { contains: q, mode: "insensitive" }
+        },
+        orderBy: { order: "asc" }
+      });
+
+      // 2. Dükkanları Ara
+      const shops = await prisma.shop.findMany({
+        where: {
+          merchant: { status: "ACTIVE" },
+          OR: [
+            { name: { contains: q, mode: "insensitive" } },
+            { description: { contains: q, mode: "insensitive" } }
+          ]
+        }
+      });
+
+      // 3. Ürünleri Ara
+      const products = await prisma.product.findMany({
+        where: {
+          isActive: true,
+          shop: { merchant: { status: "ACTIVE" } },
+          OR: [
+            { name: { contains: q, mode: "insensitive" } },
+            { description: { contains: q, mode: "insensitive" } },
+            { brand: { name: { contains: q, mode: "insensitive" } } }
+          ]
+        },
+        include: {
+          category: { include: { parent: true } },
+          unit: true,
+          brand: true,
+          globalProduct: true,
+          optionGroups: { include: { options: true } }
+        },
+        take: 30
+      });
+
+      const formattedProducts = products.map(formatProduct);
+
+      // Kategori resimlerinin önüne dinamik base URL ekle
+      const protocol = req.headers["x-forwarded-proto"] || req.protocol;
+      const baseUrl = `${protocol}://${req.get("host")}`;
+      const formattedCategories = categories.map(cat => {
+        let imageUrl = cat.imageUrl;
+        if (imageUrl && imageUrl.startsWith("/")) {
+          imageUrl = `${baseUrl}${imageUrl}`;
+        }
+        return { ...cat, imageUrl };
+      });
+
+      return res.status(200).json({
+        error: false,
+        data: {
+          categories: formattedCategories,
+          shops,
+          products: formattedProducts
+        }
+      });
+    } catch (error: any) {
+      console.error("Global arama hatası:", error);
+      return res.status(500).json({ error: true, message: error.message || "Arama yapılırken hata oluştu." });
+    }
+  }
 }
