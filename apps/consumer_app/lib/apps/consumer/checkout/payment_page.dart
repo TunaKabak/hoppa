@@ -165,8 +165,6 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
         };
       }
 
-      final businessProvider = p.Provider.of<BusinessProvider>(context, listen: false);
-      final selectedBusiness = businessProvider.selectedBusiness;
       String fulfillmentModel = 'PLATFORM_DELIVERY';
       if (widget.isPickUp) {
         fulfillmentModel = 'PICKUP';
