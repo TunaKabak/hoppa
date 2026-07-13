@@ -101,13 +101,13 @@ export class FavoritesController {
             userId_productId: { userId, productId }
           }
         });
-        res.status(200).json({ error: false, isFavorite: false, message: "Ürün favorilerden çıkarıldı." });
+        res.status(200).json({ error: false, data: { isFavorite: false }, message: "Ürün favorilerden çıkarıldı." });
       } else {
         // Yoksa favorilere ekle
         await prisma.favoriteProduct.create({
           data: { userId, productId }
         });
-        res.status(200).json({ error: false, isFavorite: true, message: "Ürün favorilere eklendi." });
+        res.status(200).json({ error: false, data: { isFavorite: true }, message: "Ürün favorilere eklendi." });
       }
     } catch (error: any) {
       console.error("Favori toggle işlemi başarısız:", error);
