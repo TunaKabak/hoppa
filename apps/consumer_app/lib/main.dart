@@ -145,7 +145,7 @@ class _ConsumerAppState extends riverpod.ConsumerState<ConsumerApp> {
           create: (_) => BusinessProvider(),
         ),
         ChangeNotifierProvider<FavoriteProvider>(
-          create: (_) => FavoriteProvider(),
+          create: (_) => FavoriteProvider(ref),
         ),
       ],
       child: Consumer<LanguageProvider>(

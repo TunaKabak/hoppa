@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:consumer_app/apps/consumer/repositories/consumer_order_repository.dart';
+import 'package:consumer_app/apps/consumer/widgets/hoppa_dialog.dart';
 import 'package:core_shared/shared/core/widgets/animated_sliding_toggle.dart';
 import 'package:core_shared/shared/models/order.dart' as model;
 import 'package:core_shared/shared/models/order_status.dart';
@@ -545,37 +546,33 @@ class _OrderCard extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text("Siparişi İptal Et"),
-          content: const Text("Bu siparişi iptal etmek istediğinize emin misiniz?"),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Vazgeç"),
-            ),
-            FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: Colors.red),
-              onPressed: () async {
-                Navigator.pop(context); // dialog'u kapat
-                try {
-                  await ref.read(consumerOrderRepositoryProvider).cancelOrder(orderId);
-                  ref.invalidate(consumerOrdersProvider);
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Siparişiniz iptal edildi.")),
-                    );
-                  }
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("İptal işlemi başarısız: $e")),
-                    );
-                  }
-                }
-              },
-              child: const Text("Evet, İptal Et"),
-            ),
-          ],
+        return HoppaDialog(
+          icon: Icons.cancel_outlined,
+          iconColor: Colors.red,
+          title: "Siparişi İptal Et",
+          content: "Bu siparişi iptal etmek istediğinize emin misiniz?",
+          cancelText: "Vazgeç",
+          confirmText: "Evet, İptal Et",
+          isDestructive: true,
+          onCancel: () => Navigator.pop(context),
+          onConfirm: () async {
+            Navigator.pop(context); // dialog'u kapat
+            try {
+              await ref.read(consumerOrderRepositoryProvider).cancelOrder(orderId);
+              ref.invalidate(consumerOrdersProvider);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Siparişiniz iptal edildi.")),
+                );
+              }
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("İptal işlemi başarısız: $e")),
+                );
+              }
+            }
+          },
         );
       },
     );

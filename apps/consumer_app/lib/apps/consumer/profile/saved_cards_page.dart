@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:core_auth/core_auth.dart';
 import 'package:core_shared/shared/core/utils/card_input_formatters.dart';
+import 'package:consumer_app/apps/consumer/widgets/hoppa_dialog.dart';
 
 class SavedCardsPage extends ConsumerStatefulWidget {
   const SavedCardsPage({super.key});
@@ -61,19 +62,16 @@ class _SavedCardsPageState extends ConsumerState<SavedCardsPage> {
   Future<void> _confirmDelete(String cardId) async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Kartı Sil"),
-        content: const Text("Bu kartı silmek istediğinize emin misiniz?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text("Vazgeç", style: TextStyle(color: Colors.grey)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text("Sil", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-          ),
-        ],
+      builder: (context) => HoppaDialog(
+        icon: Icons.delete_forever_rounded,
+        iconColor: Colors.red,
+        title: "Kartı Sil",
+        content: "Bu kartı silmek istediğinize emin misiniz?",
+        cancelText: "Vazgeç",
+        confirmText: "Sil",
+        isDestructive: true,
+        onCancel: () => Navigator.pop(context, false),
+        onConfirm: () => Navigator.pop(context, true),
       ),
     );
 
@@ -104,8 +102,6 @@ class _SavedCardsPageState extends ConsumerState<SavedCardsPage> {
     final titleController = TextEditingController();
     final holderController = TextEditingController();
     final numberController = TextEditingController();
-    final expiryController = TextEditingController();
-    final cvcController = TextEditingController();
     String selectedCardType = "Visa";
     String cardLogo = "";
 
@@ -244,78 +240,6 @@ class _SavedCardsPageState extends ConsumerState<SavedCardsPage> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Expiry Date & CVC
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text("Son Kullanma", style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13)),
-                                const SizedBox(height: 8),
-                                TextFormField(
-                                  controller: expiryController,
-                                  keyboardType: TextInputType.number,
-                                  inputFormatters: [
-                                    LengthLimitingTextInputFormatter(5),
-                                    CardExpiryInputFormatter(),
-                                  ],
-                                  decoration: InputDecoration(
-                                    hintText: "AA/YY",
-                                    filled: true,
-                                    fillColor: Colors.grey.shade50,
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                  ),
-                                  validator: (v) {
-                                    if (v == null || v.trim().isEmpty) return "Tarih girin";
-                                    if (v.length < 5) return "Geçersiz";
-                                    final parts = v.split('/');
-                                    if (parts.length != 2) return "Geçersiz";
-                                    final month = int.tryParse(parts[0]) ?? 0;
-                                    final year = int.tryParse(parts[1]) ?? 0;
-                                    if (month < 1 || month > 12) return "Geçersiz ay";
-                                    final now = DateTime.now();
-                                    final currYear = now.year % 100;
-                                    final currMonth = now.month;
-                                    if (year < currYear || (year == currYear && month < currMonth)) {
-                                      return "Süresi geçmiş";
-                                    }
-                                    return null;
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text("CVC", style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13)),
-                                const SizedBox(height: 8),
-                                TextFormField(
-                                  controller: cvcController,
-                                  keyboardType: TextInputType.number,
-                                  obscureText: true,
-                                  inputFormatters: [
-                                    FilteringTextInputFormatter.digitsOnly,
-                                    LengthLimitingTextInputFormatter(3),
-                                  ],
-                                  decoration: InputDecoration(
-                                    hintText: "123",
-                                    filled: true,
-                                    fillColor: Colors.grey.shade50,
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                  ),
-                                  validator: (v) => (v == null || v.length < 3) ? "CVC girin" : null,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
                       const SizedBox(height: 32),
 
                       // Submit Button
@@ -443,8 +367,8 @@ class _SavedCardsPageState extends ConsumerState<SavedCardsPage> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isDefault
-              ? [const Color(0xFF0F3E22), const Color(0xFF1E5D36)]
-              : [Colors.grey.shade800, Colors.grey.shade900],
+              ? [const Color(0xFF0F2027), const Color(0xFF203A43), const Color(0xFF2C5364)]
+              : [const Color(0xFF1E272C), const Color(0xFF0F1416)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -464,37 +388,13 @@ class _SavedCardsPageState extends ConsumerState<SavedCardsPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Text(
-                    title,
-                    style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  if (isDefault)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.white24,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.star, color: Colors.amber, size: 10),
-                          const SizedBox(width: 2),
-                          Text(
-                            "Varsayılan",
-                            style: GoogleFonts.poppins(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
+              Text(
+                title,
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
               Row(
                 children: [
@@ -503,19 +403,30 @@ class _SavedCardsPageState extends ConsumerState<SavedCardsPage> {
                     style: GoogleFonts.poppins(
                       color: Colors.white70,
                       fontWeight: FontWeight.w800,
-                      fontSize: 14,
+                      fontSize: 13,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.delete_forever_rounded, color: Colors.redAccent, size: 22),
-                    onPressed: () => _confirmDelete(id),
+                  const SizedBox(width: 12),
+                  GestureDetector(
+                    onTap: () => _confirmDelete(id),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.delete_outline_rounded,
+                        color: Colors.redAccent,
+                        size: 16,
+                      ),
+                    ),
                   ),
                 ],
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 24),
           Text(
             hiddenNum,
             style: GoogleFonts.poppins(
@@ -525,7 +436,7 @@ class _SavedCardsPageState extends ConsumerState<SavedCardsPage> {
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -543,23 +454,47 @@ class _SavedCardsPageState extends ConsumerState<SavedCardsPage> {
                   ),
                 ],
               ),
-              if (!isDefault)
-                TextButton.icon(
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.white70,
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              if (isDefault)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.amber.shade300, width: 1),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.star_rounded, color: Colors.amber, size: 14),
+                      const SizedBox(width: 4),
+                      Text(
+                        "Varsayılan",
+                        style: GoogleFonts.poppins(
+                          color: Colors.amber,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Colors.white30, width: 1),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  icon: const Icon(Icons.star_border, color: Colors.white54, size: 12),
+                  icon: const Icon(Icons.star_outline_rounded, color: Colors.white70, size: 14),
                   label: Text(
                     "Varsayılan Yap",
-                    style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600),
+                    style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.bold),
                   ),
                   onPressed: () => _setDefaultCard(id),
-                )
-              else
-                const Icon(Icons.nfc_rounded, color: Colors.white30, size: 28),
+                ),
             ],
           ),
         ],

@@ -164,7 +164,10 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
 
       Map<String, dynamic>? cardDetails;
       if (_paymentMethod == 'online_payment') {
-        if (_selectedCardId != null && _selectedCardId != 'new') {
+        if (_selectedCardId == null) {
+          throw Exception("Lütfen bir ödeme yöntemi seçin veya yeni kart bilgilerini girin.");
+        }
+        if (_selectedCardId != 'new') {
           // Use saved card
           final selectedCard = _savedCards.firstWhere((c) => c['id'] == _selectedCardId);
           if (_savedCardCVCController.text.length < 3) {
@@ -1317,7 +1320,9 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
               ],
             ),
           ),
-        ] else ...[
+          const SizedBox(height: 16),
+        ],
+        if (_selectedCardId == 'new') ...[
           // Full Credit Card Form
           Container(
             padding: const EdgeInsets.all(16),

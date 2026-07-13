@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider, Consumer;
 import 'package:core_shared/shared/models/business_product.dart';
 import 'package:consumer_app/apps/consumer/favorites/favorite_provider.dart';
 import 'package:consumer_app/apps/consumer/home/widgets/modern_product_card.dart';
-import 'package:core_shared/shared/core/services/business_service.dart';
 import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository.dart';
 
 class FavoritesPage extends ConsumerStatefulWidget {
@@ -16,43 +14,15 @@ class FavoritesPage extends ConsumerStatefulWidget {
 }
 
 class _FavoritesPageState extends ConsumerState<FavoritesPage> {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final BusinessService _businessService = BusinessService();
-
   Future<List<Map<String, dynamic>>> _fetchFavoriteProducts(List<String> ids) async {
     if (ids.isEmpty) return [];
 
-    // Migrate from Firestore to Prisma/API 
-    // Fetch products from the new backend endpoint via ConsumerShopRepository
     try {
       final repository = ref.read(consumerShopRepositoryProvider);
       return await repository.getFavoriteProducts(ids);
     } catch (e) {
-      print("Error fetching favorite products from API: $e");
-      
-      // Fallback: If the API fails (e.g. backend not deployed yet), try old Firestore way
-      List<Map<String, dynamic>> results = [];
-      try {
-        final futures = ids.map((id) => _db.collection('business_products').doc(id).get());
-        final snapshots = await Future.wait(futures);
-
-        for (var doc in snapshots) {
-          if (doc.exists) {
-            final productDoc = doc.data() as Map<String, dynamic>;
-            final businessProduct = BusinessProduct.fromMap(productDoc, doc.id);
-            final business = await _businessService.getBusinessById(businessProduct.businessId);
-            final bool isAvailable = business != null && business.isOpen;
-            
-            results.add({
-              'product': businessProduct,
-              'isAvailable': isAvailable,
-            });
-          }
-        }
-      } catch (firestoreError) {
-        print("Fallback Firestore error: $firestoreError");
-      }
-      return results;
+      debugPrint("Error fetching favorite products from API: $e");
+      return [];
     }
   }
 
