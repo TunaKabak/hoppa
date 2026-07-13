@@ -42,6 +42,7 @@ router.put("/profile", (req: Request, res: Response) => ProfileController.update
 router.get("/cards", (req: Request, res: Response) => savedCardController.getCards(req, res));
 router.post("/cards", (req: Request, res: Response) => savedCardController.createCard(req, res));
 router.delete("/cards/:id", (req: Request, res: Response) => savedCardController.deleteCard(req, res));
+router.put("/cards/:id/default", (req: Request, res: Response) => savedCardController.setDefaultCard(req, res));
 
 // Coupon Operations
 router.get("/coupons", (req: Request, res: Response) => couponController.getCoupons(req, res));

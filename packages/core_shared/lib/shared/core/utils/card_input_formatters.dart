@@ -41,3 +41,42 @@ class CardExpiryInputFormatter extends TextInputFormatter {
     );
   }
 }
+
+class CardNumberInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    var text = newValue.text;
+
+    if (newValue.selection.baseOffset == 0) {
+      return newValue;
+    }
+
+    final buffer = StringBuffer();
+    for (int i = 0; i < text.length; i++) {
+      if (text[i] != ' ') {
+        buffer.write(text[i]);
+      }
+    }
+
+    final String cleanText = buffer.toString();
+    final formattedBuffer = StringBuffer();
+
+    for (int i = 0; i < cleanText.length; i++) {
+      formattedBuffer.write(cleanText[i]);
+      int index = i + 1;
+      if (index % 4 == 0 && index != cleanText.length) {
+        formattedBuffer.write(' ');
+      }
+    }
+
+    final String formattedText = formattedBuffer.toString();
+
+    return newValue.copyWith(
+      text: formattedText,
+      selection: TextSelection.collapsed(offset: formattedText.length),
+    );
+  }
+}
