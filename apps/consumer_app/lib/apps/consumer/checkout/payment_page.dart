@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:core_network/core_network.dart';
+import 'package:core_auth/core_auth.dart';
 import 'package:consumer_app/apps/consumer/cart/cart_provider.dart';
 import 'package:consumer_app/apps/consumer/repositories/consumer_order_repository.dart';
 import 'package:core_shared/shared/models/address.dart';
@@ -37,6 +38,8 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
   final _cardExpiryController = TextEditingController();
   final _cardCVCController = TextEditingController();
   final _cardHolderController = TextEditingController();
+  final _savedCardCVCController = TextEditingController();
+  final _saveCardTitleController = TextEditingController();
   
   String _cardLogo = '';
 
@@ -45,8 +48,48 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
   bool _dontRingBell = false;
   bool _leaveAtDoor = false;
 
+  List<dynamic> _savedCards = [];
+  bool _isLoadingCards = false;
+  String? _selectedCardId; // ID of saved card or "new" for new card
+  bool _saveNewCard = false;
+
   final Color kPrimaryColor = const Color(0xFF00A651);
   final Color kSecondaryColor = const Color(0xFFFF6B00);
+
+  Future<void> _loadSavedCards() async {
+    if (!mounted) return;
+    setState(() => _isLoadingCards = true);
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      final response = await apiClient.get('/api/consumer/cards');
+      if (mounted) {
+        setState(() {
+          _savedCards = response['data'] ?? [];
+          if (_savedCards.isNotEmpty) {
+            final defaultCard = _savedCards.firstWhere((c) => c['isDefault'] == true, orElse: () => null);
+            if (defaultCard != null) {
+              _selectedCardId = defaultCard['id'];
+            } else {
+              _selectedCardId = _savedCards.first['id'];
+            }
+          } else {
+            _selectedCardId = 'new';
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint("Error loading saved cards: $e");
+      if (mounted) {
+        setState(() {
+          _selectedCardId = 'new';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingCards = false);
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -54,6 +97,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     if (widget.isPickUp) {
       _paymentMethod = 'online_payment';
     }
+    _loadSavedCards();
   }
 
   @override
@@ -63,6 +107,8 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     _cardExpiryController.dispose();
     _cardCVCController.dispose();
     _cardHolderController.dispose();
+    _savedCardCVCController.dispose();
+    _saveCardTitleController.dispose();
     super.dispose();
   }
 
@@ -78,6 +124,8 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
         setState(() => _cardLogo = '💳 Visa');
       } else if (cleanNumber.startsWith('5')) {
         setState(() => _cardLogo = '💳 MasterCard');
+      } else if (cleanNumber.startsWith('9792')) {
+        setState(() => _cardLogo = '💳 Troy');
       } else {
         setState(() => _cardLogo = '💳 Kart');
       }
@@ -98,21 +146,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
       final selectedBusiness = businessProvider.selectedBusiness;
       final activeCampaigns = ref.read(cartCampaignsProvider).value ?? [];
       
-      bool hasFreeDeliveryCampaign = activeCampaigns.any((c) => c.type.name.toUpperCase() == "FREE_DELIVERY_FIRST_ORDERS");
       
-      double deliveryFee = selectedBusiness?.baseDeliveryFee ?? 30.0;
-      if (selectedBusiness?.freeDeliveryThreshold != null && 
-          cartState.totalAmount >= selectedBusiness!.freeDeliveryThreshold!) {
-        deliveryFee = 0.0;
-      }
-      if (hasFreeDeliveryCampaign) {
-        deliveryFee = 0.0;
-      }
-      
-      if (widget.isPickUp) {
-        deliveryFee = 0.0;
-      }
-
       final deliveryProvider = p.Provider.of<DeliveryProvider>(context, listen: false);
       final userAddress = deliveryProvider.selectedAddress;
 
@@ -130,39 +164,63 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
 
       Map<String, dynamic>? cardDetails;
       if (_paymentMethod == 'online_payment') {
-        if (_cardNumberController.text.isEmpty ||
-            _cardExpiryController.text.isEmpty ||
-            _cardCVCController.text.isEmpty ||
-            _cardHolderController.text.isEmpty) {
-          throw Exception("Lütfen kart bilgilerini eksiksiz girin.");
-        }
-        final expiryParts = _cardExpiryController.text.split('/');
-        if (expiryParts.length != 2) {
-          throw Exception("Son kullanma tarihi AA/YY formatında olmalıdır.");
-        }
-        
-        final month = int.tryParse(expiryParts[0]) ?? 0;
-        final year = int.tryParse(expiryParts[1]) ?? 0;
+        if (_selectedCardId != null && _selectedCardId != 'new') {
+          // Use saved card
+          final selectedCard = _savedCards.firstWhere((c) => c['id'] == _selectedCardId);
+          if (_savedCardCVCController.text.length < 3) {
+            throw Exception("Lütfen seçtiğiniz kart için 3 haneli CVC kodunu giriniz.");
+          }
+          final cleanHidden = selectedCard['cardNumberHidden'].toString().replaceAll(' ', '');
+          final bin = cleanHidden.substring(0, 6);
+          final last4 = cleanHidden.substring(cleanHidden.length - 4);
+          final mockNumber = "${bin}000000${last4}";
 
-        if (month < 1 || month > 12) {
-          throw Exception("Geçersiz ay girdiniz.");
+          cardDetails = {
+            'cardNumber': mockNumber,
+            'expiryMonth': '12',
+            'expiryYear': '30',
+            'cvc': _savedCardCVCController.text,
+            'cardHolderName': selectedCard['cardHolderName'],
+          };
+        } else {
+          // Use new card
+          if (_cardNumberController.text.isEmpty ||
+              _cardExpiryController.text.isEmpty ||
+              _cardCVCController.text.isEmpty ||
+              _cardHolderController.text.isEmpty) {
+            throw Exception("Lütfen kart bilgilerini eksiksiz girin.");
+          }
+          if (_saveNewCard && _saveCardTitleController.text.trim().isEmpty) {
+            throw Exception("Lütfen kaydettiğiniz kart için bir Kart Başlığı giriniz.");
+          }
+          final expiryParts = _cardExpiryController.text.split('/');
+          if (expiryParts.length != 2) {
+            throw Exception("Son kullanma tarihi AA/YY formatında olmalıdır.");
+          }
+          
+          final month = int.tryParse(expiryParts[0]) ?? 0;
+          final year = int.tryParse(expiryParts[1]) ?? 0;
+
+          if (month < 1 || month > 12) {
+            throw Exception("Geçersiz ay girdiniz.");
+          }
+
+          final now = DateTime.now();
+          final currentYear = now.year % 100;
+          final currentMonth = now.month;
+
+          if (year < currentYear || (year == currentYear && month < currentMonth)) {
+            throw Exception("Kartın süresi dolmuş.");
+          }
+
+          cardDetails = {
+            'cardNumber': _cardNumberController.text.replaceAll(' ', ''),
+            'expiryMonth': expiryParts[0],
+            'expiryYear': expiryParts[1],
+            'cvc': _cardCVCController.text,
+            'cardHolderName': _cardHolderController.text,
+          };
         }
-
-        final now = DateTime.now();
-        final currentYear = now.year % 100;
-        final currentMonth = now.month;
-
-        if (year < currentYear || (year == currentYear && month < currentMonth)) {
-          throw Exception("Kartın süresi dolmuş.");
-        }
-
-        cardDetails = {
-          'cardNumber': _cardNumberController.text,
-          'expiryMonth': expiryParts[0],
-          'expiryYear': expiryParts[1],
-          'cvc': _cardCVCController.text,
-          'cardHolderName': _cardHolderController.text,
-        };
       }
 
       String fulfillmentModel = 'PLATFORM_DELIVERY';
@@ -194,6 +252,25 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
 
       final result = await orderRepo.createOrder(orderData);
       final paymentUrl = result['paymentUrl'] as String?;
+
+      // Save card to profile if checked
+      if (_paymentMethod == 'online_payment' && _selectedCardId == 'new' && _saveNewCard) {
+        try {
+          final apiClient = ref.read(apiClientProvider);
+          final cardTitleText = _saveCardTitleController.text.trim();
+          await apiClient.post(
+            '/api/consumer/cards',
+            body: {
+              'cardTitle': cardTitleText.isEmpty ? 'Kayıtlı Kartım' : cardTitleText,
+              'cardHolderName': _cardHolderController.text.trim(),
+              'cardNumber': _cardNumberController.text.replaceAll(' ', ''),
+              'cardType': _cardLogo.replaceAll('💳 ', ''),
+            },
+          );
+        } catch (e) {
+          debugPrint("Silent error saving card after purchase: $e");
+        }
+      }
 
       // Clear cart locally
       cartNotifier.clearCart();
@@ -1024,86 +1101,212 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
   }
 
   Widget _buildCreditCardForm() {
-    return Container(
-      margin: const EdgeInsets.only(top: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: kPrimaryColor.withValues(alpha: 0.3)),
-        boxShadow: [
-          BoxShadow(
-            color: kPrimaryColor.withValues(alpha: 0.05),
-            blurRadius: 10,
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                "Kart Bilgileri",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              if (_cardLogo.isNotEmpty)
-                Text(
-                  _cardLogo,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: kPrimaryColor,
-                    fontSize: 14,
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _cardNumberController,
-            keyboardType: TextInputType.number,
-            maxLength: 19,
-            onChanged: _updateCardLogo,
-            decoration: InputDecoration(
-              labelText: "Kart Numarası",
-              counterText: "",
-              prefixIcon: const Icon(Icons.credit_card),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
+    if (_isLoadingCards) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    final hasSavedCards = _savedCards.isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (hasSavedCards) ...[
+          const Text(
+            "Kayıtlı Kartlarım",
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.black87),
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _cardExpiryController,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    LengthLimitingTextInputFormatter(5),
-                    CardExpiryInputFormatter(),
-                  ],
-                  decoration: InputDecoration(
-                    labelText: "AA/YY",
-                    counterText: "",
-                    prefixIcon: const Icon(Icons.calendar_today),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+          SizedBox(
+            height: 110,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: _savedCards.length + 1,
+              itemBuilder: (context, index) {
+                if (index == _savedCards.length) {
+                  // "Yeni Kart Kullan" button/card
+                  final isNewSelected = _selectedCardId == 'new';
+                  return GestureDetector(
+                    onTap: () => setState(() => _selectedCardId = 'new'),
+                    child: Container(
+                      width: 150,
+                      margin: const EdgeInsets.only(right: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isNewSelected ? kPrimaryColor : Colors.grey.shade300,
+                          width: isNewSelected ? 2 : 1,
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.add_card,
+                            color: isNewSelected ? kPrimaryColor : Colors.grey,
+                            size: 26,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            "Yeni Kart Kullan",
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: isNewSelected ? kPrimaryColor : Colors.black54,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                final card = _savedCards[index];
+                final cardId = card['id'];
+                final isSelected = _selectedCardId == cardId;
+                final isVisa = card['cardType']?.toString().toLowerCase().contains('visa') == true;
+                final isMaster = card['cardType']?.toString().toLowerCase().contains('master') == true;
+                final isTroy = card['cardType']?.toString().toLowerCase().contains('troy') == true;
+
+                return GestureDetector(
+                  onTap: () => setState(() => _selectedCardId = cardId),
+                  child: Container(
+                    width: 180,
+                    margin: const EdgeInsets.only(right: 12),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: isSelected
+                            ? [const Color(0xFF0F3E22), const Color(0xFF1E5D36)]
+                            : [const Color(0xFF2C3E50), const Color(0xFF34495E)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: kPrimaryColor.withValues(alpha: 0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              )
+                            ]
+                          : [],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                card['cardTitle'] ?? 'Kart',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Text(
+                              isVisa ? "Visa" : (isMaster ? "MC" : (isTroy ? "Troy" : "Kart")),
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          card['cardNumberHidden'] ?? '**** **** **** ****',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            letterSpacing: 1.5,
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                card['cardHolderName'] ?? '',
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 9,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (isSelected)
+                              const Icon(
+                                Icons.check_circle,
+                                color: Colors.white,
+                                size: 14,
+                              ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        if (_selectedCardId != null && _selectedCardId != 'new') ...[
+          // Saved card CVC validation input
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: kPrimaryColor.withValues(alpha: 0.3)),
+              boxShadow: [
+                BoxShadow(
+                  color: kPrimaryColor.withValues(alpha: 0.05),
+                  blurRadius: 10,
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
-                  controller: _cardCVCController,
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Güvenlik Doğrulaması",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  "Ödemeyi tamamlamak için seçilen kartın CVC / CVV kodunu giriniz.",
+                  style: TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _savedCardCVCController,
                   keyboardType: TextInputType.number,
-                  maxLength: 3,
                   obscureText: true,
+                  maxLength: 3,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(3),
+                  ],
                   decoration: InputDecoration(
-                    labelText: "CVC",
+                    labelText: "CVC / CVV",
                     counterText: "",
                     prefixIcon: const Icon(Icons.lock_outline),
                     border: OutlineInputBorder(
@@ -1111,23 +1314,164 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _cardHolderController,
-            textCapitalization: TextCapitalization.words,
-            decoration: InputDecoration(
-              labelText: "Kart Üzerindeki İsim",
-              prefixIcon: const Icon(Icons.person_outline),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+        ] else ...[
+          // Full Credit Card Form
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: kPrimaryColor.withValues(alpha: 0.3)),
+              boxShadow: [
+                BoxShadow(
+                  color: kPrimaryColor.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "Yeni Kart Bilgileri",
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
+                    ),
+                    if (_cardLogo.isNotEmpty)
+                      Text(
+                        _cardLogo,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: kPrimaryColor,
+                          fontSize: 14,
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _cardNumberController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(19),
+                    CardNumberInputFormatter(),
+                  ],
+                  onChanged: _updateCardLogo,
+                  decoration: InputDecoration(
+                    labelText: "Kart Numarası",
+                    counterText: "",
+                    prefixIcon: const Icon(Icons.credit_card),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _cardExpiryController,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          LengthLimitingTextInputFormatter(5),
+                          CardExpiryInputFormatter(),
+                        ],
+                        decoration: InputDecoration(
+                          labelText: "AA/YY",
+                          counterText: "",
+                          prefixIcon: const Icon(Icons.calendar_today),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: _cardCVCController,
+                        keyboardType: TextInputType.number,
+                        maxLength: 3,
+                        obscureText: true,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(3),
+                        ],
+                        decoration: InputDecoration(
+                          labelText: "CVC",
+                          counterText: "",
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _cardHolderController,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: InputDecoration(
+                    labelText: "Kart Üzerindeki İsim",
+                    prefixIcon: const Icon(Icons.person_outline),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SwitchListTile(
+                  value: _saveNewCard,
+                  title: const Text(
+                    "Bu kartı kaydet",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                  subtitle: const Text(
+                    "Gelecek alışverişleriniz için profilinize güvenli şekilde kaydedilir.",
+                    style: TextStyle(fontSize: 11, color: Colors.grey),
+                  ),
+                  secondary: Icon(
+                    Icons.save_outlined,
+                    color: _saveNewCard ? kPrimaryColor : Colors.grey,
+                  ),
+                  activeColor: kPrimaryColor,
+                  onChanged: (val) {
+                    setState(() {
+                      _saveNewCard = val;
+                      if (!val) {
+                        _saveCardTitleController.clear();
+                      }
+                    });
+                  },
+                  contentPadding: EdgeInsets.zero,
+                ),
+                if (_saveNewCard) ...[
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _saveCardTitleController,
+                    decoration: InputDecoration(
+                      labelText: "Kart Başlığı (Örn: Maaş Kartım)",
+                      prefixIcon: const Icon(Icons.title_outlined),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ],
-      ),
+      ],
     );
   }
 }

@@ -681,6 +681,7 @@ model SavedCard {
   cardNumberHidden String   // Örn: "4355 24** **** 4321"
   cardToken        String   // Ödeme sağlayıcısından dönen token
   cardType         String   // Visa, Mastercard, Troy vb.
+  isDefault        Boolean  @default(false)
   
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
