@@ -1969,6 +1969,118 @@ const restaurantProducts = [
   }
 ];
 
+async function addProductOptions(productId: string, productName: string, categoryName: string) {
+  const nameLower = productName.toLowerCase();
+  const catLower = categoryName.toLowerCase();
+
+  if (catLower.includes("pizza")) {
+    // Hamur Seçimi (Zorunlu, 1 Seçim)
+    const hamurGroup = await prisma.productOptionGroup.create({
+      data: {
+        productId,
+        name: "Hamur Seçimi",
+        minSelections: 1,
+        maxSelections: 1,
+      }
+    });
+    await prisma.productOption.createMany({
+      data: [
+        { optionGroupId: hamurGroup.id, name: "Klasik Hamur", price: 0.00 },
+        { optionGroupId: hamurGroup.id, name: "İnce Hamur", price: 0.00 },
+        { optionGroupId: hamurGroup.id, name: "Kalın Hamur", price: 15.00 },
+      ]
+    });
+
+    // Malzemeler (Opsiyonel, Çoklu Seçim)
+    const malzemeGroup = await prisma.productOptionGroup.create({
+      data: {
+        productId,
+        name: "Ekstra Malzemeler",
+        minSelections: 0,
+        maxSelections: 5,
+      }
+    });
+    await prisma.productOption.createMany({
+      data: [
+        { optionGroupId: malzemeGroup.id, name: "Ekstra Kaşar / Mozzarella", price: 25.00 },
+        { optionGroupId: malzemeGroup.id, name: "Mantar", price: 15.00 },
+        { optionGroupId: malzemeGroup.id, name: "Siyah Zeytin", price: 10.00 },
+        { optionGroupId: malzemeGroup.id, name: "Mısır", price: 10.00 },
+        { optionGroupId: malzemeGroup.id, name: "Sucuk Dilimleri", price: 30.00 },
+      ]
+    });
+  } 
+  else if (catLower.includes("burger")) {
+    // Sos Seçimi (Opsiyonel, Çoklu Seçim)
+    const sosGroup = await prisma.productOptionGroup.create({
+      data: {
+        productId,
+        name: "Sos Seçimi",
+        minSelections: 0,
+        maxSelections: 4,
+      }
+    });
+    await prisma.productOption.createMany({
+      data: [
+        { optionGroupId: sosGroup.id, name: "Ketçap", price: 0.00 },
+        { optionGroupId: sosGroup.id, name: "Mayonez", price: 0.00 },
+        { optionGroupId: sosGroup.id, name: "Barbekü Sos", price: 5.00 },
+        { optionGroupId: sosGroup.id, name: "Ranch Sos", price: 5.00 },
+      ]
+    });
+
+    // Malzeme Çıkarma (Opsiyonel, Çoklu Seçim)
+    const cikarGroup = await prisma.productOptionGroup.create({
+      data: {
+        productId,
+        name: "Malzeme Tercihi (İstemiyorsanız Seçiniz)",
+        minSelections: 0,
+        maxSelections: 3,
+      }
+    });
+    await prisma.productOption.createMany({
+      data: [
+        { optionGroupId: cikarGroup.id, name: "Soğansız Olsun", price: 0.00 },
+        { optionGroupId: cikarGroup.id, name: "Turşusuz Olsun", price: 0.00 },
+        { optionGroupId: cikarGroup.id, name: "Domatessiz Olsun", price: 0.00 },
+      ]
+    });
+  } 
+  else if (catLower.includes("kebap") || catLower.includes("pide") || nameLower.includes("dürüm")) {
+    // Soğan Tercihi (Zorunlu, 1 Seçim)
+    const soganGroup = await prisma.productOptionGroup.create({
+      data: {
+        productId,
+        name: "Soğan Tercihi",
+        minSelections: 1,
+        maxSelections: 1,
+      }
+    });
+    await prisma.productOption.createMany({
+      data: [
+        { optionGroupId: soganGroup.id, name: "Soğanlı", price: 0.00 },
+        { optionGroupId: soganGroup.id, name: "Soğansız", price: 0.00 },
+      ]
+    });
+
+    // Sos & Yan Ürün (Opsiyonel)
+    const yanGroup = await prisma.productOptionGroup.create({
+      data: {
+        productId,
+        name: "Sos ve Ekstra",
+        minSelections: 0,
+        maxSelections: 2,
+      }
+    });
+    await prisma.productOption.createMany({
+      data: [
+        { optionGroupId: yanGroup.id, name: "Ekstra Lavaş", price: 10.00 },
+        { optionGroupId: yanGroup.id, name: "Ezme Salatası", price: 20.00 },
+      ]
+    });
+  }
+}
+
 async function main() {
   console.log("🌱 Tohumlama başlatılıyor...");
 
@@ -2161,7 +2273,7 @@ async function main() {
     });
 
     // B. Product Oluştur
-    await prisma.product.create({
+    const product = await prisma.product.create({
       data: {
         shopId: RESTAURANT_SHOP_ID,
         categoryId,
@@ -2179,6 +2291,9 @@ async function main() {
         isActive: true
       }
     });
+
+    // Yan Ürün ve Malzeme Seçeneklerini Ekle
+    await addProductOptions(product.id, item.name, item.categoryName);
   }
 
   console.log("✨ Tohumlama tamamlandı!");

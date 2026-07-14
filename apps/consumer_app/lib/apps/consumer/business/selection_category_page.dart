@@ -6,6 +6,7 @@ import 'package:core_auth/core_auth.dart';
 import 'package:consumer_app/apps/consumer/address/delivery_provider.dart';
 import 'package:consumer_app/apps/consumer/address/address_list_page.dart';
 import 'package:consumer_app/apps/consumer/home/widgets/account_bottom_sheet.dart';
+import 'package:consumer_app/apps/consumer/home/widgets/hoppa_campaign_slider.dart';
 import 'package:consumer_app/apps/consumer/business/business_provider.dart';
 import 'package:consumer_app/apps/consumer/business/widgets/category_grid_item.dart';
 import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository.dart';
@@ -242,118 +243,8 @@ class SelectionCategoryPage extends rp.ConsumerWidget {
                     ),
                     const SizedBox(height: 24),
 
-                    // HOPPA SPECIAL ADVERTISING BANNER
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Container(
-                        height: 140,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(20),
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFE95D22), Color(0xFFFF8C00)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFFE95D22).withValues(alpha: 0.3),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(20),
-                          child: Stack(
-                            children: [
-                              Positioned(
-                                right: -15,
-                                bottom: -15,
-                                child: Opacity(
-                                  opacity: 0.15,
-                                  child: Icon(
-                                    Icons.play_circle_fill_rounded,
-                                    size: 150,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                            decoration: BoxDecoration(
-                                              color: Colors.white.withValues(alpha: 0.2),
-                                              borderRadius: BorderRadius.circular(8),
-                                            ),
-                                            child: Text(
-                                              "HOPPA ÖZEL REKLAM",
-                                              style: GoogleFonts.poppins(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.white,
-                                                letterSpacing: 1.0,
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(height: 10),
-                                          Text(
-                                            "Hoppa ile Tanışın!",
-                                            style: GoogleFonts.poppins(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            "Tek tıklamayla kapınızda. Tanıtım videomuzu izleyin.",
-                                            style: GoogleFonts.inter(
-                                              fontSize: 11,
-                                              color: Colors.white.withValues(alpha: 0.9),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Center(
-                                      child: Container(
-                                        height: 44,
-                                        width: 44,
-                                        decoration: const BoxDecoration(
-                                          color: Colors.white,
-                                          shape: BoxShape.circle,
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black12,
-                                              blurRadius: 4,
-                                            ),
-                                          ],
-                                        ),
-                                        child: const Icon(
-                                          Icons.play_arrow_rounded,
-                                          color: Color(0xFFE95D22),
-                                          size: 28,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
+                    // HOPPA SPECIAL ADVERTISING CAROUSEL SLIDER
+                    const HoppaCampaignSlider(),
                     const SizedBox(height: 16),
 
                     // LOGIN / REGISTER CTA CARD (Only for Guest mode)

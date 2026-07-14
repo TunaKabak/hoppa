@@ -71,3 +71,7 @@ flutter:
     - assets/images/cicek_bg.png
     - assets/images/manav_bg.png
     - assets/images/kasap_bg.png
+    - assets/images/campaign_free_delivery.png
+    - assets/images/campaign_welcome_coupon.png
+    - assets/images/campaign_everything_at_door.png
+    - assets/images/campaign_invite_friend.png
