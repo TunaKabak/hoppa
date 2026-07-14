@@ -7,6 +7,7 @@ import 'package:consumer_app/apps/consumer/address/delivery_provider.dart';
 import 'package:consumer_app/apps/consumer/address/address_list_page.dart';
 import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository.dart';
 import 'package:consumer_app/apps/consumer/home/widgets/account_bottom_sheet.dart';
+import 'package:consumer_app/apps/consumer/widgets/shop_badge.dart';
 import 'package:latlong2/latlong.dart'; // Mesafe hesaplama için
 import 'package:core_auth/core_auth.dart';
 import 'package:consumer_app/apps/consumer/auth/consumer_login_page.dart';
@@ -630,58 +631,18 @@ class BusinessSelectionPage extends ConsumerWidget {
                       children: [
                         ...business.allowedFulfillmentModels.map((model) {
                           String label = "";
-                          Color badgeColor = Colors.blue;
                           if (model == 'PLATFORM_DELIVERY') {
                             label = "Hoppa Kuryesi";
-                            badgeColor = const Color(0xFF00A651);
                           } else if (model == 'SELF_DELIVERY') {
                             label = "Esnaf Teslimatı";
-                            badgeColor = Colors.orange;
                           } else if (model == 'PICKUP') {
                             label = "Gel-Al";
-                            badgeColor = Colors.purple;
                           }
                           if (label.isEmpty) return const SizedBox.shrink();
-                          return Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: badgeColor.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: badgeColor.withValues(alpha: 0.2),
-                                width: 1,
-                              ),
-                            ),
-                            child: Text(
-                              label,
-                              style: TextStyle(
-                                color: badgeColor,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          );
+                          return ShopBadge(label: label);
                         }),
                         ...business.tags.map((tag) {
-                          return Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF00A651).withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: const Color(0xFF00A651).withValues(alpha: 0.2),
-                                width: 1,
-                              ),
-                            ),
-                            child: Text(
-                              tag,
-                              style: const TextStyle(
-                                color: Color(0xFF00A651),
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          );
+                          return ShopBadge(label: tag);
                         }),
                       ],
                     ),

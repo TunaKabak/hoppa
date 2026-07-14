@@ -13,6 +13,7 @@ import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository
 import 'package:core_shared/shared/models/shop_category_data.dart';
 import 'package:consumer_app/apps/consumer/home/widgets/campaign_carousel.dart';
 import 'package:consumer_app/apps/consumer/widgets/hoppa_dialog.dart';
+import 'package:consumer_app/apps/consumer/widgets/shop_badge.dart';
 
 class ModernShopDetailPage extends ConsumerStatefulWidget {
   final Business shop;
@@ -549,44 +550,25 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                                   ],
                                 ),
                                 const SizedBox(height: 4),
-                                Wrap(
-                                  spacing: 4,
-                                  runSpacing: 2,
-                                  children: widget.shop.allowedFulfillmentModels.map((model) {
-                                    String label = "";
-                                    Color badgeColor = Colors.blue;
-                                    if (model == 'PLATFORM_DELIVERY') {
-                                      label = "Hoppa Kuryesi";
-                                      badgeColor = const Color(0xFF00A651);
-                                    } else if (model == 'SELF_DELIVERY') {
-                                      label = "Esnaf Teslimatı";
-                                      badgeColor = Colors.orange;
-                                    } else if (model == 'PICKUP') {
-                                      label = "Gel-Al";
-                                      badgeColor = Colors.purple;
-                                    }
-                                    if (label.isEmpty) return const SizedBox.shrink();
-                                    return Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: Colors.black45,
-                                        borderRadius: BorderRadius.circular(4),
-                                        border: Border.all(
-                                          color: badgeColor.withValues(alpha: 0.5),
-                                          width: 0.5,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        label,
-                                        style: TextStyle(
-                                          color: badgeColor,
-                                          fontSize: 8,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
+                                 Wrap(
+                                   spacing: 4,
+                                   runSpacing: 2,
+                                   children: [
+                                     ...widget.shop.allowedFulfillmentModels.map((model) {
+                                       String label = "";
+                                       if (model == 'PLATFORM_DELIVERY') {
+                                         label = "Hoppa Kuryesi";
+                                       } else if (model == 'SELF_DELIVERY') {
+                                         label = "Esnaf Teslimatı";
+                                       } else if (model == 'PICKUP') {
+                                         label = "Gel-Al";
+                                       }
+                                       if (label.isEmpty) return const SizedBox.shrink();
+                                       return ShopBadge(label: label);
+                                     }),
+                                     ...widget.shop.tags.map((tag) => ShopBadge(label: tag)),
+                                   ],
+                                 ),
                               ],
                             ),
                           ),
