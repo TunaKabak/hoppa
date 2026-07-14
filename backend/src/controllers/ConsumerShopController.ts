@@ -30,17 +30,22 @@ function formatProduct(product: any) {
 function enrichShopWithTags(shop: any) {
   if (!shop) return null;
   const tags: string[] = [];
+
+  // 1. Yeni etiketi (Son 30 gün içinde oluşturulduysa)
+  if (shop.createdAt) {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    if (new Date(shop.createdAt) >= thirtyDaysAgo) {
+      tags.push("Yeni");
+    }
+  }
+
   if (shop.reviewCount > 0) {
+    // 2. Hızlı Teslimat (Hız puanı >= 4.5)
     if (shop.avgSpeedRating >= 4.5) {
       tags.push("Hızlı Teslimat");
     }
-    if (shop.avgServiceRating >= 4.5) {
-      tags.push("Kaliteli Hizmet");
-    }
-    const isRestaurant = shop.type === "RESTAURANT" || shop.type === "Cafe";
-    if (shop.avgTasteRating >= 4.5) {
-      tags.push(isRestaurant ? "Efsane Lezzet" : "Taze Ürünler");
-    }
+    // 3. Müşteri Favorisi (Ortalama puan >= 4.7)
     if (shop.averageRating >= 4.7) {
       tags.push("Müşteri Favorisi");
     }
