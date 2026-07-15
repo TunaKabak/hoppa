@@ -70,21 +70,45 @@ class SelectionCategoryPage extends rp.ConsumerWidget {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      body: Column(
-        children: [
-          // FIXED MODERN CURVED COLORFUL HEADER (Hepsiburada / Yemeksepeti Style)
-          const HoppaHeader(
-            child: _SelectionHeader(),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFFE95D22), // Hoppa Orange
+              Color(0xFFFF8C00), // Orange-Yellow
+            ],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
           ),
-          const SizedBox(height: 8),
-
-          // SCROLLABLE CONTENT
-          Expanded(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+        ),
+        child: Column(
+          children: [
+            // FIXED MODERN CURVED COLORFUL HEADER (Hepsiburada / Yemeksepeti Style)
+            const HoppaHeader(
+              child: _SelectionHeader(),
+            ),
+            // SCROLLABLE CONTENT IN WHITE CONTAINER WITH ROUNDED TOP CORNERS
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: theme.scaffoldBackgroundColor,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 16),
                   // HOPPA SPECIAL ADVERTISING CAROUSEL SLIDER (Campaigns right under header)
                   const HoppaCampaignSlider(),
                   const SizedBox(height: 16),
@@ -449,11 +473,14 @@ class SelectionCategoryPage extends rp.ConsumerWidget {
                       ),
                     ),
                   const SizedBox(height: 16),
-                ],
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -583,15 +610,9 @@ class _SelectionHeader extends rp.ConsumerWidget {
             child: Container(
               padding: const EdgeInsets.all(9),
               decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
+                color: Colors.transparent,
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.02),
-                    blurRadius: 4,
-                  ),
-                ],
+                border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
               ),
               child: const Icon(
                 Icons.person_outline_rounded,

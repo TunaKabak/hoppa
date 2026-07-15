@@ -9,6 +9,8 @@ class CampaignItem {
   final String badgeText;
   final List<Color> gradientColors;
   final Color accentColor;
+  final Color textColor;
+  final Color subtitleColor;
   final VoidCallback? onTap;
 
   CampaignItem({
@@ -18,6 +20,8 @@ class CampaignItem {
     required this.badgeText,
     required this.gradientColors,
     required this.accentColor,
+    required this.textColor,
+    required this.subtitleColor,
     this.onTap,
   });
 }
@@ -42,6 +46,8 @@ class _HoppaCampaignSliderState extends State<HoppaCampaignSlider> {
       badgeText: 'ÜCRETSİZ TESLİMAT',
       gradientColors: const [Color(0xFFFFF8F2), Color(0xFFFFECE1)],
       accentColor: const Color(0xFFE95D22), // Hoppa Orange
+      textColor: Colors.black87,
+      subtitleColor: Colors.black54,
       onTap: () {},
     ),
     CampaignItem(
@@ -50,7 +56,9 @@ class _HoppaCampaignSliderState extends State<HoppaCampaignSlider> {
       subtitle: 'İlk siparişinize özel 100 TL hediye.',
       badgeText: 'HOŞ GELDİN KUPONU',
       gradientColors: const [Color(0xFFFFF2F6), Color(0xFFFFE1EC)],
-      accentColor: Colors.purple.shade700,
+      accentColor: const Color(0xFF00A651), // Hoppa Green
+      textColor: Colors.white,
+      subtitleColor: Colors.white70,
       onTap: () {},
     ),
     CampaignItem(
@@ -59,7 +67,9 @@ class _HoppaCampaignSliderState extends State<HoppaCampaignSlider> {
       subtitle: 'Market, yemek, su... İste gelsin.',
       badgeText: 'KOLAY SİPARİŞ',
       gradientColors: const [Color(0xFFF2FBF6), Color(0xFFE1F7EB)],
-      accentColor: const Color(0xFF00A651), // Hoppa Green
+      accentColor: const Color(0xFFE95D22), // Hoppa Orange
+      textColor: Colors.black87,
+      subtitleColor: Colors.black54,
       onTap: () {},
     ),
     CampaignItem(
@@ -68,7 +78,9 @@ class _HoppaCampaignSliderState extends State<HoppaCampaignSlider> {
       subtitle: 'Davet et, ikiniz de 100 TL kazanın.',
       badgeText: 'DAVET ET KAZAN',
       gradientColors: const [Color(0xFFF2F9FF), Color(0xFFE1F0FF)],
-      accentColor: Colors.blue.shade700,
+      accentColor: const Color(0xFF00A651), // Hoppa Green
+      textColor: Colors.white,
+      subtitleColor: Colors.white70,
       onTap: () {},
     ),
   ];
@@ -128,13 +140,12 @@ class _HoppaCampaignSliderState extends State<HoppaCampaignSlider> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: item.accentColor.withValues(alpha: 0.12),
+                        color: item.accentColor.withValues(alpha: 0.2),
                         width: 1.5,
                       ),
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: item.gradientColors,
+                      image: DecorationImage(
+                        image: AssetImage(item.imagePath),
+                        fit: BoxFit.cover,
                       ),
                       boxShadow: [
                         BoxShadow(
@@ -148,30 +159,19 @@ class _HoppaCampaignSliderState extends State<HoppaCampaignSlider> {
                       borderRadius: BorderRadius.circular(20),
                       child: Stack(
                         children: [
-                          // 1. Isolated 3D Graphic on the bottom right
+                          // 1. Branded Hoppa Logo in the top-left corner
                           Positioned(
-                            right: -10,
-                            bottom: -10,
-                            child: Image.asset(
-                              item.imagePath,
-                              width: 120,
-                              height: 120,
-                              fit: BoxFit.contain,
-                            ),
-                          ),
-                          // 2. Branded Hoppa Logo in the top-right corner
-                          Positioned(
-                            right: 16,
+                            left: 16,
                             top: 16,
                             child: Image.asset(
                               'assets/images/hoppa_logo.png',
                               height: 14,
-                              color: item.accentColor.withValues(alpha: 0.7),
+                              color: item.textColor.withValues(alpha: 0.8),
                             ),
                           ),
-                          // 3. Content Column on the left
+                          // 2. Content Column on the left
                           Padding(
-                            padding: const EdgeInsets.all(16),
+                            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16, top: 40),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -180,10 +180,10 @@ class _HoppaCampaignSliderState extends State<HoppaCampaignSlider> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                   decoration: BoxDecoration(
-                                    color: item.accentColor.withValues(alpha: 0.1),
+                                    color: item.textColor.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
-                                      color: item.accentColor.withValues(alpha: 0.2),
+                                      color: item.textColor.withValues(alpha: 0.25),
                                       width: 0.8,
                                     ),
                                   ),
@@ -192,7 +192,7 @@ class _HoppaCampaignSliderState extends State<HoppaCampaignSlider> {
                                     style: GoogleFonts.poppins(
                                       fontSize: 9,
                                       fontWeight: FontWeight.bold,
-                                      color: item.accentColor,
+                                      color: item.textColor,
                                       letterSpacing: 0.5,
                                     ),
                                   ),
@@ -206,7 +206,7 @@ class _HoppaCampaignSliderState extends State<HoppaCampaignSlider> {
                                       style: GoogleFonts.poppins(
                                         fontSize: 15,
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.black87,
+                                        color: item.textColor,
                                         height: 1.25,
                                       ),
                                     ),
@@ -219,7 +219,7 @@ class _HoppaCampaignSliderState extends State<HoppaCampaignSlider> {
                                         overflow: TextOverflow.ellipsis,
                                         style: GoogleFonts.inter(
                                           fontSize: 10,
-                                          color: Colors.black54,
+                                          color: item.subtitleColor,
                                           fontWeight: FontWeight.w500,
                                         ),
                                       ),

@@ -549,26 +549,6 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 4),
-                                 Wrap(
-                                   spacing: 4,
-                                   runSpacing: 2,
-                                   children: [
-                                     ...widget.shop.allowedFulfillmentModels.map((model) {
-                                       String label = "";
-                                       if (model == 'PLATFORM_DELIVERY') {
-                                         label = "Hoppa Kuryesi";
-                                       } else if (model == 'SELF_DELIVERY') {
-                                         label = "Esnaf Teslimatı";
-                                       } else if (model == 'PICKUP') {
-                                         label = "Gel-Al";
-                                       }
-                                       if (label.isEmpty) return const SizedBox.shrink();
-                                       return ShopBadge(label: label);
-                                     }),
-                                     ...widget.shop.tags.map((tag) => ShopBadge(label: tag)),
-                                   ],
-                                 ),
                               ],
                             ),
                           ),
@@ -583,6 +563,37 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
         },
         body: CustomScrollView(
           slivers: [
+            // Shop Badges / Tags (placed modernly between header and search bar)
+            if (widget.shop.allowedFulfillmentModels.isNotEmpty || widget.shop.tags.isNotEmpty)
+              SliverToBoxAdapter(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+                  child: Row(
+                    children: [
+                      ...widget.shop.allowedFulfillmentModels.map((model) {
+                        String label = "";
+                        if (model == 'PLATFORM_DELIVERY') {
+                          label = "Hoppa Kuryesi";
+                        } else if (model == 'SELF_DELIVERY') {
+                          label = "Esnaf Teslimatı";
+                        } else if (model == 'PICKUP') {
+                          label = "Gel-Al";
+                        }
+                        if (label.isEmpty) return const SizedBox.shrink();
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: ShopBadge(label: label, isOnImage: false),
+                        );
+                      }),
+                      ...widget.shop.tags.map((tag) => Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: ShopBadge(label: tag, isOnImage: false),
+                          )),
+                    ],
+                  ),
+                ),
+              ),
             // Search Input
             SliverToBoxAdapter(
               child: Padding(

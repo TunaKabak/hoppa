@@ -74,9 +74,9 @@ class BusinessSelectionPage extends ConsumerWidget {
                           margin: const EdgeInsets.only(right: 8),
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.15),
+                            color: Colors.transparent,
                             shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
                           ),
                           child: const Icon(
                             Icons.person_outline_rounded,
