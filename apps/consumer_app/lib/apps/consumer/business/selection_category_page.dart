@@ -7,6 +7,7 @@ import 'package:consumer_app/apps/consumer/address/delivery_provider.dart';
 import 'package:consumer_app/apps/consumer/address/address_list_page.dart';
 import 'package:consumer_app/apps/consumer/home/widgets/account_bottom_sheet.dart';
 import 'package:consumer_app/apps/consumer/home/widgets/hoppa_campaign_slider.dart';
+import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
 import 'package:consumer_app/apps/consumer/business/business_provider.dart';
 import 'package:consumer_app/apps/consumer/business/widgets/category_grid_item.dart';
 import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository.dart';
@@ -69,261 +70,390 @@ class SelectionCategoryPage extends rp.ConsumerWidget {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // FIXED MODERN HEADER
-            const _SelectionHeader(),
-            const SizedBox(height: 8),
+      body: Column(
+        children: [
+          // FIXED MODERN CURVED COLORFUL HEADER (Hepsiburada / Yemeksepeti Style)
+          const HoppaHeader(
+            child: _SelectionHeader(),
+          ),
+          const SizedBox(height: 8),
 
-            // SCROLLABLE CONTENT
-            Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // WELCOME INFO AREA
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Builder(
-                            builder: (context) {
-                              String titleText = "Hoş Geldiniz 👋";
-                              if (authState is AuthAuthenticated) {
-                                titleText = "Tekrar Hoş Geldin, ${authState.user.displayName} 👋";
-                              }
-                              return Text(
-                                titleText,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
-                                ),
-                              );
-                            },
+          // SCROLLABLE CONTENT
+          Expanded(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // HOPPA SPECIAL ADVERTISING CAROUSEL SLIDER (Campaigns right under header)
+                  const HoppaCampaignSlider(),
+                  const SizedBox(height: 16),
+
+                  // WELCOME INFO AREA
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Builder(
+                          builder: (context) {
+                            String titleText = "Hoş Geldiniz 👋";
+                            if (authState is AuthAuthenticated) {
+                              titleText =
+                                  "Tekrar Hoş Geldin, ${authState.user.displayName} 👋";
+                            }
+                            return Text(
+                              titleText,
+                              style: GoogleFonts.poppins(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          "Kuzey Kıbrıs'ın en hızlı teslimat ağını keşfedin.",
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: Colors.grey.shade600,
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            "Kuzey Kıbrıs'ın en hızlı teslimat ağını keşfedin.",
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              color: Colors.grey.shade600,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // GLOBAL SEARCH BAR MOCK (Tapping triggers Navigation to Search Tab)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: GestureDetector(
+                      onTap: () {
+                        Provider.of<NavigationProvider>(context, listen: false)
+                            .setIndex(1);
+                      },
+                      child: Container(
+                        height: 52,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.search_rounded,
+                                color: Colors.grey.shade600),
+                            const SizedBox(width: 12),
+                            Text(
+                              "Kategori, işletme veya ürün ara...",
+                              style: TextStyle(
+                                color: Colors.grey.shade500,
+                                fontSize: 15,
+                              ),
                             ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Category Title (scrolls with content)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      "İşletme Kategorileri",
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 17,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Category Grid
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: categoriesAsync.when(
+                      loading: () => const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(24.0),
+                          child: CircularProgressIndicator(),
+                        ),
+                      ),
+                      error: (err, stack) => Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: Text(
+                            "Kategoriler yüklenemedi: $err",
+                            style: const TextStyle(color: Colors.red),
+                          ),
+                        ),
+                      ),
+                      data: (categoriesList) {
+                        if (categoriesList.isEmpty) {
+                          return const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(24.0),
+                              child: Text("Henüz kategori tanımlanmamış."),
+                            ),
+                          );
+                        }
+
+                        return GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            childAspectRatio: 1.1,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                          ),
+                          itemCount: categoriesList.length,
+                          itemBuilder: (context, index) {
+                            final cat = categoriesList[index];
+                            final catName = cat.name;
+                            final isFeatured = cat.imageUrl != null ||
+                                _featuredImages.containsKey(catName);
+                            final bgImage =
+                                cat.imageUrl ?? _featuredImages[catName];
+
+                            final catMap = {
+                              'name': cat.name,
+                              'icon': _getIconData(cat.icon),
+                              'color': _getColor(cat.color),
+                              'badge': cat.badge,
+                              'avgDeliveryTime': cat.avgDeliveryTime,
+                              'subtitle': cat.subtitle,
+                              'imageUrl': cat.imageUrl,
+                            };
+
+                            return CategoryGridItem(
+                              category: catMap,
+                              isFeatured: isFeatured,
+                              backgroundImage: bgImage,
+                              badge: cat.badge,
+                              businessCount: null,
+                              avgDeliveryTime: cat.avgDeliveryTime,
+                              subtitle: cat.subtitle,
+                              index: index,
+                              onTap: () {
+                                Provider.of<BusinessProvider>(
+                                  context,
+                                  listen: false,
+                                ).setCategory(catName);
+                              },
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // HOPPA SPECIAL ADVERTISING BANNER
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Container(
+                      height: 140,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFE95D22), Color(0xFFFF8C00)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color:
+                                const Color(0xFFE95D22).withValues(alpha: 0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // GLOBAL SEARCH BAR MOCK (Tapping triggers Navigation to Search Tab)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: GestureDetector(
-                        onTap: () {
-                          Provider.of<NavigationProvider>(context, listen: false).setIndex(1);
-                        },
-                        child: Container(
-                          height: 52,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: Colors.grey.shade200),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.search_rounded, color: Colors.grey.shade600),
-                              const SizedBox(width: 12),
-                              Text(
-                                "Kategori, işletme veya ürün ara...",
-                                style: TextStyle(
-                                  color: Colors.grey.shade500,
-                                  fontSize: 15,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: Stack(
+                          children: [
+                            Positioned(
+                              right: -15,
+                              bottom: -15,
+                              child: Opacity(
+                                opacity: 0.15,
+                                child: Icon(
+                                  Icons.play_circle_fill_rounded,
+                                  size: 150,
+                                  color: Colors.white,
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Category Title (scrolls with content)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        "İşletme Kategorileri",
-                        style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 17,
-                          color: Colors.black87,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Category Grid
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: categoriesAsync.when(
-                        loading: () => const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(24.0),
-                            child: CircularProgressIndicator(),
-                          ),
-                        ),
-                        error: (err, stack) => Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(24.0),
-                            child: Text(
-                              "Kategoriler yüklenemedi: $err",
-                              style: const TextStyle(color: Colors.red),
                             ),
-                          ),
-                        ),
-                        data: (categoriesList) {
-                          if (categoriesList.isEmpty) {
-                            return const Center(
-                              child: Padding(
-                                padding: EdgeInsets.all(24.0),
-                                child: Text("Henüz kategori tanımlanmamış."),
+                            Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white
+                                                .withValues(alpha: 0.2),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            "HOPPA ÖZEL REKLAM",
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                              letterSpacing: 1.0,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 10),
+                                        Text(
+                                          "Hoppa ile Tanışın!",
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          "Tek tıklamayla kapınızda. Tanıtım videomuzu izleyin.",
+                                          style: GoogleFonts.inter(
+                                            fontSize: 11,
+                                            color: Colors.white
+                                                .withValues(alpha: 0.9),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Center(
+                                    child: Container(
+                                      height: 44,
+                                      width: 44,
+                                      decoration: const BoxDecoration(
+                                        color: Colors.white,
+                                        shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black12,
+                                            blurRadius: 4,
+                                          ),
+                                        ],
+                                      ),
+                                      child: const Icon(
+                                        Icons.play_arrow_rounded,
+                                        color: Color(0xFFE95D22),
+                                        size: 28,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            );
-                          }
-
-                          return GridView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              childAspectRatio: 1.1,
-                              crossAxisSpacing: 12,
-                              mainAxisSpacing: 12,
                             ),
-                            itemCount: categoriesList.length,
-                            itemBuilder: (context, index) {
-                              final cat = categoriesList[index];
-                              final catName = cat.name;
-                              final isFeatured = cat.imageUrl != null || _featuredImages.containsKey(catName);
-                              final bgImage = cat.imageUrl ?? _featuredImages[catName];
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
 
-                              final catMap = {
-                                'name': cat.name,
-                                'icon': _getIconData(cat.icon),
-                                'color': _getColor(cat.color),
-                                'badge': cat.badge,
-                                'avgDeliveryTime': cat.avgDeliveryTime,
-                                'subtitle': cat.subtitle,
-                                'imageUrl': cat.imageUrl,
-                              };
-
-                              return CategoryGridItem(
-                                category: catMap,
-                                isFeatured: isFeatured,
-                                backgroundImage: bgImage,
-                                badge: cat.badge,
-                                businessCount: null,
-                                avgDeliveryTime: cat.avgDeliveryTime,
-                                subtitle: cat.subtitle,
-                                index: index,
-                                onTap: () {
-                                  Provider.of<BusinessProvider>(
+                  // LOGIN / REGISTER CTA CARD (Only for Guest mode)
+                  if (isGuest)
+                    Padding(
+                      padding: const EdgeInsets.only(
+                          left: 16, right: 16, bottom: 24),
+                      child: Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.grey.shade200),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.02),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Hoppa Dünyasına Katılın!",
+                              style: GoogleFonts.poppins(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              "Siparişlerinizi hızlıca kapınıza getirmek, adreslerinizi güvenle kaydetmek ve size özel kampanyalardan yararlanmak için şimdi giriş yapın veya kayıt olun.",
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: Colors.grey.shade600,
+                                height: 1.4,
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            SizedBox(
+                              height: 46,
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF00A651),
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                onPressed: () {
+                                  Navigator.push(
                                     context,
-                                    listen: false,
-                                  ).setCategory(catName);
+                                    MaterialPageRoute(
+                                        builder: (_) => const LoginPage()),
+                                  );
                                 },
-                              );
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // HOPPA SPECIAL ADVERTISING CAROUSEL SLIDER
-                    const HoppaCampaignSlider(),
-                    const SizedBox(height: 16),
-
-                    // LOGIN / REGISTER CTA CARD (Only for Guest mode)
-                    if (isGuest)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 16, right: 16, bottom: 24),
-                        child: Container(
-                          padding: const EdgeInsets.all(18),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.grey.shade200),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.02),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Hoppa Dünyasına Katılın!",
-                                style: GoogleFonts.poppins(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                "Siparişlerinizi hızlıca kapınıza getirmek, adreslerinizi güvenle kaydetmek ve size özel kampanyalardan yararlanmak için şimdi giriş yapın veya kayıt olun.",
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  color: Colors.grey.shade600,
-                                  height: 1.4,
-                                ),
-                              ),
-                              const SizedBox(height: 14),
-                              SizedBox(
-                                height: 46,
-                                width: double.infinity,
-                                child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF00A651),
-                                    foregroundColor: Colors.white,
-                                    elevation: 0,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(builder: (_) => const LoginPage()),
-                                    );
-                                  },
-                                  child: Text(
-                                    "Giriş Yap / Üye Ol",
-                                    style: GoogleFonts.poppins(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 14,
-                                    ),
+                                child: Text(
+                                  "Giriş Yap / Üye Ol",
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
                                   ),
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
-                    const SizedBox(height: 16),
-                  ],
-                ),
+                    ),
+                  const SizedBox(height: 16),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -334,12 +464,11 @@ class _SelectionHeader extends rp.ConsumerWidget {
 
   @override
   Widget build(BuildContext context, rp.WidgetRef ref) {
-    final theme = Theme.of(context);
     final authState = ref.watch(authControllerProvider);
     final isGuest = authState is! AuthAuthenticated;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -352,7 +481,8 @@ class _SelectionHeader extends rp.ConsumerWidget {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade100),
+                  border:
+                      Border.all(color: Colors.white.withValues(alpha: 0.12)),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.04),
@@ -374,11 +504,13 @@ class _SelectionHeader extends rp.ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    isGuest ? "Merhaba, Misafir" : "Merhaba, ${authState.user.displayName}",
+                    isGuest
+                        ? "Merhaba, Misafir"
+                        : "Merhaba, ${authState.user.displayName}",
                     style: GoogleFonts.poppins(
                       fontWeight: FontWeight.bold,
                       fontSize: 15,
-                      color: Colors.black87,
+                      color: Colors.white,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -389,24 +521,28 @@ class _SelectionHeader extends rp.ConsumerWidget {
                         if (isGuest) {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => const LoginPage()),
+                            MaterialPageRoute(
+                                builder: (_) => const LoginPage()),
                           );
                         } else {
                           final address = await Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => const AddressListPage(isSelectionMode: true),
+                              builder: (_) =>
+                                  const AddressListPage(isSelectionMode: true),
                             ),
                           );
                           if (address != null) provider.setAddress(address);
                         }
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
+                          color: Colors.white.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.grey.shade200),
+                          border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.25)),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -414,7 +550,7 @@ class _SelectionHeader extends rp.ConsumerWidget {
                             const Icon(
                               Icons.location_on_rounded,
                               size: 12,
-                              color: Color(0xFFE95D22),
+                              color: Colors.white,
                             ),
                             const SizedBox(width: 4),
                             Text(
@@ -422,14 +558,14 @@ class _SelectionHeader extends rp.ConsumerWidget {
                               style: GoogleFonts.inter(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.grey.shade700,
+                                color: Colors.white,
                               ),
                             ),
                             const SizedBox(width: 2),
                             const Icon(
                               Icons.keyboard_arrow_down_rounded,
                               size: 14,
-                              color: Colors.grey,
+                              color: Colors.white70,
                             ),
                           ],
                         ),
@@ -447,9 +583,9 @@ class _SelectionHeader extends rp.ConsumerWidget {
             child: Container(
               padding: const EdgeInsets.all(9),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Colors.white.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.grey.shade200),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.02),
@@ -457,9 +593,9 @@ class _SelectionHeader extends rp.ConsumerWidget {
                   ),
                 ],
               ),
-              child: Icon(
+              child: const Icon(
                 Icons.person_outline_rounded,
-                color: theme.primaryColor,
+                color: Colors.white,
                 size: 20,
               ),
             ),

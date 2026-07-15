@@ -11,6 +11,8 @@ import 'package:consumer_app/apps/consumer/widgets/shop_badge.dart';
 import 'package:latlong2/latlong.dart'; // Mesafe hesaplama için
 import 'package:core_auth/core_auth.dart';
 import 'package:consumer_app/apps/consumer/auth/consumer_login_page.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
 
 class BusinessSelectionPage extends ConsumerWidget {
   final String? category; // Artık İşletme Türü veya Kategori filtresi olabilir
@@ -31,51 +33,6 @@ class BusinessSelectionPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7F6),
-      appBar: AppBar(
-        title: Text(
-          category ?? "İşletme Seçimi",
-          style: const TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () {
-            // Kategoriyi temizle -> Kategori Seçimine döner
-            p.Provider.of<BusinessProvider>(
-              context,
-              listen: false,
-            ).clearCategory();
-          },
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: Center(
-              child: GestureDetector(
-                onTap: () => AccountBottomSheet.show(context),
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: const Icon(
-                    Icons.person_outline,
-                    color: kPrimaryColor,
-                    size: 20,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
       body: p.Consumer<DeliveryProvider>(
         builder: (context, deliveryProvider, child) {
           final address = deliveryProvider.selectedAddress;
@@ -85,6 +42,55 @@ class BusinessSelectionPage extends ConsumerWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // FIXED MODERN CURVED COLORFUL HEADER (Hepsiburada / Yemeksepeti Style)
+              HoppaHeader(
+                height: 56,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                        onPressed: () {
+                          // Kategoriyi temizle -> Kategori Seçimine döner
+                          p.Provider.of<BusinessProvider>(
+                            context,
+                            listen: false,
+                          ).clearCategory();
+                        },
+                      ),
+                      Text(
+                        category ?? "İşletme Seçimi",
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => AccountBottomSheet.show(context),
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                          ),
+                          child: const Icon(
+                            Icons.person_outline_rounded,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+
               // --- ADRES KARTI ---
               Container(
                 color: Colors.white,

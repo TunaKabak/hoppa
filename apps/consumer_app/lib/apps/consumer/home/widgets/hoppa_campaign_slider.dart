@@ -6,12 +6,18 @@ class CampaignItem {
   final String imagePath;
   final String title;
   final String subtitle;
+  final String badgeText;
+  final List<Color> gradientColors;
+  final Color accentColor;
   final VoidCallback? onTap;
 
   CampaignItem({
     required this.imagePath,
     required this.title,
     required this.subtitle,
+    required this.badgeText,
+    required this.gradientColors,
+    required this.accentColor,
     this.onTap,
   });
 }
@@ -31,35 +37,39 @@ class _HoppaCampaignSliderState extends State<HoppaCampaignSlider> {
   late final List<CampaignItem> _campaigns = [
     CampaignItem(
       imagePath: 'assets/images/campaign_free_delivery.png',
-      title: 'Teslimat Ücreti Hoppadan! 🏍️',
-      subtitle: 'İlk 5 siparişinizde teslimat ücreti ödemeyin.',
-      onTap: () {
-        // Can route to a specific page or show dialog
-      },
+      title: 'Teslimat Ücreti\nHoppa\'dan! 🏍️',
+      subtitle: 'İlk 5 siparişinizde teslimat ödemeyin.',
+      badgeText: 'ÜCRETSİZ TESLİMAT',
+      gradientColors: const [Color(0xFFFFF8F2), Color(0xFFFFECE1)],
+      accentColor: const Color(0xFFE95D22), // Hoppa Orange
+      onTap: () {},
     ),
     CampaignItem(
       imagePath: 'assets/images/campaign_welcome_coupon.png',
-      title: 'Hoppa\'ya Hoş Geldin! 🎉',
-      subtitle: 'İlk siparişinize özel 100 TL hediye kuponu.',
-      onTap: () {
-        // Can route to coupon wallet
-      },
+      title: 'Hoppa\'ya\nHoş Geldin! 🎉',
+      subtitle: 'İlk siparişinize özel 100 TL hediye.',
+      badgeText: 'HOŞ GELDİN KUPONU',
+      gradientColors: const [Color(0xFFFFF2F6), Color(0xFFFFE1EC)],
+      accentColor: Colors.purple.shade700,
+      onTap: () {},
     ),
     CampaignItem(
       imagePath: 'assets/images/campaign_everything_at_door.png',
-      title: 'Aradığın Her Şey Kapında! 🛒',
-      subtitle: 'Market, yemek, su veya çiçek... İste hemen gelsin.',
-      onTap: () {
-        // Can open search or highlight categories
-      },
+      title: 'Aradığın Her Şey\nKapında! 🛒',
+      subtitle: 'Market, yemek, su... İste gelsin.',
+      badgeText: 'KOLAY SİPARİŞ',
+      gradientColors: const [Color(0xFFF2FBF6), Color(0xFFE1F7EB)],
+      accentColor: const Color(0xFF00A651), // Hoppa Green
+      onTap: () {},
     ),
     CampaignItem(
       imagePath: 'assets/images/campaign_invite_friend.png',
-      title: 'Arkadaşını Davet Et Kazan! 🤝',
-      subtitle: 'Davet et, ikiniz de 100 TL Hoppa Puan kazanın.',
-      onTap: () {
-        // Can route to invite page
-      },
+      title: 'Arkadaşını\nDavet Et Kazan! 🤝',
+      subtitle: 'Davet et, ikiniz de 100 TL kazanın.',
+      badgeText: 'DAVET ET KAZAN',
+      gradientColors: const [Color(0xFFF2F9FF), Color(0xFFE1F0FF)],
+      accentColor: Colors.blue.shade700,
+      onTap: () {},
     ),
   ];
 
@@ -78,7 +88,7 @@ class _HoppaCampaignSliderState extends State<HoppaCampaignSlider> {
 
   void _startAutoPlay() {
     _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 4), (timer) {
+    _timer = Timer.periodic(const Duration(seconds: 5), (timer) {
       if (_pageController.hasClients) {
         final nextPage = (_currentPage + 1) % _campaigns.length;
         _pageController.animateToPage(
@@ -102,7 +112,6 @@ class _HoppaCampaignSliderState extends State<HoppaCampaignSlider> {
               setState(() {
                 _currentPage = index;
               });
-              // Reset timer to prevent premature slide after user manual swipe
               _startAutoPlay();
             },
             itemCount: _campaigns.length,
@@ -111,18 +120,25 @@ class _HoppaCampaignSliderState extends State<HoppaCampaignSlider> {
               final item = _campaigns[index];
               return AnimatedBuilder(
                 animation: _pageController,
-                builder: (context, child) {
-                  return child!;
-                },
+                builder: (context, child) => child!,
                 child: GestureDetector(
                   onTap: item.onTap,
                   child: Container(
                     margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: item.accentColor.withValues(alpha: 0.12),
+                        width: 1.5,
+                      ),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: item.gradientColors,
+                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.08),
+                          color: item.accentColor.withValues(alpha: 0.04),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),
@@ -131,65 +147,84 @@ class _HoppaCampaignSliderState extends State<HoppaCampaignSlider> {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(20),
                       child: Stack(
-                        fit: StackFit.expand,
                         children: [
-                          // Background Image
-                          Image.asset(
-                            item.imagePath,
-                            fit: BoxFit.cover,
-                          ),
-                          // Premium Gradient Overlay for readability
-                          Container(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.bottomCenter,
-                                end: Alignment.topCenter,
-                                colors: [
-                                  Colors.black.withValues(alpha: 0.75),
-                                  Colors.black.withValues(alpha: 0.2),
-                                  Colors.transparent,
-                                ],
-                                stops: const [0.0, 0.6, 1.0],
-                              ),
+                          // 1. Isolated 3D Graphic on the bottom right
+                          Positioned(
+                            right: -10,
+                            bottom: -10,
+                            child: Image.asset(
+                              item.imagePath,
+                              width: 120,
+                              height: 120,
+                              fit: BoxFit.contain,
                             ),
                           ),
-                          // Content
+                          // 2. Branded Hoppa Logo in the top-right corner
+                          Positioned(
+                            right: 16,
+                            top: 16,
+                            child: Image.asset(
+                              'assets/images/hoppa_logo.png',
+                              height: 14,
+                              color: item.accentColor.withValues(alpha: 0.7),
+                            ),
+                          ),
+                          // 3. Content Column on the left
                           Padding(
                             padding: const EdgeInsets.all(16),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.end,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
-                                  item.title,
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    shadows: const [
-                                      Shadow(
-                                        color: Colors.black38,
-                                        offset: Offset(0, 1),
-                                        blurRadius: 2,
-                                      ),
-                                    ],
+                                // Campaign Badge/Label
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: item.accentColor.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: item.accentColor.withValues(alpha: 0.2),
+                                      width: 0.8,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    item.badgeText,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                      color: item.accentColor,
+                                      letterSpacing: 0.5,
+                                    ),
                                   ),
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  item.subtitle,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    color: Colors.white.withValues(alpha: 0.9),
-                                    fontWeight: FontWeight.w500,
-                                    shadows: const [
-                                      Shadow(
-                                        color: Colors.black38,
-                                        offset: Offset(0, 1),
-                                        blurRadius: 2,
+                                // Text details
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item.title,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black87,
+                                        height: 1.25,
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    SizedBox(
+                                      width: MediaQuery.of(context).size.width * 0.52, // prevent text overlaying with right graphic
+                                      child: Text(
+                                        item.subtitle,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 10,
+                                          color: Colors.black54,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
