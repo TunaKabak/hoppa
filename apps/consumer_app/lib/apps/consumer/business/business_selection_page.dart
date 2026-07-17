@@ -9,8 +9,6 @@ import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository
 import 'package:consumer_app/apps/consumer/home/widgets/account_bottom_sheet.dart';
 import 'package:consumer_app/apps/consumer/widgets/shop_badge.dart';
 import 'package:latlong2/latlong.dart'; // Mesafe hesaplama için
-import 'package:core_auth/core_auth.dart';
-import 'package:consumer_app/apps/consumer/auth/consumer_login_page.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
 
@@ -36,8 +34,6 @@ class BusinessSelectionPage extends ConsumerWidget {
       body: p.Consumer<DeliveryProvider>(
         builder: (context, deliveryProvider, child) {
           final address = deliveryProvider.selectedAddress;
-          final authState = ref.watch(authControllerProvider);
-          final isGuest = authState is! AuthAuthenticated;
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -122,22 +118,15 @@ class BusinessSelectionPage extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(16),
                       splashColor: kPrimaryColor.withValues(alpha: 0.1),
                       onTap: () async {
-                        if (isGuest) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => const LoginPage()),
-                          );
-                        } else {
-                          final selectedAddress = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const AddressListPage(isSelectionMode: true),
-                            ),
-                          );
-                          if (selectedAddress != null) {
-                            deliveryProvider.setAddress(selectedAddress);
-                          }
+                        final selectedAddress = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const AddressListPage(isSelectionMode: true),
+                          ),
+                        );
+                        if (selectedAddress != null) {
+                          deliveryProvider.setAddress(selectedAddress);
                         }
                       },
                       child: Padding(
@@ -166,7 +155,7 @@ class BusinessSelectionPage extends ConsumerWidget {
                                   Text(
                                     address != null
                                         ? "Teslimat: ${address.title}"
-                                        : (isGuest ? "Nereye Gönderilsin?" : "Teslimat Adresi Seçin"),
+                                        : "Nereye Gönderilsin?",
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14,
@@ -178,7 +167,7 @@ class BusinessSelectionPage extends ConsumerWidget {
                                   Text(
                                     address != null
                                         ? "${address.district}, ${address.city}"
-                                        : (isGuest ? "Adres girmek için lütfen giriş yapın" : "Lütfen bir teslimat adresi belirtin"),
+                                        : "Lütfen bir teslimat adresi belirtin",
                                     style: TextStyle(
                                       color: Colors.grey.shade600,
                                       fontSize: 12,
@@ -191,41 +180,10 @@ class BusinessSelectionPage extends ConsumerWidget {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            // Navigation Caret or Guest Badge
-                            if (isGuest) ...[
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFFECE5), // Soft orange tint
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: const Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      "Giriş Yapın",
-                                      style: TextStyle(
-                                        color: Color(0xFFE95D22), // Hoppa Orange
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 11,
-                                        fontFamily: 'Inter',
-                                      ),
-                                    ),
-                                    SizedBox(width: 2),
-                                    Icon(
-                                      Icons.chevron_right_rounded,
-                                      color: Color(0xFFE95D22),
-                                      size: 14,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ] else ...[
-                              const Icon(
-                                Icons.keyboard_arrow_down_rounded,
-                                color: Colors.grey,
-                              ),
-                            ],
+                            const Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              color: Colors.grey,
+                            ),
                           ],
                         ),
                       ),

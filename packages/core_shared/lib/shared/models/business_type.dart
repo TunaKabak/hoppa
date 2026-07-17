@@ -15,7 +15,7 @@ enum BusinessType {
       case BusinessType.market:
         return 'Market';
       case BusinessType.restaurant:
-        return 'Restoran';
+        return 'Yemek';
       case BusinessType.cafe:
         return 'Cafe';
       case BusinessType.butcher:

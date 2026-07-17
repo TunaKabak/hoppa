@@ -14,6 +14,7 @@ import 'package:core_shared/shared/models/shop_category_data.dart';
 import 'package:consumer_app/apps/consumer/home/widgets/campaign_carousel.dart';
 import 'package:consumer_app/apps/consumer/widgets/hoppa_dialog.dart';
 import 'package:consumer_app/apps/consumer/widgets/shop_badge.dart';
+import 'package:share_plus/share_plus.dart';
 
 class ModernShopDetailPage extends ConsumerStatefulWidget {
   final Business shop;
@@ -428,8 +429,17 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                       ),
                     )
                   : null,
-              actions: const [
-                CartPriceBadge(),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.share_rounded, color: Colors.white),
+                  tooltip: "İşletmeyi Paylaş",
+                  onPressed: () {
+                    final text = "${widget.shop.name} Hoppa'da! 🚀\n"
+                        "Hemen sipariş vermek için dükkanı görüntüle: https://hoppanow.com/shop/${widget.shop.id}";
+                    Share.share(text);
+                  },
+                ),
+                const CartPriceBadge(),
               ],
               flexibleSpace: FlexibleSpaceBar(
                 background: Stack(

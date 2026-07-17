@@ -34,6 +34,12 @@ model User {
   notifyCampaigns   Boolean @default(true)
   notifyNews        Boolean @default(true)
   
+  // Davet Sistemi
+  referralCode String?   @unique
+  referredById String?
+  referredBy   User?     @relation("ReferralRelation", fields: [referredById], references: [id])
+  referrals    User[]    @relation("ReferralRelation")
+
   // Tüketici İlişkileri
   addresses    Address[]
   orders       Order[]
@@ -45,6 +51,7 @@ model User {
   courier          Courier?
   savedCards       SavedCard[]
   couponUsages     CouponUsage[]
+  wallet       Wallet?
 }
 
 enum Role {
@@ -380,6 +387,7 @@ enum PaymentMethod {
   CASH_ON_DELIVERY
   CARD_ON_DELIVERY
   ONLINE_PAYMENT
+  WALLET
 }
 
 // Ödeme Durumları
@@ -563,6 +571,12 @@ model FavoriteShop {
   @@index([shopId])
 }
 
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model Review {
   id            String   @id @default(uuid())
   rating        Int
@@ -570,6 +584,7 @@ model Review {
   serviceRating Int?
   speedRating   Int?
   tasteRating   Int?
+  status        ReviewStatus @default(PENDING)
   createdAt     DateTime @default(now())
 
   userId    String
@@ -735,6 +750,54 @@ model CouponUsage {
 
   @@index([couponId])
   @@index([userId])
+}
+
+model SystemConfig {
+  key       String   @id
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Wallet {
+  id           String              @id @default(uuid())
+  userId       String              @unique
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance      Decimal             @db.Decimal(10, 2) @default(0.00)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  transactions WalletTransaction[]
+}
+
+enum WalletTransactionType {
+  DEPOSIT
+  WITHDRAW
+  REFUND
+  REFERRAL_BONUS
+  REVIEW_BONUS
+}
+
+model WalletTransaction {
+  id                 String                @id @default(uuid())
+  walletId           String
+  wallet             Wallet                @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  amount             Decimal               @db.Decimal(10, 2)
+  type               WalletTransactionType
+  description        String?
+  expiresAt          DateTime?             // Hoppa Para için geçerlilik süresi
+  isExpiredProcessed Boolean               @default(false)
+  createdAt          DateTime              @default(now())
+
+  @@index([walletId])
+}
+
+model Referral {
+  id               String   @id @default(uuid())
+  referrerId       String
+  referredId       String   @unique
+  couponId         String?  // Davet edene verilen kupon
+  referredCouponId String?  // Davet edilene verilen kupon
+  createdAt        DateTime @default(now())
 }
 
 

@@ -44,6 +44,7 @@ dependencies:
   flutter_local_notifications: ^22.0.1
   supabase_flutter: ^2.6.0
   speech_to_text: ^7.4.0
+  video_player: ^2.8.6
 
   # Monorepo packages
   core_auth:
@@ -52,6 +53,7 @@ dependencies:
     path: ../../packages/core_network
   core_shared:
     path: ../../packages/core_shared
+  share_plus: ^13.2.1
 
 dev_dependencies:
   flutter_test:
@@ -75,3 +77,4 @@ flutter:
     - assets/images/campaign_welcome_coupon.png
     - assets/images/campaign_everything_at_door.png
     - assets/images/campaign_invite_friend.png
+    - assets/videos/hoppa_reklam.mp4

@@ -67,33 +67,29 @@ const richCategories = [
     shopType: "MARKET",
     children: ["Deterjanlar", "Kağıt Ürünleri", "Kişisel Bakım"]
   },
-
-  // GREENGROCER
   {
     name: "Sebzeler",
-    shopType: "GREENGROCER",
+    shopType: "MARKET",
     children: ["Yeşillikler", "Patates & Soğan", "Domates & Biber", "Mevsim Sebzeleri"]
   },
   {
     name: "Meyveler",
-    shopType: "GREENGROCER",
+    shopType: "MARKET",
     children: ["Narenciye", "Egzotik Meyveler", "Mevsim Meyveleri"]
   },
-
-  // BUTCHER
   {
     name: "Kırmızı Et",
-    shopType: "BUTCHER",
+    shopType: "MARKET",
     children: ["Dana Eti", "Kuzu Eti", "Kıymalar"]
   },
   {
     name: "Beyaz Et",
-    shopType: "BUTCHER",
+    shopType: "MARKET",
     children: ["Tavuk Eti", "Hindi Eti"]
   },
   {
     name: "Hazır Ürünler",
-    shopType: "BUTCHER",
+    shopType: "MARKET",
     children: ["Mangal Kömürü", "Köfteler", "Marine Etler"]
   },
 
@@ -751,11 +747,11 @@ async function main() {
   await seedShopWithProducts(
     "manav@test.com",
     "Taze Manavım",
-    "GREENGROCER",
+    "MARKET",
     "+905553334444",
     [
       {
-        categoryName: "Meyve, Sebze",
+        categoryName: "Sebzeler",
         products: [
           { name: "Yerli Muz 1 Kg", price: 50.0, description: "Taze yerli muz" },
           { name: "Çeri Domates 500g", price: 30.0, description: "Tatlı çeri domates" },
@@ -773,7 +769,7 @@ async function main() {
   await seedShopWithProducts(
     "kasap@test.com",
     "Kardeşler Kasap",
-    "BUTCHER",
+    "MARKET",
     "+905553335555",
     [
       {
@@ -881,15 +877,27 @@ async function main() {
 
   // 8.5. SEED BUSINESS CATEGORIES
   const businessCategories = [
-    { name: "Market", icon: "shopping_basket", color: "#00A651", subtitle: "Market alışverişi", avgDeliveryTime: "20-30 dk", badge: "popular", imageUrl: "/uploads/market_bg.png", order: 0 },
-    { name: "Restoran", icon: "restaurant", color: "#FF6B00", subtitle: "Yemek siparişi", avgDeliveryTime: "25-35 dk", badge: "popular", imageUrl: "/uploads/restaurant_bg.png", order: 1 },
-    { name: "Su", icon: "water_drop", color: "#2196F3", subtitle: "Su ve içecek", avgDeliveryTime: "15-25 dk", badge: null, imageUrl: "/uploads/su_bg.png", order: 2 },
-    { name: "Kuruyemiş", icon: "grain", color: "#795548", subtitle: "Kuruyemiş çeşitleri", avgDeliveryTime: "20-30 dk", badge: "new", imageUrl: "/uploads/kuruyemis_bg.png", order: 3 },
-    { name: "Kahve", icon: "coffee", color: "#4E342E", subtitle: "Kahve ve içecek", avgDeliveryTime: "15-20 dk", badge: null, imageUrl: "/uploads/kahve_bg.png", order: 4 },
-    { name: "Çiçek", icon: "local_florist", color: "#E91E63", subtitle: "Çiçek siparişi", avgDeliveryTime: "30-45 dk", badge: null, imageUrl: "/uploads/cicek_bg.png", order: 5 },
-    { name: "Manav", icon: "grain", color: "#4CAF50", subtitle: "Taze meyve ve sebze", avgDeliveryTime: "15-25 dk", badge: null, imageUrl: "/uploads/manav_bg.png", order: 6 },
-    { name: "Kasap", icon: "restaurant", color: "#F44336", subtitle: "Taze et ürünleri", avgDeliveryTime: "20-30 dk", badge: "popular", imageUrl: "/uploads/kasap_bg.png", order: 7 },
+    { name: "Market", icon: "shopping_basket", color: "#00B359", subtitle: "Market alışverişi", avgDeliveryTime: "20-30 dk", badge: "popular", imageUrl: "/uploads/market_bg.png", order: 0 },
+    { name: "Yemek", icon: "restaurant", color: "#E53935", subtitle: "Yemek siparişi", avgDeliveryTime: "25-35 dk", badge: "popular", imageUrl: "/uploads/restaurant_bg.png", order: 1 },
+    { name: "Su", icon: "water_drop", color: "#0288D1", subtitle: "Su ve içecek", avgDeliveryTime: "15-25 dk", badge: null, imageUrl: "/uploads/su_bg.png", order: 2 },
+    { name: "Çiçek", icon: "local_florist", color: "#EC407A", subtitle: "Çiçek siparişi", avgDeliveryTime: "30-45 dk", badge: null, imageUrl: "/uploads/cicek_bg.png", order: 3 },
   ];
+
+  // Silinecek veya güncellenecek eski kategorileri temizle
+  await prisma.businessCategory.deleteMany({
+    where: {
+      name: {
+        notIn: ["Market", "Yemek", "Su", "Çiçek"]
+      }
+    }
+  });
+
+  // Eski "Restoran" kategorisini temizle (çünkü adı "Yemek" oldu)
+  await prisma.businessCategory.deleteMany({
+    where: {
+      name: "Restoran"
+    }
+  });
 
   for (const cat of businessCategories) {
     await prisma.businessCategory.upsert({
@@ -916,6 +924,22 @@ async function main() {
     });
   }
   console.log("✅ Business Categories Seeded successfully.");
+
+  // 8.5.2. SEED SYSTEM CONFIGS
+  const configs = [
+    { key: "referral_bonus_amount", value: "100" },
+    { key: "review_rating_bonus", value: "5" },
+    { key: "review_comment_bonus", value: "10" }
+  ];
+
+  for (const config of configs) {
+    await prisma.systemConfig.upsert({
+      where: { key: config.key },
+      update: { value: config.value },
+      create: { key: config.key, value: config.value }
+    });
+  }
+  console.log("✅ System Configs Seeded successfully.");
 
   // 8.6. SEED VEHICLE OPTIONS
   const vehicleOptions = [

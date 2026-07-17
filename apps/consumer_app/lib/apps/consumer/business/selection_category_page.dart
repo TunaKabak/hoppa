@@ -8,11 +8,14 @@ import 'package:consumer_app/apps/consumer/address/address_list_page.dart';
 import 'package:consumer_app/apps/consumer/home/widgets/account_bottom_sheet.dart';
 import 'package:consumer_app/apps/consumer/home/widgets/hoppa_campaign_slider.dart';
 import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
+import 'package:consumer_app/apps/consumer/widgets/hoppa_video_player_dialog.dart';
 import 'package:consumer_app/apps/consumer/business/business_provider.dart';
 import 'package:consumer_app/apps/consumer/business/widgets/category_grid_item.dart';
 import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository.dart';
 import 'package:consumer_app/apps/consumer/auth/consumer_login_page.dart';
 import 'package:core_shared/shared/core/services/navigation_provider.dart';
+import 'package:consumer_app/apps/consumer/cart/cart_provider.dart';
+import 'package:consumer_app/apps/consumer/cart/cart_page.dart';
 
 class SelectionCategoryPage extends rp.ConsumerWidget {
   const SelectionCategoryPage({super.key});
@@ -20,6 +23,7 @@ class SelectionCategoryPage extends rp.ConsumerWidget {
   static const Map<String, String> _featuredImages = {
     'Market': 'assets/images/market_bg.png',
     'Restoran': 'assets/images/restaurant_bg.png',
+    'Yemek': 'assets/images/restaurant_bg.png',
     'Su': 'assets/images/su_bg.png',
     'Kuruyemiş': 'assets/images/kuruyemis_bg.png',
     'Kahve': 'assets/images/kahve_bg.png',
@@ -67,6 +71,7 @@ class SelectionCategoryPage extends rp.ConsumerWidget {
     final categoriesAsync = ref.watch(businessCategoriesProvider);
     final authState = ref.watch(authControllerProvider);
     final isGuest = authState is! AuthAuthenticated;
+    final cartState = ref.watch(cartProvider);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -282,118 +287,127 @@ class SelectionCategoryPage extends rp.ConsumerWidget {
                   // HOPPA SPECIAL ADVERTISING BANNER
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Container(
-                      height: 140,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFFE95D22), Color(0xFFFF8C00)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color:
-                                const Color(0xFFE95D22).withValues(alpha: 0.3),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
+                    child: GestureDetector(
+                      onTap: () {
+                        showDialog(
+                          context: context,
+                          barrierColor: Colors.black.withValues(alpha: 0.7),
+                          builder: (context) => const HoppaVideoPlayerDialog(),
+                        );
+                      },
+                      child: Container(
+                        height: 140,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFE95D22), Color(0xFFFF8C00)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: Stack(
-                          children: [
-                            Positioned(
-                              right: -15,
-                              bottom: -15,
-                              child: Opacity(
-                                opacity: 0.15,
-                                child: Icon(
-                                  Icons.play_circle_fill_rounded,
-                                  size: 150,
-                                  color: Colors.white,
+                          boxShadow: [
+                            BoxShadow(
+                              color:
+                                  const Color(0xFFE95D22).withValues(alpha: 0.3),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: Stack(
+                            children: [
+                              Positioned(
+                                right: -15,
+                                bottom: -15,
+                                child: Opacity(
+                                  opacity: 0.15,
+                                  child: Icon(
+                                    Icons.play_circle_fill_rounded,
+                                    size: 150,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 8, vertical: 3),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white
-                                                .withValues(alpha: 0.2),
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                          ),
-                                          child: Text(
-                                            "HOPPA ÖZEL REKLAM",
-                                            style: GoogleFonts.poppins(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.white,
-                                              letterSpacing: 1.0,
+                              Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 8, vertical: 3),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white
+                                                  .withValues(alpha: 0.2),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: Text(
+                                              "HOPPA ÖZEL REKLAM",
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white,
+                                                letterSpacing: 1.0,
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                        const SizedBox(height: 10),
-                                        Text(
-                                          "Hoppa ile Tanışın!",
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white,
+                                          const SizedBox(height: 10),
+                                          Text(
+                                            "Hoppa ile Tanışın!",
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                            ),
                                           ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          "Tek tıklamayla kapınızda. Tanıtım videomuzu izleyin.",
-                                          style: GoogleFonts.inter(
-                                            fontSize: 11,
-                                            color: Colors.white
-                                                .withValues(alpha: 0.9),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Center(
-                                    child: Container(
-                                      height: 44,
-                                      width: 44,
-                                      decoration: const BoxDecoration(
-                                        color: Colors.white,
-                                        shape: BoxShape.circle,
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black12,
-                                            blurRadius: 4,
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            "Tek tıklamayla kapınızda. Tanıtım videomuzu izleyin.",
+                                            style: GoogleFonts.inter(
+                                              fontSize: 11,
+                                              color: Colors.white
+                                                  .withValues(alpha: 0.9),
+                                            ),
                                           ),
                                         ],
                                       ),
-                                      child: const Icon(
-                                        Icons.play_arrow_rounded,
-                                        color: Color(0xFFE95D22),
-                                        size: 28,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Center(
+                                      child: Container(
+                                        height: 44,
+                                        width: 44,
+                                        decoration: const BoxDecoration(
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black12,
+                                              blurRadius: 4,
+                                            ),
+                                          ],
+                                        ),
+                                        child: const Icon(
+                                          Icons.play_arrow_rounded,
+                                          color: Color(0xFFE95D22),
+                                          size: 28,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -482,6 +496,70 @@ class SelectionCategoryPage extends rp.ConsumerWidget {
           ],
         ),
       ),
+      floatingActionButton: cartState.items.isNotEmpty
+          ? Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              height: 58,
+              width: double.infinity,
+              child: FloatingActionButton.extended(
+                onPressed: () {
+                  Navigator.of(context, rootNavigator: true).push(
+                    MaterialPageRoute(
+                      builder: (context) => const CartPage(),
+                    ),
+                  );
+                },
+                backgroundColor: const Color(0xFF00A651), // Hoppa Green
+                elevation: 6,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                label: SizedBox(
+                  width: MediaQuery.of(context).size.width - 96,
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${cartState.items.length}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'Sepeti Görüntüle',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        '${cartState.totalAmount.toStringAsFixed(2)} TL',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 14),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 }
@@ -545,22 +623,14 @@ class _SelectionHeader extends rp.ConsumerWidget {
                   Consumer<DeliveryProvider>(
                     builder: (context, provider, _) => GestureDetector(
                       onTap: () async {
-                        if (isGuest) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const LoginPage()),
-                          );
-                        } else {
-                          final address = await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  const AddressListPage(isSelectionMode: true),
-                            ),
-                          );
-                          if (address != null) provider.setAddress(address);
-                        }
+                        final address = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                const AddressListPage(isSelectionMode: true),
+                          ),
+                        );
+                        if (address != null) provider.setAddress(address);
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(

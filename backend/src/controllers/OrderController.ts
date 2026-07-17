@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { PrismaClient, OrderStatus, PaymentMethod, PaymentStatus } from "@prisma/client";
 import { PaymentRoutingService } from "../services/PaymentRoutingService";
 import { CampaignService } from "../services/CampaignService";
+import { WalletService } from "../services/WalletService";
 
 const prisma = new PrismaClient();
 const campaignService = new CampaignService();
@@ -327,6 +328,20 @@ export class OrderController {
           });
 
           paymentUrl = routeResponse.paymentUrl;
+        } else if (method === "WALLET") {
+          const orderTotal = Number(totalAmount) + Number(finalDeliveryFee);
+          await WalletService.withdraw(
+            consumerId, 
+            orderTotal, 
+            `Sipariş Ödemesi (Sipariş No: ${createdOrder.id})`, 
+            tx
+          );
+
+          // Siparişin ödeme durumunu başarılı yap
+          await tx.order.update({
+            where: { id: createdOrder.id },
+            data: { paymentStatus: "SUCCESS" }
+          });
         }
 
         return { createdOrder, paymentUrl };
@@ -742,15 +757,29 @@ export class OrderController {
         return res.status(403).json({ error: true, message: "Geçersiz rol." });
       }
 
-      const updatedOrder = await prisma.order.update({
-        where: { id: orderId },
-        data: {
-          status: "CANCELLED",
-          cancelReason: cancelReason || "Kullanıcı tarafından iptal edildi",
-          cancelledAt: new Date(),
-          cancelledBy,
-          ...(order.paymentMethod === "ONLINE_PAYMENT" ? { paymentStatus: "REFUNDED" } : {})
+      const updatedOrder = await prisma.$transaction(async (tx) => {
+        const orderTotal = Number(order.totalAmount) + Number(order.deliveryFee);
+
+        if (order.paymentMethod === "WALLET" && order.paymentStatus === "SUCCESS") {
+          await WalletService.refund(
+            order.consumerId,
+            orderTotal,
+            `Sipariş İptal İadesi (Sipariş No: ${order.id})`,
+            tx
+          );
         }
+
+        return await tx.order.update({
+          where: { id: orderId },
+          data: {
+            status: "CANCELLED",
+            cancelReason: cancelReason || "Kullanıcı tarafından iptal edildi",
+            cancelledAt: new Date(),
+            cancelledBy,
+            ...(order.paymentMethod === "ONLINE_PAYMENT" ? { paymentStatus: "REFUNDED" } : {}),
+            ...(order.paymentMethod === "WALLET" ? { paymentStatus: "REFUNDED" } : {})
+          }
+        });
       });
 
       // Send notifications based on who cancelled

@@ -13,6 +13,7 @@ import 'package:consumer_app/apps/consumer/favorites/favorite_provider.dart';
 import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository.dart';
 import 'package:core_shared/shared/core/utils/quantity_formatter.dart';
 import 'package:consumer_app/apps/consumer/cart/cart_validation.dart';
+import 'package:share_plus/share_plus.dart';
 
 class ProductDetailPage extends ConsumerStatefulWidget {
   final BusinessProduct businessProduct;
@@ -169,6 +170,33 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                           favProvider.toggleFavorite(widget.businessProduct.id);
                         },
                       );
+                    },
+                  ),
+                  IconButton(
+                    icon: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withAlpha(26),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.share_rounded,
+                        color: Colors.black,
+                        size: 20,
+                      ),
+                    ),
+                    onPressed: () {
+                      final text = "${product.name} Hoppa'da! 🚀\n"
+                          "Fiyatı: ${activePrice.toStringAsFixed(2)} TL\n"
+                          "Hemen satın almak için ürünü görüntüle: https://hoppanow.com/product/${widget.businessProduct.id}";
+                      Share.share(text);
                     },
                   ),
                   Padding(
