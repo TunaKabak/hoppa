@@ -2,6 +2,7 @@ import { Router } from "express";
 import { authMiddleware } from "../middlewares/AuthMiddleware";
 import { SuperAdminController } from "../controllers/SuperAdminController";
 import { BusinessCategoryController } from "../controllers/BusinessCategoryController";
+import { ReviewController } from "../controllers/ReviewController";
 
 const router = Router();
 const superAdminController = new SuperAdminController();
@@ -34,5 +35,9 @@ router.post("/business-categories", (req, res) => businessCategoryController.adm
 router.put("/business-categories/reorder", (req, res) => businessCategoryController.adminReorderBusinessCategories(req, res));
 router.put("/business-categories/:id", (req, res) => businessCategoryController.adminUpdateBusinessCategory(req, res));
 router.delete("/business-categories/:id", (req, res) => businessCategoryController.adminDeleteBusinessCategory(req, res));
+
+// Admin -> Review Management
+router.put("/reviews/:reviewId/approve", (req, res) => ReviewController.approveReview(req, res));
+router.put("/reviews/:reviewId/reject", (req, res) => ReviewController.rejectReview(req, res));
 
 export default router;

@@ -11,6 +11,8 @@ import { BusinessCategoryController } from "../controllers/BusinessCategoryContr
 import { ProfileController } from "../controllers/ProfileController";
 import { SavedCardController } from "../controllers/SavedCardController";
 import { CouponController } from "../controllers/CouponController";
+import walletRoutes from "./walletRoutes";
+import referralRoutes from "./referralRoutes";
 
 const router = Router();
 const consumerShopController = new ConsumerShopController();
@@ -33,6 +35,10 @@ router.get("/search/global", optionalAuthMiddleware, (req: Request, res: Respons
 
 // --- Authenticated Consumer Endpoints ---
 router.use(authMiddleware);
+
+// Wallet & Referral
+router.use("/wallet", walletRoutes);
+router.use("/referral", referralRoutes);
 
 // Profile Operations
 router.get("/profile", (req: Request, res: Response) => ProfileController.getProfile(req, res));

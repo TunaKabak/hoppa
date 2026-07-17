@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, ReviewStatus } from '@prisma/client';
+import { WalletService } from '../services/WalletService';
+import { SystemConfigService } from '../services/SystemConfigService';
 
 const prisma = new PrismaClient();
 
@@ -135,6 +137,105 @@ export class ReviewController {
     } catch (error) {
       console.error("Kendi yorumlarını getirme hatası:", error);
       res.status(500).json({ error: true, message: "Değerlendirmeleriniz getirilirken hata oluştu." });
+    }
+  }
+
+  // 4. Değerlendirmeyi Onayla (Admin) ve Ödül Kazandır
+  public static async approveReview(req: Request, res: Response): Promise<void> {
+    try {
+      const reviewId = req.params.reviewId as string;
+
+      if (!reviewId) {
+        res.status(400).json({ error: true, message: "Değerlendirme ID gereklidir." });
+        return;
+      }
+
+      const review = await prisma.review.findUnique({
+        where: { id: reviewId },
+        include: { user: true }
+      });
+
+      if (!review) {
+        res.status(404).json({ error: true, message: "Değerlendirme bulunamadı." });
+        return;
+      }
+
+      if (review.status === ReviewStatus.APPROVED) {
+        res.status(400).json({ error: true, message: "Bu değerlendirme zaten onaylanmış." });
+        return;
+      }
+
+      // Ödül tutarlarını Sistem Ayarlarından çek
+      const ratingBonusStr = await SystemConfigService.getSetting("review_rating_bonus", "5");
+      const commentBonusStr = await SystemConfigService.getSetting("review_comment_bonus", "10");
+
+      const ratingBonus = parseFloat(ratingBonusStr);
+      const commentBonus = parseFloat(commentBonusStr);
+
+      // Yorum yazılmış mı kontrolü
+      const hasComment = review.comment && review.comment.trim().length > 0;
+      const rewardAmount = hasComment ? commentBonus : ratingBonus;
+      const description = hasComment 
+        ? "Yorumlu Değerlendirme Ödülü (Hoppa Para)" 
+        : "Yıldızlı Değerlendirme Ödülü (Hoppa Para)";
+
+      await prisma.$transaction(async (tx) => {
+        // Yorum durumunu güncelle
+        await tx.review.update({
+          where: { id: reviewId },
+          data: { status: ReviewStatus.APPROVED }
+        });
+
+        // Cüzdana Hoppa Para (ödül) ekle (30 gün süreli)
+        await WalletService.addReward(
+          review.userId,
+          rewardAmount,
+          "REVIEW_BONUS",
+          description,
+          30 // 30 gün geçerlilik süresi
+        );
+      });
+
+      res.status(200).json({
+        error: false,
+        message: "Değerlendirme onaylandı ve cüzdana ödül Hoppa Para yüklendi.",
+        rewardAmount
+      });
+    } catch (error: any) {
+      console.error("Yorum onaylama hatası:", error);
+      res.status(500).json({ error: true, message: error.message || "İşlem sırasında bir hata oluştu." });
+    }
+  }
+
+  // 5. Değerlendirmeyi Reddet (Admin)
+  public static async rejectReview(req: Request, res: Response): Promise<void> {
+    try {
+      const reviewId = req.params.reviewId as string;
+
+      if (!reviewId) {
+        res.status(400).json({ error: true, message: "Değerlendirme ID gereklidir." });
+        return;
+      }
+
+      const review = await prisma.review.findUnique({ where: { id: reviewId } });
+
+      if (!review) {
+        res.status(404).json({ error: true, message: "Değerlendirme bulunamadı." });
+        return;
+      }
+
+      await prisma.review.update({
+        where: { id: reviewId },
+        data: { status: ReviewStatus.REJECTED }
+      });
+
+      res.status(200).json({
+        error: false,
+        message: "Değerlendirme reddedildi."
+      });
+    } catch (error: any) {
+      console.error("Yorum reddetme hatası:", error);
+      res.status(500).json({ error: true, message: error.message || "İşlem sırasında bir hata oluştu." });
     }
   }
 }

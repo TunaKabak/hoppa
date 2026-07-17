@@ -14,6 +14,7 @@ import 'package:core_shared/shared/models/shop_category_data.dart';
 import 'package:consumer_app/apps/consumer/home/widgets/campaign_carousel.dart';
 import 'package:consumer_app/apps/consumer/widgets/hoppa_dialog.dart';
 import 'package:consumer_app/apps/consumer/widgets/shop_badge.dart';
+import 'package:share_plus/share_plus.dart';
 
 class ModernShopDetailPage extends ConsumerStatefulWidget {
   final Business shop;
@@ -428,8 +429,17 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                       ),
                     )
                   : null,
-              actions: const [
-                CartPriceBadge(),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.share_rounded, color: Colors.white),
+                  tooltip: "İşletmeyi Paylaş",
+                  onPressed: () {
+                    final text = "${widget.shop.name} Hoppa'da! 🚀\n"
+                        "Hemen sipariş vermek için dükkanı görüntüle: https://hoppanow.com/shop/${widget.shop.id}";
+                    Share.share(text);
+                  },
+                ),
+                const CartPriceBadge(),
               ],
               flexibleSpace: FlexibleSpaceBar(
                 background: Stack(
@@ -549,26 +559,6 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 4),
-                                 Wrap(
-                                   spacing: 4,
-                                   runSpacing: 2,
-                                   children: [
-                                     ...widget.shop.allowedFulfillmentModels.map((model) {
-                                       String label = "";
-                                       if (model == 'PLATFORM_DELIVERY') {
-                                         label = "Hoppa Kuryesi";
-                                       } else if (model == 'SELF_DELIVERY') {
-                                         label = "Esnaf Teslimatı";
-                                       } else if (model == 'PICKUP') {
-                                         label = "Gel-Al";
-                                       }
-                                       if (label.isEmpty) return const SizedBox.shrink();
-                                       return ShopBadge(label: label);
-                                     }),
-                                     ...widget.shop.tags.map((tag) => ShopBadge(label: tag)),
-                                   ],
-                                 ),
                               ],
                             ),
                           ),
@@ -583,6 +573,37 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
         },
         body: CustomScrollView(
           slivers: [
+            // Shop Badges / Tags (placed modernly between header and search bar)
+            if (widget.shop.allowedFulfillmentModels.isNotEmpty || widget.shop.tags.isNotEmpty)
+              SliverToBoxAdapter(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+                  child: Row(
+                    children: [
+                      ...widget.shop.allowedFulfillmentModels.map((model) {
+                        String label = "";
+                        if (model == 'PLATFORM_DELIVERY') {
+                          label = "Hoppa Kuryesi";
+                        } else if (model == 'SELF_DELIVERY') {
+                          label = "Esnaf Teslimatı";
+                        } else if (model == 'PICKUP') {
+                          label = "Gel-Al";
+                        }
+                        if (label.isEmpty) return const SizedBox.shrink();
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: ShopBadge(label: label, isOnImage: false),
+                        );
+                      }),
+                      ...widget.shop.tags.map((tag) => Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: ShopBadge(label: tag, isOnImage: false),
+                          )),
+                    ],
+                  ),
+                ),
+              ),
             // Search Input
             SliverToBoxAdapter(
               child: Padding(

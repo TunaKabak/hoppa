@@ -9,6 +9,7 @@ import 'package:consumer_app/apps/consumer/home/widgets/modern_product_card.dart
 import 'package:core_shared/shared/core/services/navigation_provider.dart';
 import 'package:consumer_app/apps/consumer/business/business_provider.dart';
 import 'package:consumer_app/apps/consumer/product/product_detail_page.dart';
+import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
 
 class SearchPage extends ConsumerStatefulWidget {
   const SearchPage({super.key});
@@ -86,51 +87,101 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        titleSpacing: 0,
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        leading: const Icon(Icons.search, color: Colors.grey),
-        title: TextField(
-          controller: _searchController,
-          focusNode: _focusNode,
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: 'Ürün, kategori veya dükkan ara...',
-            hintStyle: TextStyle(color: Colors.grey.shade400),
-            border: InputBorder.none,
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFFE95D22), // Hoppa Orange
+              Color(0xFFFF8C00), // Orange-Yellow
+            ],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
           ),
-          style: const TextStyle(fontSize: 16),
-          onChanged: (value) {
-            setState(() {
-              _query = value;
-            });
-            ref.read(catalogSearchQueryProvider.notifier).state = value;
-          },
         ),
-        actions: [
-          if (_query.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.clear, color: Colors.grey),
-              onPressed: () {
-                setState(() {
-                  _searchController.clear();
-                  _query = '';
-                });
-                ref.read(catalogSearchQueryProvider.notifier).state = '';
-              },
+        child: Column(
+          children: [
+            HoppaHeader(
+              height: 76,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        height: 48,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.search, color: Colors.grey),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextField(
+                                controller: _searchController,
+                                focusNode: _focusNode,
+                                autofocus: true,
+                                decoration: InputDecoration(
+                                  hintText: 'Ürün, kategori veya dükkan ara...',
+                                  hintStyle: TextStyle(color: Colors.grey.shade400),
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                ),
+                                style: const TextStyle(fontSize: 15),
+                                onChanged: (value) {
+                                  setState(() {
+                                    _query = value;
+                                  });
+                                  ref.read(catalogSearchQueryProvider.notifier).state = value;
+                                },
+                              ),
+                            ),
+                            if (_query.isNotEmpty)
+                              GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _searchController.clear();
+                                    _query = '';
+                                  });
+                                  ref.read(catalogSearchQueryProvider.notifier).state = '';
+                                },
+                                child: const Icon(Icons.clear, color: Colors.grey),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          const SizedBox(width: 8),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1.0),
-          child: Container(color: Colors.grey.shade200, height: 1.0),
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: theme.scaffoldBackgroundColor,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                  child: _buildSearchResults(),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
-      body: _buildSearchResults(),
     );
   }
 

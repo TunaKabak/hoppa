@@ -13,6 +13,7 @@ import 'package:consumer_app/apps/consumer/cart/widgets/compact_delivery_status.
 import 'package:consumer_app/apps/consumer/cart/widgets/compact_checkout_bar.dart';
 import 'package:consumer_app/apps/consumer/auth/consumer_login_page.dart';
 import 'package:core_auth/core_auth.dart';
+import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
 
 class CartPage extends ConsumerStatefulWidget {
   const CartPage({super.key});
@@ -76,32 +77,70 @@ class _CartPageState extends ConsumerState<CartPage> {
     final bool canCheckout = cartState.totalAmount >= requiredMinAmount;
 
     return Scaffold(
-      backgroundColor: colorScheme.surface,
-      appBar: AppBar(
-        title: Text(
-          "Sepetim",
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFFE95D22), // Hoppa Orange
+              Color(0xFFFF8C00), // Orange-Yellow
+            ],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
           ),
         ),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () => _handleClose(context),
-        ),
-        actions: [
-          if (cartState.items.isNotEmpty)
-            IconButton(
-              icon: Icon(Icons.delete_sweep_outlined, color: colorScheme.error),
-              tooltip: "Tüm Sepeti Boşalt",
-              onPressed: () => _showClearCartDialog(context, ref.read(cartProvider.notifier)),
+        child: Column(
+          children: [
+            HoppaHeader(
+              height: 70,
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => _handleClose(context),
+                  ),
+                  const Expanded(
+                    child: Center(
+                      child: Text(
+                        "Sepetim",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (cartState.items.isNotEmpty)
+                    IconButton(
+                      icon: const Icon(Icons.delete_sweep_outlined, color: Colors.white),
+                      tooltip: "Tüm Sepeti Boşalt",
+                      onPressed: () => _showClearCartDialog(context, ref.read(cartProvider.notifier)),
+                    )
+                  else
+                    const SizedBox(width: 48), // Denge için
+                ],
+              ),
             ),
-        ],
-      ),
-      body: cartState.items.isEmpty
-          ? _buildEmptyCart(context, colorScheme)
-          : Column(
-              children: [
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: colorScheme.surface,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                  child: cartState.items.isEmpty
+                      ? _buildEmptyCart(context, colorScheme)
+                      : Column(
+                          children: [
                 CompactDeliveryStatus(
                   currentCartTotal: cartState.totalAmount,
                   minOrderLimit: requiredMinAmount,
@@ -230,6 +269,12 @@ class _CartPageState extends ConsumerState<CartPage> {
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    ],
+  ),
+),
     );
   }
 

@@ -3,6 +3,8 @@ import { OtpService } from "../services/OtpService";
 import { prisma } from "../config/db";
 import { JwtUtils } from "../utils/JwtUtils";
 import { CouponController } from "./CouponController";
+import { ReferralService } from "../services/ReferralService";
+import { WalletService } from "../services/WalletService";
 
 const otpService = new OtpService();
 
@@ -62,13 +64,20 @@ export class AuthController {
       let isNewUser = false;
       if (!user) {
         isNewUser = true;
+
+        const referralCode = await ReferralService.generateReferralCode();
+
         user = await prisma.user.create({
           data: {
             phone: phoneNumber,
             name: name || "Misafir",
-            surname: surname || "Kullanıcı"
+            surname: surname || "Kullanıcı",
+            referralCode
           }
         });
+
+        // Cüzdan oluştur
+        await WalletService.getOrCreateWallet(user.id);
         
         // Auto-provision a welcome coupon for the new user
         await CouponController.provisionWelcomeCoupon(user.id);
