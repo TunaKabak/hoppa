@@ -11,6 +11,7 @@ import 'package:core_shared/shared/models/business_type.dart';
 import 'package:provider/provider.dart' as p;
 import 'package:core_shared/shared/core/services/navigation_provider.dart';
 import 'package:consumer_app/apps/consumer/business/business_provider.dart';
+import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
 
 class OrderHistoryPage extends ConsumerStatefulWidget {
   const OrderHistoryPage({super.key});
@@ -80,64 +81,105 @@ class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text(
-          "Siparişlerim",
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: Column(
-        children: [
-          // --- FİLTRELEME BUTONLARI (KAYMA EFEKTLİ COMPONENT) ---
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            color: Colors.white,
-            child: AnimatedSlidingToggle(
-              labels: const ["Aktif Siparişler", "Geçmiş Siparişler"],
-              selectedIndex: _selectedFilterIndex,
-              activeColor: kPrimaryColor,
-              onChanged: (index) =>
-                  setState(() => _selectedFilterIndex = index),
-            ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFFE95D22), // Hoppa Orange
+              Color(0xFFFF8C00), // Orange-Yellow
+            ],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
           ),
-
-          // --- TARİH FİLTRELERİ ROW ---
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            color: Colors.white,
-            alignment: Alignment.centerLeft,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
+        ),
+        child: Column(
+          children: [
+            HoppaHeader(
+              height: 70,
               child: Row(
                 children: [
-                  _buildDateFilterChip("Son 3 Ay", '3_months'),
-                  const SizedBox(width: 8),
-                  _buildDateFilterChip("Son 6 Ay", '6_months'),
-                  const SizedBox(width: 8),
-                  _buildDateFilterChip("Son 1 Yıl", '1_year'),
-                  const SizedBox(width: 8),
-                  _buildDateFilterChip("Tümü", 'all'),
-                  const SizedBox(width: 8),
-                  _buildDateFilterChip(
-                    _customDateRange != null
-                        ? "${DateFormat('dd.MM').format(_customDateRange!.start)} - ${DateFormat('dd.MM').format(_customDateRange!.end)}"
-                        : "Özel Tarih",
-                    'custom',
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                  const Expanded(
+                    child: Center(
+                      child: Padding(
+                        padding: EdgeInsets.only(right: 48.0),
+                        child: Text(
+                          "Siparişlerim",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
-          ),
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF8F9FA),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                  child: Column(
+                    children: [
+                      // --- FİLTRELEME BUTONLARI (KAYMA EFEKTLİ COMPONENT) ---
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        color: Colors.white,
+                        child: AnimatedSlidingToggle(
+                          labels: const ["Aktif Siparişler", "Geçmiş Siparişler"],
+                          selectedIndex: _selectedFilterIndex,
+                          activeColor: kPrimaryColor,
+                          onChanged: (index) =>
+                              setState(() => _selectedFilterIndex = index),
+                        ),
+                      ),
 
-          // --- SİPARİŞ LİSTESİ ---
-          Expanded(
+                      // --- TARİH FİLTRELERİ ROW ---
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        color: Colors.white,
+                        alignment: Alignment.centerLeft,
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              _buildDateFilterChip("Son 3 Ay", '3_months'),
+                              const SizedBox(width: 8),
+                              _buildDateFilterChip("Son 6 Ay", '6_months'),
+                              const SizedBox(width: 8),
+                              _buildDateFilterChip("Son 1 Yıl", '1_year'),
+                              const SizedBox(width: 8),
+                              _buildDateFilterChip("Tümü", 'all'),
+                              const SizedBox(width: 8),
+                              _buildDateFilterChip(
+                                _customDateRange != null
+                                    ? "${DateFormat('dd.MM').format(_customDateRange!.start)} - ${DateFormat('dd.MM').format(_customDateRange!.end)}"
+                                    : "Özel Tarih",
+                                'custom',
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      // --- SİPARİŞ LİSTESİ ---
+                      Expanded(
             child: ordersAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (err, stack) => Center(child: Text("Hata: $err")),
@@ -244,7 +286,13 @@ class _OrderHistoryPageState extends ConsumerState<OrderHistoryPage> {
               },
             ),
           ),
-        ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

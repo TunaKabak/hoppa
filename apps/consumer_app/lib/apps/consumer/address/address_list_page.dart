@@ -6,6 +6,7 @@ import 'package:consumer_app/apps/consumer/address/add_address_page.dart';
 import 'package:provider/provider.dart' as p;
 import 'package:consumer_app/apps/consumer/address/delivery_provider.dart';
 import 'package:core_auth/core_auth.dart';
+import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
 
 class AddressListPage extends ConsumerWidget {
   final bool isSelectionMode;
@@ -33,86 +34,134 @@ class AddressListPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: Text(
-          "Adreslerim",
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFFE95D22), // Hoppa Orange
+              Color(0xFFFF8C00), // Orange-Yellow
+            ],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
           ),
         ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        leading: BackButton(onPressed: () => Navigator.pop(context)),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: isGuest
-                ? _buildListContent(context, ref, addressesToShow, selectedAddress, isGuest, deliveryProvider, theme)
-                : ref.watch(addressesProvider).when(
-                    loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (err, stack) => Center(
-                      child: Text(
-                        "Hatalar yüklenemedi: $err",
-                        style: const TextStyle(color: Colors.red),
+        child: Column(
+          children: [
+            HoppaHeader(
+              height: 70,
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  const Expanded(
+                    child: Center(
+                      child: Padding(
+                        padding: EdgeInsets.only(right: 48.0),
+                        child: Text(
+                          "Adreslerim",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
                     ),
-                    data: (addresses) => _buildListContent(context, ref, addresses, selectedAddress, isGuest, deliveryProvider, theme),
                   ),
-          ),
-
-          // SABİT ALT BUTON
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, -5),
-                ),
-              ],
+                ],
+              ),
             ),
-            child: SafeArea(
-              child: SizedBox(
+            Expanded(
+              child: Container(
                 width: double.infinity,
-                height: 56,
-                child: ElevatedButton.icon(
-                  onPressed: () async {
-                    final newAddress = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const AddAddressPage(),
-                      ),
-                    );
-                    if (newAddress != null) {
-                      if (isGuest) {
-                        await deliveryProvider.setAddress(newAddress as Address);
-                      } else {
-                        ref.invalidate(addressesProvider);
-                      }
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.primaryColor,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 0,
+                decoration: BoxDecoration(
+                  color: theme.scaffoldBackgroundColor,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
                   ),
-                  icon: const Icon(Icons.add),
-                  label: const Text(
-                    "Yeni Adres Ekle",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: isGuest
+                            ? _buildListContent(context, ref, addressesToShow, selectedAddress, isGuest, deliveryProvider, theme)
+                            : ref.watch(addressesProvider).when(
+                                loading: () => const Center(child: CircularProgressIndicator()),
+                                error: (err, stack) => Center(
+                                  child: Text(
+                                    "Hatalar yüklenemedi: $err",
+                                    style: const TextStyle(color: Colors.red),
+                                  ),
+                                ),
+                                data: (addresses) => _buildListContent(context, ref, addresses, selectedAddress, isGuest, deliveryProvider, theme),
+                              ),
+                      ),
+
+                      // SABİT ALT BUTON
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, -5),
+                            ),
+                          ],
+                        ),
+                        child: SafeArea(
+                          child: SizedBox(
+                            width: double.infinity,
+                            height: 56,
+                            child: ElevatedButton.icon(
+                              onPressed: () async {
+                                final newAddress = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const AddAddressPage(),
+                                  ),
+                                );
+                                if (newAddress != null) {
+                                  if (isGuest) {
+                                    await deliveryProvider.setAddress(newAddress as Address);
+                                  } else {
+                                    ref.invalidate(addressesProvider);
+                                  }
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: theme.primaryColor,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                elevation: 0,
+                              ),
+                              icon: const Icon(Icons.add),
+                              label: const Text(
+                                "Yeni Adres Ekle",
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
