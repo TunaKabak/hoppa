@@ -1,7 +1,9 @@
 import 'dart:math' as math;
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:merchant_app/apps/merchant/merchant_main_layout.dart';
 import 'package:merchant_app/apps/merchant/repositories/merchant_shop_repository.dart';
 import 'package:merchant_app/apps/merchant/providers/merchant_api_providers.dart';
@@ -68,6 +70,8 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
   double? _longitude;
   String? _imageUrl;
   String? _headerImageUrl;
+  File? _localLogoFile;
+  File? _localHeaderFile;
   bool _isUploadingImage = false;
   bool _isUploadingHeader = false;
   bool _isFetchingLocation = false;
@@ -598,18 +602,12 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
               Expanded(
                 child: Column(
                   children: [
-                    CircleAvatar(
-                      key: ValueKey(_imageUrl ?? ''),
-                      radius: 40,
-                      backgroundImage: (_imageUrl ?? '').isNotEmpty
-                          ? NetworkImage(_imageUrl!)
-                          : null,
-                      child: _isUploadingImage
-                          ? const CircularProgressIndicator()
-                          : (_imageUrl ?? '').isEmpty
-                              ? const Icon(Icons.camera_alt)
-                              : null,
-                    ),
+                    _isUploadingImage
+                        ? const CircleAvatar(
+                            radius: 40,
+                            child: CircularProgressIndicator(),
+                          )
+                        : _buildLogoWidget(_imageUrl, _nameController.text),
                     TextButton(
                       onPressed: _pickAndUploadLogo,
                       child: const Text("Logo Yükle"),
@@ -625,14 +623,7 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
                       color: Colors.grey.shade200,
                       child: _isUploadingHeader
                           ? const Center(child: CircularProgressIndicator())
-                          : (_headerImageUrl ?? '').isNotEmpty
-                              ? Image.network(
-                                  _headerImageUrl!,
-                                  key: ValueKey(_headerImageUrl),
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                )
-                              : const Center(child: Icon(Icons.image)),
+                          : _buildHeaderWidget(_headerImageUrl, _nameController.text, height: 80),
                     ),
                     TextButton(
                       onPressed: _pickAndUploadHeader,
@@ -920,6 +911,7 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
     if (file == null) return;
 
     setState(() {
+      _localLogoFile = file;
       _isUploadingImage = true;
     });
 
@@ -966,6 +958,7 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
     if (file == null) return;
 
     setState(() {
+      _localHeaderFile = file;
       _isUploadingHeader = true;
     });
 
@@ -1550,4 +1543,159 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
       ),
     );
   }
+
+  Widget _buildLogoWidget(String? url, String shopName, {double radius = 40}) {
+    if (_localLogoFile != null) {
+      return CircleAvatar(
+        radius: radius,
+        backgroundImage: FileImage(_localLogoFile!),
+      );
+    }
+
+    final hasImage = url != null && url.trim().isNotEmpty && url.startsWith('http');
+    if (hasImage) {
+      return CircleAvatar(
+        radius: radius,
+        backgroundImage: NetworkImage(url),
+        key: ValueKey(url),
+      );
+    }
+
+    // Modern Gradient Initials Fallback
+    final initial = shopName.isNotEmpty ? shopName[0].toUpperCase() : 'H';
+    
+    // Choose a stable gradient based on the shop's name hash
+    final hash = shopName.hashCode;
+    final List<Color> colors = hash % 3 == 0
+        ? [const Color(0xFFE95D22), const Color(0xFFFF8C00)] // Orange gradient
+        : hash % 3 == 1
+            ? [const Color(0xFF00A651), const Color(0xFF007A3E)] // Green gradient
+            : [const Color(0xFF2979FF), const Color(0xFF1565C0)]; // Blue gradient
+
+    return Container(
+      width: radius * 2,
+      height: radius * 2,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          colors: colors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Text(
+          initial,
+          style: GoogleFonts.poppins(
+            fontSize: radius * 0.9,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderWidget(String? url, String shopName, {double height = 120}) {
+    if (_localHeaderFile != null) {
+      return Image.file(
+        _localHeaderFile!,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: height,
+      );
+    }
+
+    final hasImage = url != null && url.trim().isNotEmpty && url.startsWith('http');
+    if (hasImage) {
+      return Image.network(
+        url,
+        key: ValueKey(url),
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: height,
+        errorBuilder: (context, error, stackTrace) => _buildAbstractGradientHeader(shopName, height),
+      );
+    }
+
+    return _buildAbstractGradientHeader(shopName, height);
+  }
+
+  Widget _buildAbstractGradientHeader(String shopName, double height) {
+    final hash = shopName.hashCode;
+    final List<Color> colors = hash % 3 == 0
+        ? [const Color(0xFFFFF3EE), const Color(0xFFFFE0D3)] // Soft Warm gradient
+        : hash % 3 == 1
+            ? [const Color(0xFFE8F5E9), const Color(0xFFC8E6C9)] // Soft Green gradient
+            : [const Color(0xFFE3F2FD), const Color(0xFFBBDEFB)]; // Soft Blue gradient
+
+    final primaryColor = hash % 3 == 0
+        ? const Color(0xFFE95D22)
+        : hash % 3 == 1
+            ? const Color(0xFF00A651)
+            : const Color(0xFF2979FF);
+
+    return Container(
+      width: double.infinity,
+      height: height,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: colors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Stack(
+        children: [
+          // Subtle decorative shapes
+          Positioned(
+            right: -20,
+            bottom: -20,
+            child: Opacity(
+              opacity: 0.12,
+              child: Icon(
+                Icons.storefront_rounded,
+                size: height * 1.2,
+                color: primaryColor,
+              ),
+            ),
+          ),
+          Positioned(
+            left: 20,
+            top: 20,
+            child: Opacity(
+              opacity: 0.1,
+              child: Icon(
+                Icons.bubble_chart_rounded,
+                size: height * 0.5,
+                color: primaryColor,
+              ),
+            ),
+          ),
+          Center(
+            child: Opacity(
+              opacity: 0.35,
+              child: Text(
+                shopName,
+                style: GoogleFonts.poppins(
+                  fontSize: height * 0.18,
+                  fontWeight: FontWeight.w800,
+                  color: primaryColor,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
+

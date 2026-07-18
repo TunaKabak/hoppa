@@ -26,6 +26,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   @override
   void initState() {
     super.initState();
+    _focusNode.addListener(_onFocusChange);
     // Listen to navigation changes
     WidgetsBinding.instance.addPostFrameCallback((_) {
       p.Provider.of<NavigationProvider>(
@@ -33,6 +34,12 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         listen: false,
       ).addListener(_onNavChange);
     });
+  }
+
+  void _onFocusChange() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   void _onNavChange() {
@@ -53,6 +60,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     // Clear the search query when leaving search page to not affect other views
     ref.read(catalogSearchQueryProvider.notifier).state = '';
     
+    _focusNode.removeListener(_onFocusChange);
     p.Provider.of<NavigationProvider>(
       context,
       listen: false,
@@ -116,6 +124,21 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: _focusNode.hasFocus
+                                ? const Color(0xFFFF6B00).withOpacity(0.3)
+                                : Colors.transparent,
+                            width: 1.5,
+                          ),
+                          boxShadow: _focusNode.hasFocus
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.06),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ]
+                              : [],
                         ),
                         child: Row(
                           children: [
@@ -130,6 +153,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                   hintText: 'Ürün, kategori veya dükkan ara...',
                                   hintStyle: TextStyle(color: Colors.grey.shade400),
                                   border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
                                   isDense: true,
                                 ),
                                 style: const TextStyle(fontSize: 15),
