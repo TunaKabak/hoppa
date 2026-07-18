@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:provider/provider.dart' as p;
 import 'package:consumer_app/apps/consumer/business/business_provider.dart';
 import 'package:core_shared/shared/models/business.dart';
@@ -13,6 +14,9 @@ import 'package:latlong2/latlong.dart'; // Mesafe hesaplama için
 import 'package:google_fonts/google_fonts.dart';
 import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
 import 'package:consumer_app/apps/consumer/providers/consumer_location_controller.dart';
+
+final selectedBusinessFilterProvider = StateProvider<String>((ref) => 'Tümü');
+final selectedBusinessSortProvider = StateProvider<String>((ref) => 'Mesafe');
 
 class BusinessSelectionPage extends ConsumerWidget {
   final String? category; // Artık İşletme Türü veya Kategori filtresi olabilir
@@ -262,15 +266,18 @@ class BusinessSelectionPage extends ConsumerWidget {
                               loading: () => const Center(child: CircularProgressIndicator()),
                               error: (err, stack) => const Center(child: Text("Dükkanlar yüklenirken bir hata oluştu. Lütfen tekrar deneyin.")),
                               data: (allBusinesses) {
-                                var businesses = List<Business>.from(allBusinesses);
-
-                                if (businesses.isEmpty) {
+                                if (allBusinesses.isEmpty) {
                                   return const Center(
                                     child: Text("Aktif işletme bulunamadı."),
                                   );
                                 }
 
-                                // FİLTRELEME (İşletme Türü veya Kategori)
+                                final activeFilter = ref.watch(selectedBusinessFilterProvider);
+                                final activeSort = ref.watch(selectedBusinessSortProvider);
+
+                                var businesses = List<Business>.from(allBusinesses);
+
+                                // 1. KATEGORİ FİLTRELEME
                                 if (category != null) {
                                   businesses = businesses
                                       .where(
@@ -281,30 +288,9 @@ class BusinessSelectionPage extends ConsumerWidget {
                                                 category!.toLowerCase(),
                                       )
                                       .toList();
-
-                                  if (businesses.isEmpty) {
-                                    return Center(
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            Icons.search_off,
-                                            size: 64,
-                                            color: Colors.grey.shade300,
-                                          ),
-                                          const SizedBox(height: 16),
-                                          Text(
-                                            "Bu kategoride hizmet veren\niş yeri bulunamadı.",
-                                            textAlign: TextAlign.center,
-                                            style: TextStyle(color: Colors.grey.shade600),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  }
                                 }
 
-                                // MESAFEYE GÖRE FILTRELEME
+                                // 2. MESAFEYE GÖRE FILTRELEME
                                 if (address != null) {
                                   final Distance distance = const Distance();
                                   businesses = businesses.where((b) {
@@ -314,65 +300,81 @@ class BusinessSelectionPage extends ConsumerWidget {
                                       LatLng(address.latitude, address.longitude),
                                       LatLng(b.latitude, b.longitude),
                                     ) / 1000.0;
-                                    return km <= (b.deliveryRadius > 0 ? b.deliveryRadius : 10.0);
+                                    return km <= (b.deliveryRadius > 0 ? b.deliveryRadius : 15.0);
                                   }).toList();
+                                }
 
-                                  if (businesses.isEmpty) {
-                                    return Center(
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            Icons.location_off_outlined,
-                                            size: 64,
-                                            color: Colors.grey.shade300,
-                                          ),
-                                          const SizedBox(height: 16),
-                                          Text(
-                                            "Seçilen adrese hizmet veren\niş yeri bulunamadı.",
-                                            textAlign: TextAlign.center,
-                                            style: TextStyle(color: Colors.grey.shade600),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  }
+                                // 3. SEÇİLİ AKTİF FİLTRE
+                                if (activeFilter == 'Açık Olanlar') {
+                                  businesses = businesses.where((b) => b.isOpen).toList();
+                                } else if (activeFilter == 'Ücretsiz Teslimat') {
+                                  businesses = businesses.where((b) => b.baseDeliveryFee == 0 || b.freeDeliveryThreshold != null).toList();
+                                } else if (activeFilter == 'Hızlı Teslimat') {
+                                  businesses = businesses.where((b) => b.averageDeliveryTime.contains('15') || b.averageDeliveryTime.contains('30')).toList();
                                 }
 
                                 // SPONSORLU VE NORMAL DÜKKANLARI AYIR (Story 49.2)
                                 final sponsoredBusinesses = businesses.where((b) => b.tags.contains("Öne Çıkan (Kategori)")).toList();
                                 final regularBusinesses = businesses.where((b) => !b.tags.contains("Öne Çıkan (Kategori)")).toList();
 
-                                // Her iki listeyi de mesafeye göre sıralayalım
-                                if (address != null) {
-                                  final Distance distance = const Distance();
-                                  final sortFunc = (Business a, Business b) {
-                                    final isAZero = a.latitude == 0 && a.longitude == 0;
-                                    final isBZero = b.latitude == 0 && b.longitude == 0;
-                                    if (isAZero && isBZero) return 0;
-                                    if (isAZero) return 1;
-                                    if (isBZero) return -1;
-
-                                    final distA = distance.as(
-                                      LengthUnit.Meter,
-                                      LatLng(address.latitude, address.longitude),
-                                      LatLng(a.latitude, a.longitude),
-                                    );
-                                    final distB = distance.as(
-                                      LengthUnit.Meter,
-                                      LatLng(address.latitude, address.longitude),
-                                      LatLng(b.latitude, b.longitude),
-                                    );
+                                // 4. SEÇİLİ AKTİF SIRALAMA
+                                final Distance distance = const Distance();
+                                final sortFunc = (Business a, Business b) {
+                                  if (activeSort == 'Mesafe') {
+                                    if (address == null) return 0;
+                                    final distA = distance.as(LengthUnit.Meter, LatLng(address.latitude, address.longitude), LatLng(a.latitude, a.longitude));
+                                    final distB = distance.as(LengthUnit.Meter, LatLng(address.latitude, address.longitude), LatLng(b.latitude, b.longitude));
                                     return distA.compareTo(distB);
-                                  };
+                                  } else if (activeSort == 'Puan') {
+                                    return b.averageRating.compareTo(a.averageRating);
+                                  } else if (activeSort == 'Hız') {
+                                    final getWeight = (String val) {
+                                      if (val.contains('15')) return 1;
+                                      if (val.contains('30')) return 2;
+                                      if (val.contains('45')) return 3;
+                                      return 4;
+                                    };
+                                    return getWeight(a.averageDeliveryTime).compareTo(getWeight(b.averageDeliveryTime));
+                                  } else if (activeSort == 'Sepet Limiti') {
+                                    return a.minBasketAmount.compareTo(b.minBasketAmount);
+                                  }
+                                  return 0;
+                                };
 
-                                  sponsoredBusinesses.sort(sortFunc);
-                                  regularBusinesses.sort(sortFunc);
-                                }
+                                sponsoredBusinesses.sort(sortFunc);
+                                regularBusinesses.sort(sortFunc);
 
                                 return Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
+                                    // Filtreleme ve Sıralama Çipleri
+                                    _buildFilterAndSortBar(ref, activeFilter, activeSort),
+
+                                    if (businesses.isEmpty)
+                                      Expanded(
+                                        child: Center(
+                                          child: Column(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Icon(
+                                                Icons.filter_list_off_rounded,
+                                                size: 64,
+                                                color: Colors.grey.shade300,
+                                              ),
+                                              const SizedBox(height: 16),
+                                              Text(
+                                                "Seçilen filtrelere uygun dükkan bulunamadı.",
+                                                textAlign: TextAlign.center,
+                                                style: GoogleFonts.poppins(
+                                                  color: Colors.grey.shade600,
+                                                  fontSize: 13,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      )
+                                    else ...[
                                     // ─── ÖNE ÇIKAN İŞLETMELER YATAY KAROUSEL ───
                                     if (sponsoredBusinesses.isNotEmpty) ...[
                                       Padding(
@@ -520,9 +522,10 @@ class BusinessSelectionPage extends ConsumerWidget {
                                               ),
                                       ),
                                     ),
-                                  ],
-                                );
-                              },
+                                   ],
+                                 ],
+                               );
+                             },
                             ),
                           ),
                         ],
@@ -683,46 +686,68 @@ class BusinessSelectionPage extends ConsumerWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            const SizedBox(height: 2),
-                            Row(
-                              children: [
-                                const Icon(Icons.star_rounded, color: Colors.amber, size: 11),
-                                const SizedBox(width: 2),
-                                Text(
-                                  "4.9",
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 9,
-                                    color: Colors.white70,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                const Icon(Icons.access_time_rounded, color: Colors.white60, size: 10),
-                                const SizedBox(width: 2),
-                                Expanded(
-                                  child: Text(
-                                    business.averageDeliveryTime,
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 9,
-                                      color: Colors.white60,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                if (distanceText != null) ...[
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    distanceText,
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 9,
-                                      color: Colors.white60,
-                                      fontWeight: FontWeight.w500,
+                            if (business.campaignText != null && business.campaignText!.isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  const Icon(Icons.campaign_rounded, color: Color(0xFFFF7E40), size: 11),
+                                  const SizedBox(width: 3),
+                                  Expanded(
+                                    child: Text(
+                                      business.campaignText!,
+                                      style: GoogleFonts.poppins(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 8.5,
+                                        color: const Color(0xFFFF7E40),
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ],
-                              ],
-                            ),
+                              ),
+                            ] else ...[
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  const Icon(Icons.star_rounded, color: Colors.amber, size: 11),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    business.averageRating.toStringAsFixed(1),
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 9,
+                                      color: Colors.white70,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  const Icon(Icons.access_time_rounded, color: Colors.white60, size: 10),
+                                  const SizedBox(width: 2),
+                                  Expanded(
+                                    child: Text(
+                                      business.averageDeliveryTime,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 9,
+                                        color: Colors.white60,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (distanceText != null) ...[
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      distanceText,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 9,
+                                        color: Colors.white60,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -963,6 +988,131 @@ class BusinessSelectionPage extends ConsumerWidget {
             color: isPrimary ? kPrimaryColor : Colors.grey.shade700,
             fontSize: 12,
             fontWeight: isPrimary ? FontWeight.bold : FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFilterAndSortBar(WidgetRef ref, String activeFilter, String activeSort) {
+    final filters = [
+      {'label': 'Tüm İşletmeler', 'value': 'Tümü', 'icon': Icons.store_rounded},
+      {'label': 'Açık Olanlar', 'value': 'Açık Olanlar', 'icon': Icons.lock_open_rounded},
+      {'label': 'Ücretsiz Teslimat', 'value': 'Ücretsiz Teslimat', 'icon': Icons.local_shipping_rounded},
+      {'label': 'Hızlı Teslimat', 'value': 'Hızlı Teslimat', 'icon': Icons.bolt_rounded},
+    ];
+
+    final sorts = [
+      {'label': 'Mesafe', 'value': 'Mesafe', 'icon': Icons.near_me_rounded},
+      {'label': 'Puan', 'value': 'Puan', 'icon': Icons.star_rounded},
+      {'label': 'Hız', 'value': 'Hız', 'icon': Icons.access_time_rounded},
+      {'label': 'Sepet Limiti', 'value': 'Sepet Limiti', 'icon': Icons.shopping_bag_rounded},
+    ];
+
+    return Column(
+      children: [
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: filters.map((f) {
+              final isSelected = activeFilter == f['value'];
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
+                  label: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        f['icon'] as IconData,
+                        size: 14,
+                        color: isSelected ? Colors.white : Colors.grey.shade600,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        f['label'] as String,
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          color: isSelected ? Colors.white : Colors.grey.shade800,
+                        ),
+                      ),
+                    ],
+                  ),
+                  selected: isSelected,
+                  selectedColor: const Color(0xFFFF5200),
+                  backgroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    side: BorderSide(
+                      color: isSelected ? const Color(0xFFFF5200) : Colors.grey.shade300,
+                    ),
+                  ),
+                  onSelected: (selected) {
+                    ref.read(selectedBusinessFilterProvider.notifier).state = f['value'] as String;
+                  },
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: Row(
+            children: [
+              Text(
+                "Sırala:",
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(width: 8),
+              ...sorts.map((s) {
+                final isSelected = activeSort == s['value'];
+                return Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: InkWell(
+                    onTap: () {
+                      ref.read(selectedBusinessSortProvider.notifier).state = s['value'] as String;
+                    },
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: isSelected ? const Color(0xFFFF5200).withOpacity(0.08) : Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isSelected ? const Color(0xFFFF5200) : Colors.transparent,
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            s['icon'] as IconData,
+                            size: 12,
+                            color: isSelected ? const Color(0xFFFF5200) : Colors.grey.shade600,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            s['label'] as String,
+                            style: GoogleFonts.poppins(
+                              fontSize: 10,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                              color: isSelected ? const Color(0xFFFF5200) : Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ],
           ),
         ),
       ],

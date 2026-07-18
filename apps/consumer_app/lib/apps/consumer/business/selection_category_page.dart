@@ -803,46 +803,68 @@ class SelectionCategoryPage extends rp.ConsumerWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            const SizedBox(height: 2),
-                            Row(
-                              children: [
-                                const Icon(Icons.star_rounded, color: Colors.amber, size: 11),
-                                const SizedBox(width: 2),
-                                Text(
-                                  "4.9",
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 9,
-                                    color: Colors.white70,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                const Icon(Icons.access_time_rounded, color: Colors.white60, size: 10),
-                                const SizedBox(width: 2),
-                                Expanded(
-                                  child: Text(
-                                    business.averageDeliveryTime,
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 9,
-                                      color: Colors.white60,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                if (distanceText != null) ...[
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    distanceText,
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 9,
-                                      color: Colors.white60,
-                                      fontWeight: FontWeight.w500,
+                            if (business.campaignText != null && business.campaignText!.isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  const Icon(Icons.campaign_rounded, color: Color(0xFFFF7E40), size: 11),
+                                  const SizedBox(width: 3),
+                                  Expanded(
+                                    child: Text(
+                                      business.campaignText!,
+                                      style: GoogleFonts.poppins(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 8.5,
+                                        color: const Color(0xFFFF7E40),
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ],
-                              ],
-                            ),
+                              ),
+                            ] else ...[
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  const Icon(Icons.star_rounded, color: Colors.amber, size: 11),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    business.averageRating.toStringAsFixed(1),
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 9,
+                                      color: Colors.white70,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  const Icon(Icons.access_time_rounded, color: Colors.white60, size: 10),
+                                  const SizedBox(width: 2),
+                                  Expanded(
+                                    child: Text(
+                                      business.averageDeliveryTime,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 9,
+                                        color: Colors.white60,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (distanceText != null) ...[
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      distanceText,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 9,
+                                        color: Colors.white60,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ],
                           ],
                         ),
                       ),

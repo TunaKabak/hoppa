@@ -573,6 +573,74 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
         },
         body: CustomScrollView(
           slivers: [
+            // Shop Campaign Banner
+            if (widget.shop.campaignText != null && widget.shop.campaignText!.isNotEmpty)
+              SliverToBoxAdapter(
+                child: Container(
+                  margin: const EdgeInsets.fromLTRB(12, 12, 12, 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [
+                        Color(0xFFFF7E40),
+                        Color(0xFFFF5200),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFFF5200).withOpacity(0.2),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.campaign_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "MAĞAZA KAMPANYASI",
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 8,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.1,
+                              ),
+                            ),
+                            const SizedBox(height: 1),
+                            Text(
+                              widget.shop.campaignText!,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             // Shop Badges / Tags (placed modernly between header and search bar)
             if (widget.shop.allowedFulfillmentModels.isNotEmpty || widget.shop.tags.isNotEmpty)
               SliverToBoxAdapter(

@@ -33,12 +33,12 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
   bool _isInitialized = false;
   MerchantShop? _shop;
 
-  // Controllers - Profile
   late TextEditingController _nameController;
   late TextEditingController _phoneController;
   late TextEditingController _addressController;
   late TextEditingController _taxController;
   late TextEditingController _identityController;
+  late TextEditingController _campaignController;
 
   // Controllers - Operation & Delivery
   late TextEditingController _minBasketController;
@@ -193,6 +193,7 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
     _taxController = TextEditingController();
     _identityController = TextEditingController();
     _districtController = TextEditingController();
+    _campaignController = TextEditingController();
     _mapController = MapController();
 
     // Invalidate shopControllerProvider to clear any previous failed toggle error states
@@ -215,6 +216,7 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
     _baseDeliveryFeeController.text = shop.baseDeliveryFee?.toString() ?? '30.0';
     _deliveryFeePerKmController.text = shop.deliveryFeePerKm?.toString() ?? '5.0';
     _freeDeliveryThresholdController.text = shop.freeDeliveryThreshold?.toString() ?? '';
+    _campaignController.text = shop.campaignText ?? '';
 
     final allowed = shop.allowedPaymentMethods ?? ['ONLINE_PAYMENT', 'CASH_ON_DELIVERY', 'CARD_ON_DELIVERY'];
     _supportsOnline = allowed.contains('ONLINE_PAYMENT');
@@ -298,6 +300,7 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
     _freeDeliveryThresholdController.dispose();
     _taxController.dispose();
     _identityController.dispose();
+    _campaignController.dispose();
     super.dispose();
   }
 
@@ -356,6 +359,7 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
       await ref.read(shopControllerProvider.notifier).updateShop({
         'name': _nameController.text,
         'address': combinedAddress,
+        'campaignText': _campaignController.text.trim(),
         'minOrderAmount': double.tryParse(_minBasketController.text) ?? 0.0,
         'deliveryRadiusKm': _isPolygonMode ? null : _deliveryRadius,
         'deliveryPolygon': _isPolygonMode ? _deliveryPolygon.map((p) => {'lat': p.latitude, 'lng': p.longitude}).toList() : null,
@@ -567,6 +571,17 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
             ),
             keyboardType: TextInputType.phone,
             validator: (value) => value!.isEmpty ? "Zorunlu alan" : null,
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _campaignController,
+            decoration: const InputDecoration(
+              labelText: "Aktif Kampanya Mesajı",
+              helperText: "Örn: %10 İndirim veya 2 Alana 1 Bedava!",
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.campaign),
+            ),
+            maxLength: 60,
           ),
           const SizedBox(height: 24),
           const Text(
