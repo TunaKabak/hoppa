@@ -273,11 +273,10 @@ export class ShopController {
       }
 
       const now = new Date();
-      // Aktif sponsorluk var mı kontrolü
+      // Aktif sponsorluk var mı kontrolü (Karşılıklı Dışlama)
       const existing = await prisma.shopPromotion.findFirst({
         where: {
           shopId: shop.id,
-          promoType,
           isActive: true,
           startDate: { lte: now },
           endDate: { gte: now }
@@ -285,10 +284,20 @@ export class ShopController {
       });
 
       if (existing) {
-        return res.status(400).json({
-          error: true,
-          message: "Bu sponsorluk türü dükkanınız için zaten aktif durumda."
-        });
+        // Kategori promosyonundan Ana Sayfa promosyonuna yükseltmeye (upgrade) izin ver
+        if (existing.promoType === "CATEGORY" && promoType === "MAIN_SCREEN") {
+          await prisma.shopPromotion.update({
+            where: { id: existing.id },
+            data: { isActive: false }
+          });
+        } else {
+          return res.status(400).json({
+            error: true,
+            message: existing.promoType === "MAIN_SCREEN"
+              ? "Ana sayfa tepe slider sponsorluğunuz zaten aktif durumdadır. Kategori içi öne çıkarma satın alamazsınız."
+              : "Zaten aktif bir öne çıkarma kampanyanız bulunmaktadır. Karşılıklı dışlama kuralı gereği aynı anda birden fazla reklam satın alamazsınız."
+          });
+        }
       }
 
       // Sponsorluk 1 haftalık (7 gün) oluşturulur

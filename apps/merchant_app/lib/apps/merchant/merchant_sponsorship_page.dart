@@ -88,12 +88,15 @@ class MerchantSponsorshipPage extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
 
-              // ─── SPONSORLUK SEÇENEKLERİ KARTLARI ───
+              // ─── SPONSORLUK SEÇENEKLERİ KARTLARI (MUTUAL EXCLUSION & UPGRADE PATH) ───
               _SponsorshipCard(
                 title: "Hoppa Ana Sayfa Tepe Slider",
-                description: "Dükkanınız 1 hafta boyunca ana sayfanın en üstünde parıldar. Peşin ücret yok! Sadece bu hafta gelen siparişlerden standart %5 yerine %15 komisyon tahsil edilir.",
+                description: "Dükkanınız 1 hafta boyunca ana sayfanın en üstünde parıldar. Bu reklam etkinken kategori içi öne çıkarma satın alınamaz.",
                 promoType: "MAIN_SCREEN",
                 isActive: hasMainScreen,
+                isDisabled: false, // upgrades allowed!
+                isUpgrade: hasCategory, // true if CATEGORY is active
+                disabledWarning: null,
                 commissionRateLabel: "%15 Komisyon",
                 activePromoData: mainPromo,
                 gradient: const LinearGradient(
@@ -102,16 +105,19 @@ class MerchantSponsorshipPage extends ConsumerWidget {
                   end: Alignment.bottomRight,
                 ),
                 icon: Icons.auto_awesome_rounded,
-                onActivate: () => _confirmAndActivate(context, ref, "MAIN_SCREEN"),
+                onActivate: () => _confirmAndActivate(context, ref, "MAIN_SCREEN", isUpgrade: hasCategory),
                 onCancel: () => _confirmAndCancel(context, ref, "MAIN_SCREEN"),
               ),
               const SizedBox(height: 16),
 
               _SponsorshipCard(
                 title: "Kategori İçi Öne Çıkarma",
-                description: "Kendi kategorinizde (Örn: Kebap) rakiplerinizin en üstünde yer alın. Sadece bu hafta gelen siparişlerden standart %5 yerine %10 komisyon alınır.",
+                description: "Kendi kategorinizde rakiplerinizin en üstünde yer edin. Bu reklam etkinken ana sayfa tepe slider sponsorluğu satın alınamaz.",
                 promoType: "CATEGORY",
                 isActive: hasCategory,
+                isDisabled: hasMainScreen, // strictly disabled if MAIN_SCREEN is active
+                isUpgrade: false,
+                disabledWarning: "Ana Sayfa Reklamınız Aktif",
                 commissionRateLabel: "%10 Komisyon",
                 activePromoData: catPromo,
                 gradient: const LinearGradient(
@@ -120,12 +126,12 @@ class MerchantSponsorshipPage extends ConsumerWidget {
                   end: Alignment.bottomRight,
                 ),
                 icon: Icons.category_rounded,
-                onActivate: () => _confirmAndActivate(context, ref, "CATEGORY"),
+                onActivate: () => _confirmAndActivate(context, ref, "CATEGORY", isUpgrade: false),
                 onCancel: () => _confirmAndCancel(context, ref, "CATEGORY"),
               ),
               const SizedBox(height: 32),
 
-              // ─── TÜKETİCİ UYGULAMASI ÖNİZLEMESİ (PREVIEW) ───
+              // ─── TÜKETİCİ UYGULAMASI ÖNİZLEMESİ (SLIDING PREVIEW) ───
               _LivePreviewsSection(shop: shop),
               const SizedBox(height: 40),
             ],
@@ -237,22 +243,28 @@ class MerchantSponsorshipPage extends ConsumerWidget {
     );
   }
 
-  void _confirmAndActivate(BuildContext context, WidgetRef ref, String promoType) {
+  void _confirmAndActivate(BuildContext context, WidgetRef ref, String promoType, {bool isUpgrade = false}) {
     final title = promoType == "MAIN_SCREEN"
-        ? "Ana Sayfa Tepe Slider"
+        ? (isUpgrade ? "Ana Sayfa Slider Yükseltmesi" : "Ana Sayfa Tepe Slider")
         : "Kategori İçi Öne Çıkarma";
 
     final rateText = promoType == "MAIN_SCREEN" ? "%15" : "%10";
+
+    final content = isUpgrade
+        ? "Kategori sponsorluğunuz sonlandırılarak Ana Sayfa Tepe Slider sponsorluğuna yükseltilecektir. Bu işlem onaylandıktan sonra bu hafta gelen siparişlerden %15 komisyon kesilecektir. Emin misiniz?"
+        : "Dükkanınızı 1 hafta boyunca öne çıkarmak istediğinize emin misiniz? Bu işlem onaylandıktan sonra peşin ücret alınmaz, bu hafta gelen siparişlerden $rateText komisyon kesilir.";
+
+    final confirmText = isUpgrade ? "Evet, Yükselt" : "Evet, Başlat";
 
     showDialog(
       context: context,
       builder: (ctx) => MerchantDialog(
         icon: promoType == "MAIN_SCREEN" ? Icons.auto_awesome_rounded : Icons.category_rounded,
         iconColor: const Color(0xFFE95D22),
-        title: "$title Aktivasyonu",
-        content: "Dükkanınızı 1 hafta boyunca öne çıkarmak istediğinize emin misiniz? Bu işlem onaylandıktan sonra peşin ücret alınmaz, bu hafta gelen siparişlerden $rateText komisyon kesilir.",
+        title: isUpgrade ? "Sponsorluk Yükseltme" : "$title Aktivasyonu",
+        content: content,
         cancelText: "Vazgeç",
-        confirmText: "Evet, Başlat",
+        confirmText: confirmText,
         onCancel: () => Navigator.pop(ctx),
         onConfirm: () async {
           Navigator.pop(ctx); // Close dialog
@@ -269,8 +281,8 @@ class MerchantSponsorshipPage extends ConsumerWidget {
             if (context.mounted) {
               Navigator.pop(context); // Close loading dialog
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Sponsorluk başarıyla aktif edildi!"),
+                SnackBar(
+                  content: Text(isUpgrade ? "Sponsorluğunuz başarıyla yükseltildi!" : "Sponsorluk başarıyla aktif edildi!"),
                   backgroundColor: Colors.green,
                 ),
               );
@@ -357,6 +369,19 @@ class _LivePreviewsSection extends StatefulWidget {
 
 class _LivePreviewsSectionState extends State<_LivePreviewsSection> {
   int _selectedTabIndex = 0;
+  late PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: _selectedTabIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -396,93 +421,106 @@ class _LivePreviewsSectionState extends State<_LivePreviewsSection> {
             borderRadius: BorderRadius.circular(12),
           ),
           padding: const EdgeInsets.all(4),
-          child: Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(() => _selectedTabIndex = 0),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final double width = constraints.maxWidth / 2;
+              return Stack(
+                children: [
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 250),
                     curve: Curves.easeInOut,
-                    decoration: BoxDecoration(
-                      color: _selectedTabIndex == 0 ? Colors.white : Colors.transparent,
-                      borderRadius: BorderRadius.circular(8),
-                      boxShadow: _selectedTabIndex == 0
-                          ? [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.05),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              )
-                            ]
-                          : [],
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      "Tepe Slider (Ana Sayfa)",
-                      style: TextStyle(
-                        color: _selectedTabIndex == 0 ? const Color(0xFFE95D22) : Colors.grey.shade600,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                    left: _selectedTabIndex * width,
+                    top: 0,
+                    bottom: 0,
+                    width: width,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          )
+                        ],
                       ),
                     ),
                   ),
-                ),
-              ),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(() => _selectedTabIndex = 1),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    curve: Curves.easeInOut,
-                    decoration: BoxDecoration(
-                      color: _selectedTabIndex == 1 ? Colors.white : Colors.transparent,
-                      borderRadius: BorderRadius.circular(8),
-                      boxShadow: _selectedTabIndex == 1
-                          ? [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.05),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              )
-                            ]
-                          : [],
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      "Liste Kartı (Kategori)",
-                      style: TextStyle(
-                        color: _selectedTabIndex == 1 ? const Color(0xFFE95D22) : Colors.grey.shade600,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() => _selectedTabIndex = 0);
+                            _pageController.animateToPage(
+                              0,
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                            );
+                          },
+                          child: Container(
+                            color: Colors.transparent,
+                            alignment: Alignment.center,
+                            child: Text(
+                              "Tepe Slider (Ana Sayfa)",
+                              style: TextStyle(
+                                color: _selectedTabIndex == 0 ? const Color(0xFFE95D22) : Colors.grey.shade600,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() => _selectedTabIndex = 1);
+                            _pageController.animateToPage(
+                              1,
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                            );
+                          },
+                          child: Container(
+                            color: Colors.transparent,
+                            alignment: Alignment.center,
+                            child: Text(
+                              "Liste Kartı (Kategori)",
+                              style: TextStyle(
+                                color: _selectedTabIndex == 1 ? const Color(0xFFE95D22) : Colors.grey.shade600,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ),
-            ],
+                ],
+              );
+            }
           ),
         ),
         const SizedBox(height: 16),
 
-        // Smooth cross-fade animation between tabs
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 250),
-          transitionBuilder: (Widget child, Animation<double> animation) {
-            return FadeTransition(
-              opacity: animation,
-              child: child,
-            );
-          },
-          child: _selectedTabIndex == 0
-              ? KeyedSubtree(
-                  key: const ValueKey('slider_mockup'),
-                  child: _buildSliderMockup(shopName, logoUrl, headerUrl),
-                )
-              : KeyedSubtree(
-                  key: const ValueKey('card_mockup'),
-                  child: _buildCardMockup(shopName, logoUrl, headerUrl, widget.shop),
-                ),
+        // Horizontal sliding PageView transition (Exactly like consumer app)
+        SizedBox(
+          height: 200,
+          child: PageView(
+            controller: _pageController,
+            onPageChanged: (index) {
+              setState(() {
+                _selectedTabIndex = index;
+              });
+            },
+            children: [
+              _buildSliderMockup(shopName, logoUrl, headerUrl),
+              _buildCardMockup(shopName, logoUrl, headerUrl, widget.shop),
+            ],
+          ),
         ),
       ],
     );
@@ -490,7 +528,6 @@ class _LivePreviewsSectionState extends State<_LivePreviewsSection> {
 
   Widget _buildSliderMockup(String shopName, String? logoUrl, String? headerUrl) {
     return Container(
-      height: 180,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -611,7 +648,6 @@ class _LivePreviewsSectionState extends State<_LivePreviewsSection> {
 
   Widget _buildCardMockup(String shopName, String? logoUrl, String? headerUrl, dynamic shop) {
     return Container(
-      height: 180,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -732,6 +768,9 @@ class _SponsorshipCard extends StatelessWidget {
   final String description;
   final String promoType;
   final bool isActive;
+  final bool isDisabled;
+  final bool isUpgrade;
+  final String? disabledWarning;
   final String commissionRateLabel;
   final dynamic activePromoData;
   final Gradient gradient;
@@ -744,6 +783,9 @@ class _SponsorshipCard extends StatelessWidget {
     required this.description,
     required this.promoType,
     required this.isActive,
+    required this.isDisabled,
+    this.isUpgrade = false,
+    this.disabledWarning,
     required this.commissionRateLabel,
     required this.activePromoData,
     required this.gradient,
@@ -784,190 +826,246 @@ class _SponsorshipCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isActive ? Colors.transparent : Colors.grey.shade200,
-          width: isActive ? 0 : 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    return Opacity(
+      opacity: isDisabled ? 0.5 : 1.0,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isActive ? Colors.transparent : Colors.grey.shade200,
+            width: isActive ? 0 : 1.5,
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header of card (with background color gradient if active)
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: isActive ? gradient : null,
-              color: isActive ? null : Colors.grey.shade50,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header of card (with background color gradient if active)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: isActive ? gradient : null,
+                color: isActive ? null : Colors.grey.shade50,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    icon,
+                    color: isActive ? Colors.white : theme.colorScheme.primary,
+                    size: 24,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        color: isActive ? Colors.white : Colors.grey.shade800,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isActive ? Colors.white.withValues(alpha: 0.2) : Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      commissionRateLabel,
+                      style: TextStyle(
+                        color: isActive ? Colors.white : Colors.grey.shade700,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            child: Row(
-              children: [
-                Icon(
-                  icon,
-                  color: isActive ? Colors.white : theme.colorScheme.primary,
-                  size: 24,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    title,
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    description,
                     style: TextStyle(
-                      color: isActive ? Colors.white : Colors.grey.shade800,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                      color: Colors.grey.shade600,
+                      fontSize: 13,
+                      height: 1.4,
                     ),
                   ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: isActive ? Colors.white.withValues(alpha: 0.2) : Colors.grey.shade200,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    commissionRateLabel,
-                    style: TextStyle(
-                      color: isActive ? Colors.white : Colors.grey.shade700,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  description,
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 13,
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                if (isActive)
-                  Column(
-                    children: [
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade50,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.green.shade200),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(Icons.check_circle_rounded, color: Colors.green.shade700, size: 20),
-                                const SizedBox(width: 8),
-                                Text(
-                                  "Sponsorluk Yayında",
-                                  style: TextStyle(
-                                    color: Colors.green.shade800,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
+                  const SizedBox(height: 20),
+                  if (isActive)
+                    Column(
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.green.shade200),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.check_circle_rounded, color: Colors.green.shade700, size: 20),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    "Sponsorluk Yayında",
+                                    style: TextStyle(
+                                      color: Colors.green.shade800,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
                                   ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                _getPromoDurationDetails(),
+                                style: TextStyle(
+                                  color: Colors.green.shade900,
+                                  fontSize: 12,
+                                  height: 1.4,
                                 ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        if (onCancel != null)
+                          OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(color: Colors.red.shade200),
+                              foregroundColor: Colors.red,
+                              minimumSize: const Size.fromHeight(46),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            onPressed: onCancel,
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.cancel_outlined, size: 18),
+                                SizedBox(width: 8),
+                                Text("Sponsorluğu İptal Et", style: TextStyle(fontWeight: FontWeight.bold)),
                               ],
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _getPromoDurationDetails(),
-                              style: TextStyle(
-                                color: Colors.green.shade900,
-                                fontSize: 12,
-                                height: 1.4,
+                          ),
+                      ],
+                    )
+                  else if (isDisabled && disabledWarning != null)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.lock_outline_rounded, color: Colors.grey.shade500, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            disabledWarning!,
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else ...[
+                    if (isUpgrade) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.purple.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.purple.shade100),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.upgrade_rounded, color: Colors.purple.shade700, size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                "Aktif kategori reklamınız sonlandırılarak bu reklama yükseltilir.",
+                                style: TextStyle(
+                                  color: Colors.purple.shade700,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                           ],
                         ),
                       ),
                       const SizedBox(height: 12),
-                      if (onCancel != null)
-                        OutlinedButton(
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: Colors.red.shade200),
-                            foregroundColor: Colors.red,
-                            minimumSize: const Size.fromHeight(46),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          onPressed: onCancel,
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.cancel_outlined, size: 18),
-                              SizedBox(width: 8),
-                              Text("Sponsorluğu İptal Et", style: TextStyle(fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                        ),
                     ],
-                  )
-                else
-                  Container(
-                    width: double.infinity,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      gradient: gradient,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        shadowColor: Colors.transparent,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      onPressed: onActivate,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(icon, size: 18, color: Colors.white),
-                          const SizedBox(width: 8),
-                          const Text(
-                            "Hemen Aktif Et",
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white),
+                    Container(
+                      width: double.infinity,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        gradient: gradient,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
                           ),
                         ],
                       ),
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: onActivate,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(isUpgrade ? Icons.upgrade_rounded : icon, size: 18, color: Colors.white),
+                            const SizedBox(width: 8),
+                            Text(
+                              isUpgrade ? "Hemen Yükselt" : "Hemen Aktif Et",
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
-              ],
+                  ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
