@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:core_shared/shared/core/services/language_provider.dart';
 import 'package:provider/provider.dart' as p;
+import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
 
 class LanguageSelectionPage extends ConsumerWidget {
   const LanguageSelectionPage({super.key});
@@ -11,61 +12,101 @@ class LanguageSelectionPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final languageProvider = p.Provider.of<LanguageProvider>(context);
     final currentLocale = languageProvider.currentLocale;
-    const kPrimaryColor = Color(0xFF00A651);
+    final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        leading: const BackButton(color: Colors.black),
-        title: Text(
-          "Dil Seçimi / Language",
-          style: GoogleFonts.poppins(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFFE95D22), // Hoppa Orange
+              Color(0xFFFF8C00), // Orange-Yellow
+            ],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
           ),
         ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 10),
-            Text(
-              "Lütfen tercih ettiğiniz uygulama dilini seçin.",
-              style: GoogleFonts.inter(color: Colors.grey.shade600, fontSize: 14),
+            HoppaHeader(
+              height: 70,
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  Expanded(
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 48.0),
+                        child: Text(
+                          "Dil Seçimi / Language",
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 24),
-            _buildLanguageCard(
-              context,
-              title: "Türkçe",
-              subtitle: "Turkish",
-              flag: "🇹🇷",
-              isSelected: currentLocale.languageCode == 'tr',
-              onTap: () {
-                languageProvider.changeLanguage(const Locale('tr', 'TR'));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Dil Türkçe olarak değiştirildi.")),
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-            _buildLanguageCard(
-              context,
-              title: "English",
-              subtitle: "English",
-              flag: "🇬🇧",
-              isSelected: currentLocale.languageCode == 'en',
-              onTap: () {
-                languageProvider.changeLanguage(const Locale('en', 'US'));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Language changed to English.")),
-                );
-              },
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: theme.scaffoldBackgroundColor,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 10),
+                      Text(
+                        "Lütfen tercih ettiğiniz uygulama dilini seçin.",
+                        style: GoogleFonts.inter(color: Colors.grey.shade600, fontSize: 14),
+                      ),
+                      const SizedBox(height: 24),
+                      _buildLanguageCard(
+                        context,
+                        title: "Türkçe",
+                        subtitle: "Turkish",
+                        flag: "🇹🇷",
+                        isSelected: currentLocale.languageCode == 'tr',
+                        onTap: () {
+                          languageProvider.changeLanguage(const Locale('tr', 'TR'));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Dil Türkçe olarak değiştirildi.")),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      _buildLanguageCard(
+                        context,
+                        title: "English",
+                        subtitle: "English",
+                        flag: "🇬🇧",
+                        isSelected: currentLocale.languageCode == 'en',
+                        onTap: () {
+                          languageProvider.changeLanguage(const Locale('en', 'US'));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Language changed to English.")),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ],
         ),
@@ -98,7 +139,7 @@ class LanguageSelectionPage extends ConsumerWidget {
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.02),
-              blurRadius: 10,
+              blurRadius: 8,
               offset: const Offset(0, 4),
             ),
           ],
@@ -107,7 +148,7 @@ class LanguageSelectionPage extends ConsumerWidget {
           children: [
             Text(
               flag,
-              style: const TextStyle(fontSize: 32),
+              style: const TextStyle(fontSize: 30),
             ),
             const SizedBox(width: 20),
             Expanded(
@@ -117,9 +158,9 @@ class LanguageSelectionPage extends ConsumerWidget {
                   Text(
                     title,
                     style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.bold,
                       fontSize: 16,
-                      color: isSelected ? kPrimaryColor : Colors.black87,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
                     ),
                   ),
                   Text(
@@ -136,7 +177,7 @@ class LanguageSelectionPage extends ConsumerWidget {
               const Icon(
                 Icons.check_circle_rounded,
                 color: kPrimaryColor,
-                size: 28,
+                size: 24,
               ),
           ],
         ),

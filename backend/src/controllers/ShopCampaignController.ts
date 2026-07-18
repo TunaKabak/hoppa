@@ -18,7 +18,7 @@ export class ShopCampaignController {
         return res.status(404).json({ error: true, message: "Dükkan bulunamadı." });
       }
 
-      const { title, description, imageUrl, targetArea, designService } = req.body;
+      const { title, description, imageUrl, targetArea, designService, targetProducts } = req.body;
       if (!title || !description || !targetArea) {
         return res.status(400).json({ error: true, message: "Lütfen başlık, açıklama ve kampanya alanını seçin." });
       }
@@ -35,7 +35,8 @@ export class ShopCampaignController {
           targetArea,
           designService: Boolean(designService),
           status,
-          isActive: true
+          isActive: true,
+          targetProducts: Array.isArray(targetProducts) ? targetProducts : []
         }
       });
 

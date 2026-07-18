@@ -14,6 +14,9 @@ import 'package:consumer_app/apps/consumer/cart/widgets/compact_checkout_bar.dar
 import 'package:consumer_app/apps/consumer/auth/consumer_login_page.dart';
 import 'package:core_auth/core_auth.dart';
 import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
+import 'package:consumer_app/apps/consumer/business/shop_detail_page.dart';
+import 'package:consumer_app/apps/consumer/widgets/hoppa_dialog.dart';
+import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository.dart';
 
 class CartPage extends ConsumerStatefulWidget {
   const CartPage({super.key});
@@ -99,16 +102,33 @@ class _CartPageState extends ConsumerState<CartPage> {
                     icon: const Icon(Icons.close, color: Colors.white),
                     onPressed: () => _handleClose(context),
                   ),
-                  const Expanded(
-                    child: Center(
-                      child: Text(
-                        "Sepetim",
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          "Sepetim",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
+                        if (cartState.items.isNotEmpty && selectedBusiness != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            selectedBusiness.name,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.white.withOpacity(0.9),
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                   if (cartState.items.isNotEmpty)
@@ -229,7 +249,30 @@ class _CartPageState extends ConsumerState<CartPage> {
                 ),
 
                 TextButton.icon(
-                  onPressed: () => _handleClose(context),
+                  onPressed: () {
+                    if (cartState.items.isNotEmpty) {
+                      try {
+                        final shopId = cartState.items.first.businessProduct.businessId;
+                        final shopsAsync = ref.read(consumerShopsProvider);
+                        final shops = shopsAsync.value ?? [];
+                        final shop = shops.firstWhere((s) => s.id == shopId);
+                        
+                        businessProvider.setCategory(shop.type.label);
+                        businessProvider.selectBusiness(shop);
+                        
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ModernShopDetailPage(shop: shop),
+                          ),
+                        );
+                      } catch (e) {
+                        _handleClose(context);
+                      }
+                    } else {
+                      _handleClose(context);
+                    }
+                  },
                   icon: const Icon(Icons.arrow_back, size: 16),
                   label: const Text(
                     "Alışverişe Devam Et",
@@ -439,28 +482,19 @@ class _CartPageState extends ConsumerState<CartPage> {
   void _showClearCartDialog(BuildContext context, CartNotifier cartNotifier) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Sepeti Boşalt"),
-        content: const Text(
-          "Sepetindeki tüm ürünleri silmek istediğine emin misin?",
-        ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Vazgeç", style: TextStyle(color: Colors.grey)),
-          ),
-          TextButton(
-            onPressed: () {
-              cartNotifier.clearCart();
-              Navigator.pop(context);
-            },
-            child: const Text(
-              "Evet, Boşalt",
-              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
+      builder: (context) => HoppaDialog(
+        icon: Icons.delete_sweep_outlined,
+        iconColor: const Color(0xFFFF5200),
+        title: "Sepeti Boşalt",
+        content: "Sepetindeki tüm ürünleri silmek istediğine emin misin?",
+        cancelText: "Vazgeç",
+        confirmText: "Evet, Boşalt",
+        isDestructive: true,
+        onCancel: () => Navigator.pop(context),
+        onConfirm: () {
+          cartNotifier.clearCart();
+          Navigator.pop(context);
+        },
       ),
     );
   }

@@ -15,6 +15,8 @@ import 'package:consumer_app/apps/consumer/home/widgets/campaign_carousel.dart';
 import 'package:consumer_app/apps/consumer/widgets/hoppa_dialog.dart';
 import 'package:consumer_app/apps/consumer/widgets/shop_badge.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:core_shared/shared/models/campaign.dart';
+import 'package:consumer_app/apps/consumer/business/campaign_products_page.dart';
 
 class ModernShopDetailPage extends ConsumerStatefulWidget {
   final Business shop;
@@ -269,6 +271,9 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
     final productsAsync = ref.watch(filteredShopProductsProvider(widget.shop.id));
     final allProductsAsync = ref.watch(shopProductsProvider(widget.shop.id));
     final categoriesAsync = ref.watch(shopCategoriesProvider(widget.shop.id));
+    final activeShopCampaignsAsync = ref.watch(activeShopCampaignsProvider);
+    final activeShopCampaigns = activeShopCampaignsAsync.value ?? [];
+    final currentShopCampaigns = activeShopCampaigns.where((c) => c['shopId'] == widget.shop.id && c['targetArea'] == "SHOP_DETAIL").toList();
 
     String normalize(String name) {
       return name
@@ -353,7 +358,12 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
               floating: false,
               snap: false,
               expandedHeight: 145.0,
-              backgroundColor: theme.primaryColor,
+              backgroundColor: const Color(0xFFE95D22),
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(20),
+                ),
+              ),
               forceElevated: innerBoxIsScrolled,
               iconTheme: const IconThemeData(color: Colors.white),
               leading: IconButton(
@@ -572,9 +582,106 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
           ];
         },
         body: CustomScrollView(
-          slivers: [
-            // Shop Campaign Banner
-            if (widget.shop.campaignText != null && widget.shop.campaignText!.isNotEmpty)
+                slivers: [
+                  // Shop Campaign Banner
+                  if (currentShopCampaigns.isNotEmpty) ...[
+                    for (final c in currentShopCampaigns)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 12, 12, 2),
+                          child: InkWell(
+                            onTap: () {
+                              final double discountVal = c['discountValue'] != null ? double.tryParse(c['discountValue'].toString()) ?? 0.0 : 0.0;
+                              final targetProducts = c['targetProducts'] != null ? List<String>.from(c['targetProducts'] as List) : <String>[];
+                              final campaignObj = Campaign(
+                                id: c['id']?.toString() ?? '',
+                                vendorId: widget.shop.id,
+                                name: c['title'] ?? 'Dükkan Kampanyası',
+                                description: c['description'] ?? '',
+                                type: CampaignType.percentage,
+                          discountValue: discountVal,
+                          startDate: DateTime.tryParse(c['createdAt']?.toString() ?? '') ?? DateTime.now(),
+                          endDate: DateTime.now().add(const Duration(days: 30)),
+                          imageUrl: c['imageUrl'] ?? '',
+                          targetProducts: targetProducts,
+                          isActive: c['isActive'] ?? true,
+                        );
+                        
+                        final allProducts = ref.read(shopProductsProvider(widget.shop.id)).value ?? [];
+                        
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => CampaignProductsPage(
+                              campaign: campaignObj,
+                              allShopProducts: allProducts,
+                            ),
+                          ),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        height: 100,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          image: DecorationImage(
+                            image: NetworkImage(c['imageUrl'] ?? ''),
+                            fit: BoxFit.cover,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.08),
+                              blurRadius: 6,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            gradient: LinearGradient(
+                              begin: Alignment.bottomCenter,
+                              end: Alignment.topCenter,
+                              colors: [
+                                Colors.black.withOpacity(0.7),
+                                Colors.transparent,
+                              ],
+                            ),
+                          ),
+                          padding: const EdgeInsets.all(12),
+                          alignment: Alignment.bottomLeft,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                c['title'] ?? 'Kampanya',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              if (c['description'] != null && c['description'].toString().isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  c['description'].toString(),
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 11,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ] else if (widget.shop.campaignText != null && widget.shop.campaignText!.isNotEmpty)
               SliverToBoxAdapter(
                 child: Container(
                   margin: const EdgeInsets.fromLTRB(12, 12, 12, 2),

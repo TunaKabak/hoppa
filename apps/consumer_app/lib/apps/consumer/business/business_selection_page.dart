@@ -391,8 +391,11 @@ class BusinessSelectionPage extends ConsumerWidget {
                                   },
                                   child: CustomScrollView(
                                     slivers: [
-                                      SliverToBoxAdapter(
-                                        child: _buildFilterAndSortBar(context, ref, activeFilters, activeSort, activeSubcategory),
+                                      SliverPersistentHeader(
+                                        pinned: true,
+                                        delegate: _StickyFilterBarDelegate(
+                                          child: _buildFilterAndSortBar(context, ref, activeFilters, activeSort, activeSubcategory),
+                                        ),
                                       ),
 
                                       if (businesses.isEmpty)
@@ -990,13 +993,10 @@ class BusinessSelectionPage extends ConsumerWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Teslimat Tipi
+                        // Minimum Sepet Tutarı
                         _buildInfoBadge(
-                          Icons.delivery_dining,
-                          business.allowedFulfillmentModels.contains('PICKUP') &&
-                                  !business.allowedFulfillmentModels.any((m) => m.contains('DELIVERY'))
-                              ? "Gel-Al"
-                              : "Paket Servis",
+                          Icons.shopping_bag_outlined,
+                          "Min: ₺${business.minBasketAmount.toStringAsFixed(0)}",
                         ),
                         // Teslimat Süresi
                         _buildInfoBadge(
@@ -1053,6 +1053,7 @@ class BusinessSelectionPage extends ConsumerWidget {
     }
 
     final hasActiveFilters = activeFilters.isNotEmpty;
+    final hasActiveSort = activeSort != 'Önerilen';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -1082,15 +1083,17 @@ class BusinessSelectionPage extends ConsumerWidget {
                         size: 16,
                         color: hasActiveFilters ? const Color(0xFFFF5200) : Colors.grey.shade700,
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Filtrele',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: hasActiveFilters ? const Color(0xFFFF5200) : Colors.grey.shade800,
+                      if (hasActiveFilters) ...[
+                        const SizedBox(width: 4),
+                        Text(
+                          'Filtrele',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFFFF5200),
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),
@@ -1129,26 +1132,28 @@ class BusinessSelectionPage extends ConsumerWidget {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: Colors.grey.shade300,
-                  width: 1,
+                  color: hasActiveSort ? const Color(0xFFFF5200) : Colors.grey.shade300,
+                  width: hasActiveSort ? 1.5 : 1,
                 ),
               ),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.sort_rounded,
                     size: 16,
-                    color: Colors.grey,
+                    color: hasActiveSort ? const Color(0xFFFF5200) : Colors.grey.shade700,
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    activeSort,
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade800,
+                  if (hasActiveSort) ...[
+                    const SizedBox(width: 4),
+                    Text(
+                      activeSort,
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xFFFF5200),
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -1355,5 +1360,30 @@ class BusinessSelectionPage extends ConsumerWidget {
         );
       },
     );
+  }
+}
+
+class _StickyFilterBarDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+
+  _StickyFilterBarDelegate({required this.child});
+
+  @override
+  double get minExtent => 60.0;
+
+  @override
+  double get maxExtent => 60.0;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      color: const Color(0xFFF4F7F6), // Match background color of business selection page
+      child: child,
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _StickyFilterBarDelegate oldDelegate) {
+    return oldDelegate.child != child;
   }
 }

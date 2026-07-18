@@ -587,62 +587,80 @@ class SelectionCategoryPage extends rp.ConsumerWidget {
       ),
       floatingActionButton: cartState.items.isNotEmpty
           ? Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              height: 58,
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              height: 56,
               width: double.infinity,
-              child: FloatingActionButton.extended(
-                onPressed: () {
-                  Navigator.of(context, rootNavigator: true).push(
-                    MaterialPageRoute(
-                      builder: (context) => const CartPage(),
-                    ),
-                  );
-                },
-                backgroundColor: const Color(0xFF00A651), // Hoppa Green
-                elevation: 6,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(28),
+                gradient: const LinearGradient(
+                  colors: [
+                    Color(0xFFE95D22), // Hoppa Orange
+                    Color(0xFFFF8C00), // Orange-Yellow
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                label: SizedBox(
-                  width: MediaQuery.of(context).size.width - 96,
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '${cartState.items.length}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFE95D22).withOpacity(0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(28),
+                  onTap: () {
+                    Navigator.of(context, rootNavigator: true).push(
+                      MaterialPageRoute(
+                        builder: (context) => const CartPage(),
+                      ),
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '${cartState.items.length}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      const Text(
-                        'Sepeti Görüntüle',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
+                        const SizedBox(width: 14),
+                        Text(
+                          'Sepeti Görüntüle',
+                          style: GoogleFonts.outfit(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            letterSpacing: 0.5,
+                          ),
                         ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        '${cartState.totalAmount.toStringAsFixed(2)} TL',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
+                        const Spacer(),
+                        Text(
+                          '${cartState.totalAmount.toStringAsFixed(2)} TL',
+                          style: GoogleFonts.outfit(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 14),
-                    ],
+                        const SizedBox(width: 10),
+                        const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 14),
+                      ],
+                    ),
                   ),
                 ),
               ),

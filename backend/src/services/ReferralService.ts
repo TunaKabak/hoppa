@@ -158,14 +158,28 @@ export class ReferralService {
       }
     });
 
+    const completedOrders = await prisma.order.findMany({
+      where: {
+        consumerId: { in: referredUserIds },
+        status: "DELIVERED"
+      },
+      select: {
+        consumerId: true
+      }
+    });
+
+    const completedSet = new Set(completedOrders.map(o => o.consumerId));
+
     return referrals.map(ref => {
       const u = users.find(user => user.id === ref.referredId);
+      const isCompleted = completedSet.has(ref.referredId);
       return {
         id: ref.id,
+        status: isCompleted ? "COMPLETED" : "PENDING",
         referredUser: u ? {
           name: u.name || "Hoppa",
           surname: u.surname || "Kullanıcısı",
-          phone: `${u.phone.substring(0, 6)}***${u.phone.substring(u.phone.length - 2)}`,
+          phone: u.phone,
           createdAt: u.createdAt
         } : null,
         createdAt: ref.createdAt

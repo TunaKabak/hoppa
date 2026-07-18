@@ -10,6 +10,7 @@ import 'package:core_auth/core_auth.dart';
 import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository.dart';
 import 'package:core_shared/shared/core/utils/quantity_formatter.dart';
 import 'package:consumer_app/apps/consumer/cart/cart_validation.dart';
+import 'package:consumer_app/apps/consumer/widgets/hoppa_dialog.dart';
 
 class ModernProductCard extends ConsumerWidget {
   final BusinessProduct businessProduct;
@@ -564,28 +565,20 @@ class ModernProductCard extends ConsumerWidget {
   void _showErrorDialog(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text("Farklı Dükkan"),
-        content: const Text(
-          "Sepetinizde başka bir dükkana ait ürünler var. Sepeti temizleyip bu dükkandan devam etmek ister misiniz?",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text("İptal", style: TextStyle(color: Colors.grey)),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              ref.read(cartProvider.notifier).clearCart();
-              ref.read(cartProvider.notifier).addToCart(businessProduct);
-            },
-            child: const Text(
-              "Sepeti Temizle ve Ekle",
-              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
+      builder: (ctx) => HoppaDialog(
+        icon: Icons.shopping_basket_outlined,
+        iconColor: const Color(0xFFFF5200),
+        title: "Farklı Dükkan",
+        content: "Sepetinizde başka bir dükkana ait ürünler var. Sepeti temizleyip bu dükkandan devam etmek ister misiniz?",
+        cancelText: "İptal",
+        confirmText: "Sepeti Temizle ve Ekle",
+        isDestructive: true,
+        onCancel: () => Navigator.pop(ctx),
+        onConfirm: () {
+          Navigator.pop(ctx);
+          ref.read(cartProvider.notifier).clearCart();
+          ref.read(cartProvider.notifier).addToCart(businessProduct);
+        },
       ),
     );
   }
