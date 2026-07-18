@@ -13,6 +13,9 @@ class ApiClient {
   /// 401 alındığında çağrılacak callback (örn. AuthController.logout())
   void Function()? onUnauthorized;
 
+  /// Süper Admin'in işlem yapmak istediği dükkanın ID'si
+  String? activeBusinessId;
+
   static const String _tokenKey = 'jwt_token';
 
   ApiClient({
@@ -60,6 +63,10 @@ class ApiClient {
       if (token != null) {
         headers[HttpHeaders.authorizationHeader] = 'Bearer $token';
       }
+    }
+
+    if (activeBusinessId != null && activeBusinessId!.isNotEmpty) {
+      headers['x-business-id'] = activeBusinessId!;
     }
 
     return headers;

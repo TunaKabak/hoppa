@@ -17,7 +17,6 @@ import 'package:merchant_app/apps/merchant/merchant_sponsorship_page.dart';
 import 'package:merchant_app/apps/merchant/admin/admin_approvals_page.dart';
 import 'package:merchant_app/apps/merchant/admin/admin_business_categories_page.dart';
 import 'package:merchant_app/apps/merchant/auth/merchant_auth_wrapper.dart' as hoppa_wrapper;
-import 'package:core_network/core_network.dart';
 import 'package:core_shared/shared/core/services/notification_service.dart';
 
 final GlobalKey<ScaffoldState> merchantDrawerKey = GlobalKey<ScaffoldState>();
@@ -77,6 +76,9 @@ class _MerchantMainLayoutState extends ConsumerState<MerchantMainLayout> {
           _activeBusinessId = _allBusinesses.first.id;
         }
         ref.read(selectedMerchantBusinessIdProvider.notifier).setSelectedId(_activeBusinessId);
+        ref.read(apiClientProvider).activeBusinessId = _activeBusinessId;
+      } else {
+        ref.read(apiClientProvider).activeBusinessId = null;
       }
       if (_activeBusinessId.isNotEmpty) {
         await _loadBusinessName();
@@ -306,6 +308,7 @@ class _MerchantMainLayoutState extends ConsumerState<MerchantMainLayout> {
                         onChanged: (newVal) async {
                           if (newVal != null && newVal != _activeBusinessId) {
                             ref.read(selectedMerchantBusinessIdProvider.notifier).setSelectedId(newVal);
+                            ref.read(apiClientProvider).activeBusinessId = newVal;
                             setState(() {
                               _activeBusinessId = newVal;
                               _isLoading = true;
