@@ -162,16 +162,7 @@ export class OrderController {
         totalAmount += unitPrice * item.quantity;
       }
 
-      // 4. Minimum dükkan sipariş limiti kontrolü
-      if (chosenFulfillment !== "PICKUP") {
-        const minLimit = Number(shop.minimumOrderLimit);
-        if (totalAmount < minLimit) {
-          return res.status(400).json({
-            error: true,
-            message: `Minimum sepet tutarı ${minLimit} TL olmalıdır.`
-          });
-        }
-      }
+      // 4. Minimum dükkan sipariş limiti kontrolü (Story 49.1: Bloklanmıyor, kuryeli ise SOS uygulanıyor)
 
       // 5. Adres Çözümleme ve Snapshot Oluşturma
       let finalAddressId = addressId;
@@ -258,7 +249,7 @@ export class OrderController {
 
         // Backend Delivery Fee Calculation via Campaign Engine
         const deliveryResult = await campaignService.calculateDeliveryFee(consumerId, shop, totalAmount);
-        const finalDeliveryFee = chosenFulfillment === "PICKUP" ? 0 : deliveryResult.fee;
+        let finalDeliveryFee = chosenFulfillment === "PICKUP" ? 0 : deliveryResult.fee;
 
         // Dinamik Komisyon Hesaplama
         let commissionRate = 0.05; // default 5%
@@ -284,6 +275,14 @@ export class OrderController {
         }
 
         const commissionAmount = totalAmount * commissionRate;
+
+        // Small Order Surcharge (SOS) - Story 49.1
+        if (chosenFulfillment === "PLATFORM_DELIVERY" && totalAmount < Number(shop.minimumOrderLimit)) {
+          const sos = 80 - 40 - (totalAmount * commissionRate);
+          if (sos > 0) {
+            finalDeliveryFee += sos;
+          }
+        }
 
         const createdOrder = await tx.order.create({
           data: {
@@ -337,9 +336,11 @@ export class OrderController {
             throw new Error("Online ödeme için kart bilgileri gereklidir.");
           }
 
+          const orderTotal = Number(totalAmount) + Number(finalDeliveryFee);
+
           const routeResponse = await PaymentRoutingService.routePayment({
             orderId: createdOrder.id,
-            amount: Number(totalAmount),
+            amount: orderTotal,
             cardDetails
           });
 
