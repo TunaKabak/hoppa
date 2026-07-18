@@ -50,6 +50,12 @@ function enrichShopWithTags(shop: any) {
       tags.push("Müşteri Favorisi");
     }
   }
+
+  // 4. Öne Çıkan etiketi (Aktif sponsorluk varsa)
+  if (shop.promotions && shop.promotions.length > 0) {
+    tags.push("Öne Çıkan");
+  }
+
   return {
     ...shop,
     tags
@@ -71,7 +77,14 @@ export class ConsumerShopController {
           }
         },
         include: {
-          merchant: { select: { businessName: true, status: true } }
+          merchant: { select: { businessName: true, status: true } },
+          promotions: {
+            where: {
+              isActive: true,
+              startDate: { lte: new Date() },
+              endDate: { gte: new Date() }
+            }
+          }
         }
       });
 
