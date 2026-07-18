@@ -164,6 +164,7 @@ async function main() {
         isActive: true,
         type: "MARKET",
         minOrderAmount: 100.0,
+        minimumOrderLimit: 250.00,
       }
     });
   }

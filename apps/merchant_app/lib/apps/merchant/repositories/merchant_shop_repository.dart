@@ -29,6 +29,11 @@ class MerchantShop {
   final List<String>? allowedPaymentMethods;
   final List<String>? allowedFulfillmentModels;
 
+  // Story 49 Sponsorluk ve Sepet Limiti Alanları
+  final double? minimumOrderLimit;
+  final double? activeCommissionRate;
+  final List<dynamic>? activePromotions;
+
   MerchantShop({
     required this.id,
     required this.merchantId,
@@ -55,6 +60,9 @@ class MerchantShop {
     this.deliveryPolygon,
     this.allowedPaymentMethods,
     this.allowedFulfillmentModels,
+    this.minimumOrderLimit,
+    this.activeCommissionRate,
+    this.activePromotions,
   });
 
   factory MerchantShop.fromMap(Map<String, dynamic> map) {
@@ -85,6 +93,9 @@ class MerchantShop {
       deliveryPolygon: map['deliveryPolygon'] != null ? List<dynamic>.from(map['deliveryPolygon']) : null,
       allowedPaymentMethods: map['allowedPaymentMethods'] != null ? List<String>.from(map['allowedPaymentMethods']) : null,
       allowedFulfillmentModels: map['allowedFulfillmentModels'] != null ? List<String>.from(map['allowedFulfillmentModels']) : null,
+      minimumOrderLimit: map['minimumOrderLimit'] != null ? double.tryParse(map['minimumOrderLimit'].toString()) : null,
+      activeCommissionRate: map['activeCommissionRate'] != null ? (map['activeCommissionRate'] as num).toDouble() : null,
+      activePromotions: map['activePromotions'] != null ? List<dynamic>.from(map['activePromotions']) : null,
     );
   }
 
@@ -113,6 +124,9 @@ class MerchantShop {
       'deliveryPolygon': deliveryPolygon,
       'allowedPaymentMethods': allowedPaymentMethods,
       'allowedFulfillmentModels': allowedFulfillmentModels,
+      'minimumOrderLimit': minimumOrderLimit,
+      'activeCommissionRate': activeCommissionRate,
+      'activePromotions': activePromotions,
     };
   }
 }
@@ -147,6 +161,11 @@ class MerchantShopRepository {
   Future<MerchantShop> toggleStatus(bool isActive, {String? shopId}) async {
     final path = shopId != null && shopId.isNotEmpty ? '/api/merchant/shop/toggle-status?shopId=$shopId' : '/api/merchant/shop/toggle-status';
     final response = await _apiClient.post(path, body: {'isActive': isActive});
+    return MerchantShop.fromMap(response['data']);
+  }
+
+  Future<MerchantShop> createPromotion(String promoType) async {
+    final response = await _apiClient.post('/api/merchant/promotions', body: {'promoType': promoType});
     return MerchantShop.fromMap(response['data']);
   }
 }

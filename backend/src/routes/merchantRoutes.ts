@@ -43,4 +43,8 @@ router.post("/orders/:id/cancel", (req, res) => orderController.cancelOrder(req,
 // Dashboard İşlemleri
 router.get("/dashboard/stats", (req, res) => shopController.getDashboardStats(req, res));
 
+// Öne Çıkarma / Sponsorluk İşlemleri
+router.get("/promotions", (req, res) => shopController.getPromotions(req, res));
+router.post("/promotions", (req, res) => shopController.createPromotion(req, res));
+
 export default router;

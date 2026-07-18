@@ -25,6 +25,36 @@ export class ShopController {
         });
       }
 
+      if (shop) {
+        const now = new Date();
+        const activePromotions = await prisma.shopPromotion.findMany({
+          where: {
+            shopId: shop.id,
+            isActive: true,
+            startDate: { lte: now },
+            endDate: { gte: now }
+          }
+        });
+
+        const hasMainScreen = activePromotions.some(p => p.promoType === "MAIN_SCREEN");
+        const hasCategory = activePromotions.some(p => p.promoType === "CATEGORY");
+
+        let activeCommissionRate = 0.05;
+        if (hasMainScreen) {
+          activeCommissionRate = 0.15;
+        } else if (hasCategory) {
+          activeCommissionRate = 0.10;
+        }
+
+        const enrichedShop = {
+          ...shop,
+          activeCommissionRate,
+          activePromotions
+        };
+
+        return res.status(200).json({ error: false, data: enrichedShop });
+      }
+
       return res.status(200).json({ error: false, data: shop });
     } catch (error: any) {
       return res.status(500).json({ error: true, message: error.message });
@@ -56,7 +86,7 @@ export class ShopController {
 
       const {
         name, description, address, latitude, longitude,
-        deliveryRadiusKm, deliveryPolygon, workingHours, minOrderAmount, minimumOrderAmount, imageUrl, headerImageUrl,
+        deliveryRadiusKm, deliveryPolygon, workingHours, minOrderAmount, minimumOrderAmount, minimumOrderLimit, imageUrl, headerImageUrl,
         taxNumber, businessPhone, identityNumber,
         deliveryPricingType, baseDeliveryFee, deliveryFeePerKm, freeDeliveryThreshold, deliveryTime,
         allowedPaymentMethods, allowedFulfillmentModels
@@ -104,6 +134,7 @@ export class ShopController {
           workingHours,
           minOrderAmount: minimumOrderAmount ?? minOrderAmount,
           minimumOrderAmount: minimumOrderAmount ?? minOrderAmount,
+          minimumOrderLimit: minimumOrderLimit !== undefined ? minimumOrderLimit : undefined,
           deliveryPricingType,
           baseDeliveryFee,
           deliveryFeePerKm,
@@ -218,6 +249,117 @@ export class ShopController {
           weeklyTrend
         }
       });
+    } catch (error: any) {
+      return res.status(500).json({ error: true, message: error.message });
+    }
+  }
+
+  async createPromotion(req: Request, res: Response) {
+    try {
+      const merchantId = req.user?.id;
+      if (!merchantId) return res.status(401).json({ error: true, message: "Kullanıcı bilgisi eksik." });
+
+      const { promoType } = req.body;
+      if (promoType !== "MAIN_SCREEN" && promoType !== "CATEGORY") {
+        return res.status(400).json({ error: true, message: "Geçersiz sponsorluk türü." });
+      }
+
+      const shop = await prisma.shop.findUnique({
+        where: { merchantId }
+      });
+
+      if (!shop) {
+        return res.status(404).json({ error: true, message: "Dükkan bulunamadı." });
+      }
+
+      const now = new Date();
+      // Aktif sponsorluk var mı kontrolü
+      const existing = await prisma.shopPromotion.findFirst({
+        where: {
+          shopId: shop.id,
+          promoType,
+          isActive: true,
+          startDate: { lte: now },
+          endDate: { gte: now }
+        }
+      });
+
+      if (existing) {
+        return res.status(400).json({
+          error: true,
+          message: "Bu sponsorluk türü dükkanınız için zaten aktif durumda."
+        });
+      }
+
+      // Sponsorluk 1 haftalık (7 gün) oluşturulur
+      const startDate = new Date();
+      const endDate = new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+      await prisma.shopPromotion.create({
+        data: {
+          shopId: shop.id,
+          promoType,
+          startDate,
+          endDate,
+          isActive: true
+        }
+      });
+
+      // Zenginleştirilmiş shop bilgisini dönelim ki frontend state'i anında güncellensin
+      const activePromotions = await prisma.shopPromotion.findMany({
+        where: {
+          shopId: shop.id,
+          isActive: true,
+          startDate: { lte: now },
+          endDate: { gte: now }
+        }
+      });
+
+      const hasMainScreen = activePromotions.some(p => p.promoType === "MAIN_SCREEN");
+      const hasCategory = activePromotions.some(p => p.promoType === "CATEGORY");
+
+      let activeCommissionRate = 0.05;
+      if (hasMainScreen) {
+        activeCommissionRate = 0.15;
+      } else if (hasCategory) {
+        activeCommissionRate = 0.10;
+      }
+
+      const enrichedShop = {
+        ...shop,
+        activeCommissionRate,
+        activePromotions
+      };
+
+      return res.status(201).json({
+        error: false,
+        message: "Sponsorluk başarıyla aktif edildi.",
+        data: enrichedShop
+      });
+    } catch (error: any) {
+      return res.status(500).json({ error: true, message: error.message });
+    }
+  }
+
+  async getPromotions(req: Request, res: Response) {
+    try {
+      const merchantId = req.user?.id;
+      if (!merchantId) return res.status(401).json({ error: true, message: "Kullanıcı bilgisi eksik." });
+
+      const shop = await prisma.shop.findUnique({
+        where: { merchantId }
+      });
+
+      if (!shop) {
+        return res.status(404).json({ error: true, message: "Dükkan bulunamadı." });
+      }
+
+      const promotions = await prisma.shopPromotion.findMany({
+        where: { shopId: shop.id },
+        orderBy: { createdAt: "desc" }
+      });
+
+      return res.status(200).json({ error: false, data: promotions });
     } catch (error: any) {
       return res.status(500).json({ error: true, message: error.message });
     }

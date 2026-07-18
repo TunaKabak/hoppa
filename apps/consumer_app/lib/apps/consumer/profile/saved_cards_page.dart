@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:core_auth/core_auth.dart';
 import 'package:core_shared/shared/core/utils/card_input_formatters.dart';
 import 'package:consumer_app/apps/consumer/widgets/hoppa_dialog.dart';
+import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
 
 class SavedCardsPage extends ConsumerStatefulWidget {
   const SavedCardsPage({super.key});
@@ -307,44 +308,90 @@ class _SavedCardsPageState extends ConsumerState<SavedCardsPage> {
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        leading: const BackButton(color: Colors.black),
-        title: Text(
-          "Kayıtlı Kartlarım",
-          style: GoogleFonts.poppins(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFFE95D22), // Hoppa Orange
+              Color(0xFFFF8C00), // Orange-Yellow
+            ],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
           ),
         ),
-      ),
-      body: _isLoading && _cards.isEmpty
-          ? const Center(child: CircularProgressIndicator(color: kPrimaryColor))
-          : _cards.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.credit_card_off_rounded, size: 80, color: Colors.grey.shade300),
-                      const SizedBox(height: 16),
-                      Text(
-                        "Kayıtlı kredi kartınız bulunmuyor.",
-                        style: GoogleFonts.inter(color: Colors.grey.shade500),
-                      ),
-                    ],
+        child: Column(
+          children: [
+            HoppaHeader(
+              height: 70,
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+                    onPressed: () => Navigator.of(context).pop(),
                   ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _cards.length,
-                  itemBuilder: (context, index) {
-                    final card = _cards[index];
-                    return _buildCardItem(card);
-                  },
+                  const Expanded(
+                    child: Center(
+                      child: Padding(
+                        padding: EdgeInsets.only(right: 48.0),
+                        child: Text(
+                          "Kayıtlı Kartlarım",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
                 ),
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                  child: _isLoading && _cards.isEmpty
+                      ? const Center(child: CircularProgressIndicator(color: kPrimaryColor))
+                      : _cards.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.credit_card_off_rounded, size: 80, color: Colors.grey.shade300),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    "Kayıtlı kredi kartınız bulunmuyor.",
+                                    style: GoogleFonts.inter(color: Colors.grey.shade500),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.all(16),
+                              itemCount: _cards.length,
+                              itemBuilder: (context, index) {
+                                final card = _cards[index];
+                                return _buildCardItem(card);
+                              },
+                            ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showAddCardDialog,
         backgroundColor: kPrimaryColor,

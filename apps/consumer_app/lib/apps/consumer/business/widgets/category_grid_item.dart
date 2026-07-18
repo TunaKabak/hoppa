@@ -289,25 +289,25 @@ class _CategoryGridItemState extends State<CategoryGridItem>
   List<Color> _getCardGradient(String categoryName) {
     switch (categoryName.toLowerCase()) {
       case 'market':
-        return const [Color(0xFFF2FBF6), Color(0xFFE1F7EB)];
+        return [Colors.white, const Color(0xFF00B359).withValues(alpha: 0.35)];
       case 'restoran':
-        return const [Color(0xFFFFF8F2), Color(0xFFFFECE1)];
+        return [Colors.white, const Color(0xFFE53935).withValues(alpha: 0.35)];
       case 'su':
-        return const [Color(0xFFF2F9FF), Color(0xFFE1F0FF)];
+        return [Colors.white, const Color(0xFF0288D1).withValues(alpha: 0.35)];
       case 'kuruyemiş':
-        return const [Color(0xFFFAF6F2), Color(0xFFEFE3D8)];
+        return [Colors.white, const Color(0xFF8D6E63).withValues(alpha: 0.35)];
       case 'kahve':
-        return const [Color(0xFFFAF6F5), Color(0xFFF0E5DF)];
+        return [Colors.white, const Color(0xFF4E342E).withValues(alpha: 0.35)];
       case 'çiçek':
-        return const [Color(0xFFFFF2F6), Color(0xFFFFE1EC)];
+        return [Colors.white, const Color(0xFFEC407A).withValues(alpha: 0.35)];
       case 'manav':
-        return const [Color(0xFFF6FBF2), Color(0xFFE7F7DF)];
+        return [Colors.white, const Color(0xFF7CB342).withValues(alpha: 0.35)];
       case 'kasap':
-        return const [Color(0xFFFFF2F2), Color(0xFFFFE1E1)];
+        return [Colors.white, const Color(0xFFD32F2F).withValues(alpha: 0.35)];
       default:
         return [
           Colors.white,
-          widget.category['color'] as Color? ?? Colors.green,
+          (widget.category['color'] as Color? ?? Colors.green).withValues(alpha: 0.35),
         ];
     }
   }

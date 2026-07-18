@@ -31,78 +31,106 @@ class BusinessSelectionPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7F6),
-      body: p.Consumer<DeliveryProvider>(
-        builder: (context, deliveryProvider, child) {
-          final address = deliveryProvider.selectedAddress;
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFFE95D22), // Hoppa Orange
+              Color(0xFFFF8C00), // Orange-Yellow
+            ],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+        ),
+        child: p.Consumer<DeliveryProvider>(
+          builder: (context, deliveryProvider, child) {
+            final address = deliveryProvider.selectedAddress;
 
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // FIXED MODERN CURVED COLORFUL HEADER (Hepsiburada / Yemeksepeti Style)
-              HoppaHeader(
-                height: 56,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-                        onPressed: () {
-                          // Kategoriyi temizle -> Kategori Seçimine döner
-                          p.Provider.of<BusinessProvider>(
-                            context,
-                            listen: false,
-                          ).clearCategory();
-                        },
-                      ),
-                      Text(
-                        category ?? "İşletme Seçimi",
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // FIXED MODERN CURVED COLORFUL HEADER (Hepsiburada / Yemeksepeti Style)
+                HoppaHeader(
+                  height: 56,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                          onPressed: () {
+                            // Kategoriyi temizle -> Kategori Seçimine döner
+                            p.Provider.of<BusinessProvider>(
+                              context,
+                              listen: false,
+                            ).clearCategory();
+                          },
                         ),
-                      ),
-                      GestureDetector(
-                        onTap: () => AccountBottomSheet.show(context),
-                        child: Container(
-                          margin: const EdgeInsets.only(right: 8),
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Colors.transparent,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
-                          ),
-                          child: const Icon(
-                            Icons.person_outline_rounded,
+                        Text(
+                          category ?? "İşletme Seçimi",
+                          style: GoogleFonts.poppins(
                             color: Colors.white,
-                            size: 20,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
                           ),
                         ),
-                      ),
-                    ],
+                        GestureDetector(
+                          onTap: () => AccountBottomSheet.show(context),
+                          child: Container(
+                            margin: const EdgeInsets.only(right: 8),
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.transparent,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
+                            ),
+                            child: const Icon(
+                              Icons.person_outline_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 8),
-
-              // --- ADRES KARTI ---
-              Container(
-                color: Colors.white,
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                child: Container(
+                Expanded(
+                  child: Container(
+                    width: double.infinity,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF4F7F6),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(24),
+                        topRight: Radius.circular(24),
+                      ),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(24),
+                        topRight: Radius.circular(24),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 8),
+                          // --- ADRES KARTI ---
+                          Container(
+                            color: Colors.white,
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                            child: Container(
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
+                    gradient: const LinearGradient(
                       colors: [
-                        const Color(0xFFF3FAF6), // Soft mint green tint
+                        Color(0xFFFFF3EE), // Soft orange peach tint
                         Colors.white,
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    border: Border.all(color: const Color(0xFFFFDDD2)), // Warm orange border
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.04),
@@ -116,7 +144,7 @@ class BusinessSelectionPage extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(16),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(16),
-                      splashColor: kPrimaryColor.withValues(alpha: 0.1),
+                      splashColor: const Color(0xFFE95D22).withValues(alpha: 0.1),
                       onTap: () async {
                         final selectedAddress = await Navigator.push(
                           context,
@@ -137,12 +165,12 @@ class BusinessSelectionPage extends ConsumerWidget {
                             Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: kPrimaryColor.withValues(alpha: 0.08),
+                                color: const Color(0xFFE95D22).withValues(alpha: 0.08),
                                 shape: BoxShape.circle,
                               ),
                               child: const Icon(
                                 Icons.location_on_rounded,
-                                color: kPrimaryColor,
+                                color: Color(0xFFE95D22),
                                 size: 22,
                               ),
                             ),
@@ -398,9 +426,15 @@ class BusinessSelectionPage extends ConsumerWidget {
                   },
                 ),
               ),
-            ],
-          );
-        },
+              ],
+            ),
+          ),
+        ),
+      ),
+    ],
+  );
+},
+        ),
       ),
     );
   }
@@ -644,7 +678,7 @@ class BusinessSelectionPage extends ConsumerWidget {
             ),
           ],
         ),
-      ),
+        ),
       ),
     );
   }

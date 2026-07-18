@@ -8,7 +8,7 @@ import 'package:core_shared/shared/models/address.dart';
 import 'package:core_shared/shared/core/data/kktc_districts.dart';
 import 'package:consumer_app/apps/consumer/providers/consumer_location_controller.dart';
 import 'package:core_auth/core_auth.dart';
-import 'package:provider/provider.dart' as p;
+import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
 
 class AddAddressPage extends ConsumerStatefulWidget {
   final Address? addressToEdit; // Düzenlenecek adres (Opsiyonel)
@@ -263,17 +263,58 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: Text(
-          isEditing ? "Adresi Düzenle" : "Yeni Adres Ekle",
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFFE95D22), // Hoppa Orange
+              Color(0xFFFF8C00), // Orange-Yellow
+            ],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
           ),
         ),
-        centerTitle: true,
-        leading: const BackButton(),
-      ),
-      body: Column(
+        child: Column(
+          children: [
+            HoppaHeader(
+              height: 70,
+              child: Row(
+                children: [
+                  const BackButton(color: Colors.white),
+                  Expanded(
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 48.0),
+                        child: Text(
+                          isEditing ? "Adresi Düzenle" : "Yeni Adres Ekle",
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: theme.scaffoldBackgroundColor,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                  child: Column(
         children: [
           // --- HARİTA BÖLÜMÜ ---
           AnimatedContainer(
@@ -643,7 +684,13 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
                     ),
                   ),
           ),
-        ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

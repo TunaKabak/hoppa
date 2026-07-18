@@ -109,6 +109,7 @@ async function main() {
       deliveryRadiusKm: 5.0,
       minOrderAmount: 150.0,
       minimumOrderAmount: 150.0,
+      minimumOrderLimit: 250.00,
       baseDeliveryFee: 30.0,
       freeDeliveryThreshold: 500.0,
     },
@@ -119,6 +120,7 @@ async function main() {
       address: "Lefkoşa, KKTC",
       minOrderAmount: 150.0,
       minimumOrderAmount: 150.0,
+      minimumOrderLimit: 250.00,
       baseDeliveryFee: 30.0,
       freeDeliveryThreshold: 500.0,
       isActive: true, // Dükkan siparişe açık
@@ -190,6 +192,7 @@ async function main() {
       latitude: 35.1856,
       longitude: 33.3823,
       deliveryRadiusKm: 10.0,
+      minimumOrderLimit: 250.00,
     },
     create: {
       merchantId: marketMerchant.id,
@@ -197,6 +200,7 @@ async function main() {
       description: "E2E testleri için otomatik oluşturulmuş hazır market dükkanı.",
       address: "Lefkoşa, KKTC",
       minOrderAmount: 100.0,
+      minimumOrderLimit: 250.00,
       isActive: true, // Dükkan siparişe açık
       type: "MARKET",
       latitude: 35.1856,
