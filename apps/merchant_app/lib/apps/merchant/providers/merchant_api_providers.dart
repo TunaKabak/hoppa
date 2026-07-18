@@ -99,6 +99,10 @@ class ShopController extends AsyncNotifier<MerchantShop?> {
       rethrow;
     }
   }
+
+  void setShop(MerchantShop shop) {
+    state = AsyncData(shop);
+  }
 }
 
 final shopControllerProvider =
@@ -235,3 +239,29 @@ final productControllerProvider =
     AsyncNotifierProvider<ProductController, List<MerchantProduct>>(
       ProductController.new,
     );
+
+// --- Sponsorship Notifier ---
+class SponsorshipNotifier extends AsyncNotifier<void> {
+  @override
+  Future<void> build() async {}
+
+  Future<void> activateSponsorship(String promoType) async {
+    state = const AsyncLoading();
+    try {
+      final repo = ref.read(merchantShopRepositoryProvider);
+      final updatedShop = await repo.createPromotion(promoType);
+      
+      // Update shop state instantly
+      ref.read(shopControllerProvider.notifier).setShop(updatedShop);
+      state = const AsyncData(null);
+    } catch (e, st) {
+      state = AsyncError(e, st);
+      rethrow;
+    }
+  }
+}
+
+final sponsorshipNotifierProvider =
+    AsyncNotifierProvider<SponsorshipNotifier, void>(
+  SponsorshipNotifier.new,
+);

@@ -147,6 +147,7 @@ model Shop {
   deliveryTime          String?               // Örn: "30-45 dk"
   minOrderAmount        Decimal               @db.Decimal(10, 2) @default(150.0)
   minimumOrderAmount    Float                 @default(150.0)
+  minimumOrderLimit     Decimal               @db.Decimal(10, 2) @default(250.00)
   deliveryPricingType   DeliveryPricingType   @default(FIXED)
   baseDeliveryFee       Float                 @default(30.0)
   deliveryFeePerKm      Float                 @default(5.0)
@@ -165,6 +166,7 @@ model Shop {
   allowedFulfillmentModels FulfillmentModel[] @default([PLATFORM_DELIVERY, PICKUP])
   couriers         CourierShop[]
   coupons          CouponShop[]
+  promotions       ShopPromotion[]
 
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
@@ -363,6 +365,9 @@ model Order {
   leaveAtDoor     Boolean     @default(false)
   review          Review?
   couponUsage     CouponUsage?
+
+  commissionRate   Decimal     @db.Decimal(5, 4) @default(0.0500)
+  commissionAmount Decimal     @db.Decimal(10, 2) @default(0.00)
 
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
@@ -798,6 +803,20 @@ model Referral {
   couponId         String?  // Davet edene verilen kupon
   referredCouponId String?  // Davet edilene verilen kupon
   createdAt        DateTime @default(now())
+}
+
+model ShopPromotion {
+  id        String   @id @default(uuid())
+  shopId    String
+  shop      Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  promoType String   // "MAIN_SCREEN" veya "CATEGORY"
+  startDate DateTime
+  endDate   DateTime
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([shopId])
 }
 
 

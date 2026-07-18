@@ -163,12 +163,14 @@ export class OrderController {
       }
 
       // 4. Minimum dükkan sipariş limiti kontrolü
-      const minAmount = Number(shop.minOrderAmount);
-      if (totalAmount < minAmount) {
-        return res.status(400).json({
-          error: true,
-          message: `Minimum sipariş tutarı (${minAmount} TL) karşılanmalıdır. Mevcut sipariş tutarı: ${totalAmount.toFixed(2)} TL.`
-        });
+      if (chosenFulfillment !== "PICKUP") {
+        const minLimit = Number(shop.minimumOrderLimit);
+        if (totalAmount < minLimit) {
+          return res.status(400).json({
+            error: true,
+            message: `Minimum sepet tutarı ${minLimit} TL olmalıdır.`
+          });
+        }
       }
 
       // 5. Adres Çözümleme ve Snapshot Oluşturma
@@ -258,6 +260,31 @@ export class OrderController {
         const deliveryResult = await campaignService.calculateDeliveryFee(consumerId, shop, totalAmount);
         const finalDeliveryFee = chosenFulfillment === "PICKUP" ? 0 : deliveryResult.fee;
 
+        // Dinamik Komisyon Hesaplama
+        let commissionRate = 0.05; // default 5%
+        if (chosenFulfillment !== "PICKUP") {
+          const now = new Date();
+          const activePromotions = await tx.shopPromotion.findMany({
+            where: {
+              shopId,
+              isActive: true,
+              startDate: { lte: now },
+              endDate: { gte: now }
+            }
+          });
+
+          const hasMainScreen = activePromotions.some(p => p.promoType === "MAIN_SCREEN");
+          const hasCategory = activePromotions.some(p => p.promoType === "CATEGORY");
+
+          if (hasMainScreen) {
+            commissionRate = 0.15;
+          } else if (hasCategory) {
+            commissionRate = 0.10;
+          }
+        }
+
+        const commissionAmount = totalAmount * commissionRate;
+
         const createdOrder = await tx.order.create({
           data: {
             consumerId,
@@ -273,7 +300,9 @@ export class OrderController {
             paymentStatus: "PENDING",
             estimatedDeliveryDuration: estimatedDeliveryDuration,
             dontRingBell: dontRingBell === true || dontRingBell === "true",
-            leaveAtDoor: leaveAtDoor === true || leaveAtDoor === "true"
+            leaveAtDoor: leaveAtDoor === true || leaveAtDoor === "true",
+            commissionRate,
+            commissionAmount
           }
         });
 
