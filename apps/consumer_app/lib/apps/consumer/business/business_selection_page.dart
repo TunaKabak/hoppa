@@ -339,8 +339,8 @@ class BusinessSelectionPage extends ConsumerWidget {
                                 }
 
                                 // SPONSORLU VE NORMAL DÜKKANLARI AYIR (Story 49.2)
-                                final sponsoredBusinesses = businesses.where((b) => b.tags.contains("Öne Çıkan")).toList();
-                                final regularBusinesses = businesses.where((b) => !b.tags.contains("Öne Çıkan")).toList();
+                                final sponsoredBusinesses = businesses.where((b) => b.tags.contains("Öne Çıkan (Kategori)")).toList();
+                                final regularBusinesses = businesses.where((b) => !b.tags.contains("Öne Çıkan (Kategori)")).toList();
 
                                 // Her iki listeyi de mesafeye göre sıralayalım
                                 if (address != null) {
@@ -943,7 +943,7 @@ class BusinessSelectionPage extends ConsumerWidget {
                             runSpacing: 4,
                             children: [
                               ...business.tags.map((tag) => ShopBadge(
-                                    label: tag,
+                                    label: tag.startsWith("Öne Çıkan") ? "Öne Çıkan" : tag,
                                   )),
                               const ShopBadge(
                                 label: "Gel-Al",

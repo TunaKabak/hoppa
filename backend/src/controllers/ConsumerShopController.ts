@@ -53,7 +53,14 @@ function enrichShopWithTags(shop: any) {
 
   // 4. Öne Çıkan etiketi (Aktif sponsorluk varsa)
   if (shop.promotions && shop.promotions.length > 0) {
-    tags.push("Öne Çıkan");
+    const hasMainScreen = shop.promotions.some((p: any) => p.promoType === "MAIN_SCREEN");
+    const hasCategory = shop.promotions.some((p: any) => p.promoType === "CATEGORY");
+    if (hasMainScreen) {
+      tags.push("Öne Çıkan (Ana Sayfa)");
+    }
+    if (hasCategory) {
+      tags.push("Öne Çıkan (Kategori)");
+    }
   }
 
   return {
