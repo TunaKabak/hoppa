@@ -16,6 +16,8 @@ import 'package:consumer_app/apps/consumer/auth/consumer_login_page.dart';
 import 'package:core_shared/shared/core/services/navigation_provider.dart';
 import 'package:consumer_app/apps/consumer/cart/cart_provider.dart';
 import 'package:consumer_app/apps/consumer/cart/cart_page.dart';
+import 'package:core_shared/shared/models/business.dart';
+import 'package:latlong2/latlong.dart';
 
 class SelectionCategoryPage extends rp.ConsumerWidget {
   const SelectionCategoryPage({super.key});
@@ -72,6 +74,7 @@ class SelectionCategoryPage extends rp.ConsumerWidget {
     final authState = ref.watch(authControllerProvider);
     final isGuest = authState is! AuthAuthenticated;
     final cartState = ref.watch(cartProvider);
+    final address = Provider.of<DeliveryProvider>(context).selectedAddress;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -188,6 +191,91 @@ class SelectionCategoryPage extends rp.ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 24),
+
+                  // --- ANA SAYFA ÖNE ÇIKAN MAĞAZALAR ---
+                  ref.watch(consumerShopsProvider).when(
+                    skipLoadingOnReload: true,
+                    loading: () => const SizedBox.shrink(),
+                    error: (err, stack) => const SizedBox.shrink(),
+                    data: (allBusinesses) {
+                      final sponsored = allBusinesses
+                          .where((b) => b.tags.contains("Öne Çıkan (Ana Sayfa)"))
+                          .toList();
+                      if (sponsored.isEmpty) return const SizedBox.shrink();
+
+                      // Mesafe sıralaması (konum seçiliyse)
+                      if (address != null) {
+                        final Distance distance = const Distance();
+                        sponsored.sort((a, b) {
+                          final isAZero = a.latitude == 0 && a.longitude == 0;
+                          final isBZero = b.latitude == 0 && b.longitude == 0;
+                          if (isAZero && isBZero) return 0;
+                          if (isAZero) return 1;
+                          if (isBZero) return -1;
+
+                          final distA = distance.as(
+                            LengthUnit.Meter,
+                            LatLng(address.latitude, address.longitude),
+                            LatLng(a.latitude, a.longitude),
+                          );
+                          final distB = distance.as(
+                            LengthUnit.Meter,
+                            LatLng(address.latitude, address.longitude),
+                            LatLng(b.latitude, b.longitude),
+                          );
+                          return distA.compareTo(distB);
+                        });
+                      }
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            child: Row(
+                              children: [
+                                Text(
+                                  "✨ Haftanın Öne Çıkanları",
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(
+                            height: 180,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              itemCount: sponsored.length,
+                              itemBuilder: (context, index) {
+                                final business = sponsored[index];
+                                String? distanceText;
+                                if (address != null) {
+                                  if (business.latitude == 0 && business.longitude == 0) {
+                                    distanceText = "Mesafe Bilinmiyor";
+                                  } else {
+                                    const distance = Distance();
+                                    final double km = distance.as(
+                                      LengthUnit.Meter,
+                                      LatLng(address.latitude, address.longitude),
+                                      LatLng(business.latitude, business.longitude),
+                                    ) / 1000.0;
+                                    distanceText = "${km.toStringAsFixed(1)} km";
+                                  }
+                                }
+                                return _buildHomeFeaturedCard(context, ref, business, distanceText);
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                      );
+                    },
+                  ),
 
                   // Category Title (scrolls with content)
                   Padding(
@@ -560,6 +648,237 @@ class SelectionCategoryPage extends rp.ConsumerWidget {
             )
           : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+    );
+  }
+
+  bool _isValidImageUrl(String? url) {
+    if (url == null || url.trim().isEmpty) return false;
+    return url.startsWith('http://') || url.startsWith('https://');
+  }
+
+  Widget _buildHomeFeaturedCard(
+    BuildContext context,
+    rp.WidgetRef ref,
+    Business business,
+    String? distanceText,
+  ) {
+    return GestureDetector(
+      onTap: () {
+        final businessProvider = Provider.of<BusinessProvider>(
+          context,
+          listen: false,
+        );
+
+        // Reset and initialize Riverpod catalog providers
+        ref.read(selectedCatalogCategoryProvider.notifier).state =
+            business.type.label == 'Çiçek' ? 'Çiçek' : 'Tümü';
+        ref.read(selectedCatalogSubCategoryProvider.notifier).state = 'Tümü';
+        ref.read(selectedCatalogSortOptionProvider.notifier).state = 'Önerilen';
+        ref.read(catalogSearchQueryProvider.notifier).state = '';
+
+        businessProvider.setCategory(business.type.label);
+        businessProvider.selectBusiness(business);
+      },
+      child: Opacity(
+        opacity: business.isOpen ? 1.0 : 0.5,
+        child: Container(
+          width: 280,
+          margin: const EdgeInsets.only(right: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFFFFE0B2), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.orange.withValues(alpha: 0.06),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Stack(
+                  children: [
+                    Container(
+                      height: 100,
+                      width: double.infinity,
+                      decoration: BoxDecoration(color: Colors.grey.shade100),
+                      child: _isValidImageUrl(business.headerImageUrl)
+                          ? Image.network(
+                              business.headerImageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Image.network('https://via.placeholder.com/150', fit: BoxFit.cover),
+                            )
+                          : Image.network('https://via.placeholder.com/150', fit: BoxFit.cover),
+                    ),
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.black.withValues(alpha: 0.3),
+                              Colors.transparent,
+                            ],
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.topCenter,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 10,
+                      left: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFE65100), Color(0xFFFF8C00)],
+                          ),
+                          borderRadius: BorderRadius.circular(6),
+                          boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.star_rounded, color: Colors.white, size: 12),
+                            SizedBox(width: 4),
+                            Text(
+                              "ÖNE ÇIKAN",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 9,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (!business.isOpen)
+                      Positioned(
+                        top: 10,
+                        right: 10,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            "KAPALI",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 10,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.grey.shade200),
+                            boxShadow: [
+                              BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: _isValidImageUrl(business.logoUrl)
+                                ? Image.network(
+                                    business.logoUrl,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) =>
+                                        Image.network('https://via.placeholder.com/150', fit: BoxFit.cover),
+                                  )
+                                : Image.network('https://via.placeholder.com/150', fit: BoxFit.cover),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                business.name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: Colors.black87,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  const Icon(Icons.star_rounded, color: Colors.amber, size: 13),
+                                  const SizedBox(width: 2),
+                                  const Text(
+                                    "4.9",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 11,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Icon(Icons.access_time_rounded, color: Colors.grey.shade600, size: 12),
+                                  const SizedBox(width: 2),
+                                  Expanded(
+                                    child: Text(
+                                      business.averageDeliveryTime,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (distanceText != null) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  distanceText,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.grey.shade500,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
