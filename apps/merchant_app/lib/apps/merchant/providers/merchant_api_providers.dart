@@ -259,6 +259,21 @@ class SponsorshipNotifier extends AsyncNotifier<void> {
       rethrow;
     }
   }
+
+  Future<void> cancelSponsorship(String promoType) async {
+    state = const AsyncLoading();
+    try {
+      final repo = ref.read(merchantShopRepositoryProvider);
+      final updatedShop = await repo.cancelPromotion(promoType);
+      
+      // Update shop state instantly
+      ref.read(shopControllerProvider.notifier).setShop(updatedShop);
+      state = const AsyncData(null);
+    } catch (e, st) {
+      state = AsyncError(e, st);
+      rethrow;
+    }
+  }
 }
 
 final sponsorshipNotifierProvider =

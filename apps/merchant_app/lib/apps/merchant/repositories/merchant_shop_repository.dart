@@ -168,4 +168,9 @@ class MerchantShopRepository {
     final response = await _apiClient.post('/api/merchant/promotions', body: {'promoType': promoType});
     return MerchantShop.fromMap(response['data']);
   }
+
+  Future<MerchantShop> cancelPromotion(String promoType) async {
+    final response = await _apiClient.post('/api/merchant/promotions/cancel', body: {'promoType': promoType});
+    return MerchantShop.fromMap(response['data']);
+  }
 }

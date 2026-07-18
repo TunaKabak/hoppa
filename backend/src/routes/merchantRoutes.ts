@@ -46,5 +46,6 @@ router.get("/dashboard/stats", (req, res) => shopController.getDashboardStats(re
 // Öne Çıkarma / Sponsorluk İşlemleri
 router.get("/promotions", (req, res) => shopController.getPromotions(req, res));
 router.post("/promotions", (req, res) => shopController.createPromotion(req, res));
+router.post("/promotions/cancel", (req, res) => shopController.cancelPromotion(req, res));
 
 export default router;

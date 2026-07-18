@@ -11,6 +11,7 @@ import 'package:consumer_app/apps/consumer/widgets/shop_badge.dart';
 import 'package:latlong2/latlong.dart'; // Mesafe hesaplama için
 import 'package:google_fonts/google_fonts.dart';
 import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
+import 'package:consumer_app/apps/consumer/providers/consumer_location_controller.dart';
 
 class BusinessSelectionPage extends ConsumerWidget {
   final String? category; // Artık İşletme Türü veya Kategori filtresi olabilir
@@ -46,54 +47,191 @@ class BusinessSelectionPage extends ConsumerWidget {
           builder: (context, deliveryProvider, child) {
             final address = deliveryProvider.selectedAddress;
 
+            // Synchronize with Riverpod's consumerCoordinatesProvider
+            if (address != null) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                final currentCoords = ref.read(consumerCoordinatesProvider);
+                if (currentCoords == null ||
+                    currentCoords.latitude != address.latitude ||
+                    currentCoords.longitude != address.longitude) {
+                  ref.read(consumerCoordinatesProvider.notifier).state =
+                      LatLng(address.latitude, address.longitude);
+                }
+              });
+            }
+
+            String pageTitle = "Yakındaki Mağazalar";
+            if (category != null) {
+              final catLower = category!.toLowerCase();
+              if (catLower == 'market') {
+                pageTitle = "Hoppa Market";
+              } else if (catLower == 'restaurant') {
+                pageTitle = "Restoran & Yemek";
+              } else if (catLower == 'greengrocer') {
+                pageTitle = "Manav & Taze Meyve";
+              } else if (catLower == 'butcher') {
+                pageTitle = "Kasap & Şarküteri";
+              } else {
+                pageTitle = category!;
+              }
+            }
+
             return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // FIXED MODERN CURVED COLORFUL HEADER (Hepsiburada / Yemeksepeti Style)
                 HoppaHeader(
-                  height: 56,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-                          onPressed: () {
-                            // Kategoriyi temizle -> Kategori Seçimine döner
-                            p.Provider.of<BusinessProvider>(
-                              context,
-                              listen: false,
-                            ).clearCategory();
-                          },
+                  height: 154,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                              onPressed: () {
+                                // Kategoriyi temizle -> Kategori Seçimine döner
+                                p.Provider.of<BusinessProvider>(
+                                  context,
+                                  listen: false,
+                                ).clearCategory();
+                              },
+                            ),
+                            Text(
+                              pageTitle,
+                              style: GoogleFonts.poppins(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () => AccountBottomSheet.show(context),
+                              child: Container(
+                                margin: const EdgeInsets.only(right: 8),
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: Colors.transparent,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
+                                ),
+                                child: const Icon(
+                                  Icons.person_outline_rounded,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        Text(
-                          category ?? "İşletme Seçimi",
-                          style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                      ),
+                      const SizedBox(height: 8),
+                      // Floating Address Bar Card (integrated into orange gradient header)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [
+                                Color(0xFFFFF3EE), // Soft orange peach tint
+                                Colors.white,
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: const Color(0xFFFFDDD2)), // Warm orange border
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.08),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            borderRadius: BorderRadius.circular(16),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(16),
+                              splashColor: const Color(0xFFE95D22).withValues(alpha: 0.1),
+                              onTap: () async {
+                                final selectedAddress = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const AddressListPage(isSelectionMode: true),
+                                  ),
+                                );
+                                if (selectedAddress != null) {
+                                  deliveryProvider.setAddress(selectedAddress);
+                                }
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.all(14),
+                                child: Row(
+                                  children: [
+                                    // Circular Location Icon Badge
+                                    Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFE95D22).withValues(alpha: 0.08),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.location_on_rounded,
+                                        color: Color(0xFFE95D22),
+                                        size: 22,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    // Address Info text
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            address != null
+                                                ? "Teslimat: ${address.title}"
+                                                : "Nereye Gönderilsin?",
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                              fontFamily: 'Poppins',
+                                              color: Colors.grey.shade900,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 3),
+                                          Text(
+                                            address != null
+                                                ? "${address.district}, ${address.city}"
+                                                : "Lütfen bir teslimat adresi belirtin",
+                                            style: TextStyle(
+                                              color: Colors.grey.shade600,
+                                              fontSize: 12,
+                                              fontFamily: 'Inter',
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const Icon(
+                                      Icons.keyboard_arrow_down_rounded,
+                                      color: Colors.grey,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ),
                         ),
-                        GestureDetector(
-                          onTap: () => AccountBottomSheet.show(context),
-                          child: Container(
-                            margin: const EdgeInsets.only(right: 8),
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: Colors.transparent,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
-                            ),
-                            child: const Icon(
-                              Icons.person_outline_rounded,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
                 Expanded(
@@ -114,113 +252,7 @@ class BusinessSelectionPage extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const SizedBox(height: 8),
-                          // --- ADRES KARTI ---
-                          Container(
-                            color: Colors.white,
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                            child: Container(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [
-                        Color(0xFFFFF3EE), // Soft orange peach tint
-                        Colors.white,
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFFFDDD2)), // Warm orange border
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    borderRadius: BorderRadius.circular(16),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(16),
-                      splashColor: const Color(0xFFE95D22).withValues(alpha: 0.1),
-                      onTap: () async {
-                        final selectedAddress = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                const AddressListPage(isSelectionMode: true),
-                          ),
-                        );
-                        if (selectedAddress != null) {
-                          deliveryProvider.setAddress(selectedAddress);
-                        }
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.all(14),
-                        child: Row(
-                          children: [
-                            // Circular Location Icon Badge
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFE95D22).withValues(alpha: 0.08),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.location_on_rounded,
-                                color: Color(0xFFE95D22),
-                                size: 22,
-                              ),
-                            ),
-                            const SizedBox(width: 14),
-                            // Address Info text
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    address != null
-                                        ? "Teslimat: ${address.title}"
-                                        : "Nereye Gönderilsin?",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                      fontFamily: 'Poppins',
-                                      color: Colors.grey.shade900,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    address != null
-                                        ? "${address.district}, ${address.city}"
-                                        : "Lütfen bir teslimat adresi belirtin",
-                                    style: TextStyle(
-                                      color: Colors.grey.shade600,
-                                      fontSize: 12,
-                                      fontFamily: 'Inter',
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            const Icon(
-                              Icons.keyboard_arrow_down_rounded,
-                              color: Colors.grey,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 10),
+                          const SizedBox(height: 16),
 
               // --- İŞLETME LİSTESİ ---
               Expanded(
@@ -313,8 +345,14 @@ class BusinessSelectionPage extends ConsumerWidget {
                         );
                       }
 
-                      // 2. Sıralama: En yakından uzağa
+                      // 2. Sıralama: Önce sponsorlu (Öne Çıkan) dükkanlar, sonra en yakından uzağa
                       businesses.sort((a, b) {
+                        final aSponsored = a.tags.contains("Öne Çıkan");
+                        final bSponsored = b.tags.contains("Öne Çıkan");
+
+                        if (aSponsored && !bSponsored) return -1;
+                        if (!aSponsored && bSponsored) return 1;
+
                         final isAZero = a.latitude == 0 && a.longitude == 0;
                         final isBZero = b.latitude == 0 && b.longitude == 0;
                         

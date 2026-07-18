@@ -306,12 +306,13 @@ export class ShopController {
       });
 
       // Zenginleştirilmiş shop bilgisini dönelim ki frontend state'i anında güncellensin
+      const queryTime = new Date();
       const activePromotions = await prisma.shopPromotion.findMany({
         where: {
           shopId: shop.id,
           isActive: true,
-          startDate: { lte: now },
-          endDate: { gte: now }
+          startDate: { lte: queryTime },
+          endDate: { gte: queryTime }
         }
       });
 
@@ -360,6 +361,86 @@ export class ShopController {
       });
 
       return res.status(200).json({ error: false, data: promotions });
+    } catch (error: any) {
+      return res.status(500).json({ error: true, message: error.message });
+    }
+  }
+
+  async cancelPromotion(req: Request, res: Response) {
+    try {
+      const merchantId = req.user?.id;
+      if (!merchantId) return res.status(401).json({ error: true, message: "Kullanıcı bilgisi eksik." });
+
+      const { promoType } = req.body;
+      if (!promoType) {
+        return res.status(400).json({ error: true, message: "İptal edilecek sponsorluk türü (promoType) belirtilmelidir." });
+      }
+
+      const shop = await prisma.shop.findUnique({
+        where: { merchantId }
+      });
+
+      if (!shop) {
+        return res.status(404).json({ error: true, message: "Dükkan bulunamadı." });
+      }
+
+      // Aktif promosyonu devre dışı bırak
+      const now = new Date();
+      const activePromo = await prisma.shopPromotion.findFirst({
+        where: {
+          shopId: shop.id,
+          promoType,
+          isActive: true,
+          startDate: { lte: now },
+          endDate: { gte: now }
+        }
+      });
+
+      if (!activePromo) {
+        return res.status(400).json({
+          error: true,
+          message: "İptal edilecek aktif bir sponsorluk bulunamadı."
+        });
+      }
+
+      // Pasifleştir
+      await prisma.shopPromotion.update({
+        where: { id: activePromo.id },
+        data: { isActive: false }
+      });
+
+      // Zenginleştirilmiş güncel dükkan bilgisini geri dön
+      const queryTime = new Date();
+      const activePromotions = await prisma.shopPromotion.findMany({
+        where: {
+          shopId: shop.id,
+          isActive: true,
+          startDate: { lte: queryTime },
+          endDate: { gte: queryTime }
+        }
+      });
+
+      const hasMainScreen = activePromotions.some(p => p.promoType === "MAIN_SCREEN");
+      const hasCategory = activePromotions.some(p => p.promoType === "CATEGORY");
+
+      let activeCommissionRate = 0.05;
+      if (hasMainScreen) {
+        activeCommissionRate = 0.15;
+      } else if (hasCategory) {
+        activeCommissionRate = 0.10;
+      }
+
+      const enrichedShop = {
+        ...shop,
+        activeCommissionRate,
+        activePromotions
+      };
+
+      return res.status(200).json({
+        error: false,
+        message: "Sponsorluk başarıyla iptal edildi.",
+        data: enrichedShop
+      });
     } catch (error: any) {
       return res.status(500).json({ error: true, message: error.message });
     }
