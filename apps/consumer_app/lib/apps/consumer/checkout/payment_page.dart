@@ -13,6 +13,7 @@ import 'package:consumer_app/apps/consumer/address/delivery_provider.dart';
 import 'package:consumer_app/apps/consumer/business/business_provider.dart';
 import 'package:core_shared/shared/core/utils/quantity_formatter.dart';
 import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
+import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository.dart';
 
 class PaymentPage extends ConsumerStatefulWidget {
   final Address deliveryAddress;
@@ -238,6 +239,9 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
         }
       }
 
+      final referringSource = ref.read(activeReferringSourceProvider);
+      final shopCampaignId = ref.read(activeShopCampaignIdProvider);
+
       final orderData = {
         'shopId': cartState.currentBusinessId,
         'items': cartState.items.map((item) => {
@@ -252,6 +256,8 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
         'dontRingBell': _dontRingBell,
         'leaveAtDoor': _leaveAtDoor,
         'fulfillmentModel': fulfillmentModel,
+        'referringSource': referringSource,
+        'shopCampaignId': shopCampaignId,
       };
 
       final result = await orderRepo.createOrder(orderData);
@@ -278,6 +284,8 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
 
       // Clear cart locally
       cartNotifier.clearCart();
+      ref.read(activeReferringSourceProvider.notifier).state = 'ORGANIC';
+      ref.read(activeShopCampaignIdProvider.notifier).state = null;
 
       if (mounted) {
         if (paymentUrl != null && paymentUrl.isNotEmpty) {

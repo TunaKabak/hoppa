@@ -12,6 +12,7 @@ import 'package:merchant_app/apps/merchant/merchant_product_list_page.dart';
 import 'package:merchant_app/apps/merchant/merchant_settings_page.dart';
 import 'package:merchant_app/apps/merchant/merchant_analytics_page.dart';
 import 'package:merchant_app/apps/merchant/campaign/merchant_campaigns_page.dart';
+import 'package:merchant_app/apps/merchant/campaign/merchant_shop_campaigns_page.dart';
 import 'package:merchant_app/apps/merchant/merchant_sponsorship_page.dart';
 import 'package:merchant_app/apps/merchant/admin/admin_approvals_page.dart';
 import 'package:merchant_app/apps/merchant/admin/admin_business_categories_page.dart';
@@ -152,6 +153,11 @@ class _MerchantMainLayoutState extends ConsumerState<MerchantMainLayout> {
           businessId: _activeBusinessId,
         ),
       );
+      pages.add(
+        MerchantShopCampaignsPage(
+          key: ValueKey('shop_camp_$_activeBusinessId'),
+        ),
+      );
     }
     pages.add(
       MerchantSponsorshipPage(
@@ -185,6 +191,7 @@ class _MerchantMainLayoutState extends ConsumerState<MerchantMainLayout> {
     ];
     if (_canSeeCampaigns(user)) {
       items.add(const _NavItem(Icons.campaign_rounded, 'Kampanyalar'));
+      items.add(const _NavItem(Icons.design_services_rounded, 'Reklam & Afiş'));
     }
     items.add(const _NavItem(Icons.bolt_rounded, 'Öne Çıkarma'));
     if (user.isSuperAdmin) {

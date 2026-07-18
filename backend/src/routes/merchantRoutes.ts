@@ -3,11 +3,13 @@ import { authMiddleware } from "../middlewares/AuthMiddleware";
 import { ShopController } from "../controllers/ShopController";
 import { ProductController } from "../controllers/ProductController";
 import { OrderController } from "../controllers/OrderController";
+import { ShopCampaignController } from "../controllers/ShopCampaignController";
 
 const router = Router();
 const shopController = new ShopController();
 const productController = new ProductController();
 const orderController = new OrderController();
+const shopCampaignController = new ShopCampaignController();
 
 // Tüm merchant rotaları authMiddleware'den geçmeli
 router.use(authMiddleware);
@@ -47,5 +49,9 @@ router.get("/dashboard/stats", (req, res) => shopController.getDashboardStats(re
 router.get("/promotions", (req, res) => shopController.getPromotions(req, res));
 router.post("/promotions", (req, res) => shopController.createPromotion(req, res));
 router.post("/promotions/cancel", (req, res) => shopController.cancelPromotion(req, res));
+
+// Kampanya Yönetimi
+router.post("/campaigns", (req, res) => shopCampaignController.createCampaign(req, res));
+router.get("/campaigns", (req, res) => shopCampaignController.getMyCampaigns(req, res));
 
 export default router;

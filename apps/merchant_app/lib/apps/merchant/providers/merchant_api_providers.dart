@@ -280,3 +280,8 @@ final sponsorshipNotifierProvider =
     AsyncNotifierProvider<SponsorshipNotifier, void>(
   SponsorshipNotifier.new,
 );
+
+final merchantShopCampaignsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+  final repo = ref.watch(merchantShopRepositoryProvider);
+  return await repo.getShopCampaigns();
+});

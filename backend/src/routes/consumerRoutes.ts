@@ -11,6 +11,7 @@ import { BusinessCategoryController } from "../controllers/BusinessCategoryContr
 import { ProfileController } from "../controllers/ProfileController";
 import { SavedCardController } from "../controllers/SavedCardController";
 import { CouponController } from "../controllers/CouponController";
+import { ShopCampaignController } from "../controllers/ShopCampaignController";
 import walletRoutes from "./walletRoutes";
 import referralRoutes from "./referralRoutes";
 
@@ -23,12 +24,14 @@ const categoryController = new CategoryController();
 const businessCategoryController = new BusinessCategoryController();
 const savedCardController = new SavedCardController();
 const couponController = new CouponController();
+const shopCampaignController = new ShopCampaignController();
 
 // --- Public / Optional Auth Endpoints (Misafir Modu Gezinti) ---
 router.get("/shops", optionalAuthMiddleware, (req: Request, res: Response) => consumerShopController.getActiveShops(req, res));
 router.get("/shops/:shopId/products", optionalAuthMiddleware, (req: Request, res: Response) => consumerShopController.getShopProducts(req, res));
 router.get("/shops/:shopId/categories", optionalAuthMiddleware, (req: Request, res: Response) => consumerShopController.getShopActiveCategories(req, res));
 router.get("/campaigns", optionalAuthMiddleware, (req: Request, res: Response) => consumerShopController.getCampaigns(req, res));
+router.get("/shop-campaigns/active", optionalAuthMiddleware, (req: Request, res: Response) => shopCampaignController.getActiveSliders(req, res));
 router.get("/categories", optionalAuthMiddleware, (req: Request, res: Response) => categoryController.getCategories(req, res));
 router.get("/business-categories", optionalAuthMiddleware, (req: Request, res: Response) => businessCategoryController.getBusinessCategories(req, res));
 router.get("/search/global", optionalAuthMiddleware, (req: Request, res: Response) => consumerShopController.globalSearch(req, res));

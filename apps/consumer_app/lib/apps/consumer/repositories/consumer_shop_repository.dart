@@ -446,11 +446,28 @@ class ConsumerShopRepository {
       return [];
     }
   }
+
+  Future<List<dynamic>> getActiveShopCampaigns() async {
+    try {
+      final response = await _apiClient.get('/api/consumer/shop-campaigns/active');
+      return response['data'] as List<dynamic>? ?? [];
+    } catch (e) {
+      print("Error fetching active shop campaigns: $e");
+      return [];
+    }
+  }
 }
 
 // Riverpod Providers
 final consumerShopRepositoryProvider = Provider<ConsumerShopRepository>((ref) {
   return ConsumerShopRepository(ref.watch(apiClientProvider));
+});
+
+final activeReferringSourceProvider = StateProvider<String>((ref) => 'ORGANIC');
+final activeShopCampaignIdProvider = StateProvider<String?>((ref) => null);
+
+final activeShopCampaignsProvider = FutureProvider<List<dynamic>>((ref) async {
+  return ref.watch(consumerShopRepositoryProvider).getActiveShopCampaigns();
 });
 
 final activeCampaignsProvider = FutureProvider<List<Campaign>>((ref) async {

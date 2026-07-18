@@ -177,4 +177,29 @@ class MerchantShopRepository {
     final response = await _apiClient.post('/api/merchant/promotions/cancel', body: {'promoType': promoType});
     return MerchantShop.fromMap(response['data']);
   }
+
+  Future<List<dynamic>> getShopCampaigns() async {
+    final response = await _apiClient.get('/api/merchant/campaigns');
+    return response['data'] ?? [];
+  }
+
+  Future<dynamic> createShopCampaign({
+    required String title,
+    required String description,
+    required String imageUrl,
+    required String targetArea,
+    required bool designService,
+  }) async {
+    final response = await _apiClient.post(
+      '/api/merchant/campaigns',
+      body: {
+        'title': title,
+        'description': description,
+        'imageUrl': imageUrl,
+        'targetArea': targetArea,
+        'designService': designService,
+      },
+    );
+    return response['data'];
+  }
 }
