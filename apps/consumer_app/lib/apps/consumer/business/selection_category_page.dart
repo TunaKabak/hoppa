@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' as rp;
 import 'package:google_fonts/google_fonts.dart';
+import 'package:core_shared/shared/common/premium_image_views.dart';
 import 'package:core_auth/core_auth.dart';
 import 'package:consumer_app/apps/consumer/address/delivery_provider.dart';
 import 'package:consumer_app/apps/consumer/address/address_list_page.dart';
@@ -246,7 +247,7 @@ class SelectionCategoryPage extends rp.ConsumerWidget {
                             ),
                           ),
                           SizedBox(
-                            height: 180,
+                            height: 130,
                             child: ListView.builder(
                               scrollDirection: Axis.horizontal,
                               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -682,173 +683,139 @@ class SelectionCategoryPage extends rp.ConsumerWidget {
       child: Opacity(
         opacity: business.isOpen ? 1.0 : 0.5,
         child: Container(
-          width: 280,
-          margin: const EdgeInsets.only(right: 16),
+          width: 220,
+          margin: const EdgeInsets.only(right: 12),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFFFE0B2), width: 1.5),
+            borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.orange.withValues(alpha: 0.06),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
               ),
             ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            borderRadius: BorderRadius.circular(16),
+            child: Stack(
               children: [
-                Stack(
-                  children: [
-                    Container(
-                      height: 100,
-                      width: double.infinity,
-                      decoration: BoxDecoration(color: Colors.grey.shade100),
-                      child: _isValidImageUrl(business.headerImageUrl)
-                          ? Image.network(
-                              business.headerImageUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Image.network('https://via.placeholder.com/150', fit: BoxFit.cover),
-                            )
-                          : Image.network('https://via.placeholder.com/150', fit: BoxFit.cover),
+                // 1. Background Cover Image/Gradient
+                PremiumHeaderView(
+                  imageUrl: business.headerImageUrl,
+                  shopName: business.name,
+                  height: 130,
+                ),
+                // 2. Black Gradient Overlay for perfect text legibility
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.black.withOpacity(0.1),
+                          Colors.black.withOpacity(0.75),
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
                     ),
-                    Positioned.fill(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.black.withValues(alpha: 0.3),
-                              Colors.transparent,
-                            ],
-                            begin: Alignment.bottomCenter,
-                            end: Alignment.topCenter,
+                  ),
+                ),
+                // 3. Gold Featured Badge (Top Left)
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFE65100), Color(0xFFFF8C00)],
+                      ),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.star_rounded, color: Colors.white, size: 10),
+                        const SizedBox(width: 2),
+                        Text(
+                          "ÖNE ÇIKAN",
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 7.5,
+                            letterSpacing: 0.3,
                           ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // 4. Closed Overlay (Top Right)
+                if (!business.isOpen)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.9),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        "KAPALI",
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 7.5,
                         ),
                       ),
                     ),
-                    Positioned(
-                      top: 10,
-                      left: 10,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFE65100), Color(0xFFFF8C00)],
-                          ),
-                          borderRadius: BorderRadius.circular(6),
-                          boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
-                        ),
-                        child: const Row(
+                  ),
+                // 5. Bottom Brand Logo & Content Row
+                Positioned(
+                  left: 10,
+                  right: 10,
+                  bottom: 10,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      PremiumLogoView(
+                        imageUrl: business.logoUrl,
+                        shopName: business.name,
+                        radius: 15,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 1.5),
+                        boxShadow: const [],
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.star_rounded, color: Colors.white, size: 12),
-                            SizedBox(width: 4),
                             Text(
-                              "ÖNE ÇIKAN",
-                              style: TextStyle(
+                              business.name,
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11.5,
                                 color: Colors.white,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 9,
-                                letterSpacing: 0.5,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    if (!business.isOpen)
-                      Positioned(
-                        top: 10,
-                        right: 10,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: const Text(
-                            "KAPALI",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 10,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.grey.shade200),
-                            boxShadow: [
-                              BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: _isValidImageUrl(business.logoUrl)
-                                ? Image.network(
-                                    business.logoUrl,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) =>
-                                        Image.network('https://via.placeholder.com/150', fit: BoxFit.cover),
-                                  )
-                                : Image.network('https://via.placeholder.com/150', fit: BoxFit.cover),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                business.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                  color: Colors.black87,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 4),
+                            if (business.campaignText != null && business.campaignText!.isNotEmpty) ...[
+                              const SizedBox(height: 2),
                               Row(
                                 children: [
-                                  const Icon(Icons.star_rounded, color: Colors.amber, size: 13),
-                                  const SizedBox(width: 2),
-                                  const Text(
-                                    "4.9",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 11,
-                                      color: Colors.black87,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Icon(Icons.access_time_rounded, color: Colors.grey.shade600, size: 12),
-                                  const SizedBox(width: 2),
+                                  const Icon(Icons.campaign_rounded, color: Color(0xFFFF7E40), size: 11),
+                                  const SizedBox(width: 3),
                                   Expanded(
                                     child: Text(
-                                      business.averageDeliveryTime,
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.grey.shade600,
+                                      business.campaignText!,
+                                      style: GoogleFonts.poppins(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 8.5,
+                                        color: const Color(0xFFFF7E40),
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
@@ -856,22 +823,52 @@ class SelectionCategoryPage extends rp.ConsumerWidget {
                                   ),
                                 ],
                               ),
-                              if (distanceText != null) ...[
-                                const SizedBox(height: 2),
-                                Text(
-                                  distanceText,
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.grey.shade500,
-                                    fontWeight: FontWeight.w500,
+                            ] else ...[
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  const Icon(Icons.star_rounded, color: Colors.amber, size: 11),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    business.averageRating.toStringAsFixed(1),
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 9,
+                                      color: Colors.white70,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: 6),
+                                  const Icon(Icons.access_time_rounded, color: Colors.white60, size: 10),
+                                  const SizedBox(width: 2),
+                                  Expanded(
+                                    child: Text(
+                                      business.averageDeliveryTime,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 9,
+                                        color: Colors.white60,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (distanceText != null) ...[
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      distanceText,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 9,
+                                        color: Colors.white60,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
                             ],
-                          ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ],

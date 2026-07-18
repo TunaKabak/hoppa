@@ -27,6 +27,7 @@ class Business {
   final List<String> allowedPaymentMethods;
   final List<String> allowedFulfillmentModels;
   final List<String> tags; // YENİ: Dinamik işletme etiketleri
+  final String? campaignText;
 
   Business({
     required this.id,
@@ -54,6 +55,7 @@ class Business {
     this.allowedPaymentMethods = const ['CASH_ON_DELIVERY', 'CARD_ON_DELIVERY', 'ONLINE_PAYMENT'],
     this.allowedFulfillmentModels = const ['PLATFORM_DELIVERY', 'PICKUP'],
     this.tags = const [],
+    this.campaignText,
   });
 
   factory Business.fromMap(Map<String, dynamic> data, String id) {
@@ -89,6 +91,7 @@ class Business {
       allowedPaymentMethods: List<String>.from(data['allowedPaymentMethods'] ?? const ['CASH_ON_DELIVERY', 'CARD_ON_DELIVERY', 'ONLINE_PAYMENT']),
       allowedFulfillmentModels: List<String>.from(data['allowedFulfillmentModels'] ?? const ['PLATFORM_DELIVERY', 'PICKUP']),
       tags: List<String>.from(data['tags'] ?? []),
+      campaignText: data['campaignText'],
     );
   }
 
@@ -118,6 +121,7 @@ class Business {
       'allowedPaymentMethods': allowedPaymentMethods,
       'allowedFulfillmentModels': allowedFulfillmentModels,
       'tags': tags,
+      'campaignText': campaignText,
     };
   }
 
@@ -147,6 +151,7 @@ class Business {
     List<String>? allowedPaymentMethods,
     List<String>? allowedFulfillmentModels,
     List<String>? tags,
+    String? campaignText,
   }) {
     return Business(
       id: id ?? this.id,
@@ -174,6 +179,7 @@ class Business {
       allowedPaymentMethods: allowedPaymentMethods ?? this.allowedPaymentMethods,
       allowedFulfillmentModels: allowedFulfillmentModels ?? this.allowedFulfillmentModels,
       tags: tags ?? this.tags,
+      campaignText: campaignText ?? this.campaignText,
     );
   }
 }

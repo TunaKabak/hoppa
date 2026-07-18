@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'providers/merchant_api_providers.dart';
+import 'package:core_shared/shared/common/premium_image_views.dart';
 import 'merchant_main_layout.dart';
 import 'widgets/merchant_dialog.dart';
 import 'package:intl/intl.dart';
@@ -615,23 +616,14 @@ class _LivePreviewsSectionState extends State<_LivePreviewsSection> {
                           ),
                           const SizedBox(width: 12),
                           // Shop Circle Logo
-                          Container(
-                            width: 60,
-                            height: 60,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                              boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 6)],
-                            ),
-                            child: CircleAvatar(
-                              backgroundColor: Colors.white,
-                              backgroundImage: (logoUrl != null && logoUrl.startsWith('http'))
-                                  ? NetworkImage(logoUrl)
-                                  : null,
-                              child: (logoUrl == null || !logoUrl.startsWith('http'))
-                                  ? const Icon(Icons.store_rounded, color: Color(0xFFE95D22), size: 30)
-                                  : null,
-                            ),
+                          PremiumLogoView(
+                            imageUrl: logoUrl,
+                            shopName: shopName,
+                            radius: 30,
+                            border: Border.all(color: Colors.white, width: 2),
+                            boxShadow: [
+                              BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 6, offset: const Offset(0, 3)),
+                            ],
                           ),
                         ],
                       ),
@@ -683,19 +675,13 @@ class _LivePreviewsSectionState extends State<_LivePreviewsSection> {
             child: Row(
               children: [
                 // Logo mockup
-                Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: (logoUrl != null && logoUrl.startsWith('http'))
-                        ? Image.network(logoUrl, fit: BoxFit.cover)
-                        : const Icon(Icons.store_rounded, color: Colors.grey, size: 28),
-                  ),
+                PremiumLogoView(
+                  imageUrl: logoUrl,
+                  shopName: shopName,
+                  radius: 25,
+                  shape: BoxShape.rectangle,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey.shade200),
                 ),
                 const SizedBox(width: 12),
                 Expanded(

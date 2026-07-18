@@ -167,6 +167,7 @@ model Shop {
   couriers         CourierShop[]
   coupons          CouponShop[]
   promotions       ShopPromotion[]
+  campaignText     String?
 
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt

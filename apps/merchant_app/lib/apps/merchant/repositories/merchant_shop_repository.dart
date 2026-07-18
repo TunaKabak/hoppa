@@ -28,6 +28,7 @@ class MerchantShop {
   final List<dynamic>? deliveryPolygon;
   final List<String>? allowedPaymentMethods;
   final List<String>? allowedFulfillmentModels;
+  final String? campaignText;
 
   // Story 49 Sponsorluk ve Sepet Limiti Alanları
   final double? minimumOrderLimit;
@@ -60,6 +61,7 @@ class MerchantShop {
     this.deliveryPolygon,
     this.allowedPaymentMethods,
     this.allowedFulfillmentModels,
+    this.campaignText,
     this.minimumOrderLimit,
     this.activeCommissionRate,
     this.activePromotions,
@@ -93,6 +95,7 @@ class MerchantShop {
       deliveryPolygon: map['deliveryPolygon'] != null ? List<dynamic>.from(map['deliveryPolygon']) : null,
       allowedPaymentMethods: map['allowedPaymentMethods'] != null ? List<String>.from(map['allowedPaymentMethods']) : null,
       allowedFulfillmentModels: map['allowedFulfillmentModels'] != null ? List<String>.from(map['allowedFulfillmentModels']) : null,
+      campaignText: map['campaignText'],
       minimumOrderLimit: map['minimumOrderLimit'] != null ? double.tryParse(map['minimumOrderLimit'].toString()) : null,
       activeCommissionRate: map['activeCommissionRate'] != null ? (map['activeCommissionRate'] as num).toDouble() : null,
       activePromotions: map['activePromotions'] != null ? List<dynamic>.from(map['activePromotions']) : null,
@@ -124,6 +127,7 @@ class MerchantShop {
       'deliveryPolygon': deliveryPolygon,
       'allowedPaymentMethods': allowedPaymentMethods,
       'allowedFulfillmentModels': allowedFulfillmentModels,
+      'campaignText': campaignText,
       'minimumOrderLimit': minimumOrderLimit,
       'activeCommissionRate': activeCommissionRate,
       'activePromotions': activePromotions,

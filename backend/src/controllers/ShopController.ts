@@ -89,7 +89,7 @@ export class ShopController {
         deliveryRadiusKm, deliveryPolygon, workingHours, minOrderAmount, minimumOrderAmount, minimumOrderLimit, imageUrl, headerImageUrl,
         taxNumber, businessPhone, identityNumber,
         deliveryPricingType, baseDeliveryFee, deliveryFeePerKm, freeDeliveryThreshold, deliveryTime,
-        allowedPaymentMethods, allowedFulfillmentModels
+        allowedPaymentMethods, allowedFulfillmentModels, campaignText
       } = req.body;
 
       if (allowedPaymentMethods !== undefined) {
@@ -145,6 +145,7 @@ export class ShopController {
           taxNumber,
           allowedPaymentMethods,
           allowedFulfillmentModels,
+          campaignText,
           ...(Object.keys(merchantUpdate).length > 0 ? {
             merchant: {
               update: merchantUpdate
