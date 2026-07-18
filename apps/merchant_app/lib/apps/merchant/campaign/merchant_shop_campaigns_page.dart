@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -298,6 +299,7 @@ class _CreateCampaignBottomSheetState extends ConsumerState<_CreateCampaignBotto
   String _targetArea = "SHOP_DETAIL";
   bool _designService = false;
   String? _imageUrl;
+  File? _localImageFile;
   bool _isUploading = false;
   bool _isSaving = false;
 
@@ -307,6 +309,7 @@ class _CreateCampaignBottomSheetState extends ConsumerState<_CreateCampaignBotto
     if (pickerFile == null) return;
 
     setState(() {
+      _localImageFile = pickerFile;
       _isUploading = true;
     });
 
@@ -474,6 +477,7 @@ class _CreateCampaignBottomSheetState extends ConsumerState<_CreateCampaignBotto
                       _designService = val ?? false;
                       if (_designService) {
                         _imageUrl = null;
+                        _localImageFile = null;
                       }
                     });
                   },
@@ -498,24 +502,29 @@ class _CreateCampaignBottomSheetState extends ConsumerState<_CreateCampaignBotto
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.grey.shade300, style: BorderStyle.solid),
                   ),
-                  child: _isUploading
-                      ? const Center(child: CircularProgressIndicator())
-                      : _imageUrl != null
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Image.network(_imageUrl!, fit: BoxFit.cover),
-                            )
-                          : Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.add_photo_alternate_rounded, color: Colors.grey, size: 36),
-                                const SizedBox(height: 8),
-                                Text(
-                                  "Kampanya Afiş Görseli Seçin",
-                                  style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12),
+                  child: _localImageFile != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.file(_localImageFile!, fit: BoxFit.cover),
+                        )
+                      : _isUploading
+                          ? const Center(child: CircularProgressIndicator())
+                          : _imageUrl != null
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Image.network(_imageUrl!, fit: BoxFit.cover),
+                                )
+                              : Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.add_photo_alternate_rounded, color: Colors.grey, size: 36),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      "Kampanya Afiş Görseli Seçin",
+                                      style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
                 ),
               ),
             ],

@@ -36,11 +36,11 @@ class CompactDeliveryStatus extends StatelessWidget {
 
     String statusText;
     if (!isMinLimitPassed) {
-      statusText = "Sepete minimum tutar için ${(minOrderLimit - currentCartTotal).toStringAsFixed(0)} TL daha ekleyin.";
+      statusText = "Sipariş verebilmek için en az ${(minOrderLimit - currentCartTotal).toStringAsFixed(0)} TL daha ürün eklemelisiniz.";
     } else if (!isFreeDeliveryPassed) {
-      statusText = "Kurye ücreti bedava! Kalan: ${(freeDeliveryLimit - currentCartTotal).toStringAsFixed(0)} TL.";
+      statusText = "Bedava teslimat için son ${(freeDeliveryLimit - currentCartTotal).toStringAsFixed(0)} TL!";
     } else {
-      statusText = "Tebrikler, teslimat ücretiniz tamamen Hoppa'dan! 🎉";
+      statusText = "Harika! Teslimat ücretiniz bedava! 🎉";
     }
 
     final double progressValue = freeDeliveryLimit > 0

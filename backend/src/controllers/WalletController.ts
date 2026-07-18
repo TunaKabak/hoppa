@@ -13,11 +13,21 @@ export class WalletController {
       const wallet = await WalletService.getOrCreateWallet(userId);
       res.status(200).json({
         error: false,
-        wallet: {
-          id: wallet.id,
-          balance: Number(wallet.balance),
-          createdAt: wallet.createdAt,
-          updatedAt: wallet.updatedAt
+        data: {
+          wallet: {
+            id: wallet.id,
+            balance: Number(wallet.balance),
+            transactions: (wallet as any).transactions ? (wallet as any).transactions.map((tx: any) => ({
+              id: tx.id,
+              amount: Number(tx.amount),
+              type: tx.type,
+              description: tx.description,
+              expiresAt: tx.expiresAt,
+              createdAt: tx.createdAt
+            })) : [],
+            createdAt: wallet.createdAt,
+            updatedAt: wallet.updatedAt
+          }
         }
       });
     } catch (err: any) {

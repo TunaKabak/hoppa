@@ -201,42 +201,43 @@ class AddressListPage extends ConsumerWidget {
       itemBuilder: (context, index) {
         final address = addresses[index];
         final isSelected = selectedAddress?.id == address.id;
+        final highlightColor = const Color(0xFFE95D22);
         return Card(
-          elevation: isSelected ? 2 : 0,
-          shadowColor: isSelected ? theme.primaryColor.withOpacity(0.1) : Colors.transparent,
+          elevation: isSelected ? 3 : 0,
+          shadowColor: isSelected ? highlightColor.withOpacity(0.15) : Colors.transparent,
           color: isSelected
-              ? theme.primaryColor.withOpacity(0.12)
+              ? Colors.white
               : theme.cardTheme.color,
           margin: const EdgeInsets.only(bottom: 12),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
             side: BorderSide(
-              color: isSelected ? theme.primaryColor : (theme.dividerColor ?? Colors.grey.shade200),
-              width: isSelected ? 2.5 : 1.0,
+              color: isSelected ? highlightColor : (theme.dividerColor ?? Colors.grey.shade200),
+              width: isSelected ? 2.0 : 1.0,
             ),
           ),
           child: ListTile(
             contentPadding: const EdgeInsets.all(12),
             leading: CircleAvatar(
               backgroundColor: isSelected
-                  ? theme.primaryColor.withOpacity(0.2)
+                  ? highlightColor.withOpacity(0.15)
                   : theme.primaryColor.withOpacity(0.1),
               child: Icon(
                 _getIconForTitle(address.title),
-                color: theme.primaryColor,
+                color: isSelected ? highlightColor : theme.primaryColor,
               ),
             ),
             title: Text(
               address.title,
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: isSelected ? theme.primaryColor : null,
+                color: isSelected ? highlightColor : null,
               ),
             ),
             subtitle: Text(
               "${address.city}, ${address.district}\n${address.fullDetails}",
               style: TextStyle(
-                color: isSelected ? Colors.grey.shade800 : Colors.grey.shade600,
+                color: isSelected ? Colors.grey.shade900 : Colors.grey.shade600,
                 fontSize: 13,
               ),
             ),

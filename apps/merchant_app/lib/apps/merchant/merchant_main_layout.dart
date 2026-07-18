@@ -121,6 +121,7 @@ class _MerchantMainLayoutState extends ConsumerState<MerchantMainLayout> {
       user.role == 'admin' ||
       user.role == 'manager' ||
       user.role == 'store_manager' ||
+      user.role == 'merchant' ||
       user.isSuperAdmin;
 
   List<Widget> _getPages(AuthUser user) {

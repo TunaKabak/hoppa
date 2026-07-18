@@ -6,6 +6,7 @@ import 'package:core_shared/shared/models/order.dart';
 import 'package:consumer_app/apps/consumer/repositories/consumer_order_repository.dart';
 import 'package:consumer_app/apps/consumer/repositories/support_repository.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
 
 class ChatOption {
   final String id;
@@ -212,110 +213,144 @@ class _SupportChatPageState extends ConsumerState<SupportChatPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        titleSpacing: 0,
-        backgroundColor: Colors.white,
-        elevation: 1,
-        iconTheme: const IconThemeData(color: Colors.black87),
-        title: Row(
-          children: [
-            Stack(
-              children: [
-                CircleAvatar(
-                  backgroundColor: brandGreen.withOpacity(0.1),
-                  child: const Icon(Icons.support_agent, color: brandGreen),
-                ),
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: Colors.green,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "Hoppa Asistan",
-                  style: TextStyle(
-                    color: Colors.black87,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  "Akıllı Destek",
-                  style: TextStyle(
-                    color: Colors.grey[500],
-                    fontSize: 11,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+      backgroundColor: const Color(0xFFF9FBF9),
       body: Container(
-        color: const Color(0xFFF9FBF9), // Soft background color
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFFE95D22), // Hoppa Orange
+              Color(0xFFFF8C00), // Orange-Yellow
+            ],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+        ),
         child: Column(
           children: [
-            // Sipariş seçim listesi (Çoklu sipariş desteği için)
-            _buildOrderSelectionList(ordersAsync.value),
-
-            // Active Order context info banner if exists
-            if (_activeOrder != null)
-              Container(
-                color: brandGreen.withOpacity(0.08),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                child: Row(
-                  children: [
-                    const Icon(Icons.shopping_bag_outlined, color: brandGreen, size: 20),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        "Sipariş Bağlantısı Kuruldu: ${_activeOrder!.businessName ?? 'İşletme'} (#${_activeOrder!.id.substring(0, math.min(8, _activeOrder!.id.length))})",
-                        style: const TextStyle(
-                          color: brandGreen,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
+            HoppaHeader(
+              height: 70,
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  const SizedBox(width: 4),
+                  Stack(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: Colors.white.withOpacity(0.2),
+                        child: const Icon(Icons.support_agent, color: Colors.white),
+                      ),
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: Colors.green,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-
-            // Message History List
-            Expanded(
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.all(16),
-                itemCount: _messages.length + (_isTyping ? 1 : 0),
-                itemBuilder: (context, index) {
-                  if (index == _messages.length && _isTyping) {
-                    return _buildTypingBubble();
-                  }
-                  
-                  final msg = _messages[index];
-                  return _buildMessageBubble(msg, timeFormat);
-                },
+                    ],
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        "Hoppa Asistan",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        "Akıllı Destek",
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF9FBF9),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                  child: Column(
+                    children: [
+                      // Sipariş seçim listesi (Çoklu sipariş desteği için)
+                      _buildOrderSelectionList(ordersAsync.value),
 
-            // Quick Replies Row
-            _buildQuickRepliesRow(),
+                      // Active Order context info banner if exists
+                      if (_activeOrder != null)
+                        Container(
+                          color: brandGreen.withOpacity(0.08),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.shopping_bag_outlined, color: brandGreen, size: 20),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  "Sipariş Bağlantısı Kuruldu: ${_activeOrder!.businessName ?? 'İşletme'} (#${_activeOrder!.id.substring(0, math.min(8, _activeOrder!.id.length))})",
+                                  style: const TextStyle(
+                                    color: brandGreen,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
 
-            // Chat input field
-            _buildInputRow(brandGreen),
+                      Expanded(
+                        child: ListView.builder(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.all(16),
+                          itemCount: _messages.length + (_isTyping ? 1 : 0),
+                          itemBuilder: (context, index) {
+                            if (index == _messages.length && _isTyping) {
+                              return _buildTypingBubble();
+                            }
+                            
+                            final msg = _messages[index];
+                            return _buildMessageBubble(msg, timeFormat);
+                          },
+                        ),
+                      ),
+
+                      // Quick Replies Row
+                      _buildQuickRepliesRow(),
+
+                      // Chat input field
+                      _buildInputRow(brandGreen),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),

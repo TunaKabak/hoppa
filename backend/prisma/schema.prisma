@@ -836,6 +836,7 @@ model ShopCampaign {
   status        String   @default("PENDING_APPROVAL") // "PENDING_APPROVAL", "APPROVED", "REJECTED"
   designService Boolean  @default(false)
   isActive      Boolean  @default(true)
+  targetProducts String[] @default([])
   createdAt     DateTime @default(now())
   orders        Order[]
 

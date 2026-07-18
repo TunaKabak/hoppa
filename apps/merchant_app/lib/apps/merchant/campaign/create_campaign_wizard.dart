@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:core_shared/shared/core/services/campaign_service.dart';
@@ -25,6 +26,7 @@ class _CreateCampaignWizardState extends State<CreateCampaignWizard> {
   final _descriptionController = TextEditingController();
   DateTimeRange? _selectedDateRange;
   String? _imageUrl;
+  File? _localImageFile;
   bool _isUploadingImage = false;
 
   // STEP 2: PRODUCTS
@@ -101,7 +103,10 @@ class _CreateCampaignWizardState extends State<CreateCampaignWizard> {
     final file = await mediaService.pickImage(source: ImageSource.gallery);
     if (file == null) return;
 
-    setState(() => _isUploadingImage = true);
+    setState(() {
+      _localImageFile = file;
+      _isUploadingImage = true;
+    });
 
     try {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
@@ -266,34 +271,65 @@ class _CreateCampaignWizardState extends State<CreateCampaignWizard> {
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: Colors.grey.shade300),
                   ),
-                  child: _isUploadingImage
-                      ? const Center(child: CircularProgressIndicator())
-                      : _imageUrl != null
+                  child: _localImageFile != null
                       ? Stack(
                           fit: StackFit.expand,
                           children: [
                             ClipRRect(
                               borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                _imageUrl!,
+                              child: Image.file(
+                                _localImageFile!,
                                 fit: BoxFit.cover,
                               ),
                             ),
-                            Positioned(
-                              top: 4,
-                              right: 4,
-                              child: IconButton(
-                                icon: const Icon(
-                                  Icons.close,
-                                  color: Colors.white,
+                            if (_isUploadingImage)
+                              const Center(child: CircularProgressIndicator())
+                            else
+                              Positioned(
+                                top: 4,
+                                right: 4,
+                                child: IconButton(
+                                  icon: const Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                  ),
+                                  onPressed: () => setState(() {
+                                    _imageUrl = null;
+                                    _localImageFile = null;
+                                  }),
                                 ),
-                                onPressed: () =>
-                                    setState(() => _imageUrl = null),
                               ),
-                            ),
                           ],
                         )
-                      : InkWell(
+                      : _isUploadingImage
+                          ? const Center(child: CircularProgressIndicator())
+                          : _imageUrl != null
+                              ? Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.network(
+                                        _imageUrl!,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                    Positioned(
+                                      top: 4,
+                                      right: 4,
+                                      child: IconButton(
+                                        icon: const Icon(
+                                          Icons.close,
+                                          color: Colors.white,
+                                        ),
+                                        onPressed: () => setState(() {
+                                          _imageUrl = null;
+                                        }),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : InkWell(
                           onTap: _pickAndUploadImage,
                           child: const Column(
                             mainAxisAlignment: MainAxisAlignment.center,

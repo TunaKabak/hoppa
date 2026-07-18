@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:core_network/core_network.dart';
 import 'package:core_auth/core_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
 
 class MyReviewsPage extends ConsumerStatefulWidget {
   const MyReviewsPage({super.key});
@@ -42,47 +43,94 @@ class _MyReviewsPageState extends ConsumerState<MyReviewsPage> {
   @override
   Widget build(BuildContext context) {
     const kPrimaryColor = Color(0xFF00A651);
+    final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        leading: const BackButton(color: Colors.black),
-        title: Text(
-          "Değerlendirmelerim",
-          style: GoogleFonts.poppins(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFFE95D22), // Hoppa Orange
+              Color(0xFFFF8C00), // Orange-Yellow
+            ],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
           ),
         ),
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: kPrimaryColor))
-          : _reviews.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.rate_review_outlined, size: 80, color: Colors.grey.shade300),
-                      const SizedBox(height: 16),
-                      Text(
-                        "Henüz bir değerlendirme yapmadınız.",
-                        style: GoogleFonts.inter(color: Colors.grey.shade500),
-                      ),
-                    ],
+        child: Column(
+          children: [
+            HoppaHeader(
+              height: 70,
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
                   ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _reviews.length,
-                  itemBuilder: (context, index) {
-                    final review = _reviews[index];
-                    return _buildReviewItem(review);
-                  },
+                  const Expanded(
+                    child: Center(
+                      child: Padding(
+                        padding: EdgeInsets.only(right: 48.0),
+                        child: Text(
+                          "Değerlendirmelerim",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: theme.scaffoldBackgroundColor,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
                 ),
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator(color: kPrimaryColor))
+                      : _reviews.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.rate_review_outlined, size: 80, color: Colors.grey.shade300),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    "Henüz bir değerlendirme yapmadınız.",
+                                    style: GoogleFonts.inter(color: Colors.grey.shade500),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.all(16),
+                              itemCount: _reviews.length,
+                              itemBuilder: (context, index) {
+                                final review = _reviews[index];
+                                return _buildReviewItem(review);
+                              },
+                            ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

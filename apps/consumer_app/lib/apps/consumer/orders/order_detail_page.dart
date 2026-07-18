@@ -13,6 +13,7 @@ import 'package:core_shared/shared/models/business_type.dart';
 import 'package:core_shared/shared/models/order_status.dart';
 import 'package:consumer_app/apps/consumer/orders/order_tracking_page.dart';
 import 'package:consumer_app/apps/consumer/orders/widgets/rate_order_dialog.dart';
+import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
 
 class OrderDetailPage extends ConsumerStatefulWidget {
   final model.Order? order;
@@ -126,21 +127,63 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
     final formattedDate = DateFormat('dd MMM yyyy, HH:mm').format(date);
 
     return Scaffold(
-      backgroundColor: const Color(
-        0xFFF5F5F7,
-      ), // Slightly darker for card contrast
-      appBar: AppBar(
-        title: const Text(
-          "Sipariş Detayı",
-          style: TextStyle(fontWeight: FontWeight.bold),
+      backgroundColor: const Color(0xFFF5F5F7),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFFE95D22), // Hoppa Orange
+              Color(0xFFFF8C00), // Orange-Yellow
+            ],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
         ),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        elevation: 0,
-        scrolledUnderElevation: 2,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            HoppaHeader(
+              height: 70,
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  const Expanded(
+                    child: Center(
+                      child: Padding(
+                        padding: EdgeInsets.only(right: 48.0),
+                        child: Text(
+                          "Sipariş Detayı",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF5F5F7),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    topRight: Radius.circular(24),
+                  ),
+                  child: ListView(
+                    padding: const EdgeInsets.all(16.0),
         children: [
           // 1. İŞLETME BİLGİ KARTI (EN ÜSTE)
           _buildCard(
@@ -659,6 +702,12 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
 
           const SizedBox(height: 30),
         ],
+      ),
+    ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

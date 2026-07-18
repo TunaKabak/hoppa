@@ -2,6 +2,34 @@ import { Request, Response } from "express";
 import { ReferralService } from "../services/ReferralService";
 
 export class ReferralController {
+  async getReferralData(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ error: true, message: "Yetkisiz işlem." });
+        return;
+      }
+
+      const referralCode = await ReferralService.getOrCreateReferralCode(userId);
+      const referrals = await ReferralService.getReferrals(userId);
+      
+      const completedCount = referrals.filter((r: any) => r.status === "COMPLETED").length;
+      const totalEarnings = completedCount * 100.0;
+
+      res.status(200).json({
+        error: false,
+        data: {
+          referralCode,
+          referralCount: referrals.length,
+          totalEarnings,
+          referrals
+        }
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: true, message: err.message || "Davet bilgileri alınamadı." });
+    }
+  }
+
   async getReferralCode(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.user?.id;
