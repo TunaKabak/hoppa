@@ -5,6 +5,8 @@ import { ProductController } from "../controllers/ProductController";
 import { OrderController } from "../controllers/OrderController";
 import { ShopCampaignController } from "../controllers/ShopCampaignController";
 
+import { prisma } from "../config/db";
+
 const router = Router();
 const shopController = new ShopController();
 const productController = new ProductController();
@@ -18,6 +20,31 @@ router.use(authMiddleware);
 router.use((req, res, next) => {
   if (req.user?.role !== "merchant" && req.user?.role !== "super_admin") {
     return res.status(403).json({ error: true, message: "Yetkisiz erişim. Sadece satıcı yetkisi gereklidir." });
+  }
+  next();
+});
+
+// Süper Admin için aktif dükkan bağlamını (Shop Context) ayarlayan ara yazılım
+router.use(async (req, res, next) => {
+  const isSuperAdmin = req.user?.role === "super_admin";
+  const shopId = (req.query.shopId || req.headers["x-business-id"]) as string;
+
+  if (isSuperAdmin && shopId) {
+    try {
+      const shop = await prisma.shop.findUnique({
+        where: { id: shopId }
+      });
+      if (shop) {
+        // Süper Admin seçilen dükkanın sahibi (merchant) rolünde hareket eder
+        req.user = {
+          ...req.user!,
+          id: shop.merchantId,
+          role: "merchant"
+        };
+      }
+    } catch (err) {
+      console.error("[MerchantRoutes.shopContextMiddleware] Hata:", err);
+    }
   }
   next();
 });

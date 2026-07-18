@@ -359,11 +359,6 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
               snap: false,
               expandedHeight: 145.0,
               backgroundColor: const Color(0xFFE95D22),
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.vertical(
-                  bottom: Radius.circular(20),
-                ),
-              ),
               forceElevated: innerBoxIsScrolled,
               iconTheme: const IconThemeData(color: Colors.white),
               leading: IconButton(
@@ -581,7 +576,22 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
             ),
           ];
         },
-        body: CustomScrollView(
+        body: Container(
+          color: const Color(0xFFE95D22),
+          child: Container(
+            decoration: BoxDecoration(
+              color: theme.scaffoldBackgroundColor,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(24),
+                topRight: Radius.circular(24),
+              ),
+            ),
+            child: ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(24),
+                topRight: Radius.circular(24),
+              ),
+              child: CustomScrollView(
                 slivers: [
                   // Shop Campaign Banner
                   if (currentShopCampaigns.isNotEmpty) ...[
@@ -1153,6 +1163,9 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
               ),
             ),
           ),
+        ),
+      ),
+    ),
           Positioned(
             top: kToolbarHeight + MediaQuery.of(context).padding.top, // Right below the collapsed App Bar
             left: 0,
