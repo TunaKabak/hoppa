@@ -3,10 +3,12 @@ import { authMiddleware } from "../middlewares/AuthMiddleware";
 import { SuperAdminController } from "../controllers/SuperAdminController";
 import { BusinessCategoryController } from "../controllers/BusinessCategoryController";
 import { ReviewController } from "../controllers/ReviewController";
+import { ShopCampaignController } from "../controllers/ShopCampaignController";
 
 const router = Router();
 const superAdminController = new SuperAdminController();
 const businessCategoryController = new BusinessCategoryController();
+const shopCampaignController = new ShopCampaignController();
 
 // Auth Middleware: All admin routes are protected
 router.use(authMiddleware);
@@ -39,5 +41,8 @@ router.delete("/business-categories/:id", (req, res) => businessCategoryControll
 // Admin -> Review Management
 router.put("/reviews/:reviewId/approve", (req, res) => ReviewController.approveReview(req, res));
 router.put("/reviews/:reviewId/reject", (req, res) => ReviewController.rejectReview(req, res));
+
+// Admin -> Campaign Management
+router.put("/campaigns/:campaignId/approve", (req, res) => shopCampaignController.approveCampaign(req, res));
 
 export default router;

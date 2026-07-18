@@ -168,6 +168,7 @@ model Shop {
   coupons          CouponShop[]
   promotions       ShopPromotion[]
   campaignText     String?
+  shopCampaigns    ShopCampaign[]
 
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
@@ -367,8 +368,12 @@ model Order {
   review          Review?
   couponUsage     CouponUsage?
 
-  commissionRate   Decimal     @db.Decimal(5, 4) @default(0.0500)
-  commissionAmount Decimal     @db.Decimal(10, 2) @default(0.00)
+  referringSource  String        @default("ORGANIC")
+  shopCampaignId   String?
+  shopCampaign     ShopCampaign? @relation(fields: [shopCampaignId], references: [id], onDelete: SetNull)
+
+  commissionRate   Decimal       @db.Decimal(5, 4) @default(0.0500)
+  commissionAmount Decimal       @db.Decimal(10, 2) @default(0.00)
 
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
@@ -816,6 +821,23 @@ model ShopPromotion {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([shopId])
+}
+
+model ShopCampaign {
+  id            String   @id @default(uuid())
+  shopId        String
+  shop          Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  title         String
+  description   String
+  imageUrl      String
+  targetArea    String   // "SHOP_DETAIL", "CATEGORY_SLIDER", "MAIN_SLIDER"
+  status        String   @default("PENDING_APPROVAL") // "PENDING_APPROVAL", "APPROVED", "REJECTED"
+  designService Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  orders        Order[]
 
   @@index([shopId])
 }
