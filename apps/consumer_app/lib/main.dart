@@ -75,16 +75,20 @@ void main() async {
     );
   };
 
-  await Firebase.initializeApp();
-
-  // Disable App Verification for Dev/QA Testing
-  if (const String.fromEnvironment('flavor') == 'consumer' ||
-      const bool.fromEnvironment('dart.vm.product') == false) {
+  if (Platform.isAndroid || Platform.isIOS) {
     try {
-      await FirebaseAuth.instance.setSettings(
-        appVerificationDisabledForTesting: true,
-      );
-    } catch (_) {}
+      await Firebase.initializeApp();
+
+      // Disable App Verification for Dev/QA Testing
+      if (const String.fromEnvironment('flavor') == 'consumer' ||
+          const bool.fromEnvironment('dart.vm.product') == false) {
+        await FirebaseAuth.instance.setSettings(
+          appVerificationDisabledForTesting: true,
+        );
+      }
+    } catch (e) {
+      print("🚨 Firebase initialization failed: $e");
+    }
   }
 
   await initializeDateFormatting('tr_TR', null);
