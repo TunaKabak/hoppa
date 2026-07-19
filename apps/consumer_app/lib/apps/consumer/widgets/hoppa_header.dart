@@ -14,7 +14,9 @@ class HoppaHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final statusBarHeight = MediaQuery.of(context).padding.top;
 
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeInOut,
       height: height + statusBarHeight,
       width: double.infinity,
       decoration: const BoxDecoration(

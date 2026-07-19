@@ -15,14 +15,52 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
 import 'package:consumer_app/apps/consumer/providers/consumer_location_controller.dart';
 
-final selectedBusinessFiltersProvider = StateProvider<List<String>>((ref) => []);
+final selectedBusinessFiltersProvider =
+    StateProvider<List<String>>((ref) => []);
 final selectedBusinessSortProvider = StateProvider<String>((ref) => 'Mesafe');
-final selectedBusinessSubcategoryProvider = StateProvider<String>((ref) => 'Tümü');
+final selectedBusinessSubcategoryProvider =
+    StateProvider<String>((ref) => 'Tümü');
 
-class BusinessSelectionPage extends ConsumerWidget {
+class BusinessSelectionPage extends ConsumerStatefulWidget {
   final String? category; // Artık İşletme Türü veya Kategori filtresi olabilir
 
   const BusinessSelectionPage({super.key, this.category});
+
+  @override
+  ConsumerState<BusinessSelectionPage> createState() =>
+      _BusinessSelectionPageState();
+}
+
+class _BusinessSelectionPageState extends ConsumerState<BusinessSelectionPage> {
+  late ScrollController _scrollController;
+  bool _isCollapsed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+    _scrollController.addListener(_scrollListener);
+  }
+
+  void _scrollListener() {
+    if (_scrollController.hasClients) {
+      if (_scrollController.offset > 50 && !_isCollapsed) {
+        setState(() {
+          _isCollapsed = true;
+        });
+      } else if (_scrollController.offset <= 50 && _isCollapsed) {
+        setState(() {
+          _isCollapsed = false;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   bool _isValidImageUrl(String? url) {
     if (url == null || url.trim().isEmpty) return false;
@@ -30,10 +68,10 @@ class BusinessSelectionPage extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     // İzlenecek lifecycle provider'ı çağır
     ref.watch(shopLifecyclePollingProvider);
-    
+
     const kPrimaryColor = Color(0xFF00A651);
 
     return Scaffold(
@@ -67,8 +105,8 @@ class BusinessSelectionPage extends ConsumerWidget {
             }
 
             String pageTitle = "Yakındaki Mağazalar";
-            if (category != null) {
-              final catLower = category!.toLowerCase();
+            if (widget.category != null) {
+              final catLower = widget.category!.toLowerCase();
               if (catLower == 'market') {
                 pageTitle = "Hoppa Market";
               } else if (catLower == 'restaurant') {
@@ -78,7 +116,7 @@ class BusinessSelectionPage extends ConsumerWidget {
               } else if (catLower == 'butcher') {
                 pageTitle = "Kasap & Şarküteri";
               } else {
-                pageTitle = category!;
+                pageTitle = widget.category!;
               }
             }
 
@@ -86,7 +124,7 @@ class BusinessSelectionPage extends ConsumerWidget {
               children: [
                 // FIXED MODERN CURVED COLORFUL HEADER (Hepsiburada / Yemeksepeti Style)
                 HoppaHeader(
-                  height: 154,
+                  height: _isCollapsed ? 60.0 : 154.0,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -96,7 +134,8 @@ class BusinessSelectionPage extends ConsumerWidget {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                              icon: const Icon(Icons.arrow_back_rounded,
+                                  color: Colors.white),
                               onPressed: () {
                                 // Kategoriyi temizle -> Kategori Seçimine döner
                                 p.Provider.of<BusinessProvider>(
@@ -105,12 +144,50 @@ class BusinessSelectionPage extends ConsumerWidget {
                                 ).clearCategory();
                               },
                             ),
-                            Text(
-                              pageTitle,
-                              style: GoogleFonts.poppins(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                            Expanded(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    pageTitle,
+                                    style: GoogleFonts.poppins(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: _isCollapsed ? 14 : 16,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  if (_isCollapsed && address != null) ...[
+                                    const SizedBox(height: 2),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(
+                                          Icons.location_on_rounded,
+                                          color: Colors.white70,
+                                          size: 11,
+                                        ),
+                                        const SizedBox(width: 2),
+                                        Flexible(
+                                          child: Text(
+                                            address.title,
+                                            style: GoogleFonts.inter(
+                                              color: Colors.white.withValues(alpha: 0.9),
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ],
                               ),
                             ),
                             GestureDetector(
@@ -121,7 +198,9 @@ class BusinessSelectionPage extends ConsumerWidget {
                                 decoration: BoxDecoration(
                                   color: Colors.transparent,
                                   shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
+                                  border: Border.all(
+                                      color:
+                                          Colors.white.withValues(alpha: 0.5)),
                                 ),
                                 child: const Icon(
                                   Icons.person_outline_rounded,
@@ -133,109 +212,135 @@ class BusinessSelectionPage extends ConsumerWidget {
                           ],
                         ),
                       ),
-                      const SizedBox(height: 8),
                       // Floating Address Bar Card (integrated into orange gradient header)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [
-                                Color(0xFFFFF3EE), // Soft orange peach tint
-                                Colors.white,
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: const Color(0xFFFFDDD2)), // Warm orange border
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.08),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Material(
-                            color: Colors.transparent,
-                            borderRadius: BorderRadius.circular(16),
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(16),
-                              splashColor: const Color(0xFFE95D22).withValues(alpha: 0.1),
-                              onTap: () async {
-                                final selectedAddress = await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const AddressListPage(isSelectionMode: true),
-                                  ),
-                                );
-                                if (selectedAddress != null) {
-                                  deliveryProvider.setAddress(selectedAddress);
-                                }
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.all(14),
-                                child: Row(
-                                  children: [
-                                    // Circular Location Icon Badge
-                                    Container(
-                                      padding: const EdgeInsets.all(10),
+                      AnimatedSize(
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeInOut,
+                        child: _isCollapsed
+                            ? const SizedBox.shrink()
+                            : Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const SizedBox(height: 8),
+                                  Padding(
+                                    padding:
+                                        const EdgeInsets.symmetric(horizontal: 16),
+                                    child: Container(
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFE95D22).withValues(alpha: 0.08),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Icon(
-                                        Icons.location_on_rounded,
-                                        color: Color(0xFFE95D22),
-                                        size: 22,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 14),
-                                    // Address Info text
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            address != null
-                                                ? "Teslimat: ${address.title}"
-                                                : "Nereye Gönderilsin?",
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 14,
-                                              fontFamily: 'Poppins',
-                                              color: Colors.grey.shade900,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 3),
-                                          Text(
-                                            address != null
-                                                ? "${address.district}, ${address.city}"
-                                                : "Lütfen bir teslimat adresi belirtin",
-                                            style: TextStyle(
-                                              color: Colors.grey.shade600,
-                                              fontSize: 12,
-                                              fontFamily: 'Inter',
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
+                                        gradient: const LinearGradient(
+                                          colors: [
+                                            Color(
+                                                0xFFFFF3EE), // Soft orange peach tint
+                                            Colors.white,
+                                          ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(
+                                            color: const Color(
+                                                0xFFFFDDD2)), // Warm orange border
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black
+                                                .withValues(alpha: 0.08),
+                                            blurRadius: 10,
+                                            offset: const Offset(0, 4),
                                           ),
                                         ],
                                       ),
+                                      child: Material(
+                                        color: Colors.transparent,
+                                        borderRadius: BorderRadius.circular(16),
+                                        child: InkWell(
+                                          borderRadius: BorderRadius.circular(16),
+                                          splashColor: const Color(0xFFE95D22)
+                                              .withValues(alpha: 0.1),
+                                          onTap: () async {
+                                            final selectedAddress =
+                                                await Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    const AddressListPage(
+                                                        isSelectionMode: true),
+                                              ),
+                                            );
+                                            if (selectedAddress != null) {
+                                              deliveryProvider
+                                                  .setAddress(selectedAddress);
+                                            }
+                                          },
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(14),
+                                            child: Row(
+                                              children: [
+                                                // Circular Location Icon Badge
+                                                Container(
+                                                  padding: const EdgeInsets.all(10),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(0xFFE95D22)
+                                                        .withValues(alpha: 0.08),
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                  child: const Icon(
+                                                    Icons.location_on_rounded,
+                                                    color: Color(0xFFE95D22),
+                                                    size: 22,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 14),
+                                                // Address Info text
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(
+                                                        address != null
+                                                            ? "Teslimat: ${address.title}"
+                                                            : "Nereye Gönderilsin?",
+                                                        style: TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontSize: 14,
+                                                          fontFamily: 'Poppins',
+                                                          color:
+                                                              Colors.grey.shade900,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 3),
+                                                      Text(
+                                                        address != null
+                                                            ? "${address.district}, ${address.city}"
+                                                            : "Lütfen bir teslimat adresi belirtin",
+                                                        style: TextStyle(
+                                                          color:
+                                                              Colors.grey.shade600,
+                                                          fontSize: 12,
+                                                          fontFamily: 'Inter',
+                                                        ),
+                                                        maxLines: 1,
+                                                        overflow:
+                                                            TextOverflow.ellipsis,
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                const Icon(
+                                                  Icons.keyboard_arrow_down_rounded,
+                                                  color: Colors.grey,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
                                     ),
-                                    const SizedBox(width: 8),
-                                    const Icon(
-                                      Icons.keyboard_arrow_down_rounded,
-                                      color: Colors.grey,
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ),
-                        ),
                       ),
                     ],
                   ),
@@ -258,325 +363,498 @@ class BusinessSelectionPage extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 4),
 
                           // --- İŞLETME LİSTESİ ---
                           Expanded(
                             child: ref.watch(consumerShopsProvider).when(
-                              skipLoadingOnReload: true,
-                              loading: () => const Center(child: CircularProgressIndicator()),
-                              error: (err, stack) => const Center(child: Text("Dükkanlar yüklenirken bir hata oluştu. Lütfen tekrar deneyin.")),
-                              data: (allBusinesses) {
-                                if (allBusinesses.isEmpty) {
-                                  return const Center(
-                                    child: Text("Aktif işletme bulunamadı."),
-                                  );
-                                }
-
-                                final activeFilters = ref.watch(selectedBusinessFiltersProvider);
-                                final activeSort = ref.watch(selectedBusinessSortProvider);
-                                final activeSubcategory = ref.watch(selectedBusinessSubcategoryProvider);
-
-                                var businesses = List<Business>.from(allBusinesses);
-
-                                // 1. KATEGORİ FİLTRELEME (Yemek, Market, Su, Çiçek)
-                                if (category != null) {
-                                  businesses = businesses
-                                      .where(
-                                        (b) =>
-                                            b.categories.contains(category) ||
-                                            b.type.label == category ||
-                                            b.type.name.toLowerCase() ==
-                                                category!.toLowerCase(),
-                                      )
-                                      .toList();
-                                }
-
-                                // 2. MESAFEYE GÖRE FILTRELEME
-                                if (address != null) {
-                                  final Distance distance = const Distance();
-                                  businesses = businesses.where((b) {
-                                    if (b.latitude == 0 && b.longitude == 0) return true;
-                                    final double km = distance.as(
-                                      LengthUnit.Meter,
-                                      LatLng(address.latitude, address.longitude),
-                                      LatLng(b.latitude, b.longitude),
-                                    ) / 1000.0;
-                                    return km <= (b.deliveryRadius > 0 ? b.deliveryRadius : 15.0);
-                                  }).toList();
-                                }
-
-                                // 3. SEÇİLİ AKTİF FİLTRELER (Çoklu Seçim)
-                                if (activeFilters.contains('Açık Olanlar')) {
-                                  businesses = businesses.where((b) => b.isOpen).toList();
-                                }
-                                if (activeFilters.contains('Ücretsiz Teslimat')) {
-                                  businesses = businesses.where((b) => b.baseDeliveryFee == 0 || b.freeDeliveryThreshold != null).toList();
-                                }
-                                if (activeFilters.contains('Hızlı Teslimat')) {
-                                  businesses = businesses.where((b) => b.averageDeliveryTime.contains('15') || b.averageDeliveryTime.contains('30')).toList();
-                                }
-
-                                // 4. SEÇİLİ AKTİF ALTKATEGORİ FİLTRESİ
-                                if (activeSubcategory != 'Tümü') {
-                                  businesses = businesses.where((b) {
-                                    final nameLower = b.name.toLowerCase();
-                                    final subLower = activeSubcategory.toLowerCase();
-                                    
-                                    if (subLower == 'restoran') {
-                                      return b.type.name == 'restaurant' && 
-                                          (nameLower.contains('kebap') || nameLower.contains('pide') || nameLower.contains('balık') || nameLower.contains('döner') || nameLower.contains('burger'));
+                                  skipLoadingOnReload: true,
+                                  loading: () => const Center(
+                                      child: CircularProgressIndicator()),
+                                  error: (err, stack) => const Center(
+                                      child: Text(
+                                          "Dükkanlar yüklenirken bir hata oluştu. Lütfen tekrar deneyin.")),
+                                  data: (allBusinesses) {
+                                    if (allBusinesses.isEmpty) {
+                                      return const Center(
+                                        child:
+                                            Text("Aktif işletme bulunamadı."),
+                                      );
                                     }
-                                    if (subLower == 'kafe') {
-                                      return nameLower.contains('kahve') || nameLower.contains('cafe') || nameLower.contains('kafe') || nameLower.contains('brew');
-                                    }
-                                    if (subLower == 'tatlı' || subLower == 'pastane') {
-                                      return nameLower.contains('tatlı') || nameLower.contains('baklava') || nameLower.contains('pastane') || nameLower.contains('çikolata') || b.categories.contains('Tatlılar');
-                                    }
-                                    if (subLower == 'market') {
-                                      return b.type.name == 'market' && 
-                                          (nameLower.contains('market') || nameLower.contains('süpermarket') || nameLower.contains('bakkal') || nameLower.contains('koop'));
-                                    }
-                                    if (subLower == 'kasap') {
-                                      return nameLower.contains('kasap') || nameLower.contains('et');
-                                    }
-                                    if (subLower == 'manav') {
-                                      return nameLower.contains('manav') || nameLower.contains('yeşillik') || b.categories.contains('Sebzeler') || b.categories.contains('Meyveler');
-                                    }
-                                    if (subLower == 'fırın') {
-                                      return nameLower.contains('fırın') || nameLower.contains('ekmek') || nameLower.contains('unlu') || b.categories.contains('Fırın');
-                                    }
-                                    if (subLower == 'hırdavat') {
-                                      return nameLower.contains('hırdavat') || nameLower.contains('yapı') || nameLower.contains('nalbur');
-                                    }
-                                    return nameLower.contains(subLower) || b.categories.any((c) => c.toLowerCase().contains(subLower));
-                                  }).toList();
-                                }
 
-                                // SPONSORLU VE NORMAL DÜKKANLARI AYIR (Story 49.2)
-                                final sponsoredBusinesses = businesses.where((b) => b.tags.contains("Öne Çıkan (Kategori)")).toList();
-                                final regularBusinesses = businesses.where((b) => !b.tags.contains("Öne Çıkan (Kategori)")).toList();
+                                    final activeFilters = ref
+                                        .watch(selectedBusinessFiltersProvider);
+                                    final activeSort =
+                                        ref.watch(selectedBusinessSortProvider);
+                                    final activeSubcategory = ref.watch(
+                                        selectedBusinessSubcategoryProvider);
 
-                                // 5. SEÇİLİ AKTİF SIRALAMA
-                                final Distance distance = const Distance();
-                                final sortFunc = (Business a, Business b) {
-                                  if (activeSort == 'Mesafe') {
-                                    if (address == null) return 0;
-                                    final distA = distance.as(LengthUnit.Meter, LatLng(address.latitude, address.longitude), LatLng(a.latitude, a.longitude));
-                                    final distB = distance.as(LengthUnit.Meter, LatLng(address.latitude, address.longitude), LatLng(b.latitude, b.longitude));
-                                    return distA.compareTo(distB);
-                                  } else if (activeSort == 'Puan') {
-                                    return b.averageRating.compareTo(a.averageRating);
-                                  } else if (activeSort == 'Hız') {
-                                    final getWeight = (String val) {
-                                      if (val.contains('15')) return 1;
-                                      if (val.contains('30')) return 2;
-                                      if (val.contains('45')) return 3;
-                                      return 4;
+                                    var businesses =
+                                        List<Business>.from(allBusinesses);
+
+                                    // 1. KATEGORİ FİLTRELEME (Yemek, Market, Su, Çiçek)
+                                    if (widget.category != null) {
+                                      businesses = businesses
+                                          .where(
+                                            (b) =>
+                                                b.categories.contains(
+                                                    widget.category) ||
+                                                b.type.label ==
+                                                    widget.category ||
+                                                b.type.name.toLowerCase() ==
+                                                    widget.category!
+                                                        .toLowerCase(),
+                                          )
+                                          .toList();
+                                    }
+
+                                    // 2. MESAFEYE GÖRE FILTRELEME
+                                    if (address != null) {
+                                      final Distance distance =
+                                          const Distance();
+                                      businesses = businesses.where((b) {
+                                        if (b.latitude == 0 && b.longitude == 0)
+                                          return true;
+                                        final double km = distance.as(
+                                              LengthUnit.Meter,
+                                              LatLng(address.latitude,
+                                                  address.longitude),
+                                              LatLng(b.latitude, b.longitude),
+                                            ) /
+                                            1000.0;
+                                        return km <=
+                                            (b.deliveryRadius > 0
+                                                ? b.deliveryRadius
+                                                : 15.0);
+                                      }).toList();
+                                    }
+
+                                    // 3. SEÇİLİ AKTİF FİLTRELER (Çoklu Seçim)
+                                    if (activeFilters
+                                        .contains('Açık Olanlar')) {
+                                      businesses = businesses
+                                          .where((b) => b.isOpen)
+                                          .toList();
+                                    }
+                                    if (activeFilters
+                                        .contains('Ücretsiz Teslimat')) {
+                                      businesses = businesses
+                                          .where((b) =>
+                                              b.baseDeliveryFee == 0 ||
+                                              b.freeDeliveryThreshold != null)
+                                          .toList();
+                                    }
+                                    if (activeFilters
+                                        .contains('Hızlı Teslimat')) {
+                                      businesses = businesses
+                                          .where((b) =>
+                                              b.averageDeliveryTime
+                                                  .contains('15') ||
+                                              b.averageDeliveryTime
+                                                  .contains('30'))
+                                          .toList();
+                                    }
+
+                                    // 4. SEÇİLİ AKTİF ALTKATEGORİ FİLTRESİ
+                                    if (activeSubcategory != 'Tümü') {
+                                      businesses = businesses.where((b) {
+                                        final nameLower = b.name.toLowerCase();
+                                        final subLower =
+                                            activeSubcategory.toLowerCase();
+
+                                        if (subLower == 'restoran') {
+                                          return b.type.name == 'restaurant' &&
+                                              (nameLower.contains('kebap') ||
+                                                  nameLower.contains('pide') ||
+                                                  nameLower.contains('balık') ||
+                                                  nameLower.contains('döner') ||
+                                                  nameLower.contains('burger'));
+                                        }
+                                        if (subLower == 'kafe') {
+                                          return nameLower.contains('kahve') ||
+                                              nameLower.contains('cafe') ||
+                                              nameLower.contains('kafe') ||
+                                              nameLower.contains('brew');
+                                        }
+                                        if (subLower == 'tatlı' ||
+                                            subLower == 'pastane') {
+                                          return nameLower.contains('tatlı') ||
+                                              nameLower.contains('baklava') ||
+                                              nameLower.contains('pastane') ||
+                                              nameLower.contains('çikolata') ||
+                                              b.categories.contains('Tatlılar');
+                                        }
+                                        if (subLower == 'market') {
+                                          return b.type.name == 'market' &&
+                                              (nameLower.contains('market') ||
+                                                  nameLower.contains(
+                                                      'süpermarket') ||
+                                                  nameLower
+                                                      .contains('bakkal') ||
+                                                  nameLower.contains('koop'));
+                                        }
+                                        if (subLower == 'kasap') {
+                                          return nameLower.contains('kasap') ||
+                                              nameLower.contains('et');
+                                        }
+                                        if (subLower == 'manav') {
+                                          return nameLower.contains('manav') ||
+                                              nameLower.contains('yeşillik') ||
+                                              b.categories
+                                                  .contains('Sebzeler') ||
+                                              b.categories.contains('Meyveler');
+                                        }
+                                        if (subLower == 'fırın') {
+                                          return nameLower.contains('fırın') ||
+                                              nameLower.contains('ekmek') ||
+                                              nameLower.contains('unlu') ||
+                                              b.categories.contains('Fırın');
+                                        }
+                                        if (subLower == 'hırdavat') {
+                                          return nameLower
+                                                  .contains('hırdavat') ||
+                                              nameLower.contains('yapı') ||
+                                              nameLower.contains('nalbur');
+                                        }
+                                        return nameLower.contains(subLower) ||
+                                            b.categories.any((c) => c
+                                                .toLowerCase()
+                                                .contains(subLower));
+                                      }).toList();
+                                    }
+
+                                    // SPONSORLU VE NORMAL DÜKKANLARI AYIR (Story 49.2)
+                                    final sponsoredBusinesses = businesses
+                                        .where((b) => b.tags
+                                            .contains("Öne Çıkan (Kategori)"))
+                                        .toList();
+                                    final regularBusinesses = businesses
+                                        .where((b) => !b.tags
+                                            .contains("Öne Çıkan (Kategori)"))
+                                        .toList();
+
+                                    // 5. SEÇİLİ AKTİF SIRALAMA
+                                    final Distance distance = const Distance();
+                                    final sortFunc = (Business a, Business b) {
+                                      if (activeSort == 'Mesafe') {
+                                        if (address == null) return 0;
+                                        final distA = distance.as(
+                                            LengthUnit.Meter,
+                                            LatLng(address.latitude,
+                                                address.longitude),
+                                            LatLng(a.latitude, a.longitude));
+                                        final distB = distance.as(
+                                            LengthUnit.Meter,
+                                            LatLng(address.latitude,
+                                                address.longitude),
+                                            LatLng(b.latitude, b.longitude));
+                                        return distA.compareTo(distB);
+                                      } else if (activeSort == 'Puan') {
+                                        return b.averageRating
+                                            .compareTo(a.averageRating);
+                                      } else if (activeSort == 'Hız') {
+                                        final getWeight = (String val) {
+                                          if (val.contains('15')) return 1;
+                                          if (val.contains('30')) return 2;
+                                          if (val.contains('45')) return 3;
+                                          return 4;
+                                        };
+                                        return getWeight(a.averageDeliveryTime)
+                                            .compareTo(getWeight(
+                                                b.averageDeliveryTime));
+                                      } else if (activeSort == 'Sepet Limiti') {
+                                        return a.minBasketAmount
+                                            .compareTo(b.minBasketAmount);
+                                      }
+                                      return 0;
                                     };
-                                    return getWeight(a.averageDeliveryTime).compareTo(getWeight(b.averageDeliveryTime));
-                                  } else if (activeSort == 'Sepet Limiti') {
-                                    return a.minBasketAmount.compareTo(b.minBasketAmount);
-                                  }
-                                  return 0;
-                                };
 
-                                sponsoredBusinesses.sort(sortFunc);
-                                regularBusinesses.sort(sortFunc);
+                                    sponsoredBusinesses.sort(sortFunc);
+                                    regularBusinesses.sort(sortFunc);
 
-                                return RefreshIndicator(
-                                  onRefresh: () async {
-                                    ref.invalidate(consumerShopsProvider);
-                                    await ref.read(consumerShopsProvider.future);
-                                  },
-                                  child: CustomScrollView(
-                                    slivers: [
-                                      SliverPersistentHeader(
-                                        pinned: true,
-                                        delegate: _StickyFilterBarDelegate(
-                                          child: _buildFilterAndSortBar(context, ref, activeFilters, activeSort, activeSubcategory),
-                                        ),
-                                      ),
-
-                                      if (businesses.isEmpty)
-                                        SliverFillRemaining(
-                                          hasScrollBody: false,
-                                          child: Center(
-                                            child: Column(
-                                              mainAxisAlignment: MainAxisAlignment.center,
-                                              children: [
-                                                Icon(
-                                                  Icons.filter_list_off_rounded,
-                                                  size: 64,
-                                                  color: Colors.grey.shade300,
-                                                ),
-                                                const SizedBox(height: 16),
-                                                Text(
-                                                  "Seçilen filtrelere uygun dükkan bulunamadı.",
-                                                  textAlign: TextAlign.center,
-                                                  style: GoogleFonts.poppins(
-                                                    color: Colors.grey.shade600,
-                                                    fontSize: 13,
-                                                  ),
-                                                ),
-                                              ],
+                                    return RefreshIndicator(
+                                      onRefresh: () async {
+                                        ref.invalidate(consumerShopsProvider);
+                                        await ref
+                                            .read(consumerShopsProvider.future);
+                                      },
+                                      child: CustomScrollView(
+                                        controller: _scrollController,
+                                        slivers: [
+                                          SliverPersistentHeader(
+                                            pinned: true,
+                                            delegate: _StickyFilterBarDelegate(
+                                              child: _buildFilterAndSortBar(
+                                                  context,
+                                                  ref,
+                                                  activeFilters,
+                                                  activeSort,
+                                                  activeSubcategory),
                                             ),
                                           ),
-                                        )
-                                      else ...[
-                                        // ─── ÖNE ÇIKAN İŞLETMELER YATAY KAROUSEL ───
-                                        if (sponsoredBusinesses.isNotEmpty)
-                                          SliverToBoxAdapter(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Padding(
-                                                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                                                  child: Row(
-                                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                    children: [
-                                                      Text(
-                                                        category != null
-                                                            ? "Öne Çıkan $pageTitle"
-                                                            : "Öne Çıkanlar",
+                                          if (businesses.isEmpty)
+                                            SliverFillRemaining(
+                                              hasScrollBody: false,
+                                              child: Center(
+                                                child: Column(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: [
+                                                    Icon(
+                                                      Icons
+                                                          .filter_list_off_rounded,
+                                                      size: 64,
+                                                      color:
+                                                          Colors.grey.shade300,
+                                                    ),
+                                                    const SizedBox(height: 16),
+                                                    Text(
+                                                      "Seçilen filtrelere uygun dükkan bulunamadı.",
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      style:
+                                                          GoogleFonts.poppins(
+                                                        color: Colors
+                                                            .grey.shade600,
+                                                        fontSize: 13,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            )
+                                          else ...[
+                                            // ─── ÖNE ÇIKAN İŞLETMELER YATAY KAROUSEL ───
+                                            if (sponsoredBusinesses.isNotEmpty)
+                                              SliverToBoxAdapter(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Padding(
+                                                      padding: const EdgeInsets
+                                                          .fromLTRB(
+                                                          16, 8, 16, 8),
+                                                      child: Row(
+                                                        mainAxisAlignment:
+                                                            MainAxisAlignment
+                                                                .spaceBetween,
+                                                        children: [
+                                                          Text(
+                                                            widget.category !=
+                                                                    null
+                                                                ? "Öne Çıkan $pageTitle"
+                                                                : "Öne Çıkanlar",
+                                                            style:
+                                                                const TextStyle(
+                                                              fontSize: 15,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold,
+                                                              color: Colors
+                                                                  .black87,
+                                                              fontFamily:
+                                                                  'Poppins',
+                                                            ),
+                                                          ),
+                                                          const ShopBadge(
+                                                            label: "Sponsorlu",
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    SizedBox(
+                                                      height: 130,
+                                                      child: ListView.builder(
+                                                        scrollDirection:
+                                                            Axis.horizontal,
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                                horizontal: 16),
+                                                        itemCount:
+                                                            sponsoredBusinesses
+                                                                .length,
+                                                        itemBuilder:
+                                                            (context, index) {
+                                                          final business =
+                                                              sponsoredBusinesses[
+                                                                  index];
+                                                          String? distanceText;
+                                                          if (address != null) {
+                                                            if (business.latitude ==
+                                                                    0 &&
+                                                                business.longitude ==
+                                                                    0) {
+                                                              distanceText =
+                                                                  "Mesafe Bilinmiyor";
+                                                            } else {
+                                                              const distance =
+                                                                  Distance();
+                                                              final double km =
+                                                                  distance.as(
+                                                                        LengthUnit
+                                                                            .Meter,
+                                                                        LatLng(
+                                                                            address.latitude,
+                                                                            address.longitude),
+                                                                        LatLng(
+                                                                            business.latitude,
+                                                                            business.longitude),
+                                                                      ) /
+                                                                      1000.0;
+                                                              distanceText =
+                                                                  "${km.toStringAsFixed(1)} km";
+                                                            }
+                                                          }
+                                                          return _buildPremiumFeaturedCard(
+                                                              context,
+                                                              ref,
+                                                              business,
+                                                              distanceText);
+                                                        },
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 12),
+                                                  ],
+                                                ),
+                                              ),
+
+                                            // ─── DİĞER YAKINDAKİ TÜM İŞLETMELER DİKEY LİSTE BAŞLIĞI ───
+                                            SliverToBoxAdapter(
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.fromLTRB(
+                                                        16, 8, 16, 8),
+                                                child: Row(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment
+                                                          .spaceBetween,
+                                                  children: [
+                                                    Text(
+                                                      widget.category != null
+                                                          ? "$pageTitle Listesi"
+                                                          : "Yakındaki Tüm İşletmeler",
+                                                      style: const TextStyle(
+                                                        fontSize: 15,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: Colors.black87,
+                                                        fontFamily: 'Poppins',
+                                                      ),
+                                                    ),
+                                                    Container(
+                                                      padding: const EdgeInsets
+                                                          .symmetric(
+                                                        horizontal: 10,
+                                                        vertical: 4,
+                                                      ),
+                                                      decoration: BoxDecoration(
+                                                        color: kPrimaryColor
+                                                            .withValues(
+                                                                alpha: 0.1),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(20),
+                                                      ),
+                                                      child: Text(
+                                                        "${regularBusinesses.length} İşletme",
                                                         style: const TextStyle(
-                                                          fontSize: 15,
-                                                          fontWeight: FontWeight.bold,
-                                                          color: Colors.black87,
-                                                          fontFamily: 'Poppins',
+                                                          color: kPrimaryColor,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontSize: 12,
                                                         ),
                                                       ),
-                                                      const ShopBadge(
-                                                        label: "Sponsorlu",
-                                                      ),
-                                                    ],
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+
+                                            // ─── DİĞER YAKINDAKİ TÜM İŞLETMELER DİKEY LİSTE ───
+                                            if (regularBusinesses.isEmpty)
+                                              SliverToBoxAdapter(
+                                                child: Container(
+                                                  height: 200,
+                                                  alignment: Alignment.center,
+                                                  child: Text(
+                                                    "Yakında başka işletme bulunamadı.",
+                                                    style: TextStyle(
+                                                        color: Colors
+                                                            .grey.shade500),
                                                   ),
                                                 ),
-                                                SizedBox(
-                                                  height: 130,
-                                                  child: ListView.builder(
-                                                    scrollDirection: Axis.horizontal,
-                                                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                                                    itemCount: sponsoredBusinesses.length,
-                                                    itemBuilder: (context, index) {
-                                                      final business = sponsoredBusinesses[index];
+                                              )
+                                            else
+                                              SliverPadding(
+                                                padding: const EdgeInsets.only(
+                                                    bottom: 16),
+                                                sliver: SliverList(
+                                                  delegate:
+                                                      SliverChildBuilderDelegate(
+                                                    (context, index) {
+                                                      final business =
+                                                          regularBusinesses[
+                                                              index];
                                                       String? distanceText;
                                                       if (address != null) {
-                                                        if (business.latitude == 0 && business.longitude == 0) {
-                                                          distanceText = "Mesafe Bilinmiyor";
+                                                        if (business.latitude ==
+                                                                0 &&
+                                                            business.longitude ==
+                                                                0) {
+                                                          distanceText =
+                                                              "Mesafe\nBilinmiyor";
                                                         } else {
-                                                          const distance = Distance();
-                                                          final double km = distance.as(
-                                                            LengthUnit.Meter,
-                                                            LatLng(address.latitude, address.longitude),
-                                                            LatLng(business.latitude, business.longitude),
-                                                          ) / 1000.0;
-                                                          distanceText = "${km.toStringAsFixed(1)} km";
+                                                          const distance =
+                                                              Distance();
+                                                          final double km =
+                                                              distance.as(
+                                                                    LengthUnit
+                                                                        .Meter,
+                                                                    LatLng(
+                                                                        address
+                                                                            .latitude,
+                                                                        address
+                                                                            .longitude),
+                                                                    LatLng(
+                                                                        business
+                                                                            .latitude,
+                                                                        business
+                                                                            .longitude),
+                                                                  ) /
+                                                                  1000.0;
+                                                          distanceText =
+                                                              "${km.toStringAsFixed(1)} km";
                                                         }
                                                       }
-                                                      return _buildPremiumFeaturedCard(context, ref, business, distanceText);
+                                                      return Padding(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                                horizontal: 16,
+                                                                vertical: 6),
+                                                        child:
+                                                            _buildCompactBusinessCard(
+                                                          context,
+                                                          ref,
+                                                          business,
+                                                          distanceText,
+                                                        ),
+                                                      );
                                                     },
+                                                    childCount:
+                                                        regularBusinesses
+                                                            .length,
                                                   ),
                                                 ),
-                                                const SizedBox(height: 12),
-                                              ],
-                                            ),
-                                          ),
-
-                                        // ─── DİĞER YAKINDAKİ TÜM İŞLETMELER DİKEY LİSTE BAŞLIĞI ───
-                                        SliverToBoxAdapter(
-                                          child: Padding(
-                                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                                            child: Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                Text(
-                                                  category != null
-                                                      ? "$pageTitle Listesi"
-                                                      : "Yakındaki Tüm İşletmeler",
-                                                  style: const TextStyle(
-                                                    fontSize: 15,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Colors.black87,
-                                                    fontFamily: 'Poppins',
-                                                  ),
-                                                ),
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(
-                                                    horizontal: 10,
-                                                    vertical: 4,
-                                                  ),
-                                                  decoration: BoxDecoration(
-                                                    color: kPrimaryColor.withValues(alpha: 0.1),
-                                                    borderRadius: BorderRadius.circular(20),
-                                                  ),
-                                                  child: Text(
-                                                    "${regularBusinesses.length} İşletme",
-                                                    style: const TextStyle(
-                                                      color: kPrimaryColor,
-                                                      fontWeight: FontWeight.bold,
-                                                      fontSize: 12,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-
-                                        // ─── DİĞER YAKINDAKİ TÜM İŞLETMELER DİKEY LİSTE ───
-                                        if (regularBusinesses.isEmpty)
-                                          SliverToBoxAdapter(
-                                            child: Container(
-                                              height: 200,
-                                              alignment: Alignment.center,
-                                              child: Text(
-                                                "Yakında başka işletme bulunamadı.",
-                                                style: TextStyle(color: Colors.grey.shade500),
                                               ),
-                                            ),
-                                          )
-                                        else
-                                          SliverPadding(
-                                            padding: const EdgeInsets.only(bottom: 16),
-                                            sliver: SliverList(
-                                              delegate: SliverChildBuilderDelegate(
-                                                (context, index) {
-                                                  final business = regularBusinesses[index];
-                                                  String? distanceText;
-                                                  if (address != null) {
-                                                    if (business.latitude == 0 && business.longitude == 0) {
-                                                      distanceText = "Mesafe\nBilinmiyor";
-                                                    } else {
-                                                      const distance = Distance();
-                                                      final double km = distance.as(
-                                                        LengthUnit.Meter,
-                                                        LatLng(address.latitude, address.longitude),
-                                                        LatLng(business.latitude, business.longitude),
-                                                      ) / 1000.0;
-                                                      distanceText = "${km.toStringAsFixed(1)} km";
-                                                    }
-                                                  }
-                                                  return Padding(
-                                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                                                    child: _buildCompactBusinessCard(
-                                                      context,
-                                                      ref,
-                                                      business,
-                                                      distanceText,
-                                                    ),
-                                                  );
-                                                },
-                                                childCount: regularBusinesses.length,
-                                              ),
-                                            ),
-                                          ),
-                                      ],
-                                    ],
-                                  ),
-                                );
-                              },
-                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
                           ),
                         ],
                       ),
@@ -604,7 +882,8 @@ class BusinessSelectionPage extends ConsumerWidget {
           listen: false,
         );
 
-        ref.read(activeReferringSourceProvider.notifier).state = 'CATEGORY_SLIDER';
+        ref.read(activeReferringSourceProvider.notifier).state =
+            'CATEGORY_SLIDER';
         ref.read(activeShopCampaignIdProvider.notifier).state = null;
 
         // Reset and initialize Riverpod catalog providers
@@ -661,7 +940,8 @@ class BusinessSelectionPage extends ConsumerWidget {
                   top: 8,
                   left: 8,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
                         colors: [Color(0xFFE65100), Color(0xFFFF8C00)],
@@ -671,7 +951,8 @@ class BusinessSelectionPage extends ConsumerWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.star_rounded, color: Colors.white, size: 10),
+                        const Icon(Icons.star_rounded,
+                            color: Colors.white, size: 10),
                         const SizedBox(width: 2),
                         Text(
                           "ÖNE ÇIKAN",
@@ -692,7 +973,8 @@ class BusinessSelectionPage extends ConsumerWidget {
                     top: 8,
                     right: 8,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 3),
                       decoration: BoxDecoration(
                         color: Colors.red.withOpacity(0.9),
                         borderRadius: BorderRadius.circular(4),
@@ -739,11 +1021,13 @@ class BusinessSelectionPage extends ConsumerWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            if (business.campaignText != null && business.campaignText!.isNotEmpty) ...[
+                            if (business.campaignText != null &&
+                                business.campaignText!.isNotEmpty) ...[
                               const SizedBox(height: 2),
                               Row(
                                 children: [
-                                  const Icon(Icons.campaign_rounded, color: Color(0xFFFF7E40), size: 11),
+                                  const Icon(Icons.campaign_rounded,
+                                      color: Color(0xFFFF7E40), size: 11),
                                   const SizedBox(width: 3),
                                   Expanded(
                                     child: Text(
@@ -763,7 +1047,8 @@ class BusinessSelectionPage extends ConsumerWidget {
                               const SizedBox(height: 2),
                               Row(
                                 children: [
-                                  const Icon(Icons.star_rounded, color: Colors.amber, size: 11),
+                                  const Icon(Icons.star_rounded,
+                                      color: Colors.amber, size: 11),
                                   const SizedBox(width: 2),
                                   Text(
                                     business.averageRating.toStringAsFixed(1),
@@ -774,7 +1059,8 @@ class BusinessSelectionPage extends ConsumerWidget {
                                     ),
                                   ),
                                   const SizedBox(width: 6),
-                                  const Icon(Icons.access_time_rounded, color: Colors.white60, size: 10),
+                                  const Icon(Icons.access_time_rounded,
+                                      color: Colors.white60, size: 10),
                                   const SizedBox(width: 2),
                                   Expanded(
                                     child: Text(
@@ -976,7 +1262,9 @@ class BusinessSelectionPage extends ConsumerWidget {
                             runSpacing: 4,
                             children: [
                               ...business.tags.map((tag) => ShopBadge(
-                                    label: tag.startsWith("Öne Çıkan") ? "Öne Çıkan" : tag,
+                                    label: tag.startsWith("Öne Çıkan")
+                                        ? "Öne Çıkan"
+                                        : tag,
                                   )),
                               const ShopBadge(
                                 label: "Gel-Al",
@@ -1044,11 +1332,12 @@ class BusinessSelectionPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildFilterAndSortBar(BuildContext context, WidgetRef ref, List<String> activeFilters, String activeSort, String activeSubcategory) {
+  Widget _buildFilterAndSortBar(BuildContext context, WidgetRef ref,
+      List<String> activeFilters, String activeSort, String activeSubcategory) {
     List<String> subcategories = [];
-    if (category == 'Yemek') {
+    if (widget.category == 'Yemek') {
       subcategories = ['Tümü', 'Restoran', 'Kafe', 'Tatlı', 'Pastane'];
-    } else if (category == 'Market') {
+    } else if (widget.category == 'Market') {
       subcategories = ['Tümü', 'Market', 'Kasap', 'Manav', 'Fırın', 'Hırdavat'];
     }
 
@@ -1056,7 +1345,7 @@ class BusinessSelectionPage extends ConsumerWidget {
     final hasActiveSort = activeSort != 'Önerilen';
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.only(left: 16, right: 0, top: 4, bottom: 8),
       child: Row(
         children: [
           // 1. Filtrele Butonu
@@ -1067,12 +1356,15 @@ class BusinessSelectionPage extends ConsumerWidget {
               clipBehavior: Clip.none,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: hasActiveFilters ? const Color(0xFFFF5200) : Colors.grey.shade300,
+                      color: hasActiveFilters
+                          ? const Color(0xFFFF5200)
+                          : Colors.grey.shade300,
                       width: 1.5,
                     ),
                   ),
@@ -1081,7 +1373,9 @@ class BusinessSelectionPage extends ConsumerWidget {
                       Icon(
                         Icons.filter_list_rounded,
                         size: 16,
-                        color: hasActiveFilters ? const Color(0xFFFF5200) : Colors.grey.shade700,
+                        color: hasActiveFilters
+                            ? const Color(0xFFFF5200)
+                            : Colors.grey.shade700,
                       ),
                       if (hasActiveFilters) ...[
                         const SizedBox(width: 4),
@@ -1126,36 +1420,57 @@ class BusinessSelectionPage extends ConsumerWidget {
           InkWell(
             onTap: () => _showSortBottomSheet(context, ref),
             borderRadius: BorderRadius.circular(12),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: hasActiveSort ? const Color(0xFFFF5200) : Colors.grey.shade300,
-                  width: hasActiveSort ? 1.5 : 1,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.sort_rounded,
-                    size: 16,
-                    color: hasActiveSort ? const Color(0xFFFF5200) : Colors.grey.shade700,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: hasActiveSort
+                          ? const Color(0xFFFF5200)
+                          : Colors.grey.shade300,
+                      width: hasActiveSort ? 1.5 : 1,
+                    ),
                   ),
-                  if (hasActiveSort) ...[
-                    const SizedBox(width: 4),
-                    Text(
-                      activeSort,
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFFFF5200),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.sort_rounded,
+                        size: 16,
+                        color: hasActiveSort
+                            ? const Color(0xFFFF5200)
+                            : Colors.grey.shade700,
+                      ),
+                    ],
+                  ),
+                ),
+                if (hasActiveSort)
+                  Positioned(
+                    right: -4,
+                    top: -4,
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFFF5200),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        activeSort == 'Mesafe'
+                            ? Icons.near_me_rounded
+                            : activeSort == 'Puan'
+                                ? Icons.star_rounded
+                                : activeSort == 'Hız'
+                                    ? Icons.access_time_rounded
+                                    : Icons.shopping_bag_rounded,
+                        color: Colors.white,
+                        size: 9,
                       ),
                     ),
-                  ],
-                ],
-              ),
+                  ),
+              ],
             ),
           ),
 
@@ -1172,34 +1487,57 @@ class BusinessSelectionPage extends ConsumerWidget {
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
-                  children: subcategories.map((sub) {
-                    final isSelected = activeSubcategory == sub;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 6),
-                      child: ChoiceChip(
-                        label: Text(
-                          sub,
-                          style: GoogleFonts.poppins(
-                            fontSize: 11,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                            color: isSelected ? Colors.white : Colors.grey.shade800,
-                          ),
+                  children: [
+                    ...subcategories.map((sub) {
+                      final isSelected = activeSubcategory == sub;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: Builder(
+                          builder: (chipContext) {
+                            return ChoiceChip(
+                              label: Text(
+                                sub,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  fontWeight:
+                                      isSelected ? FontWeight.bold : FontWeight.w500,
+                                  color: isSelected
+                                      ? Colors.white
+                                      : Colors.grey.shade800,
+                                ),
+                              ),
+                              selected: isSelected,
+                              selectedColor: const Color(0xFFFF5200),
+                              backgroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                side: BorderSide(
+                                  color: isSelected
+                                      ? const Color(0xFFFF5200)
+                                      : Colors.grey.shade300,
+                                ),
+                              ),
+                              onSelected: (selected) {
+                                ref
+                                    .read(
+                                        selectedBusinessSubcategoryProvider.notifier)
+                                    .state = sub;
+                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                  Scrollable.ensureVisible(
+                                    chipContext,
+                                    alignment: 0.5,
+                                    duration: const Duration(milliseconds: 300),
+                                    curve: Curves.easeInOut,
+                                  );
+                                });
+                              },
+                            );
+                          }
                         ),
-                        selected: isSelected,
-                        selectedColor: const Color(0xFFFF5200),
-                        backgroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          side: BorderSide(
-                            color: isSelected ? const Color(0xFFFF5200) : Colors.grey.shade300,
-                          ),
-                        ),
-                        onSelected: (selected) {
-                          ref.read(selectedBusinessSubcategoryProvider.notifier).state = sub;
-                        },
-                      ),
-                    );
-                  }).toList(),
+                      );
+                    }).toList(),
+                    const SizedBox(width: 16),
+                  ],
                 ),
               ),
             ),
@@ -1224,9 +1562,24 @@ class BusinessSelectionPage extends ConsumerWidget {
           builder: (context, ref, child) {
             final activeFilters = ref.watch(selectedBusinessFiltersProvider);
             final filterOptions = [
-              {'label': 'Açık Olanlar', 'value': 'Açık Olanlar', 'icon': Icons.lock_open_rounded, 'desc': 'Şu anda hizmet vermeye devam edenler'},
-              {'label': 'Ücretsiz Teslimat', 'value': 'Ücretsiz Teslimat', 'icon': Icons.local_shipping_rounded, 'desc': 'Kurye ücreti olmayan işletmeler'},
-              {'label': 'Hızlı Teslimat', 'value': 'Hızlı Teslimat', 'icon': Icons.bolt_rounded, 'desc': '30 dakika ve altında teslimat sunanlar'},
+              {
+                'label': 'Açık Olanlar',
+                'value': 'Açık Olanlar',
+                'icon': Icons.lock_open_rounded,
+                'desc': 'Şu anda hizmet vermeye devam edenler'
+              },
+              {
+                'label': 'Ücretsiz Teslimat',
+                'value': 'Ücretsiz Teslimat',
+                'icon': Icons.local_shipping_rounded,
+                'desc': 'Kurye ücreti olmayan işletmeler'
+              },
+              {
+                'label': 'Hızlı Teslimat',
+                'value': 'Hızlı Teslimat',
+                'icon': Icons.bolt_rounded,
+                'desc': '30 dakika ve altında teslimat sunanlar'
+              },
             ];
 
             return Padding(
@@ -1256,9 +1609,16 @@ class BusinessSelectionPage extends ConsumerWidget {
                     final isChecked = activeFilters.contains(opt['value']);
                     return CheckboxListTile(
                       value: isChecked,
-                      title: Text(opt['label'] as String, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14)),
-                      subtitle: Text(opt['desc'] as String, style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey)),
-                      secondary: Icon(opt['icon'] as IconData, color: isChecked ? const Color(0xFFFF5200) : Colors.grey),
+                      title: Text(opt['label'] as String,
+                          style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w600, fontSize: 14)),
+                      subtitle: Text(opt['desc'] as String,
+                          style: GoogleFonts.poppins(
+                              fontSize: 11, color: Colors.grey)),
+                      secondary: Icon(opt['icon'] as IconData,
+                          color: isChecked
+                              ? const Color(0xFFFF5200)
+                              : Colors.grey),
                       activeColor: const Color(0xFFFF5200),
                       onChanged: (val) {
                         final current = List<String>.from(activeFilters);
@@ -1267,7 +1627,9 @@ class BusinessSelectionPage extends ConsumerWidget {
                         } else {
                           current.remove(opt['value'] as String);
                         }
-                        ref.read(selectedBusinessFiltersProvider.notifier).state = current;
+                        ref
+                            .read(selectedBusinessFiltersProvider.notifier)
+                            .state = current;
                       },
                     );
                   }),
@@ -1279,9 +1641,13 @@ class BusinessSelectionPage extends ConsumerWidget {
                       onPressed: () => Navigator.pop(context),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFFF5200),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
                       ),
-                      child: Text('Uygula', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold)),
+                      child: Text('Uygula',
+                          style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold)),
                     ),
                   ),
                 ],
@@ -1308,10 +1674,26 @@ class BusinessSelectionPage extends ConsumerWidget {
           builder: (context, ref, child) {
             final activeSort = ref.watch(selectedBusinessSortProvider);
             final sortOptions = [
-              {'label': 'Mesafe', 'value': 'Mesafe', 'icon': Icons.near_me_rounded},
-              {'label': 'Puan (En Yüksek)', 'value': 'Puan', 'icon': Icons.star_rounded},
-              {'label': 'Teslimat Hızı (En Hızlı)', 'value': 'Hız', 'icon': Icons.access_time_rounded},
-              {'label': 'Sepet Limiti (En Düşük)', 'value': 'Sepet Limiti', 'icon': Icons.shopping_bag_rounded},
+              {
+                'label': 'Mesafe',
+                'value': 'Mesafe',
+                'icon': Icons.near_me_rounded
+              },
+              {
+                'label': 'Puan (En Yüksek)',
+                'value': 'Puan',
+                'icon': Icons.star_rounded
+              },
+              {
+                'label': 'Teslimat Hızı (En Hızlı)',
+                'value': 'Hız',
+                'icon': Icons.access_time_rounded
+              },
+              {
+                'label': 'Sepet Limiti (En Düşük)',
+                'value': 'Sepet Limiti',
+                'icon': Icons.shopping_bag_rounded
+              },
             ];
 
             return Padding(
@@ -1342,12 +1724,19 @@ class BusinessSelectionPage extends ConsumerWidget {
                     return RadioListTile<String>(
                       value: opt['value'] as String,
                       groupValue: activeSort,
-                      title: Text(opt['label'] as String, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 14)),
-                      secondary: Icon(opt['icon'] as IconData, color: isSelected ? const Color(0xFFFF5200) : Colors.grey),
+                      title: Text(opt['label'] as String,
+                          style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w600, fontSize: 14)),
+                      secondary: Icon(opt['icon'] as IconData,
+                          color: isSelected
+                              ? const Color(0xFFFF5200)
+                              : Colors.grey),
                       activeColor: const Color(0xFFFF5200),
                       onChanged: (val) {
                         if (val != null) {
-                          ref.read(selectedBusinessSortProvider.notifier).state = val;
+                          ref
+                              .read(selectedBusinessSortProvider.notifier)
+                              .state = val;
                           Navigator.pop(context);
                         }
                       },
@@ -1375,9 +1764,11 @@ class _StickyFilterBarDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => 60.0;
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
-      color: const Color(0xFFF4F7F6), // Match background color of business selection page
+      color: const Color(
+          0xFFF4F7F6), // Match background color of business selection page
       child: child,
     );
   }

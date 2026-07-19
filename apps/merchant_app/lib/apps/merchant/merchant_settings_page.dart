@@ -205,7 +205,7 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
   }
 
   void _initControllers(MerchantShop shop) {
-    if (_isInitialized) return;
+    if (_isInitialized && _shop?.id == shop.id) return;
     
     _shop = shop;
     _nameController.text = shop.name;
@@ -411,6 +411,10 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
     // If we have cached/loaded data, immediately render the settings forms even if there was a transient mutation error.
     if (shopAsync.hasValue && shopAsync.value != null) {
       final shop = shopAsync.value!;
+
+      if (_isInitialized && _shop?.id != shop.id) {
+        _isInitialized = false;
+      }
 
       if (!_isInitialized) {
         WidgetsBinding.instance.addPostFrameCallback((_) {

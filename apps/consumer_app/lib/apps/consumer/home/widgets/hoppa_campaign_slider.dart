@@ -5,6 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart' as p;
 import 'package:consumer_app/apps/consumer/business/business_provider.dart';
 import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository.dart';
+import 'package:core_shared/shared/models/campaign.dart';
+import 'package:consumer_app/apps/consumer/campaigns/campaign_detail_page.dart';
 
 class CampaignItem {
   final String imagePath;
@@ -152,22 +154,34 @@ class _HoppaCampaignSliderState extends ConsumerState<HoppaCampaignSlider> {
                   final imageUrl = c['imageUrl'] as String;
                   final title = c['title'] as String;
                   final description = c['description'] as String;
-                  final shopId = c['shopId'] as String;
+                  final shopId = c['shopId'] as String?;
 
                   return GestureDetector(
                     onTap: () {
-                      final shop = shops.firstWhere(
-                        (s) => s.id == shopId,
-                        orElse: () => throw Exception('Shop not found'),
-                      );
-                      
-                      // Set attribution states
-                      ref.read(activeReferringSourceProvider.notifier).state = 'MAIN_SLIDER';
-                      ref.read(activeShopCampaignIdProvider.notifier).state = c['id'];
+                      if (shopId != null && shopId.isNotEmpty) {
+                        final shop = shops.firstWhere(
+                          (s) => s.id == shopId,
+                          orElse: () => throw Exception('Shop not found'),
+                        );
+                        
+                        // Set attribution states
+                        ref.read(activeReferringSourceProvider.notifier).state = 'MAIN_SLIDER';
+                        ref.read(activeShopCampaignIdProvider.notifier).state = c['id'];
 
-                      final businessProvider = p.Provider.of<BusinessProvider>(context, listen: false);
-                      businessProvider.setCategory(shop.type.label);
-                      businessProvider.selectBusiness(shop);
+                        final businessProvider = p.Provider.of<BusinessProvider>(context, listen: false);
+                        businessProvider.setCategory(shop.type.label);
+                        businessProvider.selectBusiness(shop);
+                      } else {
+                        // Sistemsel kampanya veya genel reklam ise detay sayfasını aç
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => CampaignDetailPage(
+                              campaign: Campaign.fromMap(Map<String, dynamic>.from(c), c['id'] ?? ''),
+                            ),
+                          ),
+                        );
+                      }
                     },
                     child: Container(
                       margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
