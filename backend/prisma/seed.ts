@@ -218,6 +218,8 @@ async function seedShopWithProducts(
   const shop = await prisma.shop.upsert({
     where: { merchantId: merchant.id },
     update: {
+      name: businessName,
+      description: `${businessName} Hoppa özel dükkanı.`,
       isActive: true,
       type: type as any,
       latitude: lat,
@@ -340,6 +342,7 @@ async function main() {
   await prisma.review.deleteMany();
   await prisma.orderItemOption.deleteMany();
   await prisma.orderItem.deleteMany();
+  await prisma.paymentTransaction.deleteMany();
   await prisma.order.deleteMany();
   await prisma.product.deleteMany();
   await prisma.shop.deleteMany();

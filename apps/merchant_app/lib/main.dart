@@ -20,6 +20,8 @@ import 'package:core_shared/shared/core/config/app_config.dart';
 import 'apps/merchant/auth/merchant_auth_wrapper.dart';
 import 'apps/merchant/merchant_order_list_page.dart';
 
+import 'dart:io';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -41,14 +43,20 @@ void main() async {
     );
   };
 
-  await Firebase.initializeApp();
+  if (Platform.isAndroid || Platform.isIOS) {
+    try {
+      await Firebase.initializeApp();
 
-  if (!AppConfig.isProduction) {
-    FirebaseAuth.instance.useAuthEmulator(AppConfig.localHostIp, 9300);
-    FirebaseFirestore.instance.useFirestoreEmulator(
-      AppConfig.localHostIp,
-      8080,
-    );
+      if (!AppConfig.isProduction) {
+        FirebaseAuth.instance.useAuthEmulator(AppConfig.localHostIp, 9300);
+        FirebaseFirestore.instance.useFirestoreEmulator(
+          AppConfig.localHostIp,
+          8080,
+        );
+      }
+    } catch (e) {
+      debugPrint("🚨 Firebase initialization failed: $e");
+    }
   }
 
   await initializeDateFormatting('tr_TR', null);

@@ -64,6 +64,8 @@ flutter:
   uses-material-design: true
   assets:
     - .env
+    - assets/images/hoppa_logo.png
+    - assets/images/hoppa_icon.png
     - assets/images/hoppa_button.png
     - assets/images/market_bg.png
     - assets/images/restaurant_bg.png

@@ -115,10 +115,10 @@ class _SplashPageState extends State<SplashPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isWhiteBg = _currentState == SplashConnectionState.loading;
 
     return Scaffold(
-      backgroundColor:
-          theme.colorScheme.secondary, // Marka ana turuncusu (vurgu)
+      backgroundColor: isWhiteBg ? Colors.white : theme.colorScheme.secondary,
       body: SafeArea(
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 300),
@@ -135,30 +135,61 @@ class _SplashPageState extends State<SplashPage> {
         return Center(
           key: const ValueKey('loading'),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Logo
+              const Spacer(flex: 3),
+              // Center Brand Logo
               Image.asset(
-                'assets/images/logo_white.png',
-                width: 140,
+                'assets/images/hoppa_logo.png',
+                width: 220,
+                fit: BoxFit.contain,
                 errorBuilder: (context, error, stackTrace) => Image.asset(
-                  'assets/images/hoppa_icon.png',
+                  'assets/images/hoppa_button.png',
                   width: 140,
+                  fit: BoxFit.contain,
                   errorBuilder: (context, error, stackTrace) => const Icon(
                     Icons.shopping_basket_rounded,
-                    color: Colors.white,
+                    color: Color(0xFFE95D22),
                     size: 80,
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
-              // Şık Beyaz Yükleme Çemberi
-              const SizedBox(
-                width: 28,
-                height: 28,
-                child: CircularProgressIndicator(
-                  color: Colors.white,
-                  strokeWidth: 3,
+              const SizedBox(height: 32),
+              // Slogan
+              Text(
+                'Hoppa: Siparişin en kısa yolu.',
+                style: GoogleFonts.poppins(
+                  color: const Color(0xFFE95D22),
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Spacer(flex: 4),
+              // Bottom Progress Bar & Loading Text
+              Padding(
+                padding: const EdgeInsets.only(bottom: 48.0, left: 80.0, right: 80.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: const SizedBox(
+                        height: 5,
+                        child: LinearProgressIndicator(
+                          color: Color(0xFF00A651),
+                          backgroundColor: Color(0xFFF5F5F5),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Yükleniyor...',
+                      style: GoogleFonts.inter(
+                        color: Colors.grey.shade400,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
