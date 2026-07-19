@@ -8,7 +8,50 @@ export class CampaignService {
    * active campaigns, and the shop's delivery pricing configuration.
    */
   async calculateDeliveryFee(userId: string, shop: Shop, cartAmount: number): Promise<{ fee: number, isCampaignApplied: boolean, campaignName?: string }> {
-    // 1. Check for active FREE_DELIVERY_FIRST_ORDERS campaign
+    // 1. Check for active FREE_DELIVERY campaigns (system-wide or allowed shops specific)
+    const freeDeliveryCampaigns = await prisma.campaign.findMany({
+      where: {
+        discountType: "FREE_DELIVERY",
+        isActive: true,
+        OR: [
+          { finishDate: null },
+          { finishDate: { gte: new Date() } }
+        ]
+      },
+      include: {
+        allowedShops: true
+      }
+    });
+
+    for (const camp of freeDeliveryCampaigns) {
+      // Eğer kampanya tüm dükkanlar için geçerliyse (allowedShops boşsa) 
+      // ya da sepet dükkanı allowedShops listesinde tanımlanmışsa kampanya uygulanır.
+      const isShopAllowed = camp.allowedShops.length === 0 || 
+                            camp.allowedShops.some(cs => cs.shopId === shop.id);
+      
+      if (isShopAllowed) {
+        // Kullanıcının bu kampanyadan sipariş sayısını kontrol et
+        const successfulOrdersCount = await prisma.order.count({
+          where: {
+            consumerId: userId,
+            shopCampaignId: camp.id,
+            status: {
+              in: ["PREPARING", "ON_THE_WAY", "DELIVERED"]
+            }
+          }
+        });
+
+        if (successfulOrdersCount < camp.maxUsesPerUser) {
+          return {
+            fee: 0.0,
+            isCampaignApplied: true,
+            campaignName: camp.title
+          };
+        }
+      }
+    }
+
+    // 2. Check for active FREE_DELIVERY_FIRST_ORDERS campaign (backward compatibility)
     const firstOrdersCampaign = await prisma.campaign.findFirst({
       where: {
         type: "FREE_DELIVERY_FIRST_ORDERS",

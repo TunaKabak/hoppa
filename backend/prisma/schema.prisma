@@ -168,7 +168,8 @@ model Shop {
   coupons          CouponShop[]
   promotions       ShopPromotion[]
   campaignText     String?
-  shopCampaigns    ShopCampaign[]
+  ownCampaigns     Campaign[]     @relation("ShopOwnCampaigns")
+  campaigns        CampaignShop[]
 
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
@@ -370,7 +371,7 @@ model Order {
 
   referringSource  String        @default("ORGANIC")
   shopCampaignId   String?
-  shopCampaign     ShopCampaign? @relation(fields: [shopCampaignId], references: [id], onDelete: SetNull)
+  shopCampaign     Campaign?     @relation(fields: [shopCampaignId], references: [id], onDelete: SetNull)
 
   commissionRate   Decimal       @db.Decimal(5, 4) @default(0.0500)
   commissionAmount Decimal       @db.Decimal(10, 2) @default(0.00)
@@ -465,11 +466,32 @@ model Campaign {
   description     String          @db.Text
   prettyName      String?         // SEO dostu kampanya ismi
   imageUrl        String          // Anasayfadaki geniş banner görseli
-  type            String          @default("SYSTEM") // SYSTEM, FREE_DELIVERY, PERCENTAGE_DISCOUNT
+  type            String          @default("SYSTEM") // SYSTEM, SHOP, AD
+  status          String          @default("APPROVED") // PENDING_APPROVAL, APPROVED, REJECTED
+  targetArea      String          @default("MAIN_SLIDER") // MAIN_SLIDER, SHOP_DETAIL, CATEGORY_SLIDER, POPUP
+  externalUrl     String?         // Harici web adresi yönlendirmesi
+  discountType    String?         // PERCENTAGE, FIXED, FREE_DELIVERY
+  discountValue   Float           @default(0.0)
+  minOrderAmount  Float           @default(0.0)
   isActive        Boolean         @default(true)
   maxUsesPerUser  Int             @default(5)
   finishDate      DateTime?       // Milisaniye timestamp'ten parse edilecek bitiş tarihi
+  
+  // Dükkan ilişkisi (Dükkana özel kampanya ise)
+  shopId          String?
+  shop            Shop?           @relation("ShopOwnCampaigns", fields: [shopId], references: [id], onDelete: Cascade)
+  
+  // Sistem kampanyasının dahil olduğu dükkanlar
+  allowedShops    CampaignShop[]
+  targetProducts  String[]        @default([])
+  designService   Boolean         @default(false)
+  orders          Order[]
+
   createdAt       DateTime        @default(now())
+
+  @@index([shopId])
+  @@index([type])
+  @@index([status])
 }
 
 // Cihaz Bildirim Token'ları (FCM vb. için)
@@ -825,21 +847,17 @@ model ShopPromotion {
   @@index([shopId])
 }
 
-model ShopCampaign {
-  id            String   @id @default(uuid())
-  shopId        String
-  shop          Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  title         String
-  description   String
-  imageUrl      String
-  targetArea    String   // "SHOP_DETAIL", "CATEGORY_SLIDER", "MAIN_SLIDER"
-  status        String   @default("PENDING_APPROVAL") // "PENDING_APPROVAL", "APPROVED", "REJECTED"
-  designService Boolean  @default(false)
-  isActive      Boolean  @default(true)
-  targetProducts String[] @default([])
-  createdAt     DateTime @default(now())
-  orders        Order[]
+model CampaignShop {
+  id         String   @id @default(uuid())
+  campaignId String
+  campaign   Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  shopId     String
+  shop       Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
+  createdAt  DateTime @default(now())
+
+  @@unique([campaignId, shopId])
+  @@index([campaignId])
   @@index([shopId])
 }
 

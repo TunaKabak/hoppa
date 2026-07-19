@@ -8,13 +8,17 @@ class Campaign {
   final String name;
   final CampaignType type;
   final List<String> targetProducts; // List of BusinessProduct IDs or Barcodes
-  final double
-  discountValue; // Percentage (e.g., 20.0) or Fixed Price (e.g. 50.0)
+  final double discountValue; // Percentage (e.g., 20.0) or Fixed Price (e.g. 50.0)
   final DateTime startDate;
   final DateTime endDate;
   final String imageUrl;
   final String description;
   final bool isActive;
+  final String? externalUrl;
+  final String targetArea;
+  final String sourceType; // SYSTEM, SHOP, AD
+  final String? discountType;
+  final double minOrderAmount;
 
   Campaign({
     required this.id,
@@ -28,6 +32,11 @@ class Campaign {
     required this.imageUrl,
     this.description = '',
     this.isActive = true,
+    this.externalUrl,
+    this.targetArea = 'MAIN_SLIDER',
+    this.sourceType = 'SYSTEM',
+    this.discountType,
+    this.minOrderAmount = 0.0,
   });
 
   factory Campaign.fromMap(Map<String, dynamic> data, String documentId) {
@@ -41,18 +50,23 @@ class Campaign {
 
     return Campaign(
       id: documentId,
-      vendorId: data['vendorId'] ?? '',
-      name: data['name'] ?? 'Adsız Kampanya',
+      vendorId: data['vendorId'] ?? data['shopId'] ?? '',
+      name: data['name'] ?? data['title'] ?? 'Adsız Kampanya',
       type: data['type'] == 'fixed_price' || data['type'] == 'CampaignType.fixedPrice'
           ? CampaignType.fixedPrice
           : CampaignType.percentage,
       targetProducts: List<String>.from(data['targetProducts'] ?? []),
       discountValue: (data['discountValue'] ?? 0.0).toDouble(),
-      startDate: parseDate(data['startDate']),
-      endDate: parseDate(data['endDate']),
+      startDate: parseDate(data['startDate'] ?? data['createdAt']),
+      endDate: parseDate(data['endDate'] ?? data['finishDate']),
       imageUrl: data['imageUrl'] ?? '',
       description: data['description'] ?? '',
       isActive: data['isActive'] ?? true,
+      externalUrl: data['externalUrl'],
+      targetArea: data['targetArea'] ?? 'MAIN_SLIDER',
+      sourceType: data['sourceType'] ?? data['type'] ?? 'SYSTEM',
+      discountType: data['discountType'],
+      minOrderAmount: (data['minOrderAmount'] ?? 0.0).toDouble(),
     );
   }
 
@@ -68,6 +82,11 @@ class Campaign {
       'imageUrl': imageUrl,
       'description': description,
       'isActive': isActive,
+      'externalUrl': externalUrl,
+      'targetArea': targetArea,
+      'sourceType': sourceType,
+      'discountType': discountType,
+      'minOrderAmount': minOrderAmount,
     };
   }
 
@@ -76,9 +95,6 @@ class Campaign {
     if (type == CampaignType.percentage) {
       return originalPrice * (1 - (discountValue / 100));
     } else {
-      // Sabit fiyat indirimi (Direkt satış fiyatı buysa)
-      // Veya indirim miktarı (original - discount) ise: return originalPrice - discountValue;
-      // İster: "Sabit Fiyat" genelde "Bu ürün 50 TL" demek olur.
       return discountValue;
     }
   }
@@ -95,6 +111,11 @@ class Campaign {
     String? imageUrl,
     String? description,
     bool? isActive,
+    String? externalUrl,
+    String? targetArea,
+    String? sourceType,
+    String? discountType,
+    double? minOrderAmount,
   }) {
     return Campaign(
       id: id ?? this.id,
@@ -108,6 +129,11 @@ class Campaign {
       imageUrl: imageUrl ?? this.imageUrl,
       description: description ?? this.description,
       isActive: isActive ?? this.isActive,
+      externalUrl: externalUrl ?? this.externalUrl,
+      targetArea: targetArea ?? this.targetArea,
+      sourceType: sourceType ?? this.sourceType,
+      discountType: discountType ?? this.discountType,
+      minOrderAmount: minOrderAmount ?? this.minOrderAmount,
     );
   }
 }

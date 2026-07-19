@@ -492,11 +492,11 @@ final consumerShopsProvider = FutureProvider<List<Business>>((ref) async {
   );
 });
 
-final shopProductsProvider = FutureProvider.family<List<BusinessProduct>, String>((ref, shopId) async {
+final shopProductsProvider = FutureProvider.autoDispose.family<List<BusinessProduct>, String>((ref, shopId) async {
   return ref.watch(consumerShopRepositoryProvider).getShopProducts(shopId);
 });
 
-final shopCategoriesProvider = FutureProvider.family<List<ShopCategoryData>, String>((ref, shopId) async {
+final shopCategoriesProvider = FutureProvider.autoDispose.family<List<ShopCategoryData>, String>((ref, shopId) async {
   final repo = ref.watch(consumerShopRepositoryProvider);
   final response = await repo._apiClient.get('/api/consumer/shops/$shopId/categories');
   final data = response['data'] as List<dynamic>?;
@@ -519,7 +519,7 @@ final shopCategoriesProvider = FutureProvider.family<List<ShopCategoryData>, Str
   }).toList();
 });
 
-final shopCategoryTreeProvider = FutureProvider.family<List<Category>, String>((ref, shopId) async {
+final shopCategoryTreeProvider = FutureProvider.autoDispose.family<List<Category>, String>((ref, shopId) async {
   final repo = ref.watch(consumerShopRepositoryProvider);
   final response = await repo._apiClient.get('/api/consumer/shops/$shopId/categories');
   final data = response['data'] as List<dynamic>?;
@@ -538,7 +538,7 @@ final selectedCatalogSortOptionProvider = StateProvider<String>((ref) => 'Öneri
 final catalogSearchQueryProvider = StateProvider<String>((ref) => '');
 
 // Combined Filtered and Sorted Products Provider
-final filteredShopProductsProvider = Provider.family<AsyncValue<List<BusinessProduct>>, String>((ref, shopId) {
+final filteredShopProductsProvider = Provider.autoDispose.family<AsyncValue<List<BusinessProduct>>, String>((ref, shopId) {
   final productsAsync = ref.watch(shopProductsProvider(shopId));
   final category = ref.watch(selectedCatalogCategoryProvider);
   final subCategory = ref.watch(selectedCatalogSubCategoryProvider);
