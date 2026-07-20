@@ -24,8 +24,15 @@ class DeliveryProvider extends ChangeNotifier {
   Future<void> updateUserId(String? newUserId) async {
     final cleanId = newUserId ?? 'guest';
     if (_userId == cleanId) return;
+    
+    final Address? prevAddress = _selectedAddress;
     _userId = cleanId;
     await _loadAddress();
+    
+    if (_selectedAddress == null && prevAddress != null && prevAddress.id.startsWith('guest')) {
+      _selectedAddress = prevAddress;
+      notifyListeners();
+    }
   }
 
   Future<void> _loadAddress() async {

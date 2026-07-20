@@ -27,6 +27,76 @@ function formatProduct(product: any) {
   };
 }
 
+function checkIsOpen(shop: any): boolean {
+  if (!shop.isActive) return false;
+
+  const countryCode = shop.merchant?.countryCode || "TR";
+  const tz = (countryCode === "CY" || countryCode === "KKTC") ? "Europe/Nicosia" : "Europe/Istanbul";
+
+  const now = new Date();
+  
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    hour: "numeric",
+    minute: "numeric",
+    hour12: false,
+    weekday: "long"
+  });
+  
+  const parts = formatter.formatToParts(now);
+  let currentHour = 0;
+  let currentMinute = 0;
+  let weekdayName = "";
+  
+  for (const part of parts) {
+    if (part.type === "hour") {
+      currentHour = parseInt(part.value, 10);
+    } else if (part.type === "minute") {
+      currentMinute = parseInt(part.value, 10);
+    } else if (part.type === "weekday") {
+      weekdayName = part.value.toLowerCase();
+    }
+  }
+
+  if (shop.workingHours && typeof shop.workingHours === 'object') {
+    const wh = shop.workingHours as any;
+    const todaySchedule = wh[weekdayName];
+    if (todaySchedule) {
+      if (todaySchedule.isOpen === false) {
+        return false;
+      } else if (todaySchedule.openTime && todaySchedule.closeTime) {
+        const [openH, openM] = todaySchedule.openTime.split(':').map(Number);
+        const [closeH, closeM] = todaySchedule.closeTime.split(':').map(Number);
+
+        const currentTotalMins = currentHour * 60 + currentMinute;
+        const openTotalMins = openH * 60 + openM;
+        let closeTotalMins = closeH * 60 + closeM;
+
+        if (closeTotalMins < openTotalMins) {
+          // Ertesi güne sarkma durumu, örn: 08:00 - 02:00
+          closeTotalMins += 24 * 60;
+        }
+
+        let checkMins = currentTotalMins;
+        if (currentTotalMins < openTotalMins && closeTotalMins > 24 * 60) {
+          checkMins += 24 * 60;
+        }
+
+        if (checkMins < openTotalMins || checkMins >= closeTotalMins) {
+          return false;
+        }
+      }
+    }
+  } else {
+    // Varsayıvan kontrol: 08:00 - 22:00
+    if (currentHour < 8 || currentHour >= 22) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 function enrichShopWithTags(shop: any) {
   if (!shop) return null;
   const tags: string[] = [];
@@ -65,6 +135,7 @@ function enrichShopWithTags(shop: any) {
 
   return {
     ...shop,
+    isOpen: checkIsOpen(shop),
     tags
   };
 }
@@ -84,7 +155,7 @@ export class ConsumerShopController {
           }
         },
         include: {
-          merchant: { select: { businessName: true, status: true } },
+          merchant: { select: { businessName: true, status: true, countryCode: true } },
           promotions: {
             where: {
               isActive: true,
@@ -309,6 +380,9 @@ export class ConsumerShopController {
             { name: { contains: q, mode: "insensitive" } },
             { description: { contains: q, mode: "insensitive" } }
           ]
+        },
+        include: {
+          merchant: { select: { businessName: true, status: true, countryCode: true } }
         }
       });
       const enrichedShops = shops.map(enrichShopWithTags);
