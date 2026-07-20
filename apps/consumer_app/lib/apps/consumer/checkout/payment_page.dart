@@ -46,6 +46,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
   String _cardLogo = '';
 
   String _paymentMethod = 'online_payment';
+  String _substitutionPreference = 'SUBSTITUTE'; // 'SUBSTITUTE' or 'REFUND'
   bool _isLoading = false;
   bool _dontRingBell = false;
   bool _leaveAtDoor = false;
@@ -258,6 +259,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
         'fulfillmentModel': fulfillmentModel,
         'referringSource': referringSource,
         'shopCampaignId': shopCampaignId,
+        'substitutionPreference': _substitutionPreference,
       };
 
       final result = await orderRepo.createOrder(orderData);
@@ -399,6 +401,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     final cartState = ref.watch(cartProvider);
     final campaignsAsync = ref.watch(cartCampaignsProvider);
     final activeCampaigns = campaignsAsync.value ?? [];
+    final shopCampaignId = ref.watch(activeShopCampaignIdProvider);
 
     final businessProvider = p.Provider.of<BusinessProvider>(context);
     final selectedBusiness = businessProvider.selectedBusiness;
@@ -715,9 +718,66 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                     crossFadeState: _paymentMethod == 'online_payment'
                         ? CrossFadeState.showFirst
                         : CrossFadeState.showSecond,
-                    firstChild: _buildCreditCardForm(),
+                    firstChild: Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: _buildCreditCardForm(),
+                    ),
                     secondChild: const SizedBox(width: double.infinity, height: 0),
                   ),
+
+                  const SizedBox(height: 24),
+
+                  // --- ÜRÜN TÜKENİRSE TERCİHİ ---
+                  _sectionTitle("Ürün Tükenirse Ne Yapalım?", Icons.help_outline),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildPaymentOption(
+                          title: 'Benzer Ürün Gönder',
+                          icon: Icons.cached_rounded,
+                          isSelected: _substitutionPreference == 'SUBSTITUTE',
+                          onTap: () => setState(() => _substitutionPreference = 'SUBSTITUTE'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildPaymentOption(
+                          title: 'Ürünü İptal Et / İade',
+                          icon: Icons.cancel_outlined,
+                          isSelected: _substitutionPreference == 'REFUND',
+                          onTap: () => setState(() => _substitutionPreference = 'REFUND'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_substitutionPreference == 'REFUND' && shopCampaignId != null)
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      margin: const EdgeInsets.only(top: 12),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.amber.shade300),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.warning_amber_rounded, color: Colors.amber.shade800),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              "Dikkat: İade seçeneğinde, eksilen ürün nedeniyle sepet tutarınız minimum limit altına düşerse aktif kampanyanız veya kupon indiriminiz iptal olabilir.",
+                              style: TextStyle(
+                                color: Colors.amber.shade900,
+                                fontWeight: FontWeight.w500,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
 
                   const SizedBox(height: 24),
 

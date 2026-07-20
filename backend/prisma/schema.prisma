@@ -348,6 +348,7 @@ model Order {
   deliveryFee     Decimal     @db.Decimal(10, 2) @default(0)
   status          OrderStatus @default(PENDING)
   fulfillmentModel FulfillmentModel @default(PLATFORM_DELIVERY)
+  substitutionPreference SubstitutionPreference @default(SUBSTITUTE)
   customerNote    String?     // Müşterinin sipariş veya kurye için ekleyeceği not
   
   paymentMethod   PaymentMethod @default(CASH_ON_DELIVERY)
@@ -392,6 +393,12 @@ model OrderItem {
   unitPrice   Decimal  @db.Decimal(10, 2)
 
   options     OrderItemOption[]
+}
+
+// Ürün Tükenme Tercihi
+enum SubstitutionPreference {
+  REFUND
+  SUBSTITUTE
 }
 
 // Ödeme Yöntemleri
