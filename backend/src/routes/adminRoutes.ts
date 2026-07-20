@@ -4,11 +4,13 @@ import { SuperAdminController } from "../controllers/SuperAdminController";
 import { BusinessCategoryController } from "../controllers/BusinessCategoryController";
 import { ReviewController } from "../controllers/ReviewController";
 import { ShopCampaignController } from "../controllers/ShopCampaignController";
+import { FleetAIController } from "../controllers/FleetAIController";
 
 const router = Router();
 const superAdminController = new SuperAdminController();
 const businessCategoryController = new BusinessCategoryController();
 const shopCampaignController = new ShopCampaignController();
+const fleetAIController = new FleetAIController();
 
 // Auth Middleware: All admin routes are protected
 router.use(authMiddleware);
@@ -44,5 +46,8 @@ router.put("/reviews/:reviewId/reject", (req, res) => ReviewController.rejectRev
 
 // Admin -> Campaign Management
 router.put("/campaigns/:campaignId/approve", (req, res) => shopCampaignController.approveCampaign(req, res));
+
+// Admin -> Fleet AI Management
+router.post("/fleet/optimize", (req, res) => fleetAIController.optimizeRoutes(req, res));
 
 export default router;

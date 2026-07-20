@@ -621,36 +621,39 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                   // --- 2. ÖDEME YÖNTEMİ ---
                   _sectionTitle("Ödeme Yöntemi", Icons.wallet_outlined),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      if (supportsOnline)
-                        Expanded(
-                          child: _buildPaymentOption(
-                            title: 'Kredi / Banka Kartı',
-                            icon: Icons.credit_card,
-                            isSelected: _paymentMethod == 'online_payment',
-                            onTap: () => setState(() => _paymentMethod = 'online_payment'),
+                  IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (supportsOnline)
+                          Expanded(
+                            child: _buildPaymentOption(
+                              title: 'Kredi / Banka Kartı',
+                              icon: Icons.credit_card,
+                              isSelected: _paymentMethod == 'online_payment',
+                              onTap: () => setState(() => _paymentMethod = 'online_payment'),
+                            ),
                           ),
-                        ),
-                      if (supportsOnline && supportsPayAtDoor) const SizedBox(width: 8),
-                      if (supportsPayAtDoor)
-                        Expanded(
-                          child: _buildPaymentOption(
-                            title: widget.isPickUp ? 'Mağazada Ödeme' : 'Kapıda Ödeme',
-                            icon: widget.isPickUp ? Icons.store_outlined : Icons.local_shipping_outlined,
-                            isSelected: _paymentMethod != 'online_payment',
-                            isDisabled: false,
-                            onTap: () {
-                              setState(() {
-                                if (_paymentMethod == 'online_payment') {
-                                  _paymentMethod = supportsCash ? 'cash_on_delivery' : 'card_on_delivery';
-                                }
-                                _leaveAtDoor = false;
-                              });
-                            },
+                        if (supportsOnline && supportsPayAtDoor) const SizedBox(width: 8),
+                        if (supportsPayAtDoor)
+                          Expanded(
+                            child: _buildPaymentOption(
+                              title: widget.isPickUp ? 'Mağazada Ödeme' : 'Kapıda Ödeme',
+                              icon: widget.isPickUp ? Icons.store_outlined : Icons.local_shipping_outlined,
+                              isSelected: _paymentMethod != 'online_payment',
+                              isDisabled: false,
+                              onTap: () {
+                                setState(() {
+                                  if (_paymentMethod == 'online_payment') {
+                                    _paymentMethod = supportsCash ? 'cash_on_delivery' : 'card_on_delivery';
+                                  }
+                                  _leaveAtDoor = false;
+                                });
+                              },
+                            ),
                           ),
-                        ),
-                    ],
+                      ],
+                    ),
                   ),
                   AnimatedCrossFade(
                     duration: const Duration(milliseconds: 300),
@@ -677,36 +680,39 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              if (supportsCash)
-                                Expanded(
-                                  child: _buildPaymentOption(
-                                    title: widget.isPickUp ? 'Nakit' : 'Kapıda Nakit',
-                                    icon: Icons.money_rounded,
-                                    isSelected: _paymentMethod == 'cash_on_delivery',
-                                    isSubOption: true,
-                                    onTap: () => setState(() {
-                                      _paymentMethod = 'cash_on_delivery';
-                                      _leaveAtDoor = false;
-                                    }),
+                          IntrinsicHeight(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                if (supportsCash)
+                                  Expanded(
+                                    child: _buildPaymentOption(
+                                      title: widget.isPickUp ? 'Nakit' : 'Kapıda Nakit',
+                                      icon: Icons.money_rounded,
+                                      isSelected: _paymentMethod == 'cash_on_delivery',
+                                      isSubOption: true,
+                                      onTap: () => setState(() {
+                                        _paymentMethod = 'cash_on_delivery';
+                                        _leaveAtDoor = false;
+                                      }),
+                                    ),
                                   ),
-                                ),
-                              if (supportsCash && supportsCard) const SizedBox(width: 8),
-                              if (supportsCard)
-                                Expanded(
-                                  child: _buildPaymentOption(
-                                    title: widget.isPickUp ? 'Kart' : 'Kapıda Kredi Kartı',
-                                    icon: Icons.credit_card_rounded,
-                                    isSelected: _paymentMethod == 'card_on_delivery',
-                                    isSubOption: true,
-                                    onTap: () => setState(() {
-                                      _paymentMethod = 'card_on_delivery';
-                                      _leaveAtDoor = false;
-                                    }),
+                                if (supportsCash && supportsCard) const SizedBox(width: 8),
+                                if (supportsCard)
+                                  Expanded(
+                                    child: _buildPaymentOption(
+                                      title: widget.isPickUp ? 'Kart' : 'Kapıda Kredi Kartı',
+                                      icon: Icons.credit_card_rounded,
+                                      isSelected: _paymentMethod == 'card_on_delivery',
+                                      isSubOption: true,
+                                      onTap: () => setState(() {
+                                        _paymentMethod = 'card_on_delivery';
+                                        _leaveAtDoor = false;
+                                      }),
+                                    ),
                                   ),
-                                ),
-                            ],
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -730,26 +736,29 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                   // --- ÜRÜN TÜKENİRSE TERCİHİ ---
                   _sectionTitle("Ürün Tükenirse Ne Yapalım?", Icons.help_outline),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildPaymentOption(
-                          title: 'Benzer Ürün Gönder',
-                          icon: Icons.cached_rounded,
-                          isSelected: _substitutionPreference == 'SUBSTITUTE',
-                          onTap: () => setState(() => _substitutionPreference = 'SUBSTITUTE'),
+                  IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: _buildPaymentOption(
+                            title: widget.isPickUp ? 'Benzer Ürünle Değiştir' : 'Benzer Ürün Gönder',
+                            icon: Icons.cached_rounded,
+                            isSelected: _substitutionPreference == 'SUBSTITUTE',
+                            onTap: () => setState(() => _substitutionPreference = 'SUBSTITUTE'),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildPaymentOption(
-                          title: 'Ürünü İptal Et / İade',
-                          icon: Icons.cancel_outlined,
-                          isSelected: _substitutionPreference == 'REFUND',
-                          onTap: () => setState(() => _substitutionPreference = 'REFUND'),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _buildPaymentOption(
+                            title: 'Ürünü İptal Et / İade',
+                            icon: Icons.cancel_outlined,
+                            isSelected: _substitutionPreference == 'REFUND',
+                            onTap: () => setState(() => _substitutionPreference = 'REFUND'),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                   if (_substitutionPreference == 'REFUND' && shopCampaignId != null)
                     AnimatedContainer(
@@ -1172,30 +1181,48 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
         opacity: isDisabled ? 0.5 : 1.0,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: EdgeInsets.symmetric(vertical: isSubOption ? 12 : 20, horizontal: 12),
+          padding: EdgeInsets.symmetric(vertical: isSubOption ? 10 : 12, horizontal: 12),
           decoration: BoxDecoration(
             color: active ? kPrimaryColor.withValues(alpha: isSubOption ? 0.08 : 0.05) : Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: active ? kPrimaryColor : Colors.grey.shade200,
-              width: active ? 2 : 1,
+              width: active ? 1.5 : 1,
             ),
+            boxShadow: active
+                ? [
+                    BoxShadow(
+                      color: kPrimaryColor.withValues(alpha: 0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    )
+                  ]
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.01),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    )
+                  ],
           ),
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 icon,
-                color: active ? kPrimaryColor : Colors.grey,
-                size: isSubOption ? 24 : 32,
+                color: active ? kPrimaryColor : Colors.grey[600],
+                size: isSubOption ? 18 : 20,
               ),
-              SizedBox(height: isSubOption ? 6 : 8),
+              const SizedBox(height: 6),
               Text(
                 title,
                 textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: active ? kPrimaryColor : Colors.grey[700],
-                  fontSize: isSubOption ? 13 : 14,
+                  fontSize: isSubOption ? 11 : 12,
                 ),
               ),
             ],

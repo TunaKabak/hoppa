@@ -4,6 +4,7 @@ import 'package:merchant_app/apps/merchant/merchant_main_layout.dart';
 import 'package:merchant_app/apps/merchant/repositories/merchant_product_repository.dart';
 import 'package:merchant_app/apps/merchant/providers/merchant_api_providers.dart';
 import 'package:merchant_app/apps/merchant/widgets/cascading_category_selector.dart';
+import 'package:merchant_app/apps/merchant/merchant_ai_scanner_page.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:core_shared/shared/core/services/media_service.dart';
 import 'package:core_auth/core_auth.dart';
@@ -154,6 +155,20 @@ class _MerchantProductListPageState
           icon: const Icon(Icons.menu_rounded),
           onPressed: () => merchantDrawerKey.currentState?.openDrawer(),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.document_scanner_outlined, color: Colors.white),
+            tooltip: "Yapay Zeka ile Fatura/Menü Tara",
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MerchantAIScannerPage(),
+                ),
+              );
+            },
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           labelColor: Colors.white,
@@ -452,6 +467,141 @@ class _MerchantProductListPageState
 
   // ===========================================================================
   // TAB 1: ENVANTER (INVENTORY)
+  Widget _buildPredictiveStockCard(BuildContext context) {
+    final predictionsAsync = ref.watch(merchantPredictiveStockProvider);
+    final primaryColor = Theme.of(context).primaryColor;
+
+    return predictionsAsync.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.all(16.0),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, st) => const SizedBox.shrink(),
+      data: (data) {
+        final List<dynamic> predictions = data['predictions'] ?? [];
+        if (predictions.isEmpty) return const SizedBox.shrink();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Row(
+                children: [
+                  Icon(Icons.auto_awesome, color: Colors.amber[700], size: 20),
+                  const SizedBox(width: 8),
+                  const Text(
+                    "Yapay Zeka Talep & Fire Öngörüleri",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(
+              height: 155,
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                scrollDirection: Axis.horizontal,
+                itemCount: predictions.length,
+                itemBuilder: (context, index) {
+                  final pred = predictions[index] as Map<String, dynamic>;
+                  final title = pred['title'] ?? '';
+                  final desc = pred['description'] ?? '';
+                  final action = pred['actionRequired'] ?? '';
+                  final confidence = pred['confidenceRate'] ?? 80;
+
+                  return Container(
+                    width: MediaQuery.of(context).size.width * 0.85,
+                    margin: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
+                    padding: const EdgeInsets.all(12.0),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          primaryColor.withValues(alpha: 0.05),
+                          primaryColor.withValues(alpha: 0.02),
+                        ],
+                      ),
+                      border: Border.all(color: primaryColor.withValues(alpha: 0.15), width: 1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                title,
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.green[50],
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                "Güven: %$confidence",
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green[700],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Expanded(
+                          child: Text(
+                            desc,
+                            style: const TextStyle(fontSize: 11, color: Colors.black87),
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.orange[50],
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.lightbulb_outline, size: 12, color: Colors.orange[800]),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  "Öneri: $action",
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.orange[800],
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildInventoryTab() {
     final productsAsync = ref.watch(productControllerProvider);
 
@@ -488,6 +638,7 @@ class _MerchantProductListPageState
 
         return Column(
           children: [
+            _buildPredictiveStockCard(context),
             // Filter Bar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

@@ -69,6 +69,7 @@ export class CourierController {
         },
         include: {
           shop: true,
+          address: true,
           items: {
             include: {
               product: true
