@@ -285,3 +285,9 @@ final merchantShopCampaignsProvider = FutureProvider.autoDispose<List<dynamic>>(
   final repo = ref.watch(merchantShopRepositoryProvider);
   return await repo.getShopCampaigns();
 });
+
+final merchantPredictiveStockProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  final apiClient = ref.watch(apiClientProvider);
+  final response = await apiClient.get('/api/merchant/ai/predictive-stock');
+  return Map<String, dynamic>.from(response['data'] ?? {});
+});

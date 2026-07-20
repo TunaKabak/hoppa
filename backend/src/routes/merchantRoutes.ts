@@ -4,6 +4,7 @@ import { ShopController } from "../controllers/ShopController";
 import { ProductController } from "../controllers/ProductController";
 import { OrderController } from "../controllers/OrderController";
 import { ShopCampaignController } from "../controllers/ShopCampaignController";
+import { MerchantAIController } from "../controllers/MerchantAIController";
 
 import { prisma } from "../config/db";
 
@@ -12,6 +13,7 @@ const shopController = new ShopController();
 const productController = new ProductController();
 const orderController = new OrderController();
 const shopCampaignController = new ShopCampaignController();
+const merchantAIController = new MerchantAIController();
 
 // Tüm merchant rotaları authMiddleware'den geçmeli
 router.use(authMiddleware);
@@ -80,5 +82,9 @@ router.post("/promotions/cancel", (req, res) => shopController.cancelPromotion(r
 // Kampanya Yönetimi
 router.post("/campaigns", (req, res) => shopCampaignController.createCampaign(req, res));
 router.get("/campaigns", (req, res) => shopCampaignController.getMyCampaigns(req, res));
+
+// Yapay Zeka (AI) ve Tahminleme İşlemleri
+router.post("/ai/scan-menu", (req, res) => merchantAIController.scanMenu(req, res));
+router.get("/ai/predictive-stock", (req, res) => merchantAIController.getPredictiveStock(req, res));
 
 export default router;

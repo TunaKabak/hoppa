@@ -28,6 +28,19 @@ export class SupportController {
     }
   }
 
+  // Haversine formülü ile iki koordinat arası mesafe hesaplama (km)
+  private static calculateHaversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371; // Dünya yarıçapı (km)
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
   public static async chatWithAssistant(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.user!.id;
@@ -48,10 +61,19 @@ export class SupportController {
           }
         },
         include: {
-          shop: { select: { name: true } },
+          shop: { select: { name: true, latitude: true, longitude: true } },
+          address: { select: { latitude: true, longitude: true, title: true, fullAddress: true } },
           items: {
             include: {
               product: { select: { name: true } }
+            }
+          },
+          courier: {
+            include: {
+              locations: {
+                orderBy: { updatedAt: 'desc' },
+                take: 1
+              }
             }
           }
         },
@@ -79,14 +101,49 @@ export class SupportController {
 
       let orderContext = "";
       if (activeOrders.length > 0) {
-        orderContext += "Kullanıcının aktif siparişleri:\n" + activeOrders.map((order, idx) => `
+        orderContext += "Kullanıcının aktif siparişleri:\n" + activeOrders.map((order, idx) => {
+          let courierContext = "";
+          if (order.courier) {
+            const latestLocation = order.courier.locations?.[0];
+            if (latestLocation) {
+              const courierLat = latestLocation.latitude;
+              const courierLon = latestLocation.longitude;
+              const shopLat = order.shop.latitude;
+              const shopLon = order.shop.longitude;
+              const destLat = order.address.latitude;
+              const destLon = order.address.longitude;
+              
+              let distToShopStr = "Bilinmiyor";
+              let distToCustomerStr = "Bilinmiyor";
+              
+              if (courierLat != null && courierLon != null && shopLat != null && shopLon != null) {
+                const distToShop = SupportController.calculateHaversineDistance(courierLat, courierLon, shopLat, shopLon);
+                distToShopStr = `${distToShop.toFixed(2)} km`;
+              }
+              
+              if (courierLat != null && courierLon != null && destLat != null && destLon != null) {
+                const distToCustomer = SupportController.calculateHaversineDistance(courierLat, courierLon, destLat, destLon);
+                distToCustomerStr = `${distToCustomer.toFixed(2)} km`;
+              }
+              
+              const lastUpdatedSecs = Math.round((Date.now() - new Date(latestLocation.updatedAt).getTime()) / 1000);
+              
+              courierContext = `\n          - Kurye Bilgisi: Atandı (${order.courier.name}, ${order.courier.phoneNumber})\n          - Kurye Konumu: En son ${lastUpdatedSecs} saniye önce güncellendi.\n          - Kuryenin Restorana/Markete Uzaklığı: ${distToShopStr}\n          - Kuryenin Teslimat Adresine Uzaklığı: ${distToCustomerStr}`;
+            } else {
+              courierContext = `\n          - Kurye Bilgisi: Atandı (${order.courier.name}, ${order.courier.phoneNumber}) fakat henüz konum sinyali alınamadı.`;
+            }
+          } else {
+            courierContext = `\n          - Kurye Bilgisi: Henüz kurye atanmadı.`;
+          }
+
+          return `
           Sipariş #${idx + 1}:
           - İşletme Adı: ${order.shop.name}
           - Sipariş Durumu: ${order.status} (PENDING: Onay bekliyor, PREPARING: Hazırlanıyor, ON_THE_WAY: Kurye Yolda, READY_FOR_PICKUP: Gel Al Hazır)
           - Sipariş Zamanı: ${order.createdAt}
           - Ürünler: ${order.items.map(i => `${i.product.name} (${i.quantity} adet)`).join(", ")}
-          - Ödeme Tipi: ${order.paymentMethod}
-        `).join("\n");
+          - Ödeme Tipi: ${order.paymentMethod}${courierContext}`;
+        }).join("\n");
       } else {
         orderContext += "Kullanıcının şu anda aktif bir siparişi bulunmamaktadır.\n";
       }
@@ -112,7 +169,7 @@ export class SupportController {
         2. KESİNLİKLE UYULMASI GEREKEN HİTAP KURALI: Kullanıcıya hitap ederken "canım", "gülüm", "tatlım", "güzelim", "canısı" gibi laubali, aşırı samimi ya da profesyonellik dışı kelimeler KESİNLİKLE kullanma. Sıcakkanlı, nazik ama saygılı ve kibar bir hitap tercih et (örn: "sevgili dostum", "sayın müşterimiz", veya sadece ismini biliyorsan "Ahmet Bey" gibi). Resmiyet ve samimiyet dengesini koru.
         3. Kullanıcının aktif siparişi "PREPARING" (Hazırlanıyor) aşamasındaysa ve iptal etmek istiyorsa, "Siparişiniz hazırlanmaya başladığı için otomatik iptal edemiyorum, ancak işletme ile görüşüp sizin için bilgi alabilirim" de.
         4. Sipariş "PENDING" (Onay bekliyor) aşamasındaysa, otomatik iptal hakkı olduğunu belirt ve iptal tetikleme yönlendirmesi yap.
-        5. Sipariş gecikmişse ("ON_THE_WAY" durumunda ve süresi aşılmışsa), kuryenin canlı haritada ilerlediğini, gerekirse kurye ile direkt iletişime geçebileceğini belirt.
+        5. Sipariş gecikmişse ("ON_THE_WAY" durumunda ve süresi aşılmışsa), kuryenin canlı haritada ilerlediğini, gerekirse kurye ile direkt iletişime geçebileceğini belirt. Kuryenin güncel mesafe verisi (örn. restorana veya teslimat adresine uzaklığı) varsa bunu Kıbrıslı sıcaklığıyla ("Kuryemiz şu anda yoldadır be dostum, mesafesi yaklaşık...") kullanıcıyla paylaş.
         6. Kıbrıs yerel ifadelerini (örneğin sıcakkanlı bir selamlama: "Merhaba sevgili dostum, nasılsın?") dengeli ve profesyonel kullan. Asla resmiyetten kopma ama aşırı soğuk da davranma.
         7. SELAMLAMA VE GİRİŞ KURALI: Her yanıtına "Merhaba", "Hoş geldin" gibi selamlamalarla başlama. Eğer kullanıcının mesajı sadece selamlaşma içeriyorsa selamla karşılık ver. Ancak kullanıcı doğrudan bir soru veya sorun ilettiyse (örn: "siparişim nerede?", "eksik ürün var") selamlama kısmını atla ve doğrudan soruya yanıt ver.
       `;

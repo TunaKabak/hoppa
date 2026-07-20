@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_swipe_button/flutter_swipe_button.dart';
@@ -228,9 +229,12 @@ class _CourierDashboardPageState extends ConsumerState<CourierDashboardPage> {
     return ListView.builder(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16.0),
-      itemCount: _activeOrders.length,
+      itemCount: _activeOrders.length + 1,
       itemBuilder: (context, index) {
-        final order = _activeOrders[index];
+        if (index == 0) {
+          return _buildOptimalRouteTimeline(theme);
+        }
+        final order = _activeOrders[index - 1];
         final shop = order['shop'] ?? {};
         final items = order['items'] as List<dynamic>? ?? [];
 
@@ -490,6 +494,219 @@ class _CourierDashboardPageState extends ConsumerState<CourierDashboardPage> {
           ),
         ),
       ),
+    );
+  }
+
+  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+    const double R = 6371; // Earth radius in km
+    final double dLat = (lat2 - lat1) * math.pi / 180.0;
+    final double dLon = (lon2 - lon1) * math.pi / 180.0;
+    final double a = 
+      math.sin(dLat / 2) * math.sin(dLat / 2) +
+      math.cos(lat1 * math.pi / 180.0) * math.cos(lat2 * math.pi / 180.0) * 
+      math.sin(dLon / 2) * math.sin(dLon / 2);
+    final double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    return R * c;
+  }
+
+  Widget _buildOptimalRouteTimeline(ThemeData theme) {
+    if (_activeOrders.isEmpty) return const SizedBox.shrink();
+
+    final shop = _activeOrders[0]['shop'] ?? {};
+    final shopName = shop['name'] ?? "Restoran/Market";
+    final shopLat = double.tryParse(shop['latitude']?.toString() ?? '') ?? 35.1856;
+    final shopLon = double.tryParse(shop['longitude']?.toString() ?? '') ?? 33.3823;
+
+    // Build list of delivery locations
+    List<Map<String, dynamic>> routePoints = [];
+    for (final order in _activeOrders) {
+      final addr = order['address'] ?? {};
+      final lat = double.tryParse(addr['latitude']?.toString() ?? '') ?? double.tryParse(order['deliveryLatitude']?.toString() ?? '') ?? 35.1856;
+      final lon = double.tryParse(addr['longitude']?.toString() ?? '') ?? double.tryParse(order['deliveryLongitude']?.toString() ?? '') ?? 33.3823;
+      final customerName = order['consumer']?['name'] ?? "Müşteri";
+      final addressTitle = order['deliveryAddress'] ?? "Teslimat Adresi";
+
+      routePoints.add({
+        'orderId': order['id'],
+        'name': customerName,
+        'address': addressTitle,
+        'latitude': lat,
+        'longitude': lon,
+      });
+    }
+
+    // Sort delivery sequence to find optimal route
+    List<Map<String, dynamic>> sortedPoints = [];
+    double totalDistance = 0.0;
+
+    if (routePoints.length == 1) {
+      sortedPoints = List.from(routePoints);
+      totalDistance = _calculateDistance(shopLat, shopLon, sortedPoints[0]['latitude'], sortedPoints[0]['longitude']);
+    } else if (routePoints.length == 2) {
+      // Compare Shop -> A -> B vs Shop -> B -> A
+      final p1 = routePoints[0];
+      final p2 = routePoints[1];
+
+      final distA1 = _calculateDistance(shopLat, shopLon, p1['latitude'], p1['longitude']);
+      final distA2 = _calculateDistance(p1['latitude'], p1['longitude'], p2['latitude'], p2['longitude']);
+      final totalA = distA1 + distA2;
+
+      final distB1 = _calculateDistance(shopLat, shopLon, p2['latitude'], p2['longitude']);
+      final distB2 = _calculateDistance(p2['latitude'], p2['longitude'], p1['latitude'], p1['longitude']);
+      final totalB = distB1 + distB2;
+
+      if (totalA <= totalB) {
+        sortedPoints = [p1, p2];
+        totalDistance = totalA;
+      } else {
+        sortedPoints = [p2, p1];
+        totalDistance = totalB;
+      }
+    } else {
+      // Fallback simple greedy approach for 3+ points
+      sortedPoints = List.from(routePoints);
+      double currentLat = shopLat;
+      double currentLon = shopLon;
+      
+      for (int i = 0; i < sortedPoints.length; i++) {
+        int bestIdx = i;
+        double minDist = double.infinity;
+        for (int j = i; j < sortedPoints.length; j++) {
+          final d = _calculateDistance(currentLat, currentLon, sortedPoints[j]['latitude'], sortedPoints[j]['longitude']);
+          if (d < minDist) {
+            minDist = d;
+            bestIdx = j;
+          }
+        }
+        final temp = sortedPoints[i];
+        sortedPoints[i] = sortedPoints[bestIdx];
+        sortedPoints[bestIdx] = temp;
+        
+        totalDistance += minDist;
+        currentLat = sortedPoints[i]['latitude'];
+        currentLon = sortedPoints[i]['longitude'];
+      }
+    }
+
+    final int estDurationMins = ((totalDistance / 40.0) * 60.0).round() + 5; // 40 km/h average speed + 5 min buffer
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16.0),
+      color: Colors.green[50],
+      shape: RoundedRectangleBorder(
+        side: BorderSide(color: Colors.green[200]!, width: 1.5),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.auto_awesome, color: Colors.green[700]),
+                const SizedBox(width: 8),
+                Text(
+                  "Fleet AI Rota Optimizasyonu",
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green[800],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              "Yapay zeka teslimat noktalarınızı en verimli sıraya dizdi. Toplam Mesafe: ${totalDistance.toStringAsFixed(2)} km (Tahmini Süre: $estDurationMins dk)",
+              style: TextStyle(color: Colors.green[900], fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            // Timeline view
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildTimelineStep(
+                  isFirst: true,
+                  isLast: false,
+                  title: "Alış Noktası: $shopName",
+                  subtitle: "Siparişi teslim alıp yola çıkın.",
+                  icon: Icons.store,
+                  color: Colors.green[700]!,
+                ),
+                ...List.generate(sortedPoints.length, (index) {
+                  final pt = sortedPoints[index];
+                  final isLast = index == sortedPoints.length - 1;
+                  return _buildTimelineStep(
+                    isFirst: false,
+                    isLast: isLast,
+                    title: "Teslimat ${index + 1}: ${pt['name']}",
+                    subtitle: pt['address'],
+                    icon: Icons.directions_bike,
+                    color: Colors.blue[700]!,
+                  );
+                }),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTimelineStep({
+    required bool isFirst,
+    required bool isLast,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+                border: Border.all(color: color, width: 2),
+              ),
+              child: Icon(icon, size: 16, color: color),
+            ),
+            if (!isLast)
+              Container(
+                width: 2,
+                height: 36,
+                color: color.withValues(alpha: 0.3),
+              ),
+          ],
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 4.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 12),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
