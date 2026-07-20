@@ -1,3 +1,7 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:ui' as ui;
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geocoding/geocoding.dart';
@@ -24,6 +28,9 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
   final _titleController = TextEditingController();
   final _detailsController = TextEditingController();
   final MapController _mapController = MapController();
+  final TextEditingController _searchController = TextEditingController();
+  List<Map<String, dynamic>> _searchResults = [];
+  Timer? _debounceTimer;
 
   String? _selectedCity;
   String? _selectedDistrict;
@@ -75,6 +82,54 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
       _selectedCity = _cities.first;
       _selectedDistrict = kKktcDistricts[_selectedCity]!.first;
     }
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _detailsController.dispose();
+    _searchController.dispose();
+    _debounceTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<List<Map<String, dynamic>>> _searchAddress(String query) async {
+    if (query.isEmpty) return [];
+    try {
+      final url = Uri.parse(
+        'https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(query)}&format=json&limit=5&addressdetails=1&countrycodes=cy,tr',
+      );
+      final response = await http.get(url, headers: {
+        'User-Agent': 'HoppaApp/1.0',
+      });
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.map((item) => {
+          'display_name': item['display_name'] ?? '',
+          'lat': double.tryParse(item['lat']?.toString() ?? '') ?? 0.0,
+          'lon': double.tryParse(item['lon']?.toString() ?? '') ?? 0.0,
+        }).toList();
+      }
+    } catch (e) {
+      debugPrint("Nominatim Search Error: $e");
+    }
+    return [];
+  }
+
+  void _debounceSearch(String query) {
+    if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () async {
+      if (query.length > 2) {
+        final results = await _searchAddress(query);
+        setState(() {
+          _searchResults = results;
+        });
+      } else {
+        setState(() {
+          _searchResults = [];
+        });
+      }
+    });
   }
 
   Future<void> _fetchAndSetLocation() async {
@@ -367,37 +422,124 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
                     ),
                   ],
                 ),
-                // ANIMATED CENTER PIN
+                // ANIMATED CENTER PIN & TARGET DOT
                 Center(
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    curve: Curves.easeOut,
-                    transform: Matrix4.translationValues(0, _isDragging ? -35 : -20, 0),
-                    child: const Icon(
-                      Icons.location_on,
-                      color: Colors.red,
-                      size: 50,
-                    ),
+                  child: MapPinWidget(
+                    isDragging: _isDragging,
+                    primaryColor: theme.primaryColor,
                   ),
                 ),
-                // Katman Seçim Butonu
-                Positioned(
-                  top: 16,
-                  right: 16,
-                  child: FloatingActionButton.small(
-                    heroTag: "btn_map_layer",
-                    backgroundColor: Colors.white,
-                    onPressed: () {
-                      setState(() {
-                        _isSatellite = !_isSatellite;
-                      });
-                    },
-                    child: Icon(
-                      _isSatellite ? Icons.map_outlined : Icons.satellite_alt_outlined,
-                      color: theme.primaryColor,
+                // SEARCH BAR & LAYER TOGGLE CARD
+                if (!_isLocationVerified)
+                  Positioned(
+                    top: 16,
+                    left: 16,
+                    right: 16,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.1),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              const SizedBox(width: 12),
+                              const Icon(Icons.search, color: Colors.grey),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: TextField(
+                                  controller: _searchController,
+                                  decoration: const InputDecoration(
+                                    hintText: 'Adres Ara...',
+                                    border: InputBorder.none,
+                                    isDense: true,
+                                  ),
+                                  onChanged: _debounceSearch,
+                                ),
+                              ),
+                              if (_searchController.text.isNotEmpty)
+                                IconButton(
+                                  icon: const Icon(Icons.close, color: Colors.grey),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    setState(() {
+                                      _searchResults = [];
+                                    });
+                                  },
+                                ),
+                              IconButton(
+                                icon: Icon(
+                                  _isSatellite ? Icons.map_outlined : Icons.satellite_alt_outlined,
+                                  color: theme.primaryColor,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _isSatellite = !_isSatellite;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (_searchResults.isNotEmpty)
+                          Container(
+                            margin: const EdgeInsets.only(top: 8),
+                            constraints: const BoxConstraints(maxHeight: 200),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.1),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: ListView.separated(
+                              shrinkWrap: true,
+                              padding: EdgeInsets.zero,
+                              itemCount: _searchResults.length,
+                              separatorBuilder: (context, index) => const Divider(height: 1),
+                              itemBuilder: (context, index) {
+                                final item = _searchResults[index];
+                                return ListTile(
+                                  dense: true,
+                                  leading: const Icon(Icons.location_on_outlined, color: Colors.grey),
+                                  title: Text(
+                                    item['display_name'] ?? '',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 13),
+                                  ),
+                                  onTap: () {
+                                    final lat = item['lat'] as double;
+                                    final lon = item['lon'] as double;
+                                    _mapController.move(LatLng(lat, lon), 16.0);
+                                    setState(() {
+                                      _latitude = lat;
+                                      _longitude = lon;
+                                      _searchResults = [];
+                                      _searchController.text = item['display_name'] ?? '';
+                                    });
+                                    _resolveAddress(lat, lon);
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                      ],
                     ),
                   ),
-                ),
                 if (!_isLocationVerified)
                   Positioned(
                     bottom: 16,
@@ -694,4 +836,130 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
       ),
     );
   }
+}
+
+class MapPinWidget extends StatelessWidget {
+  final bool isDragging;
+  final Color primaryColor;
+
+  const MapPinWidget({
+    super.key,
+    required this.isDragging,
+    required this.primaryColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 100,
+      height: 150,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // 1. Static Dot and Shadow at the bottom (exact target point)
+          Positioned(
+            bottom: 50,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              width: isDragging ? 16 : 8,
+              height: isDragging ? 6 : 8,
+              decoration: BoxDecoration(
+                color: isDragging ? Colors.black.withValues(alpha: 0.15) : Colors.black.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.all(Radius.elliptical(isDragging ? 8 : 4, isDragging ? 3 : 4)),
+              ),
+            ),
+          ),
+          // 2. Connecting Line (vertical line from target point to pin tip)
+          if (isDragging)
+            Positioned(
+              bottom: 50,
+              child: CustomPaint(
+                size: const Size(2, 35),
+                painter: DashedLinePainter(color: primaryColor),
+              ),
+            ),
+          // 3. Floating Pin
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 150),
+            curve: Curves.easeOut,
+            bottom: isDragging ? 85 : 50,
+            child: _buildPinBody(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPinBody() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.15),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Icon(
+            Icons.location_on,
+            color: primaryColor,
+            size: 32,
+          ),
+        ),
+        CustomPaint(
+          size: const Size(12, 8),
+          painter: TrianglePainter(color: Colors.white),
+        ),
+      ],
+    );
+  }
+}
+
+class DashedLinePainter extends CustomPainter {
+  final Color color;
+  DashedLinePainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    double dashHeight = 4, dashSpace = 3, startY = 0;
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = size.width
+      ..style = PaintingStyle.stroke;
+    while (startY < size.height) {
+      canvas.drawLine(Offset(0, startY), Offset(0, startY + dashHeight), paint);
+      startY += dashHeight + dashSpace;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class TrianglePainter extends CustomPainter {
+  final Color color;
+  TrianglePainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    final path = ui.Path();
+    path.moveTo(0, 0);
+    path.lineTo(size.width, 0);
+    path.lineTo(size.width / 2, size.height);
+    path.close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
