@@ -114,7 +114,7 @@ class ConsumerShopRepository {
       map['headerImageUrl'] = _isValidImageUrl(json['headerImageUrl'])
           ? json['headerImageUrl']
           : 'https://via.placeholder.com/150';
-      map['isOpen'] = json['isActive'] ?? true;
+      map['isOpen'] = json['isOpen'] ?? json['isActive'] ?? true;
       map['minBasketAmount'] = json['minOrderAmount'] != null
           ? double.tryParse(json['minOrderAmount'].toString()) ?? 0.0
           : 0.0;
@@ -281,7 +281,7 @@ class ConsumerShopRepository {
       map['headerImageUrl'] = _isValidImageUrl(json['headerImageUrl'])
           ? json['headerImageUrl']
           : 'https://via.placeholder.com/150';
-      map['isOpen'] = json['isActive'] ?? true;
+      map['isOpen'] = json['isOpen'] ?? json['isActive'] ?? true;
       map['minBasketAmount'] = json['minOrderAmount'] != null
           ? double.tryParse(json['minOrderAmount'].toString()) ?? 0.0
           : 0.0;

@@ -30,7 +30,8 @@ export class OrderController {
 
       // 1. Dükkanı bul ve aktiflik durumunu doğrula
       const shop = await prisma.shop.findUnique({
-        where: { id: shopId }
+        where: { id: shopId },
+        include: { merchant: true }
       });
 
       if (!shop) {
@@ -62,20 +63,39 @@ export class OrderController {
         });
       }
 
-      // GMT+3 Zaman Dilimi Kontrolü
-      const now = new Date();
-      const gmt3Time = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Istanbul" }));
-      const currentHour = gmt3Time.getHours();
-      const currentMinute = gmt3Time.getMinutes();
+      // Dinamik Zaman Dilimi Kontrolü (Yaz saati destekli)
+      const countryCode = (shop as any).merchant?.countryCode || "TR";
+      const tz = (countryCode === "CY" || countryCode === "KKTC") ? "Europe/Nicosia" : "Europe/Istanbul";
 
-      const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-      const currentDayName = days[gmt3Time.getDay()];
+      const now = new Date();
+      const formatter = new Intl.DateTimeFormat("en-US", {
+        timeZone: tz,
+        hour: "numeric",
+        minute: "numeric",
+        hour12: false,
+        weekday: "long"
+      });
+
+      const parts = formatter.formatToParts(now);
+      let currentHour = 0;
+      let currentMinute = 0;
+      let weekdayName = "";
+
+      for (const part of parts) {
+        if (part.type === "hour") {
+          currentHour = parseInt(part.value, 10);
+        } else if (part.type === "minute") {
+          currentMinute = parseInt(part.value, 10);
+        } else if (part.type === "weekday") {
+          weekdayName = part.value.toLowerCase();
+        }
+      }
 
       let isOpenRightNow = true;
 
       if (shop.workingHours && typeof shop.workingHours === 'object') {
         const wh = shop.workingHours as any;
-        const todaySchedule = wh[currentDayName];
+        const todaySchedule = wh[weekdayName];
         if (todaySchedule) {
           if (todaySchedule.isOpen === false) {
             isOpenRightNow = false;
