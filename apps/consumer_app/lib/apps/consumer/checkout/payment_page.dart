@@ -14,6 +14,7 @@ import 'package:consumer_app/apps/consumer/business/business_provider.dart';
 import 'package:core_shared/shared/core/utils/quantity_formatter.dart';
 import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
 import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository.dart';
+import 'package:consumer_app/apps/consumer/profile/wallet_page.dart';
 
 class PaymentPage extends ConsumerStatefulWidget {
   final Address deliveryAddress;
@@ -56,8 +57,30 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
   String? _selectedCardId; // ID of saved card or "new" for new card
   bool _saveNewCard = false;
 
+  double _walletBalance = 0.0;
+  bool _isLoadingWallet = false;
+
   final Color kPrimaryColor = const Color(0xFF00A651);
   final Color kSecondaryColor = const Color(0xFFFF6B00);
+
+  Future<void> _fetchWalletBalance() async {
+    if (!mounted) return;
+    setState(() => _isLoadingWallet = true);
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      final response = await apiClient.get('/api/consumer/wallet');
+      final data = response['data'];
+      if (mounted && data != null && data['wallet'] != null) {
+        setState(() {
+          _walletBalance = double.tryParse(data['wallet']['balance'].toString()) ?? 0.0;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error loading wallet balance in PaymentPage: $e");
+    } finally {
+      if (mounted) setState(() => _isLoadingWallet = false);
+    }
+  }
 
   Future<void> _loadSavedCards() async {
     if (!mounted) return;
@@ -101,6 +124,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
       _paymentMethod = 'online_payment';
     }
     _loadSavedCards();
+    _fetchWalletBalance();
   }
 
   @override
@@ -147,8 +171,6 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
 
       final businessProvider = p.Provider.of<BusinessProvider>(context, listen: false);
       final selectedBusiness = businessProvider.selectedBusiness;
-      final activeCampaigns = ref.read(cartCampaignsProvider).value ?? [];
-      
       
       final deliveryProvider = p.Provider.of<DeliveryProvider>(context, listen: false);
       final userAddress = deliveryProvider.selectedAddress;
@@ -166,7 +188,22 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
       String? addressId = widget.isPickUp ? userAddress?.id : widget.deliveryAddress.id;
 
       Map<String, dynamic>? cardDetails;
-      if (_paymentMethod == 'online_payment') {
+      if (_paymentMethod == 'wallet') {
+        final activeCampaigns = ref.read(cartCampaignsProvider).value ?? [];
+        bool hasFreeDeliveryCampaign = activeCampaigns.any((c) => c.type.name.toUpperCase() == "FREE_DELIVERY_FIRST_ORDERS");
+        double deliveryFee = selectedBusiness?.baseDeliveryFee ?? 30.0;
+        if (selectedBusiness?.freeDeliveryThreshold != null && cartState.totalAmount >= selectedBusiness!.freeDeliveryThreshold!) {
+          deliveryFee = 0.0;
+        }
+        if (hasFreeDeliveryCampaign || widget.isPickUp) {
+          deliveryFee = 0.0;
+        }
+        double orderTotal = cartState.totalAmount + deliveryFee;
+
+        if (_walletBalance < orderTotal) {
+          throw Exception("Hoppa Cüzdan bakiyeniz bu sipariş için yetersizdir. Mevcut bakiye: ₺${_walletBalance.toStringAsFixed(2)}, Sipariş Tutarı: ₺${orderTotal.toStringAsFixed(2)}. Lütfen bakiye yükleyin veya başka bir ödeme yöntemi seçin.");
+        }
+      } else if (_paymentMethod == 'online_payment') {
         if (_selectedCardId == null) {
           throw Exception("Lütfen bir ödeme yöntemi seçin veya yeni kart bilgilerini girin.");
         }
@@ -179,7 +216,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
           final cleanHidden = selectedCard['cardNumberHidden'].toString().replaceAll(' ', '');
           final bin = cleanHidden.substring(0, 6);
           final last4 = cleanHidden.substring(cleanHidden.length - 4);
-          final mockNumber = "${bin}000000${last4}";
+          final mockNumber = "${bin}000000$last4";
 
           cardDetails = {
             'cardNumber': mockNumber,
@@ -252,7 +289,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
         if (addressId != null) 'addressId': addressId,
         'deliveryAddress': cleanAddress,
         'notes': orderNote,
-        'paymentMethod': _paymentMethod.toUpperCase(),
+        'paymentMethod': _paymentMethod == 'wallet' ? 'WALLET' : _paymentMethod.toUpperCase(),
         if (cardDetails != null) 'cardDetails': cardDetails,
         'dontRingBell': _dontRingBell,
         'leaveAtDoor': _leaveAtDoor,
@@ -568,26 +605,26 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 14,
-                                  color: _paymentMethod != 'online_payment' ? Colors.grey : Colors.black87,
+                                  color: (_paymentMethod != 'online_payment' && _paymentMethod != 'wallet') ? Colors.grey : Colors.black87,
                                 ),
                               ),
                               subtitle: Text(
-                                _paymentMethod != 'online_payment'
+                                (_paymentMethod != 'online_payment' && _paymentMethod != 'wallet')
                                     ? "Kapıda ödeme seçildiğinde temassız teslimat yapılamaz."
                                     : "Sipariş kapınıza bırakılır, temassız teslim edilir.",
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: _paymentMethod != 'online_payment' ? Colors.grey.shade400 : Colors.grey,
+                                  color: (_paymentMethod != 'online_payment' && _paymentMethod != 'wallet') ? Colors.grey.shade400 : Colors.grey,
                                 ),
                               ),
                               secondary: Icon(
                                 Icons.door_front_door_outlined,
-                                color: _paymentMethod != 'online_payment'
+                                color: (_paymentMethod != 'online_payment' && _paymentMethod != 'wallet')
                                     ? Colors.grey.shade300
                                     : (_leaveAtDoor ? kPrimaryColor : Colors.grey),
                               ),
                               activeColor: kPrimaryColor,
-                              onChanged: _paymentMethod != 'online_payment'
+                              onChanged: (_paymentMethod != 'online_payment' && _paymentMethod != 'wallet')
                                   ? null
                                   : (bool value) {
                                       setState(() {
@@ -628,25 +665,34 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                         if (supportsOnline)
                           Expanded(
                             child: _buildPaymentOption(
-                              title: 'Kredi / Banka Kartı',
+                              title: 'Kredi Kartı',
                               icon: Icons.credit_card,
                               isSelected: _paymentMethod == 'online_payment',
                               onTap: () => setState(() => _paymentMethod = 'online_payment'),
                             ),
                           ),
-                        if (supportsOnline && supportsPayAtDoor) const SizedBox(width: 8),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: _buildPaymentOption(
+                            title: 'Hoppa Cüzdanım',
+                            icon: Icons.account_balance_wallet_rounded,
+                            isSelected: _paymentMethod == 'wallet',
+                            subtitle: _isLoadingWallet
+                                ? 'Yükleniyor...'
+                                : '₺${_walletBalance.toStringAsFixed(2)}',
+                            onTap: () => setState(() => _paymentMethod = 'wallet'),
+                          ),
+                        ),
+                        if (supportsPayAtDoor) const SizedBox(width: 6),
                         if (supportsPayAtDoor)
                           Expanded(
                             child: _buildPaymentOption(
-                              title: widget.isPickUp ? 'Mağazada Ödeme' : 'Kapıda Ödeme',
+                              title: widget.isPickUp ? 'Mağazada' : 'Kapıda',
                               icon: widget.isPickUp ? Icons.store_outlined : Icons.local_shipping_outlined,
-                              isSelected: _paymentMethod != 'online_payment',
-                              isDisabled: false,
+                              isSelected: _paymentMethod == 'cash_on_delivery' || _paymentMethod == 'card_on_delivery',
                               onTap: () {
                                 setState(() {
-                                  if (_paymentMethod == 'online_payment') {
-                                    _paymentMethod = supportsCash ? 'cash_on_delivery' : 'card_on_delivery';
-                                  }
+                                  _paymentMethod = supportsCash ? 'cash_on_delivery' : 'card_on_delivery';
                                   _leaveAtDoor = false;
                                 });
                               },
@@ -657,7 +703,138 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                   ),
                   AnimatedCrossFade(
                     duration: const Duration(milliseconds: 300),
-                    crossFadeState: _paymentMethod != 'online_payment'
+                    crossFadeState: _paymentMethod == 'wallet'
+                        ? CrossFadeState.showFirst
+                        : CrossFadeState.showSecond,
+                    firstChild: Container(
+                      margin: const EdgeInsets.only(top: 12),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: _walletBalance >= total ? kPrimaryColor : Colors.orange.shade300,
+                          width: 1.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: (_walletBalance >= total ? kPrimaryColor : Colors.orange).withValues(alpha: 0.05),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFE95D22).withValues(alpha: 0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFFE95D22), size: 20),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  const Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text("Hoppa Cüzdanım", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                      Text("Anlık Bakiye Kullanımı", style: TextStyle(fontSize: 11, color: Colors.grey)),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              Text(
+                                "₺${_walletBalance.toStringAsFixed(2)}",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: _walletBalance >= total ? kPrimaryColor : Colors.orange.shade800,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          if (_walletBalance >= total)
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: kPrimaryColor.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.check_circle_rounded, color: kPrimaryColor, size: 18),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      "Bakiyeniz yeterli. Sipariş tutarı (₺${total.toStringAsFixed(2)}) Hoppa Cüzdanınızdan düşülecektir.",
+                                      style: TextStyle(color: kPrimaryColor, fontSize: 12, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.shade50,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: Colors.orange.shade200),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.warning_amber_rounded, color: Colors.orange.shade800, size: 18),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          "Bakiyeniz bu sipariş için yetersizdir. Eksik tutar: ₺${(total - _walletBalance).toStringAsFixed(2)}",
+                                          style: TextStyle(color: Colors.orange.shade900, fontSize: 12, fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                SizedBox(
+                                  height: 42,
+                                  child: ElevatedButton.icon(
+                                    onPressed: () async {
+                                      await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(builder: (context) => const WalletPage()),
+                                      );
+                                      _fetchWalletBalance();
+                                    },
+                                    icon: const Icon(Icons.add_circle_outline_rounded, color: Colors.white, size: 18),
+                                    label: const Text("Cüzdana Bakiye Yükle", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFFE95D22),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                      elevation: 0,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
+                    ),
+                    secondChild: const SizedBox(width: double.infinity, height: 0),
+                  ),
+                  AnimatedCrossFade(
+                    duration: const Duration(milliseconds: 300),
+                    crossFadeState: (supportsCash || supportsCard) && (_paymentMethod == 'cash_on_delivery' || _paymentMethod == 'card_on_delivery')
                         ? CrossFadeState.showFirst
                         : CrossFadeState.showSecond,
                     firstChild: Container(
@@ -1171,6 +1348,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     required IconData icon,
     required bool isSelected,
     required VoidCallback? onTap,
+    String? subtitle,
     bool isSubOption = false,
     bool isDisabled = false,
   }) {
@@ -1181,7 +1359,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
         opacity: isDisabled ? 0.5 : 1.0,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: EdgeInsets.symmetric(vertical: isSubOption ? 10 : 12, horizontal: 12),
+          padding: EdgeInsets.symmetric(vertical: isSubOption ? 10 : 12, horizontal: 6),
           decoration: BoxDecoration(
             color: active ? kPrimaryColor.withValues(alpha: isSubOption ? 0.08 : 0.05) : Colors.white,
             borderRadius: BorderRadius.circular(12),
@@ -1213,7 +1391,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                 color: active ? kPrimaryColor : Colors.grey[600],
                 size: isSubOption ? 18 : 20,
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
               Text(
                 title,
                 textAlign: TextAlign.center,
@@ -1225,6 +1403,20 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                   fontSize: isSubOption ? 11 : 12,
                 ),
               ),
+              if (subtitle != null && subtitle.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: active ? kPrimaryColor : Colors.grey[600],
+                    fontSize: 10,
+                  ),
+                ),
+              ],
             ],
           ),
         ),

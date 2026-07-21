@@ -162,7 +162,7 @@ model Shop {
   avgSpeedRating   Float     @default(5.0)
   avgTasteRating   Float     @default(5.0)
   reviews          Review[]
-  allowedPaymentMethods PaymentMethod[] @default([CASH_ON_DELIVERY, CARD_ON_DELIVERY, ONLINE_PAYMENT])
+  allowedPaymentMethods PaymentMethod[] @default([CASH_ON_DELIVERY, CARD_ON_DELIVERY, ONLINE_PAYMENT, WALLET])
   allowedFulfillmentModels FulfillmentModel[] @default([PLATFORM_DELIVERY, PICKUP])
   couriers         CourierShop[]
   coupons          CouponShop[]

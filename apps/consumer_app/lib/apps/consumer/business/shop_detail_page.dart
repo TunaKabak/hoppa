@@ -225,8 +225,6 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
     AsyncValue<List<BusinessProduct>> allProductsAsync,
     String selectedCategory,
   ) {
-    final theme = Theme.of(context);
-    
     String normalize(String name) {
       return name
           .toLowerCase()
@@ -283,12 +281,15 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                   cat.name,
                   style: TextStyle(
                     fontSize: 12,
-                    color: isSelected ? Colors.white : theme.colorScheme.onSurface,
+                    color: isSelected ? const Color(0xFFE95D22) : Colors.white,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
-                selectedColor: theme.primaryColor,
-                backgroundColor: theme.colorScheme.surface,
+                selectedColor: Colors.white,
+                backgroundColor: Colors.white.withValues(alpha: 0.2),
+                side: BorderSide(
+                  color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.3),
+                ),
                 onSelected: (selected) {
                   if (selected) {
                     ref.read(selectedCatalogCategoryProvider.notifier).state = cat.name;
@@ -405,6 +406,14 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
               expandedHeight: 145.0,
               backgroundColor: const Color(0xFFE95D22),
               forceElevated: innerBoxIsScrolled,
+              shape: innerBoxIsScrolled
+                  ? const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.only(
+                        bottomLeft: Radius.circular(24),
+                        bottomRight: Radius.circular(24),
+                      ),
+                    )
+                  : null,
               iconTheme: const IconThemeData(color: Colors.white),
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -1216,7 +1225,7 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
               ),
             ),
           Positioned(
-            top: kToolbarHeight + MediaQuery.of(context).padding.top, // Right below the collapsed App Bar
+            top: kToolbarHeight + MediaQuery.of(context).padding.top - 4, // Slightly overlapping the curved header
             left: 0,
             right: 0,
             child: IgnorePointer(
@@ -1229,24 +1238,40 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                   opacity: _showMiniCategories ? 1.0 : 0.0,
                   duration: const Duration(milliseconds: 200),
                   child: Container(
-                    height: 50,
+                    height: 54,
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+                      gradient: const LinearGradient(
+                        colors: [
+                          Color(0xFFE95D22),
+                          Color(0xFFFF8C00),
+                        ],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(24),
+                        bottomRight: Radius.circular(24),
+                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
+                          color: const Color(0xFFE95D22).withValues(alpha: 0.25),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
-                    child: _buildMiniCategoriesList(
-                      context,
-                      ref,
-                      categoriesAsync,
-                      allProductsAsync,
-                      selectedCategory,
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(24),
+                        bottomRight: Radius.circular(24),
+                      ),
+                      child: _buildMiniCategoriesList(
+                        context,
+                        ref,
+                        categoriesAsync,
+                        allProductsAsync,
+                        selectedCategory,
+                      ),
                     ),
                   ),
                 ),

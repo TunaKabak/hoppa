@@ -45,7 +45,7 @@ export class OrderController {
       // Ödeme Yöntemi Dükkan Destek Kontrolü
       if (shop.allowedPaymentMethods && shop.allowedPaymentMethods.length > 0) {
         const upperMethod = paymentMethod?.toUpperCase() as PaymentMethod;
-        if (!shop.allowedPaymentMethods.includes(upperMethod)) {
+        if (upperMethod !== "WALLET" && !shop.allowedPaymentMethods.includes(upperMethod)) {
           return res.status(400).json({
             error: true,
             message: `Bu işletme seçtiğiniz ödeme yöntemini (${paymentMethod}) kabul etmemektedir.`
