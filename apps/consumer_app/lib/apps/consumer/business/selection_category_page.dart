@@ -15,8 +15,7 @@ import 'package:consumer_app/apps/consumer/business/widgets/category_grid_item.d
 import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository.dart';
 import 'package:consumer_app/apps/consumer/auth/consumer_login_page.dart';
 import 'package:core_shared/shared/core/services/navigation_provider.dart';
-import 'package:consumer_app/apps/consumer/cart/cart_provider.dart';
-import 'package:consumer_app/apps/consumer/cart/cart_page.dart';
+import 'package:consumer_app/apps/consumer/cart/widgets/floating_cart_card.dart';
 import 'package:core_shared/shared/models/business.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -74,7 +73,6 @@ class SelectionCategoryPage extends rp.ConsumerWidget {
     final categoriesAsync = ref.watch(businessCategoriesProvider);
     final authState = ref.watch(authControllerProvider);
     final isGuest = authState is! AuthAuthenticated;
-    final cartState = ref.watch(cartProvider);
     final address = Provider.of<DeliveryProvider>(context).selectedAddress;
 
     return Scaffold(
@@ -585,87 +583,7 @@ class SelectionCategoryPage extends rp.ConsumerWidget {
           ],
         ),
       ),
-      floatingActionButton: cartState.items.isNotEmpty
-          ? Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              height: 56,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(28),
-                gradient: const LinearGradient(
-                  colors: [
-                    Color(0xFFE95D22), // Hoppa Orange
-                    Color(0xFFFF8C00), // Orange-Yellow
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFE95D22).withOpacity(0.3),
-                    blurRadius: 12,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(28),
-                  onTap: () {
-                    Navigator.of(context, rootNavigator: true).push(
-                      MaterialPageRoute(
-                        builder: (context) => const CartPage(),
-                      ),
-                    );
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            '${cartState.items.length}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Text(
-                          'Sepeti Görüntüle',
-                          style: GoogleFonts.outfit(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        const Spacer(),
-                        Text(
-                          '${cartState.totalAmount.toStringAsFixed(2)} TL',
-                          style: GoogleFonts.outfit(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 14),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            )
-          : null,
+      floatingActionButton: const FloatingCartCard(),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }

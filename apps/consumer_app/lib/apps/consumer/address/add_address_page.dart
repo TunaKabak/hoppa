@@ -461,6 +461,8 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
                                   decoration: const InputDecoration(
                                     hintText: 'Adres Ara...',
                                     border: InputBorder.none,
+                                    enabledBorder: InputBorder.none,
+                                    focusedBorder: InputBorder.none,
                                     isDense: true,
                                   ),
                                   onChanged: _debounceSearch,

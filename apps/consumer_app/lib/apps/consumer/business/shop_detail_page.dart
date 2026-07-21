@@ -29,6 +29,8 @@ class ModernShopDetailPage extends ConsumerStatefulWidget {
 class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
   int _crossAxisCount = 2;
   final ScrollController _scrollController = ScrollController();
+  final ScrollController _categoryScrollController = ScrollController();
+  final ScrollController _miniCategoryScrollController = ScrollController();
   bool _showScrollToTop = false;
   bool _showMiniCategories = false;
 
@@ -53,7 +55,47 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _categoryScrollController.dispose();
+    _miniCategoryScrollController.dispose();
     super.dispose();
+  }
+
+  void _scrollToCategory(int index) {
+    if (!_categoryScrollController.hasClients) return;
+    const double itemWidth = 92.0; // 80 width + 12 horizontal margin
+    const double paddingLeft = 12.0;
+    final double screenWidth = MediaQuery.of(context).size.width;
+
+    final double itemCenter = paddingLeft + (index * itemWidth) + (itemWidth / 2);
+    double targetOffset = itemCenter - (screenWidth / 2);
+
+    final double maxScroll = _categoryScrollController.position.maxScrollExtent;
+    targetOffset = targetOffset.clamp(0.0, maxScroll);
+
+    _categoryScrollController.animateTo(
+      targetOffset,
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  void _scrollToMiniCategory(int index) {
+    if (!_miniCategoryScrollController.hasClients) return;
+    const double approxChipWidth = 95.0;
+    const double paddingLeft = 12.0;
+    final double screenWidth = MediaQuery.of(context).size.width;
+
+    final double itemCenter = paddingLeft + (index * approxChipWidth) + (approxChipWidth / 2);
+    double targetOffset = itemCenter - (screenWidth / 2);
+
+    final double maxScroll = _miniCategoryScrollController.position.maxScrollExtent;
+    targetOffset = targetOffset.clamp(0.0, maxScroll);
+
+    _miniCategoryScrollController.animateTo(
+      targetOffset,
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   void _scrollToTop() {
@@ -183,8 +225,6 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
     AsyncValue<List<BusinessProduct>> allProductsAsync,
     String selectedCategory,
   ) {
-    final theme = Theme.of(context);
-    
     String normalize(String name) {
       return name
           .toLowerCase()
@@ -225,6 +265,7 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
         ];
 
         return ListView.builder(
+          controller: _miniCategoryScrollController,
           scrollDirection: Axis.horizontal,
           itemCount: listCategories.length,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -240,16 +281,21 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                   cat.name,
                   style: TextStyle(
                     fontSize: 12,
-                    color: isSelected ? Colors.white : theme.colorScheme.onSurface,
+                    color: isSelected ? const Color(0xFFE95D22) : Colors.white,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
-                selectedColor: theme.primaryColor,
-                backgroundColor: theme.colorScheme.surface,
+                selectedColor: Colors.white,
+                backgroundColor: Colors.white.withValues(alpha: 0.2),
+                side: BorderSide(
+                  color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.3),
+                ),
                 onSelected: (selected) {
                   if (selected) {
                     ref.read(selectedCatalogCategoryProvider.notifier).state = cat.name;
                     ref.read(selectedCatalogSubCategoryProvider.notifier).state = 'Tümü';
+                    _scrollToCategory(index);
+                    _scrollToMiniCategory(index);
                   }
                 },
               ),
@@ -360,6 +406,14 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
               expandedHeight: 145.0,
               backgroundColor: const Color(0xFFE95D22),
               forceElevated: innerBoxIsScrolled,
+              shape: innerBoxIsScrolled
+                  ? const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.only(
+                        bottomLeft: Radius.circular(24),
+                        bottomRight: Radius.circular(24),
+                      ),
+                    )
+                  : null,
               iconTheme: const IconThemeData(color: Colors.white),
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -444,7 +498,10 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                     Share.share(text);
                   },
                 ),
-                const CartPriceBadge(),
+                const CartPriceBadge(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Color(0xFF00A651),
+                ),
               ],
               flexibleSpace: FlexibleSpaceBar(
                 background: Stack(
@@ -576,21 +633,10 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
             ),
           ];
         },
-        body: Container(
-          color: const Color(0xFFE95D22),
-          child: Container(
-            decoration: BoxDecoration(
+        body: Stack(
+          children: [
+            Container(
               color: theme.scaffoldBackgroundColor,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(24),
-                topRight: Radius.circular(24),
-              ),
-            ),
-            child: ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(24),
-                topRight: Radius.circular(24),
-              ),
               child: CustomScrollView(
                 slivers: [
                   // Shop Campaign Banner
@@ -640,7 +686,7 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.08),
+                              color: Colors.black.withValues(alpha: 0.08),
                               blurRadius: 6,
                               offset: const Offset(0, 3),
                             ),
@@ -653,7 +699,7 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                               begin: Alignment.bottomCenter,
                               end: Alignment.topCenter,
                               colors: [
-                                Colors.black.withOpacity(0.7),
+                                Colors.black.withValues(alpha: 0.7),
                                 Colors.transparent,
                               ],
                             ),
@@ -708,7 +754,7 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFFFF5200).withOpacity(0.2),
+                        color: const Color(0xFFFF5200).withValues(alpha: 0.2),
                         blurRadius: 8,
                         offset: const Offset(0, 3),
                       ),
@@ -719,7 +765,7 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                       Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
@@ -827,121 +873,137 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
               ),
             ),
 
-            // Categories list
-            SliverToBoxAdapter(
-              child: Container(
-                height: 104,
-                color: theme.colorScheme.surface,
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: categoriesAsync.when(
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (err, stack) => Center(
-                    child: Icon(Icons.error_outline, color: Colors.red),
-                  ),
-                  data: (shopCategories) {
-                    final Set<String> productCategories = {};
-                    if (allProductsAsync.hasValue) {
-                      for (var bp in allProductsAsync.value!) {
-                        productCategories.add(normalize(bp.product.category));
+            // Sticky Category Bar inside downward curved container
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _StickyCategoryHeaderDelegate(
+                builder: (context, isPinned) => Container(
+                  height: 104,
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: categoriesAsync.when(
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                    error: (err, stack) => const Center(
+                      child: Icon(Icons.error_outline, color: Colors.red),
+                    ),
+                    data: (shopCategories) {
+                      final Set<String> productCategories = {};
+                      if (allProductsAsync.hasValue) {
+                        for (var bp in allProductsAsync.value!) {
+                          productCategories.add(normalize(bp.product.category));
+                        }
                       }
-                    }
 
-                    final activeShopCategories = shopCategories.where(
-                      (c) => productCategories.contains(normalize(c.name))
-                    ).toList();
+                      final activeShopCategories = shopCategories.where(
+                        (c) => productCategories.contains(normalize(c.name))
+                      ).toList();
 
-                    final List<ShopCategoryData> listCategories = [
-                      ShopCategoryData(
-                        id: 'all',
-                        name: 'Tümü',
-                        iconName: 'grid_view',
-                        subCategories: [],
-                      ),
-                      ...activeShopCategories
-                    ];
+                      final List<ShopCategoryData> listCategories = [
+                        ShopCategoryData(
+                          id: 'all',
+                          name: 'Tümü',
+                          iconName: 'grid_view',
+                          subCategories: [],
+                        ),
+                        ...activeShopCategories
+                      ];
 
-                    return ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: listCategories.length,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      itemBuilder: (context, index) {
-                        final cat = listCategories[index];
-                        final isSelected = cat.name == selectedCategory;
-                        final hasImage = cat.backgroundImage != null && cat.backgroundImage!.isNotEmpty;
+                      return ListView.builder(
+                        controller: _categoryScrollController,
+                        scrollDirection: Axis.horizontal,
+                        itemCount: listCategories.length,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        itemBuilder: (context, index) {
+                          final cat = listCategories[index];
+                          final isSelected = cat.name == selectedCategory;
+                          final hasImage = cat.backgroundImage != null && cat.backgroundImage!.isNotEmpty;
 
-                        return GestureDetector(
-                          onTap: () {
-                            ref.read(selectedCatalogCategoryProvider.notifier).state = cat.name;
-                            ref.read(selectedCatalogSubCategoryProvider.notifier).state = 'Tümü';
-                          },
-                          child: Container(
-                            width: 80,
-                            margin: const EdgeInsets.symmetric(horizontal: 6),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Container(
-                                  width: 56,
-                                  height: 56,
-                                  padding: const EdgeInsets.all(3),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: isSelected ? theme.primaryColor : Colors.grey.shade200,
-                                      width: 1.5,
+                          return GestureDetector(
+                            onTap: () {
+                              ref.read(selectedCatalogCategoryProvider.notifier).state = cat.name;
+                              ref.read(selectedCatalogSubCategoryProvider.notifier).state = 'Tümü';
+                              _scrollToCategory(index);
+                              _scrollToMiniCategory(index);
+                            },
+                            child: Container(
+                              width: 80,
+                              margin: const EdgeInsets.symmetric(horizontal: 6),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    width: 54,
+                                    height: 54,
+                                    padding: const EdgeInsets.all(3),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: isSelected
+                                            ? const Color(0xFF00A651)
+                                            : (isPinned ? Colors.white30 : Colors.grey.shade200),
+                                        width: isSelected ? 2.5 : 1.0,
+                                      ),
+                                      color: Colors.white,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.08),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
                                     ),
-                                    color: Colors.white,
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(9),
-                                    child: hasImage
-                                        ? Image.network(
-                                            cat.backgroundImage!,
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (context, error, stackTrace) {
-                                              return Icon(
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(9),
+                                      child: hasImage
+                                          ? Image.network(
+                                              cat.backgroundImage!,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (context, error, stackTrace) {
+                                                return Icon(
+                                                  cat.name == 'Tümü'
+                                                      ? Icons.grid_view_rounded
+                                                      : _getCategoryIcon(cat.iconName),
+                                                  size: 20,
+                                                  color: isSelected ? const Color(0xFF00A651) : theme.primaryColor,
+                                                );
+                                              },
+                                            )
+                                          : Container(
+                                              color: Colors.grey.shade100,
+                                              child: Icon(
                                                 cat.name == 'Tümü'
                                                     ? Icons.grid_view_rounded
                                                     : _getCategoryIcon(cat.iconName),
                                                 size: 20,
-                                                color: isSelected ? theme.primaryColor : Colors.grey,
-                                              );
-                                            },
-                                          )
-                                        : Container(
-                                            color: Colors.grey.shade100,
-                                            child: Icon(
-                                              cat.name == 'Tümü'
-                                                  ? Icons.grid_view_rounded
-                                                  : _getCategoryIcon(cat.iconName),
-                                              size: 20,
-                                              color: isSelected ? theme.primaryColor : Colors.grey,
+                                                color: isSelected ? const Color(0xFF00A651) : theme.primaryColor,
+                                              ),
                                             ),
-                                          ),
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                                  child: Text(
-                                    cat.name,
-                                    textAlign: TextAlign.center,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                      color: isSelected ? theme.primaryColor : theme.colorScheme.onSurface,
                                     ),
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(height: 6),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                                    child: Text(
+                                      cat.name,
+                                      textAlign: TextAlign.center,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                                        color: isPinned
+                                            ? (isSelected ? Colors.white : Colors.white.withValues(alpha: 0.9))
+                                            : (isSelected ? const Color(0xFF00A651) : theme.colorScheme.onSurface),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        );
-                      },
-                    );
-                  },
+                          );
+                        },
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
@@ -1162,12 +1224,8 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                 ],
               ),
             ),
-          ),
-        ),
-      ),
-    ),
           Positioned(
-            top: kToolbarHeight + MediaQuery.of(context).padding.top, // Right below the collapsed App Bar
+            top: kToolbarHeight + MediaQuery.of(context).padding.top - 4, // Slightly overlapping the curved header
             left: 0,
             right: 0,
             child: IgnorePointer(
@@ -1180,24 +1238,40 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                   opacity: _showMiniCategories ? 1.0 : 0.0,
                   duration: const Duration(milliseconds: 200),
                   child: Container(
-                    height: 50,
+                    height: 54,
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+                      gradient: const LinearGradient(
+                        colors: [
+                          Color(0xFFE95D22),
+                          Color(0xFFFF8C00),
+                        ],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(24),
+                        bottomRight: Radius.circular(24),
+                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
+                          color: const Color(0xFFE95D22).withValues(alpha: 0.25),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
-                    child: _buildMiniCategoriesList(
-                      context,
-                      ref,
-                      categoriesAsync,
-                      allProductsAsync,
-                      selectedCategory,
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(24),
+                        bottomRight: Radius.circular(24),
+                      ),
+                      child: _buildMiniCategoriesList(
+                        context,
+                        ref,
+                        categoriesAsync,
+                        allProductsAsync,
+                        selectedCategory,
+                      ),
                     ),
                   ),
                 ),
@@ -1206,6 +1280,10 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
           ),
         ],
       ),
+    ),
+  ),
+],
+),
       floatingActionButton: _showScrollToTop
           ? FloatingActionButton(
               onPressed: _scrollToTop,
@@ -1217,3 +1295,65 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
     );
   }
 }
+
+class _StickyCategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final Widget Function(BuildContext context, bool isPinned) builder;
+
+  _StickyCategoryHeaderDelegate({required this.builder});
+
+  @override
+  double get minExtent => 104.0;
+
+  @override
+  double get maxExtent => 104.0;
+
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final double progress = (shrinkOffset / maxExtent).clamp(0.0, 1.0);
+    final isPinned = overlapsContent || shrinkOffset > 5;
+    final double curveRadius = isPinned ? 24.0 : (24.0 * progress);
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: isPinned
+            ? const LinearGradient(
+                colors: [
+                  Color(0xFFE95D22),
+                  Color(0xFFFF8C00),
+                ],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              )
+            : null,
+        color: isPinned ? null : Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(curveRadius),
+          bottomRight: Radius.circular(curveRadius),
+        ),
+        boxShadow: isPinned
+            ? [
+                BoxShadow(
+                  color: const Color(0xFFE95D22).withValues(alpha: 0.25),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : null,
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(curveRadius),
+          bottomRight: Radius.circular(curveRadius),
+        ),
+        child: builder(context, isPinned),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _StickyCategoryHeaderDelegate oldDelegate) {
+    return true;
+  }
+}
+

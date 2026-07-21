@@ -7,8 +7,15 @@ import 'package:consumer_app/apps/consumer/cart/cart_provider.dart';
 
 class CartPriceBadge extends ConsumerWidget {
   final VoidCallback? onTap;
+  final Color? backgroundColor;
+  final Color? foregroundColor;
 
-  const CartPriceBadge({super.key, this.onTap});
+  const CartPriceBadge({
+    super.key,
+    this.onTap,
+    this.backgroundColor,
+    this.foregroundColor,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -23,7 +30,12 @@ class CartPriceBadge extends ConsumerWidget {
         );
       },
       child: totalAmount > 0
-          ? _AnimatedCounter(totalAmount: totalAmount, onTap: onTap)
+          ? _AnimatedCounter(
+              totalAmount: totalAmount,
+              onTap: onTap,
+              backgroundColor: backgroundColor,
+              foregroundColor: foregroundColor,
+            )
           : const SizedBox.shrink(),
     );
   }
@@ -32,8 +44,15 @@ class CartPriceBadge extends ConsumerWidget {
 class _AnimatedCounter extends StatefulWidget {
   final double totalAmount;
   final VoidCallback? onTap;
+  final Color? backgroundColor;
+  final Color? foregroundColor;
 
-  const _AnimatedCounter({required this.totalAmount, this.onTap});
+  const _AnimatedCounter({
+    required this.totalAmount,
+    this.onTap,
+    this.backgroundColor,
+    this.foregroundColor,
+  });
 
   @override
   _AnimatedCounterState createState() => _AnimatedCounterState();
@@ -85,12 +104,22 @@ class _AnimatedCounterState extends State<_AnimatedCounter>
       child: AnimatedBuilder(
         animation: _animation,
         builder: (context, child) {
+          final bgColor = widget.backgroundColor ?? theme.colorScheme.secondary;
+          final fgColor = widget.foregroundColor ?? theme.colorScheme.onSecondary;
+
           return Container(
             margin: const EdgeInsets.only(right: 8),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: theme.colorScheme.secondary,
+              color: bgColor,
               borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -98,7 +127,7 @@ class _AnimatedCounterState extends State<_AnimatedCounter>
                 Icon(
                   Icons.shopping_cart_outlined,
                   size: 16,
-                  color: theme.colorScheme.onSecondary,
+                  color: fgColor,
                 ),
                 const SizedBox(width: 8),
                 Text(
@@ -108,7 +137,7 @@ class _AnimatedCounterState extends State<_AnimatedCounter>
                     decimalDigits: 2,
                   ).format(_animation.value),
                   style: theme.textTheme.labelMedium?.copyWith(
-                    color: theme.colorScheme.onSecondary,
+                    color: fgColor,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
