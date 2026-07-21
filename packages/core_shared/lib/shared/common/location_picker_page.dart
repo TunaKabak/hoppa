@@ -197,6 +197,8 @@ class _LocationPickerPageState extends State<LocationPickerPage> {
                           decoration: const InputDecoration(
                             hintText: 'Konum Ara...',
                             border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
                             isDense: true,
                           ),
                           onChanged: _debounceSearch,

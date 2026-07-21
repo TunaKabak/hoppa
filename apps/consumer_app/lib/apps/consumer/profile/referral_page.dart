@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:core_network/core_network.dart';
 import 'package:core_auth/core_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
@@ -37,9 +36,9 @@ class _ReferralPageState extends ConsumerState<ReferralPage> {
     try {
       final apiClient = ref.read(apiClientProvider);
       final response = await apiClient.get('/api/consumer/referral');
+      final data = response['data'];
 
-      if (response != null && response['error'] == false) {
-        final data = response['data'];
+      if (data != null) {
         setState(() {
           _referralCode = data['referralCode'] ?? '';
           _referralCount = data['referralCount'] ?? 0;
@@ -49,13 +48,13 @@ class _ReferralPageState extends ConsumerState<ReferralPage> {
         });
       } else {
         setState(() {
-          _errorMessage = response?['message'] ?? 'Davet bilgileri alınamadı.';
+          _errorMessage = 'Davet bilgileri alınamadı.';
           _isLoading = false;
         });
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Bağlantı hatası oluştu.';
+        _errorMessage = 'Bağlantı hatası oluştu: $e';
         _isLoading = false;
       });
     }

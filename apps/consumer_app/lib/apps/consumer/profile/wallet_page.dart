@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:core_network/core_network.dart';
 import 'package:core_auth/core_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -34,9 +33,10 @@ class _WalletPageState extends ConsumerState<WalletPage> {
     try {
       final apiClient = ref.read(apiClientProvider);
       final response = await apiClient.get('/api/consumer/wallet');
+      final data = response['data'];
       
-      if (response != null && response['error'] == false) {
-        final walletData = response['data']['wallet'];
+      if (data != null && data['wallet'] != null) {
+        final walletData = data['wallet'];
         setState(() {
           _balance = double.tryParse(walletData['balance'].toString()) ?? 0.0;
           _transactions = walletData['transactions'] ?? [];
@@ -44,13 +44,13 @@ class _WalletPageState extends ConsumerState<WalletPage> {
         });
       } else {
         setState(() {
-          _errorMessage = response?['message'] ?? 'Cüzdan bilgileri alınamadı.';
+          _errorMessage = 'Cüzdan bilgileri alınamadı.';
           _isLoading = false;
         });
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Bağlantı hatası oluştu.';
+        _errorMessage = 'Bağlantı hatası oluştu: $e';
         _isLoading = false;
       });
     }
@@ -70,28 +70,24 @@ class _WalletPageState extends ConsumerState<WalletPage> {
 
     try {
       final apiClient = ref.read(apiClientProvider);
-      final response = await apiClient.post(
+      await apiClient.post(
         '/api/consumer/wallet/deposit',
         body: {'amount': amount},
       );
 
       Navigator.pop(context); // Dismiss loading dialog
 
-      if (response != null && response['error'] == false) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${amount.toStringAsFixed(2)} TL başarıyla cüzdanınıza yüklendi!'),
-            backgroundColor: const Color(0xFF00A651),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        _fetchWalletData(); // Refresh wallet
-      } else {
-        _showErrorSnackBar(response?['message'] ?? 'Bakiye yüklenemedi.');
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${amount.toStringAsFixed(2)} TL başarıyla cüzdanınıza yüklendi!'),
+          backgroundColor: const Color(0xFF00A651),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      _fetchWalletData(); // Refresh wallet
     } catch (e) {
       Navigator.pop(context); // Dismiss loading dialog
-      _showErrorSnackBar('İşlem sırasında bir hata oluştu.');
+      _showErrorSnackBar('İşlem sırasında bir hata oluştu: $e');
     }
   }
 

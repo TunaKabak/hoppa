@@ -14,6 +14,7 @@ import 'package:latlong2/latlong.dart'; // Mesafe hesaplama için
 import 'package:google_fonts/google_fonts.dart';
 import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
 import 'package:consumer_app/apps/consumer/providers/consumer_location_controller.dart';
+import 'package:consumer_app/apps/consumer/cart/widgets/floating_cart_card.dart';
 
 final selectedBusinessFiltersProvider =
     StateProvider<List<String>>((ref) => []);
@@ -866,6 +867,8 @@ class _BusinessSelectionPageState extends ConsumerState<BusinessSelectionPage> {
           },
         ),
       ),
+      floatingActionButton: const FloatingCartCard(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 
