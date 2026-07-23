@@ -17,6 +17,7 @@ import 'package:consumer_app/apps/consumer/widgets/shop_badge.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:core_shared/shared/models/campaign.dart';
 import 'package:consumer_app/apps/consumer/business/campaign_products_page.dart';
+import 'package:consumer_app/apps/consumer/main_layout/voice_assistant_dialog.dart';
 
 class ModernShopDetailPage extends ConsumerStatefulWidget {
   final Business shop;
@@ -47,6 +48,7 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
     super.initState();
     _scrollController.addListener(_onScrollChange);
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      p.Provider.of<BusinessProvider>(context, listen: false).selectBusiness(widget.shop);
       if (widget.shop.type.label == 'Çiçek') {
         ref.read(selectedCatalogCategoryProvider.notifier).state = 'Çiçek';
       }
@@ -876,25 +878,54 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                 padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
                 child: Container(
                   height: 44,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF1F3F5),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: TextField(
-                    onChanged: (val) {
-                      ref.read(catalogSearchQueryProvider.notifier).state = val;
-                    },
-                    decoration: InputDecoration(
-                      hintText: "Bu mağazada ara...",
-                      hintStyle: theme.inputDecorationTheme.hintStyle?.copyWith(fontSize: 13),
-                      prefixIcon: Icon(
-                        Icons.search,
-                        color: theme.primaryColor,
-                        size: 20,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          onChanged: (val) {
+                            ref.read(catalogSearchQueryProvider.notifier).state = val;
+                          },
+                          decoration: InputDecoration(
+                            hintText: "Bu mağazada ara...",
+                            hintStyle: theme.inputDecorationTheme.hintStyle?.copyWith(fontSize: 13),
+                            prefixIcon: Icon(
+                              Icons.search,
+                              color: theme.primaryColor,
+                              size: 20,
+                            ),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                        ),
                       ),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
+                      GestureDetector(
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            barrierDismissible: true,
+                            builder: (context) => const VoiceAssistantDialog(),
+                          );
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 6),
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE95D22).withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.mic_rounded,
+                            color: Color(0xFFE95D22),
+                            size: 18,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
