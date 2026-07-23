@@ -17,6 +17,7 @@ import 'package:consumer_app/apps/consumer/widgets/shop_badge.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:core_shared/shared/models/campaign.dart';
 import 'package:consumer_app/apps/consumer/business/campaign_products_page.dart';
+import 'package:consumer_app/apps/consumer/main_layout/voice_assistant_dialog.dart';
 
 class ModernShopDetailPage extends ConsumerStatefulWidget {
   final Business shop;
@@ -45,15 +46,31 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScrollChange);
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      p.Provider.of<BusinessProvider>(context, listen: false).selectBusiness(widget.shop);
       if (widget.shop.type.label == 'Çiçek') {
         ref.read(selectedCatalogCategoryProvider.notifier).state = 'Çiçek';
       }
     });
   }
 
+  void _onScrollChange() {
+    if (!_scrollController.hasClients) return;
+    final double pixels = _scrollController.offset;
+    final bool showMini = pixels >= 145.0;
+    if (showMini != _showMiniCategories) {
+      setState(() => _showMiniCategories = showMini);
+    }
+    final bool showTop = pixels > 300.0;
+    if (showTop != _showScrollToTop) {
+      setState(() => _showScrollToTop = showTop);
+    }
+  }
+
   @override
   void dispose() {
+    _scrollController.removeListener(_onScrollChange);
     _scrollController.dispose();
     _categoryScrollController.dispose();
     _miniCategoryScrollController.dispose();
@@ -268,27 +285,30 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
           controller: _miniCategoryScrollController,
           scrollDirection: Axis.horizontal,
           itemCount: listCategories.length,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           itemBuilder: (context, index) {
             final cat = listCategories[index];
             final isSelected = cat.name == selectedCategory;
 
             return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 3),
               child: ChoiceChip(
                 selected: isSelected,
+                visualDensity: VisualDensity.compact,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                labelPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
                 label: Text(
                   cat.name,
                   style: TextStyle(
-                    fontSize: 12,
-                    color: isSelected ? const Color(0xFFE95D22) : Colors.white,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontSize: 11,
+                    color: isSelected ? Colors.white : const Color(0xFFE95D22),
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                   ),
                 ),
-                selectedColor: Colors.white,
-                backgroundColor: Colors.white.withValues(alpha: 0.2),
+                selectedColor: const Color(0xFFE95D22),
+                backgroundColor: Colors.white,
                 side: BorderSide(
-                  color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.3),
+                  color: isSelected ? const Color(0xFFE95D22) : Colors.grey.shade300,
                 ),
                 onSelected: (selected) {
                   if (selected) {
@@ -357,6 +377,22 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
       ).toList();
     }
 
+    ref.listen(selectedCatalogCategoryProvider, (previous, next) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients) {
+          final double pixels = _scrollController.offset;
+          final bool showMini = pixels >= 145.0;
+          if (showMini != _showMiniCategories) {
+            setState(() => _showMiniCategories = showMini);
+          }
+        } else {
+          if (_showMiniCategories) {
+            setState(() => _showMiniCategories = false);
+          }
+        }
+      });
+    });
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: Stack(
@@ -366,30 +402,21 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
               if (notification.metrics.axis != Axis.vertical) {
                 return false;
               }
-              // Only listen to the inner scroll view (depth > 0) to avoid mixed scroll pixels from the NestedScrollView header
-              if (notification.depth == 0) {
-                return false;
-              }
               final metrics = notification.metrics;
-              final bool show = metrics.pixels > 300.0;
-              if (show != _showScrollToTop) {
-                setState(() {
-                  _showScrollToTop = show;
-                });
+              final double pixels = metrics.pixels;
+
+              final bool showTop = pixels > 300.0;
+              if (showTop != _showScrollToTop) {
+                setState(() => _showScrollToTop = showTop);
               }
 
-              // Scroll detection for mini categories
-              if (notification is ScrollUpdateNotification) {
-                final double pixels = metrics.pixels;
-
-                if (pixels >= 145.0) {
-                  if (!_showMiniCategories) {
-                    setState(() => _showMiniCategories = true);
-                  }
-                } else {
-                  if (_showMiniCategories) {
-                    setState(() => _showMiniCategories = false);
-                  }
+              if (pixels >= 145.0) {
+                if (!_showMiniCategories) {
+                  setState(() => _showMiniCategories = true);
+                }
+              } else {
+                if (_showMiniCategories) {
+                  setState(() => _showMiniCategories = false);
                 }
               }
               return false;
@@ -404,16 +431,8 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
               floating: false,
               snap: false,
               expandedHeight: 145.0,
-              backgroundColor: const Color(0xFFE95D22),
+              backgroundColor: Colors.transparent,
               forceElevated: innerBoxIsScrolled,
-              shape: innerBoxIsScrolled
-                  ? const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.only(
-                        bottomLeft: Radius.circular(24),
-                        bottomRight: Radius.circular(24),
-                      ),
-                    )
-                  : null,
               iconTheme: const IconThemeData(color: Colors.white),
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -503,132 +522,150 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                   foregroundColor: Color(0xFF00A651),
                 ),
               ],
-              flexibleSpace: FlexibleSpaceBar(
-                background: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.network(
-                      widget.shop.headerImageUrl.isNotEmpty
-                          ? widget.shop.headerImageUrl
-                          : "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80",
-                      fit: BoxFit.cover,
-                    ),
-                    const DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.black45,
-                            Colors.transparent,
-                            Colors.black87,
-                          ],
-                        ),
+              flexibleSpace: Stack(
+                children: [
+                  // Hoppa gradient base layer - visible when collapsed
+                  Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Color(0xFFE95D22), // Hoppa Orange
+                          Color(0xFFFF8C00), // Orange-Yellow (lighter)
+                        ],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
                       ),
                     ),
-                    Positioned(
-                      bottom: 12,
-                      left: 16,
-                      right: 16,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                           Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(10),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Colors.black26,
-                                  blurRadius: 4,
-                                  offset: Offset(0, 2),
-                                )
+                  ),
+                  // Expanded content (shop image) - fades out on collapse
+                  FlexibleSpaceBar(
+                    background: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.network(
+                          widget.shop.headerImageUrl.isNotEmpty
+                              ? widget.shop.headerImageUrl
+                              : "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80",
+                          fit: BoxFit.cover,
+                        ),
+                        const DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.black45,
+                                Colors.transparent,
+                                Colors.black87,
                               ],
-                              border: Border.all(color: Colors.white, width: 1.5),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(8.5),
-                              child: widget.shop.logoUrl.isNotEmpty
-                                  ? Image.network(
-                                      widget.shop.logoUrl,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) => Icon(
-                                        Icons.store,
-                                        color: theme.colorScheme.primary,
-                                        size: 24,
-                                      ),
-                                    )
-                                  : Icon(
-                                      Icons.store,
-                                      color: theme.colorScheme.primary,
-                                      size: 24,
-                                    ),
                             ),
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  widget.shop.name,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    shadows: [
-                                      Shadow(
-                                        color: Colors.black45,
-                                        offset: Offset(0, 1),
-                                        blurRadius: 2,
-                                      ),
-                                    ],
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                        ),
+                        Positioned(
+                          bottom: 12,
+                          left: 16,
+                          right: 16,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                               Container(
+                                width: 44,
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: Colors.black26,
+                                      blurRadius: 4,
+                                      offset: Offset(0, 2),
+                                    )
+                                  ],
+                                  border: Border.all(color: Colors.white, width: 1.5),
                                 ),
-                                const SizedBox(height: 2),
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.star_rounded,
-                                      color: Colors.amber,
-                                      size: 14,
-                                    ),
-                                    const SizedBox(width: 2),
-                                    Expanded(
-                                      child: Text(
-                                        widget.shop.reviewCount == 0
-                                            ? "Değerlendirme Yok • Min: ₺${widget.shop.minBasketAmount.toStringAsFixed(0)} • Teslimat: ₺${widget.shop.baseDeliveryFee.toStringAsFixed(0)} • ${widget.shop.openingTime}-${widget.shop.closingTime}"
-                                            : "${widget.shop.averageRating.toStringAsFixed(1)} (${widget.shop.reviewCount}) • Min: ₺${widget.shop.minBasketAmount.toStringAsFixed(0)} • Teslimat: ₺${widget.shop.baseDeliveryFee.toStringAsFixed(0)} • ${widget.shop.openingTime}-${widget.shop.closingTime}",
-                                        style: const TextStyle(
-                                          color: Colors.white70,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                          shadows: [
-                                            Shadow(
-                                              color: Colors.black45,
-                                              offset: Offset(0, 1),
-                                              blurRadius: 2,
-                                            ),
-                                          ],
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8.5),
+                                  child: widget.shop.logoUrl.isNotEmpty
+                                      ? Image.network(
+                                          widget.shop.logoUrl,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) => Icon(
+                                            Icons.store,
+                                            color: theme.colorScheme.primary,
+                                            size: 24,
+                                          ),
+                                        )
+                                      : Icon(
+                                          Icons.store,
+                                          color: theme.colorScheme.primary,
+                                          size: 24,
                                         ),
-                                        overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      widget.shop.name,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        shadows: [
+                                          Shadow(
+                                            color: Colors.black45,
+                                            offset: Offset(0, 1),
+                                            blurRadius: 2,
+                                          ),
+                                        ],
                                       ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Row(
+                                      children: [
+                                        const Icon(
+                                          Icons.star_rounded,
+                                          color: Colors.amber,
+                                          size: 14,
+                                        ),
+                                        const SizedBox(width: 2),
+                                        Expanded(
+                                          child: Text(
+                                            widget.shop.reviewCount == 0
+                                                ? "Değerlendirme Yok • Min: ₺${widget.shop.minBasketAmount.toStringAsFixed(0)} • Teslimat: ₺${widget.shop.baseDeliveryFee.toStringAsFixed(0)} • ${widget.shop.openingTime}-${widget.shop.closingTime}"
+                                                : "${widget.shop.averageRating.toStringAsFixed(1)} (${widget.shop.reviewCount}) • Min: ₺${widget.shop.minBasketAmount.toStringAsFixed(0)} • Teslimat: ₺${widget.shop.baseDeliveryFee.toStringAsFixed(0)} • ${widget.shop.openingTime}-${widget.shop.closingTime}",
+                                            style: const TextStyle(
+                                              color: Colors.white70,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              shadows: [
+                                                Shadow(
+                                                  color: Colors.black45,
+                                                  offset: Offset(0, 1),
+                                                  blurRadius: 2,
+                                                ),
+                                              ],
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ];
@@ -841,25 +878,54 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                 padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
                 child: Container(
                   height: 44,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF1F3F5),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: TextField(
-                    onChanged: (val) {
-                      ref.read(catalogSearchQueryProvider.notifier).state = val;
-                    },
-                    decoration: InputDecoration(
-                      hintText: "Bu mağazada ara...",
-                      hintStyle: theme.inputDecorationTheme.hintStyle?.copyWith(fontSize: 13),
-                      prefixIcon: Icon(
-                        Icons.search,
-                        color: theme.primaryColor,
-                        size: 20,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          onChanged: (val) {
+                            ref.read(catalogSearchQueryProvider.notifier).state = val;
+                          },
+                          decoration: InputDecoration(
+                            hintText: "Bu mağazada ara...",
+                            hintStyle: theme.inputDecorationTheme.hintStyle?.copyWith(fontSize: 13),
+                            prefixIcon: Icon(
+                              Icons.search,
+                              color: theme.primaryColor,
+                              size: 20,
+                            ),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                        ),
                       ),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
+                      GestureDetector(
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            barrierDismissible: true,
+                            builder: (context) => const VoiceAssistantDialog(),
+                          );
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 6),
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE95D22).withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.mic_rounded,
+                            color: Color(0xFFE95D22),
+                            size: 18,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -1225,7 +1291,7 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
               ),
             ),
           Positioned(
-            top: kToolbarHeight + MediaQuery.of(context).padding.top - 4, // Slightly overlapping the curved header
+            top: kToolbarHeight + MediaQuery.of(context).padding.top, // Right below the collapsed App Bar
             left: 0,
             right: 0,
             child: IgnorePointer(
@@ -1238,7 +1304,7 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                   opacity: _showMiniCategories ? 1.0 : 0.0,
                   duration: const Duration(milliseconds: 200),
                   child: Container(
-                    height: 54,
+                    height: 48,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
                         colors: [
@@ -1248,29 +1314,34 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
                       ),
-                      borderRadius: const BorderRadius.only(
-                        bottomLeft: Radius.circular(24),
-                        bottomRight: Radius.circular(24),
-                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFFE95D22).withValues(alpha: 0.25),
-                          blurRadius: 10,
+                          color: const Color(0xFFE95D22).withValues(alpha: 0.15),
+                          blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),
                       ],
                     ),
-                    child: ClipRRect(
-                      borderRadius: const BorderRadius.only(
-                        bottomLeft: Radius.circular(24),
-                        bottomRight: Radius.circular(24),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).scaffoldBackgroundColor,
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(24),
+                          topRight: Radius.circular(24),
+                        ),
                       ),
-                      child: _buildMiniCategoriesList(
-                        context,
-                        ref,
-                        categoriesAsync,
-                        allProductsAsync,
-                        selectedCategory,
+                      child: ClipRRect(
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(24),
+                          topRight: Radius.circular(24),
+                        ),
+                        child: _buildMiniCategoriesList(
+                          context,
+                          ref,
+                          categoriesAsync,
+                          allProductsAsync,
+                          selectedCategory,
+                        ),
                       ),
                     ),
                   ),

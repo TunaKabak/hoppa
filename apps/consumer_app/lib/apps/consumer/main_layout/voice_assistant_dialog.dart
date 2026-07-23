@@ -8,7 +8,6 @@ import 'dart:math' as math;
 
 import 'package:permission_handler/permission_handler.dart';
 import 'package:core_shared/shared/core/services/navigation_provider.dart';
-import 'package:core_shared/shared/models/business_product.dart';
 import 'package:core_shared/shared/models/cart_item.dart';
 import 'package:consumer_app/apps/consumer/cart/cart_provider.dart';
 import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository.dart';
@@ -114,9 +113,15 @@ class _VoiceAssistantDialogState extends ConsumerState<VoiceAssistantDialog>
         onStatus: (status) {
           debugPrint('Voice STT Status: $status');
           if (mounted) {
-            setState(() {
-              _displayedReply = "Durum: $status\nKonuşmanızı bekliyorum...";
-            });
+            if (status == 'listening') {
+              setState(() {
+                _displayedReply = "Dinliyorum, lütfen konuşun...";
+              });
+            } else if (status == 'notListening' || status == 'done') {
+              if (_isListening) {
+                _onSpeechFinished();
+              }
+            }
           }
         },
         onError: (errorNotification) {
@@ -124,7 +129,7 @@ class _VoiceAssistantDialogState extends ConsumerState<VoiceAssistantDialog>
           if (mounted) {
             setState(() {
               _isListening = false;
-              _displayedReply = "Mikrofon Hatası: ${errorNotification.errorMsg}\n(Kalıcı mı: ${errorNotification.permanent})";
+              _displayedReply = "Mikrofon Hatası: ${errorNotification.errorMsg}";
             });
             _pulseController.stop();
             _rotationController.stop();
@@ -224,9 +229,14 @@ class _VoiceAssistantDialogState extends ConsumerState<VoiceAssistantDialog>
       if (mounted) {
         setState(() {
           _isThinking = false;
-          _assistantReply = "Hata oluştu, lütfen tekrar deneyin.";
+          _assistantReply = "İsteğiniz işleniyor...";
         });
-        _startTypewriter(_assistantReply);
+        // Fallback action execution if API call fails
+        Future.delayed(const Duration(milliseconds: 800), () {
+          if (mounted) {
+            _executeAction("UNKNOWN", {});
+          }
+        });
       }
     }
   }
@@ -238,64 +248,53 @@ class _VoiceAssistantDialogState extends ConsumerState<VoiceAssistantDialog>
     switch (action) {
       case 'ADD_TO_CART':
         final activeBusiness = businessProvider.selectedBusiness;
-        if (activeBusiness == null) {
-          setState(() {
-            _assistantReply = "Sepete ürün eklemek için lütfen önce bir dükkan seçin sevgili dostum.";
-          });
-          _startTypewriter(_assistantReply);
-          return;
-        }
-
-        final productName = parameters['productName'] as String? ?? '';
+        final productName = (parameters['productName'] as String? ?? parameters['query'] as String? ?? '').trim();
         final quantity = parameters['quantity'] as num? ?? 1;
 
-        if (productName.isEmpty) {
-          setState(() {
-            _assistantReply = "Eklemek istediğiniz ürün adını anlayamadım.";
-          });
-          _startTypewriter(_assistantReply);
-          return;
+        if (productName.isNotEmpty && activeBusiness != null) {
+          final productsAsync = ref.read(shopProductsProvider(activeBusiness.id));
+          final products = productsAsync.value ?? [];
+          final match = products.where(
+            (p) => p.product.name.toLowerCase().contains(productName.toLowerCase()),
+          ).firstOrNull;
+
+          if (match != null) {
+            try {
+              for (int i = 0; i < quantity.toInt(); i++) {
+                ref.read(cartProvider.notifier).addToCart(match);
+              }
+              Navigator.pop(context); // Close assistant
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text("$quantity adet ${match.product.name} sepete eklendi.")),
+              );
+              return;
+            } catch (e) {
+              setState(() {
+                _assistantReply = e.toString().replaceAll("Exception: ", "");
+              });
+              _startTypewriter(_assistantReply);
+              return;
+            }
+          }
         }
 
-        final productsAsync = ref.read(shopProductsProvider(activeBusiness.id));
-        final products = productsAsync.value ?? [];
-        final match = products.firstWhere(
-          (p) => p.product.name.toLowerCase().contains(productName.toLowerCase()),
-          orElse: () => null as dynamic,
-        ) as BusinessProduct?;
-
-        if (match == null) {
-          setState(() {
-            _assistantReply = "$productName bu dükkanda bulunamadı sevgili dostum.";
-          });
-          _startTypewriter(_assistantReply);
-        } else {
-          try {
-            for (int i = 0; i < quantity.toInt(); i++) {
-              ref.read(cartProvider.notifier).addToCart(match);
-            }
-            Navigator.pop(context); // Close assistant
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("$quantity adet ${match.product.name} sepete eklendi.")),
-            );
-          } catch (e) {
-            setState(() {
-              _assistantReply = e.toString().replaceAll("Exception: ", "");
-            });
-            _startTypewriter(_assistantReply);
-          }
+        // Fallback: search for product if not found in current shop or no active shop
+        final searchQuery = productName.isNotEmpty ? productName : _wordsSpoken;
+        if (searchQuery.isNotEmpty) {
+          ref.read(catalogSearchQueryProvider.notifier).state = searchQuery;
+          navProvider.setIndex(1); // Go to Search tab
+          Navigator.pop(context);
         }
         break;
 
       case 'REMOVE_FROM_CART':
-        final productName = parameters['productName'] as String? ?? '';
+        final productName = (parameters['productName'] as String? ?? '').trim();
         if (productName.isEmpty) return;
 
         final cart = ref.read(cartProvider);
-        final CartItem? item = cart.items.firstWhere(
+        final CartItem? item = cart.items.where(
           (i) => i.businessProduct.product.name.toLowerCase().contains(productName.toLowerCase()),
-          orElse: () => null as dynamic,
-        );
+        ).firstOrNull;
 
         if (item == null) {
           setState(() {
@@ -320,9 +319,10 @@ class _VoiceAssistantDialogState extends ConsumerState<VoiceAssistantDialog>
         break;
 
       case 'SEARCH_PRODUCT':
-        final query = parameters['query'] as String? ?? '';
-        if (query.isNotEmpty) {
-          ref.read(catalogSearchQueryProvider.notifier).state = query;
+        final query = (parameters['query'] as String? ?? parameters['productName'] as String? ?? '').trim();
+        final searchQuery = query.isNotEmpty ? query : _wordsSpoken;
+        if (searchQuery.isNotEmpty) {
+          ref.read(catalogSearchQueryProvider.notifier).state = searchQuery;
           navProvider.setIndex(1); // Go to Search tab
           Navigator.pop(context);
         }
@@ -379,7 +379,11 @@ class _VoiceAssistantDialogState extends ConsumerState<VoiceAssistantDialog>
         break;
 
       default:
-        // Do nothing, just display explanation
+        if (_wordsSpoken.trim().isNotEmpty) {
+          ref.read(catalogSearchQueryProvider.notifier).state = _wordsSpoken.trim();
+          navProvider.setIndex(1); // Go to Search tab
+          Navigator.pop(context);
+        }
         break;
     }
   }

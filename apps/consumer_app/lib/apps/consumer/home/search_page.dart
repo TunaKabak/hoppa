@@ -10,6 +10,7 @@ import 'package:core_shared/shared/core/services/navigation_provider.dart';
 import 'package:consumer_app/apps/consumer/business/business_provider.dart';
 import 'package:consumer_app/apps/consumer/product/product_detail_page.dart';
 import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
+import 'package:consumer_app/apps/consumer/main_layout/voice_assistant_dialog.dart';
 
 class SearchPage extends ConsumerStatefulWidget {
   const SearchPage({super.key});
@@ -96,6 +97,21 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final catalogQuery = ref.watch(catalogSearchQueryProvider);
+
+    if (catalogQuery != _query) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && catalogQuery != _query) {
+          _searchController.text = catalogQuery;
+          _searchController.selection = TextSelection.fromPosition(
+            TextPosition(offset: catalogQuery.length),
+          );
+          setState(() {
+            _query = catalogQuery;
+          });
+        }
+      });
+    }
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: Container(
@@ -177,6 +193,28 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                 },
                                 child: const Icon(Icons.clear, color: Colors.grey),
                               ),
+                            const SizedBox(width: 6),
+                            GestureDetector(
+                              onTap: () {
+                                showDialog(
+                                  context: context,
+                                  barrierDismissible: true,
+                                  builder: (context) => const VoiceAssistantDialog(),
+                                );
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE95D22).withOpacity(0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.mic_rounded,
+                                  color: Color(0xFFE95D22),
+                                  size: 18,
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),

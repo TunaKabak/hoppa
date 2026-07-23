@@ -26,7 +26,7 @@ export class CourierController {
 
       // 2. Konum kaydını Upsert (varsa güncelle yoksa ekle) et
       const location = await prisma.courierLocation.upsert({
-        where: { id: courier.id }, // Courier ID ile birebir kilitliyoruz (Mükerrer satır kirliliğini önler)
+        where: { courierId: courier.id }, // courierId @unique kısıtı üzerinden kilit
         update: {
           latitude: parseFloat(latitude.toString()),
           longitude: parseFloat(longitude.toString()),
@@ -34,8 +34,7 @@ export class CourierController {
           updatedAt: new Date()
         },
         create: {
-          id: courier.id,
-          courierId: courier.id,
+          courierId: courier.id, // id, schema'nın @default(uuid()) tarafından üretilir
           latitude: parseFloat(latitude.toString()),
           longitude: parseFloat(longitude.toString()),
           bearing: parseFloat((bearing || 0.0).toString())

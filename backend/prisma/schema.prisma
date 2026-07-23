@@ -573,7 +573,7 @@ model CourierShop {
 
 model CourierLocation {
   id        String   @id @default(uuid())
-  courierId String
+  courierId String   @unique // Her kurye için tek konum kaydı
   courier   Courier  @relation(fields: [courierId], references: [id], onDelete: Cascade)
   latitude  Float
   longitude Float
