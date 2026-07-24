@@ -16,7 +16,7 @@ final courierLocationStreamProvider = StreamProvider.family<CourierLocation?, St
   return supabase
       .from('CourierLocation')
       .stream(primaryKey: ['id'])
-      .eq('id', courierId)
+      .eq('courierId', courierId) // Bug fix: 'id' yerine 'courierId' kolonu üzerinden filtre
       .map((data) {
         if (data.isEmpty) {
           return null;
