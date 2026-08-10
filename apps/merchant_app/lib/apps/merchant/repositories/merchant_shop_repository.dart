@@ -189,6 +189,7 @@ class MerchantShopRepository {
     required String imageUrl,
     required String targetArea,
     required bool designService,
+    List<String>? targetProducts,
   }) async {
     final response = await _apiClient.post(
       '/api/merchant/campaigns',
@@ -198,6 +199,7 @@ class MerchantShopRepository {
         'imageUrl': imageUrl,
         'targetArea': targetArea,
         'designService': designService,
+        'targetProducts': targetProducts ?? [],
       },
     );
     return response['data'];

@@ -228,7 +228,7 @@ class ModernProductCard extends ConsumerWidget {
       );
     }
 
-    // --- GRID VIEW LAYOUT (Standard) ---
+    // --- GRID VIEW LAYOUT (Standardized 1:1 Aspect Ratio) ---
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -245,58 +245,57 @@ class ModernProductCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Image Area
-          Expanded(
+          // 1:1 Standard Square Image Area
+          AspectRatio(
+            aspectRatio: 1.0,
             child: Stack(
               children: [
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.zero, // Padding tamamen kaldırıldı
-                  decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(16),
+                Positioned.fill(
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF8F9FA), // Clean Studio Neutral Grey
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(16),
+                      ),
                     ),
-                  ),
-                  child: ClipRRect(
-                    // ClipRRect eklendi
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(16),
-                    ),
-                    child: product.imageUrl.isNotEmpty
-                        ? Image.network(
-                            product.imageUrl,
-                            fit: BoxFit.cover, // BoxFit.cover yapıldı
-                            errorBuilder: (context, error, stackTrace) {
-                              return Center(
-                                child: Icon(
-                                  Icons.image_not_supported,
-                                  color: Colors.grey[300],
-                                  size: 40,
-                                ),
-                              );
-                            },
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return Center(
-                                child: CircularProgressIndicator(
-                                  value:
-                                      loadingProgress.expectedTotalBytes != null
-                                      ? loadingProgress.cumulativeBytesLoaded /
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(16),
+                      ),
+                      child: product.imageUrl.isNotEmpty
+                          ? Image.network(
+                              product.imageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Center(
+                                  child: Icon(
+                                    Icons.image_not_supported,
+                                    color: Colors.grey[300],
+                                    size: 40,
+                                  ),
+                                );
+                              },
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Center(
+                                  child: CircularProgressIndicator(
+                                    value: loadingProgress.expectedTotalBytes != null
+                                        ? loadingProgress.cumulativeBytesLoaded /
                                             loadingProgress.expectedTotalBytes!
-                                      : null,
-                                  strokeWidth: 2,
-                                ),
-                              );
-                            },
-                          )
-                        : Center(
-                            child: Icon(
-                              Icons.image,
-                              color: Colors.grey[300],
-                              size: 40,
+                                        : null,
+                                    strokeWidth: 2,
+                                  ),
+                                );
+                              },
+                            )
+                          : Center(
+                              child: Icon(
+                                Icons.image,
+                                color: Colors.grey[300],
+                                size: 40,
+                              ),
                             ),
-                          ),
+                    ),
                   ),
                 ),
                 if (activeDiscountRate > 0)
@@ -334,7 +333,7 @@ class ModernProductCard extends ConsumerWidget {
                   child: _buildFavoriteButton(context, ref),
                 ),
 
-                // --- MİKTAR KONTROLÜ (Sağa Hizalı) ---
+                // MİKTAR KONTROLÜ (Sağa Hizalı)
                 Positioned(
                   bottom: isCompact ? 4 : 8,
                   right: isCompact ? 4 : 8,
@@ -351,68 +350,71 @@ class ModernProductCard extends ConsumerWidget {
             ),
           ),
 
-          // Details Area
-          Padding(
-            padding: EdgeInsets.all(isCompact ? 4 : 8), // Dynamic padding
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      product.brand,
-                      style: TextStyle(
-                        color: Colors.grey[500],
-                        fontSize: 9, // Smaller font
-                        fontWeight: FontWeight.w600,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      product.name,
-                      style: const TextStyle(
-                        color: Colors.black87,
-                        fontSize: 12, // Smaller font
-                        fontWeight: FontWeight.w700,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-                // Fiyat
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Column(
+          // Details Area (Takes remaining vertical space cleanly)
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.all(isCompact ? 6 : 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (oldPrice != null)
-                        Text(
-                          "${oldPrice.toStringAsFixed(2)} TL",
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            decoration: TextDecoration.lineThrough,
-                          ),
-                        ),
                       Text(
-                        "${activePrice.toStringAsFixed(2)} TL",
+                        product.brand,
                         style: TextStyle(
-                          color: oldPrice != null ? Colors.red : theme.primaryColor,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
+                          color: Colors.grey[500],
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        product.name,
+                        style: const TextStyle(
+                          color: Colors.black87,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          height: 1.2,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
-                ),
-              ],
+                  // Fiyat
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (oldPrice != null)
+                          Text(
+                            "${oldPrice.toStringAsFixed(2)} TL",
+                            style: const TextStyle(
+                              color: Colors.grey,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              decoration: TextDecoration.lineThrough,
+                            ),
+                          ),
+                        Text(
+                          "${activePrice.toStringAsFixed(2)} TL",
+                          style: TextStyle(
+                            color: oldPrice != null ? Colors.red : theme.primaryColor,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

@@ -3328,7 +3328,7 @@ class _EditProductDialogState extends State<_EditProductDialog> {
                               width: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          else
+                          else ...[
                             ElevatedButton.icon(
                               onPressed: _pickAndUploadImage,
                               icon: const Icon(Icons.upload, size: 16),
@@ -3337,6 +3337,16 @@ class _EditProductDialogState extends State<_EditProductDialog> {
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               ),
                             ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "📐 Standart: 1:1 Kare Format (Min 800x800 px)",
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),

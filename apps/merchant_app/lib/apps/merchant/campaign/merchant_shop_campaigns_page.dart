@@ -303,6 +303,9 @@ class _CreateCampaignBottomSheetState extends ConsumerState<_CreateCampaignBotto
   bool _isUploading = false;
   bool _isSaving = false;
 
+  final Set<String> _selectedProductIds = {};
+  bool _selectAllProducts = false;
+
   Future<void> _pickImage() async {
     final MediaService mediaService = MediaService();
     final pickerFile = await mediaService.pickImage(source: ImageSource.gallery);
@@ -362,6 +365,7 @@ class _CreateCampaignBottomSheetState extends ConsumerState<_CreateCampaignBotto
         imageUrl: _imageUrl ?? "",
         targetArea: _targetArea,
         designService: _designService,
+        targetProducts: _selectedProductIds.toList(),
       );
 
       ref.invalidate(merchantShopCampaignsProvider);
@@ -528,6 +532,89 @@ class _CreateCampaignBottomSheetState extends ConsumerState<_CreateCampaignBotto
                 ),
               ),
             ],
+            const SizedBox(height: 16),
+            Text(
+              "Kampanyaya Dahil Ürünler (Opsiyonel)",
+              style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.grey.shade700),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              "Boş bırakılırsa kampanya tüm ürünlerinizde geçerli sayılır.",
+              style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey.shade500),
+            ),
+            const SizedBox(height: 8),
+            Consumer(
+              builder: (context, ref, child) {
+                final productsAsync = ref.watch(productControllerProvider);
+                return productsAsync.when(
+                  loading: () => const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator())),
+                  error: (err, _) => Text("Ürünler yüklenemedi: $err", style: GoogleFonts.poppins(color: Colors.red, fontSize: 12)),
+                  data: (products) {
+                    if (products.isEmpty) {
+                      return Text("Envanterinizde ürün bulunmuyor.", style: GoogleFonts.poppins(color: Colors.grey, fontSize: 12));
+                    }
+                    return Container(
+                      height: 180,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        children: [
+                          CheckboxListTile(
+                            dense: true,
+                            title: Text("Tüm Ürünleri Seç (${products.length})", style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.bold)),
+                            value: _selectAllProducts,
+                            onChanged: (val) {
+                              setState(() {
+                                _selectAllProducts = val ?? false;
+                                if (_selectAllProducts) {
+                                  for (final p in products) {
+                                    final key = (p.barcode != null && p.barcode!.isNotEmpty) ? p.barcode! : p.id;
+                                    _selectedProductIds.add(key);
+                                  }
+                                } else {
+                                  _selectedProductIds.clear();
+                                }
+                              });
+                            },
+                          ),
+                          const Divider(height: 1),
+                          Expanded(
+                            child: ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: products.length,
+                              itemBuilder: (context, index) {
+                                final p = products[index];
+                                final pKey = (p.barcode != null && p.barcode!.isNotEmpty) ? p.barcode! : p.id;
+                                final isSelected = _selectedProductIds.contains(pKey);
+
+                                return CheckboxListTile(
+                                  dense: true,
+                                  title: Text(p.name, style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500)),
+                                  subtitle: Text("${p.price.toStringAsFixed(2)} ₺", style: GoogleFonts.poppins(fontSize: 11)),
+                                  value: isSelected,
+                                  onChanged: (val) {
+                                    setState(() {
+                                      if (val == true) {
+                                        _selectedProductIds.add(pKey);
+                                      } else {
+                                        _selectedProductIds.remove(pKey);
+                                        _selectAllProducts = false;
+                                      }
+                                    });
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,

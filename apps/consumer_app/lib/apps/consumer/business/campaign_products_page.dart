@@ -189,7 +189,7 @@ class CampaignProductsPage extends ConsumerWidget {
               sliver: SliverGrid(
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
-                  childAspectRatio: 0.72,
+                  childAspectRatio: 0.69,
                   mainAxisSpacing: 12,
                   crossAxisSpacing: 12,
                 ),

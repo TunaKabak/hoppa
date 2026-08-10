@@ -1256,7 +1256,7 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                             crossAxisCount: _crossAxisCount,
                             childAspectRatio: _crossAxisCount == 1
                                 ? 2.8
-                                : (_crossAxisCount == 2 ? 0.72 : 0.65),
+                                : (_crossAxisCount == 2 ? 0.69 : 0.62),
                             mainAxisSpacing: 12,
                             crossAxisSpacing: 12,
                           ),
