@@ -1,23 +1,23 @@
 import 'dart:io';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:core_shared/shared/core/services/campaign_service.dart';
-import 'package:core_shared/shared/core/services/product_service.dart';
 import 'package:core_shared/shared/core/services/media_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:core_shared/shared/models/campaign.dart';
-import 'package:core_shared/shared/models/business_product.dart';
+import '../providers/merchant_api_providers.dart';
+import '../repositories/merchant_product_repository.dart';
 
-class CreateCampaignWizard extends StatefulWidget {
+class CreateCampaignWizard extends ConsumerStatefulWidget {
   final String businessId;
 
   const CreateCampaignWizard({super.key, required this.businessId});
 
   @override
-  State<CreateCampaignWizard> createState() => _CreateCampaignWizardState();
+  ConsumerState<CreateCampaignWizard> createState() => _CreateCampaignWizardState();
 }
 
-class _CreateCampaignWizardState extends State<CreateCampaignWizard> {
+class _CreateCampaignWizardState extends ConsumerState<CreateCampaignWizard> {
   int _currentStep = 0;
   bool _isLoading = false;
 
@@ -30,9 +30,8 @@ class _CreateCampaignWizardState extends State<CreateCampaignWizard> {
   bool _isUploadingImage = false;
 
   // STEP 2: PRODUCTS
-  final ProductService _productService = ProductService();
-  // _allProducts removed
-  final Set<String> _selectedProductIds = {}; // Selected Barcodes actually
+  final _searchController = TextEditingController();
+  final Set<String> _selectedProductIds = {}; // Selected Barcodes or Product IDs
   bool _selectAll = false;
 
   // STEP 3: DISCOUNT
@@ -43,6 +42,7 @@ class _CreateCampaignWizardState extends State<CreateCampaignWizard> {
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
+    _searchController.dispose();
     _discountController.dispose();
     super.dispose();
   }
@@ -63,7 +63,7 @@ class _CreateCampaignWizardState extends State<CreateCampaignWizard> {
 
     try {
       final campaign = Campaign(
-        id: '', // Firestore will assign
+        id: '', // Firestore assign
         vendorId: widget.businessId,
         name: _nameController.text,
         description: _descriptionController.text,
@@ -136,6 +136,8 @@ class _CreateCampaignWizardState extends State<CreateCampaignWizard> {
 
   @override
   Widget build(BuildContext context) {
+    final productsAsync = ref.watch(productControllerProvider);
+
     return Scaffold(
       appBar: AppBar(title: const Text("Kampanya Oluştur"), centerTitle: true),
       body: Stepper(
@@ -355,42 +357,64 @@ class _CreateCampaignWizardState extends State<CreateCampaignWizard> {
             title: const Text("Ürün Seçimi"),
             isActive: _currentStep >= 1,
             content: SizedBox(
-              height: 400, // Limit height for list
-              child: StreamBuilder<QuerySnapshot>(
-                stream: _productService.getBusinessProductsStream(
-                  widget.businessId,
+              height: 420,
+              child: productsAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (err, stack) => Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text("Envanter ürünleri yüklenemedi: $err", style: const TextStyle(color: Colors.red)),
+                      ElevatedButton(
+                        onPressed: () => ref.refresh(productControllerProvider),
+                        child: const Text("Tekrar Deneyin"),
+                      )
+                    ],
+                  ),
                 ),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
+                data: (products) {
+                  if (products.isEmpty) {
+                    return const Center(
+                      child: Text("Envanterinizde henüz ürün bulunmamaktadır."),
+                    );
                   }
 
-                  if (!snapshot.hasData) return const Text("Ürün bulunamadı");
-
-                  final docs = snapshot.data!.docs;
-                  final products = docs
-                      .map(
-                        (doc) => BusinessProduct.fromMap(
-                          doc.data() as Map<String, dynamic>,
-                          doc.id,
-                        ),
-                      )
-                      .toList();
-
-                  // Filter out only available products if needed? No, campaign can be for anything.
+                  final search = _searchController.text.trim().toLowerCase();
+                  final filteredProducts = products.where((p) {
+                    if (search.isEmpty) return true;
+                    final nameMatch = p.name.toLowerCase().contains(search);
+                    final brandMatch = (p.brand ?? '').toLowerCase().contains(search);
+                    final barcodeMatch = (p.barcode ?? '').toLowerCase().contains(search);
+                    return nameMatch || brandMatch || barcodeMatch;
+                  }).toList();
 
                   return Column(
                     children: [
+                      TextField(
+                        controller: _searchController,
+                        onChanged: (_) => setState(() {}),
+                        decoration: const InputDecoration(
+                          hintText: "Ürün adı, marka veya barkod ile ara...",
+                          prefixIcon: Icon(Icons.search),
+                          border: OutlineInputBorder(),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
                       CheckboxListTile(
-                        title: const Text("Tümünü Seç"),
+                        title: Text(
+                          "Tümünü Seç (${filteredProducts.length} Ürün)",
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
                         value: _selectAll,
                         onChanged: (val) {
                           setState(() {
                             _selectAll = val ?? false;
                             if (_selectAll) {
-                              _selectedProductIds.addAll(
-                                products.map((p) => p.productBarcode),
-                              );
+                              for (final p in filteredProducts) {
+                                final key = (p.barcode != null && p.barcode!.isNotEmpty) ? p.barcode! : p.id;
+                                _selectedProductIds.add(key);
+                              }
                             } else {
                               _selectedProductIds.clear();
                             }
@@ -399,39 +423,46 @@ class _CreateCampaignWizardState extends State<CreateCampaignWizard> {
                       ),
                       const Divider(),
                       Expanded(
-                        child: ListView.builder(
-                          itemCount: products.length,
-                          itemBuilder: (context, index) {
-                            final p = products[index];
-                            final isSelected = _selectedProductIds.contains(
-                              p.productBarcode,
-                            );
-                            return CheckboxListTile(
-                              title: Text(p.product.name),
-                              subtitle: Text("${p.price} ₺"),
-                              secondary: Image.network(
-                                p.product.imageUrl,
-                                width: 40,
-                                height: 40,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    const Icon(Icons.image),
+                        child: filteredProducts.isEmpty
+                            ? const Center(child: Text("Aramanıza uygun ürün bulunamadı."))
+                            : ListView.builder(
+                                itemCount: filteredProducts.length,
+                                itemBuilder: (context, index) {
+                                  final p = filteredProducts[index];
+                                  final pKey = (p.barcode != null && p.barcode!.isNotEmpty) ? p.barcode! : p.id;
+                                  final isSelected = _selectedProductIds.contains(pKey);
+
+                                  return CheckboxListTile(
+                                    title: Text(p.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                    subtitle: Text(
+                                      "${p.price.toStringAsFixed(2)} ₺${p.brand != null && p.brand!.isNotEmpty ? ' • ${p.brand}' : ''}",
+                                    ),
+                                    secondary: ClipRRect(
+                                      borderRadius: BorderRadius.circular(6),
+                                      child: (p.imageUrl != null && p.imageUrl!.isNotEmpty)
+                                          ? Image.network(
+                                              p.imageUrl!,
+                                              width: 44,
+                                              height: 44,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (context, error, stackTrace) => const Icon(Icons.image),
+                                            )
+                                          : const Icon(Icons.image, size: 40, color: Colors.grey),
+                                    ),
+                                    value: isSelected,
+                                    onChanged: (val) {
+                                      setState(() {
+                                        if (val == true) {
+                                          _selectedProductIds.add(pKey);
+                                        } else {
+                                          _selectedProductIds.remove(pKey);
+                                          _selectAll = false;
+                                        }
+                                      });
+                                    },
+                                  );
+                                },
                               ),
-                              value: isSelected,
-                              onChanged: (val) {
-                                setState(() {
-                                  if (val == true) {
-                                    _selectedProductIds.add(p.productBarcode);
-                                  } else {
-                                    _selectedProductIds.remove(
-                                      p.productBarcode,
-                                    );
-                                    _selectAll = false;
-                                  }
-                                });
-                              },
-                            );
-                          },
-                        ),
                       ),
                     ],
                   );
