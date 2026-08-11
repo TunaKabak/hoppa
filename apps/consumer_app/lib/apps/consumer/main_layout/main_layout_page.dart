@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'dart:math' as math;
 
 import 'package:provider/provider.dart' as p;
 import 'package:consumer_app/apps/consumer/home/home_page.dart';
 import 'package:consumer_app/apps/consumer/cart/cart_page.dart';
 import 'package:consumer_app/apps/consumer/cart/cart_provider.dart';
 import 'package:consumer_app/apps/consumer/profile/profile_page.dart';
-import 'package:core_shared/shared/core/services/navigation_provider.dart'; // YENİ
+import 'package:core_shared/shared/core/services/navigation_provider.dart';
 import 'package:consumer_app/apps/consumer/providers/consumer_location_controller.dart';
 
 import 'package:consumer_app/apps/consumer/business/business_provider.dart';
@@ -16,6 +15,8 @@ import 'package:consumer_app/apps/consumer/home/search_page.dart';
 import 'package:core_auth/core_auth.dart';
 import 'package:core_shared/shared/core/services/notification_service.dart';
 import 'package:consumer_app/apps/consumer/main_layout/voice_assistant_dialog.dart';
+import 'package:consumer_app/apps/consumer/main_layout/widgets/floating_bottom_bar.dart';
+import 'package:consumer_app/apps/consumer/main_layout/controllers/floating_nav_controller.dart';
 
 class MainLayoutPage extends ConsumerStatefulWidget {
   const MainLayoutPage({super.key});
@@ -64,6 +65,14 @@ class _MainLayoutPageState extends ConsumerState<MainLayoutPage> {
         // Otomatik konum alma ve yetkilendirme
         ref.read(consumerLocationProvider.notifier).determineLocation().catchError((e) {
           debugPrint("Startup location retrieval failed: $e");
+          return ConsumerLocationResult(
+            address: "",
+            streetAddress: "",
+            city: "",
+            district: "",
+            latitude: 0.0,
+            longitude: 0.0,
+          );
         });
       }
     });
@@ -71,28 +80,28 @@ class _MainLayoutPageState extends ConsumerState<MainLayoutPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final primaryColor = theme.colorScheme.primary;
     final navProvider = p.Provider.of<NavigationProvider>(context);
     final cart = ref.watch(cartProvider);
     final businessProvider = p.Provider.of<BusinessProvider>(context);
-
+    final floatingNavState = ref.watch(floatingNavControllerProvider);
     // Seçili sekmeyi belirle
     int currentIndex = navProvider.currentIndex;
 
-    // Alt menüyü göster/gizle: Ana Sayfa (0) ve Kategori/İşletme Seçilmemişse GİZLE.
-    // Ayrıca Sepet (2) ekranında alt barı gizle.
-    bool showBottomBar =
-        !(currentIndex == 0 && businessProvider.selectedBusiness == null) &&
-        currentIndex != 2;
+    // Alt menü görünürlük kuralları:
+    // 1. Ana Sayfa sekmesinde (Index 0): Sadece bir dükkan seçilmişse (selectedBusiness != null) gösterilir.
+    //    Kategori seçimi veya işletme listesi aşamasında (selectedBusiness == null) GİZLENİR.
+    // 2. Sepet sekmesinde (Index 2): Sepet BOŞSA gösterilir, doluysa Checkout bar için GİZLENİR.
+    // 3. Arama (Index 1) ve Profil (Index 3) sekmelerinde: GÖSTERİLİR.
+    // 4. Görünür ekranlarda dikey kaydırmaya (floatingNavState.isBottomBarVisible) duyarlı çalışır.
+    bool isMainTabWithNoBusiness = (currentIndex == 0 && businessProvider.selectedBusiness == null);
+    bool isCartWithItems = (currentIndex == 2 && cart.items.isNotEmpty);
+
+    bool showBottomBar = !isMainTabWithNoBusiness && !isCartWithItems && floatingNavState.isBottomBarVisible;
 
     // FAB Tıklanınca yapılacak işlem (Hoppa! - Ana Kategoriye Dön)
     void onFabPressed() {
-      // 1. Kategoriyi ve Marketi sıfırla (Böylece HomePage -> SelectionCategoryPage moduna geçer)
       businessProvider.clearCategory();
       businessProvider.clearBusiness();
-
-      // 2. Ana Sayfa (0) sekmesine git
       navProvider.setIndex(0);
     }
 
@@ -104,8 +113,6 @@ class _MainLayoutPageState extends ConsumerState<MainLayoutPage> {
       );
     }
 
-    // Eğer üstümüzde başka bir sayfa varsa (ör: ProductDetailPage),
-    // normal pop davranışına izin ver
     final isCurrentRoute = ModalRoute.of(context)?.isCurrent ?? true;
 
     return PopScope(
@@ -116,7 +123,6 @@ class _MainLayoutPageState extends ConsumerState<MainLayoutPage> {
         // 1. Profil Sekmesindeysek (Index 3)
         if (currentIndex == 3) {
           final profileNavigator = _profileNavigatorKey.currentState;
-          // İç navigator geri gidebiliyorsa (örn: Siparişlerim -> Profil)
           if (profileNavigator != null && profileNavigator.canPop()) {
             profileNavigator.pop();
             return;
@@ -126,12 +132,10 @@ class _MainLayoutPageState extends ConsumerState<MainLayoutPage> {
         // 2. Ana Sayfa sekmesinde (Index 0): state-driven ekranlar arasında geri git
         if (currentIndex == 0) {
           if (businessProvider.selectedBusiness != null) {
-            // Ürün listesi -> İşletme seçimi
             businessProvider.clearBusiness();
             return;
           }
           if (businessProvider.selectedCategory != null) {
-            // İşletme seçimi -> Kategori seçimi
             businessProvider.clearCategory();
             return;
           }
@@ -143,284 +147,50 @@ class _MainLayoutPageState extends ConsumerState<MainLayoutPage> {
           return;
         }
 
-        // 4. Ana Sayfadayız ve kök kategori ekranındayız -> Uygulamadan Çık
+        // 4. Uygulamadan Çık
         SystemNavigator.pop();
       },
       child: Scaffold(
-        body: PageStorage(
-          bucket: _bucket,
-          child: IndexedStack(index: currentIndex, children: _pages),
-        ),
-        bottomNavigationBar: showBottomBar
-            ? Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(20),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 10,
-                      offset: const Offset(0, -5),
-                    ),
-                  ],
-                ),
-                child: SafeArea(
-                  child: SizedBox(
-                    height: 70,
-                    child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _buildNavItem(
-                            0,
-                            Icons.home_outlined,
-                            Icons.home,
-                            "Ana Sayfa",
-                            navProvider,
-                            primaryColor,
-                          ),
-                          _buildNavItem(
-                            1,
-                            Icons.search,
-                            Icons.search,
-                            "Ara",
-                            navProvider,
-                            primaryColor,
-                          ),
-
-                          // ORTA BUTON (HOPPA)
-                          AnimatedHoppaButton(
-                            onTap: onFabPressed,
-                            onLongPress: onFabLongPressed,
-                          ),
-
-                          _buildCartNavItem(
-                            2,
-                            "Sepetim",
-                            navProvider,
-                            cart,
-                            primaryColor,
-                          ),
-                          _buildNavItem(
-                            3,
-                            Icons.person_outline,
-                            Icons.person,
-                            "Profil",
-                            navProvider,
-                            primaryColor,
-                          ),
-                        ],
-                      ),
-                    ),
-                ),
-              )
-            : null, // Kategori seçiminde Null
-      ),
-    );
-  }
-
-  Widget _buildNavItem(
-    int index,
-    IconData icon,
-    IconData activeIcon,
-    String label,
-    NavigationProvider navProvider,
-    Color activeColor,
-  ) {
-    bool isSelected = navProvider.currentIndex == index;
-    return MaterialButton(
-      minWidth: 40,
-      onPressed: () => navProvider.setIndex(index),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            isSelected ? activeIcon : icon,
-            color: isSelected ? activeColor : Colors.grey,
-            size: 26,
-          ),
-          Text(
-            label,
-            style: TextStyle(
-              color: isSelected ? activeColor : Colors.grey,
-              fontSize: 10,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCartNavItem(
-    int index,
-    String label,
-    NavigationProvider navProvider,
-    CartState cart,
-    Color activeColor,
-  ) {
-    bool isSelected = navProvider.currentIndex == index;
-    final secondaryColor = Theme.of(context).colorScheme.secondary;
-    return MaterialButton(
-      minWidth: 40,
-      onPressed: () => navProvider.setIndex(index),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Badge(
-            isLabelVisible: cart.items.isNotEmpty,
-            label: Text(
-              '${cart.items.length}',
-              style: const TextStyle(color: Colors.white),
-            ),
-            backgroundColor: secondaryColor,
-            child: Icon(
-              isSelected ? Icons.shopping_cart : Icons.shopping_cart_outlined,
-              color: isSelected ? activeColor : Colors.grey,
-              size: 26,
-            ),
-          ),
-          Text(
-            label,
-            style: TextStyle(
-              color: isSelected ? activeColor : Colors.grey,
-              fontSize: 10,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class AnimatedHoppaButton extends StatefulWidget {
-  final VoidCallback onTap;
-  final VoidCallback? onLongPress;
-  const AnimatedHoppaButton({super.key, required this.onTap, this.onLongPress});
-
-  @override
-  State<AnimatedHoppaButton> createState() => _AnimatedHoppaButtonState();
-}
-
-class _AnimatedHoppaButtonState extends State<AnimatedHoppaButton>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _glowController;
-  bool _isPressed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _glowController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1400), // Smooth 1.4s full rotation
-    );
-  }
-
-  @override
-  void dispose() {
-    _glowController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    // Responsive size: base is ~86 on a 375px wide screen (clamped between 78 and 102)
-    final buttonSize = (screenWidth * 0.23).clamp(78.0, 102.0);
-
-    return GestureDetector(
-      onTapDown: (_) {
-        setState(() => _isPressed = true);
-        _glowController.repeat(); // Continuous rotation
-      },
-      onTapUp: (_) {
-        setState(() => _isPressed = false);
-        _glowController.stop();
-        _glowController.value = 0.0;
-      },
-      onTapCancel: () {
-        setState(() => _isPressed = false);
-        _glowController.stop();
-        _glowController.value = 0.0;
-      },
-      onLongPress: widget.onLongPress,
-      onTap: widget.onTap,
-      child: SizedBox(
-        width: buttonSize,
-        height: 70, // Conforms to bottom bar height constraints
-        child: OverflowBox(
-          minWidth: 0,
-          minHeight: 0,
-          maxWidth: buttonSize + 60, // Allow neon glow to overflow the layout box width
-          maxHeight: buttonSize + 60, // Allow neon glow to overflow the layout box height
-          alignment: Alignment.bottomCenter, // Aligns bottom of button with bottom of bar
-          child: Transform.translate(
-            offset: const Offset(0, 7), // Slide down slightly to sit deeper in the bar
-            child: AnimatedScale(
-              scale: _isPressed ? 0.92 : 1.0,
-              duration: const Duration(milliseconds: 150),
-              curve: Curves.easeInOut,
-              child: Stack(
-                alignment: Alignment.center,
-                clipBehavior: Clip.none,
-                children: [
-                  // Rotating Green and Orange Neon Glow (behind the button)
-                  if (_isPressed)
-                    AnimatedBuilder(
-                      animation: _glowController,
-                      builder: (context, child) {
-                        final angle = _glowController.value * 2 * math.pi;
-                        final dx = 10 * math.cos(angle);
-                        final dy = 10 * math.sin(angle);
-                        return Container(
-                          width: buttonSize - 8,
-                          height: buttonSize - 8,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              // Green Neon Glow (rotating)
-                              BoxShadow(
-                                color: const Color(0xFF00FF66).withValues(alpha: 0.35),
-                                blurRadius: 18,
-                                spreadRadius: 1,
-                                offset: Offset(dx, dy),
-                              ),
-                              // Orange Neon Glow (rotating on opposite side)
-                              BoxShadow(
-                                color: const Color(0xFFFF7043).withValues(alpha: 0.35),
-                                blurRadius: 18,
-                                spreadRadius: 1,
-                                offset: Offset(-dx, -dy),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  // Main Button Container
-                  Container(
-                    width: buttonSize,
-                    height: buttonSize,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.03),
-                          blurRadius: 4,
-                          offset: const Offset(0, 1),
-                        ),
-                      ],
-                    ),
-                    child: Image.asset(
-                      'assets/images/hoppa_button.png',
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                ],
+        resizeToAvoidBottomInset: false,
+        body: NotificationListener<ScrollNotification>(
+          onNotification: (ScrollNotification notification) {
+            final controller = ref.read(floatingNavControllerProvider.notifier);
+            if (notification is UserScrollNotification) {
+              controller.handleUserScroll(notification);
+            } else if (notification is ScrollUpdateNotification) {
+              controller.handleScrollUpdate(notification);
+            }
+            return false;
+          },
+          child: Stack(
+            children: [
+              // Main Page Stack
+              PageStorage(
+                bucket: _bucket,
+                child: IndexedStack(index: currentIndex, children: _pages),
               ),
-            ),
+
+              // Modern Floating Capsule Bottom Navigation Dock
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: FloatingBottomBar(
+                  currentIndex: currentIndex,
+                  onTabSelected: (index) {
+                    ref.read(floatingNavControllerProvider.notifier).showBars();
+                    navProvider.setIndex(index);
+                  },
+                  onFabPressed: () {
+                    ref.read(floatingNavControllerProvider.notifier).showBars();
+                    onFabPressed();
+                  },
+                  onFabLongPressed: onFabLongPressed,
+                  cartItemCount: cart.items.length,
+                  isVisible: showBottomBar,
+                ),
+              ),
+            ],
           ),
         ),
       ),
