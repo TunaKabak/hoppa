@@ -13,14 +13,192 @@ class FloatingCartCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cartState = ref.watch(cartProvider);
 
-    if (cartState.items.isEmpty) {
+    if (cartState.carts.isEmpty) {
       return const SizedBox.shrink();
     }
 
     final shopsAsync = ref.watch(consumerShopsProvider);
+    final shops = shopsAsync.value ?? [];
+
+    if (cartState.hasMultipleCarts) {
+      // MULTI-MERCHANT FLOATING BAR DESIGN
+      final activeCartsList = cartState.carts.values.toList();
+
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        height: 64,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: const LinearGradient(
+            colors: [
+              Color(0xFFE95D22), // Hoppa Orange
+              Color(0xFFFF8C00), // Orange-Yellow
+            ],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFE95D22).withValues(alpha: 0.35),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(24),
+            onTap: () {
+              Navigator.of(context, rootNavigator: true).push(
+                MaterialPageRoute(
+                  builder: (context) => const CartPage(),
+                ),
+              );
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              child: Row(
+                children: [
+                  // OVERLAPPING SHOP AVATARS
+                  SizedBox(
+                    width: 54,
+                    height: 40,
+                    child: Stack(
+                      children: List.generate(
+                        activeCartsList.length.clamp(0, 3),
+                        (index) {
+                          final cart = activeCartsList[index];
+                          return Positioned(
+                            left: index * 16.0,
+                            child: Container(
+                              width: 34,
+                              height: 34,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: const Color(0xFFE95D22), width: 1.5),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.1),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: ClipOval(
+                                child: cart.businessLogoUrl != null && cart.businessLogoUrl!.isNotEmpty
+                                    ? Image.network(
+                                        cart.businessLogoUrl!,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) => const Icon(
+                                          Icons.storefront_rounded,
+                                          color: Color(0xFFE95D22),
+                                          size: 18,
+                                        ),
+                                      )
+                                    : const Icon(
+                                        Icons.storefront_rounded,
+                                        color: Color(0xFFE95D22),
+                                        size: 18,
+                                      ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+
+                  // TEXT DETAILS
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              '${cartState.carts.length} İşletmede Sepet',
+                              style: GoogleFonts.outfit(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.25),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                '${cartState.totalItemCountAllCarts} Ürün',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          "Toplam: ₺${cartState.grandTotal.toStringAsFixed(2)}",
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // RIGHT ACTION & ARROW
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        "İncele",
+                        style: GoogleFonts.outfit(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          color: Colors.white,
+                          size: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // SINGLE MERCHANT FLOATING BAR DESIGN
     Business? shop;
-    if (cartState.currentBusinessId != null && shopsAsync.hasValue) {
-      final shops = shopsAsync.value ?? [];
+    if (cartState.currentBusinessId != null && shops.isNotEmpty) {
       for (final s in shops) {
         if (s.id == cartState.currentBusinessId) {
           shop = s;
@@ -29,8 +207,8 @@ class FloatingCartCard extends ConsumerWidget {
       }
     }
 
-    final shopName = shop?.name ?? "Sepetiniz";
-    final shopLogoUrl = shop?.logoUrl ?? "";
+    final shopName = shop?.name ?? (cartState.activeCart?.businessName ?? "Sepetiniz");
+    final shopLogoUrl = shop?.logoUrl ?? (cartState.activeCart?.businessLogoUrl ?? "");
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -188,3 +366,4 @@ class FloatingCartCard extends ConsumerWidget {
     );
   }
 }
+

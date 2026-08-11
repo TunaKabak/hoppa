@@ -128,44 +128,14 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
   }
 
   void _changeBusiness() {
-    final cart = ref.read(cartProvider);
-    if (cart.items.isEmpty) {
-      ref.read(selectedCatalogCategoryProvider.notifier).state = 'Tümü';
-      ref.read(selectedCatalogSubCategoryProvider.notifier).state = 'Tümü';
-      ref.read(selectedCatalogSortOptionProvider.notifier).state = 'Önerilen';
-      ref.read(catalogSearchQueryProvider.notifier).state = '';
-      p.Provider.of<BusinessProvider>(
-        context,
-        listen: false,
-      ).clearBusiness();
-      return;
-    }
-
-    showDialog(
-      context: context,
-      builder: (context) => HoppaDialog(
-        icon: Icons.warning_amber_rounded,
-        iconColor: Colors.orange,
-        title: "İşletmeyi Değiştir",
-        content: "Farklı bir işletmeye geçerseniz, mevcut sepetiniz temizlenecektir. Devam etmek istiyor musunuz?",
-        cancelText: "İptal",
-        confirmText: "Evet, Değiştir",
-        isDestructive: true,
-        onCancel: () => Navigator.pop(context),
-        onConfirm: () {
-          Navigator.pop(context);
-          ref.read(cartProvider.notifier).clearCart();
-          ref.read(selectedCatalogCategoryProvider.notifier).state = 'Tümü';
-          ref.read(selectedCatalogSubCategoryProvider.notifier).state = 'Tümü';
-          ref.read(selectedCatalogSortOptionProvider.notifier).state = 'Önerilen';
-          ref.read(catalogSearchQueryProvider.notifier).state = '';
-          p.Provider.of<BusinessProvider>(
-            context,
-            listen: false,
-          ).clearBusiness();
-        },
-      ),
-    );
+    ref.read(selectedCatalogCategoryProvider.notifier).state = 'Tümü';
+    ref.read(selectedCatalogSubCategoryProvider.notifier).state = 'Tümü';
+    ref.read(selectedCatalogSortOptionProvider.notifier).state = 'Önerilen';
+    ref.read(catalogSearchQueryProvider.notifier).state = '';
+    p.Provider.of<BusinessProvider>(
+      context,
+      listen: false,
+    ).clearBusiness();
   }
 
   Widget _buildGridIcon(int count, IconData icon) {

@@ -495,13 +495,9 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                   HapticFeedback.lightImpact();
                 } catch (e) {
                   final msg = e.toString();
-                  if (msg.contains("Farklı bir dükkandan") || msg.contains("sepeti temizlemelisiniz")) {
-                    _showErrorDialog(context);
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(msg.replaceAll("Exception: ", ""))),
-                    );
-                  }
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(msg.replaceAll("Exception: ", ""))),
+                  );
                 }
               });
             },
@@ -522,29 +518,21 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                     try {
                       ref.read(cartProvider.notifier).addToCart(widget.businessProduct);
                       HapticFeedback.lightImpact();
-                      if (mounted) {
-                        // No SnackBar as per Request 5
-                      }
                     } catch (e) {
                       final msg = e.toString();
-                      if (msg.contains("Farklı bir dükkandan") || msg.contains("sepeti temizlemelisiniz")) {
-                        _showErrorDialog(context);
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(msg.replaceAll("Exception: ", ""))),
-                        );
-                      }
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(msg.replaceAll("Exception: ", ""))),
+                      );
                     }
                   });
                 },
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF00A651), // Standard Green
+            backgroundColor: isClosed ? Colors.grey[400] : const Color(0xFF00A651),
             foregroundColor: Colors.white,
-            elevation: 4,
-            shadowColor: const Color(0xFF00A651).withAlpha(102),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
+            elevation: 0,
           ),
           child: _isActionLoading
               ? const SizedBox(
@@ -558,13 +546,13 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
               : Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.shopping_cart_outlined),
-                    const SizedBox(width: 10),
+                    const Icon(Icons.shopping_basket_outlined, size: 22),
+                    const SizedBox(width: 8),
                     Text(
-                      "Sepete Ekle",
-                      style: GoogleFonts.poppins(
+                      isClosed ? "İşletme Kapalı" : "Sepete Ekle",
+                      style: const TextStyle(
                         fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],

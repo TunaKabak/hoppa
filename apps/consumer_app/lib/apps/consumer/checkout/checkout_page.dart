@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart' as p;
 import 'package:intl/intl.dart';
 import 'package:consumer_app/apps/consumer/services/customer_auth_service.dart';
 import 'package:core_shared/shared/models/address.dart';
@@ -9,14 +9,18 @@ import 'package:consumer_app/apps/consumer/checkout/payment_page.dart';
 import 'package:core_shared/shared/core/widgets/animated_sliding_toggle.dart';
 import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
 
-class CheckoutPage extends StatefulWidget {
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:consumer_app/apps/consumer/cart/cart_provider.dart';
+import 'package:core_shared/shared/models/business.dart';
+
+class CheckoutPage extends ConsumerStatefulWidget {
   const CheckoutPage({super.key});
 
   @override
-  State<CheckoutPage> createState() => _CheckoutPageState();
+  ConsumerState<CheckoutPage> createState() => _CheckoutPageState();
 }
 
-class _CheckoutPageState extends State<CheckoutPage> {
+class _CheckoutPageState extends ConsumerState<CheckoutPage> {
   final _phoneController = TextEditingController();
 
   Address? _selectedAddress;
@@ -65,7 +69,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     _deliverySlots = _generateTimeSlots(8, 22, 120); // 08:00 - 22:00, 2 saatlik
     _pickupSlots = _generateTimeSlots(8, 22, 30); // 08:00 - 22:00, 30 dakikalık
 
-    final businessProvider = Provider.of<BusinessProvider>(context, listen: false);
+    final businessProvider = p.Provider.of<BusinessProvider>(context, listen: false);
     final selectedBusiness = businessProvider.selectedBusiness;
     if (selectedBusiness != null) {
       final hasDelivery = selectedBusiness.allowedFulfillmentModels.contains('PLATFORM_DELIVERY') ||
@@ -77,13 +81,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
       }
     }
 
-    final deliveryProvider = Provider.of<DeliveryProvider>(
+    final deliveryProvider = p.Provider.of<DeliveryProvider>(
       context,
       listen: false,
     );
     _selectedAddress = deliveryProvider.selectedAddress;
 
-    final auth = Provider.of<CustomerAuthService>(context, listen: false);
+    final auth = p.Provider.of<CustomerAuthService>(context, listen: false);
     final userPhone = auth.currentUser?.phoneNumber;
 
     if (userPhone != null && userPhone.isNotEmpty) {
@@ -211,7 +215,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     }
 
     // Gerçek zamanlı olarak mağazanın hala açık olup olmadığını kontrol et
-    final selectedBusiness = Provider.of<BusinessProvider>(
+    final selectedBusiness = p.Provider.of<BusinessProvider>(
       context,
       listen: false,
     ).selectedBusiness!;
@@ -262,7 +266,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   @override
   Widget build(BuildContext context) {
-    final businessProvider = Provider.of<BusinessProvider>(context);
+    final cartState = ref.watch(cartProvider);
+    final businessProvider = p.Provider.of<BusinessProvider>(context);
     final selectedBusiness = businessProvider.selectedBusiness;
     final hasDelivery = selectedBusiness?.allowedFulfillmentModels.contains('PLATFORM_DELIVERY') == true ||
                         selectedBusiness?.allowedFulfillmentModels.contains('SELF_DELIVERY') == true;
@@ -332,6 +337,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // --- 0. SİPARİŞ EDİLEN İŞLETME KARTI ---
+                  _buildBusinessHeaderCard(context, selectedBusiness, cartState),
+                  const SizedBox(height: 20),
+
                   // --- 1. TESLİMAT YÖNTEMİ ---
                   _sectionTitle(
                     "Teslimat Yöntemi",
@@ -396,7 +405,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
                   if (_isPickUp)
                     // GEL AL: İşletme Adresi
-                    Consumer<BusinessProvider>(
+                    p.Consumer<BusinessProvider>(
                       builder: (context, businessProvider, child) {
                         final business = businessProvider.selectedBusiness;
                         return Container(
@@ -543,7 +552,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   // --- 3. TELEFON ---
                   _sectionTitle("İletişim", Icons.phone_outlined),
                   const SizedBox(height: 12),
-                  Consumer<BusinessProvider>(
+                  p.Consumer<BusinessProvider>(
                     builder: (context, businessProvider, child) {
                       final shopPhone = businessProvider.selectedBusiness?.phone ?? '';
                       final displayText = _isPickUp ? shopPhone : _phoneController.text;
@@ -881,6 +890,144 @@ class _CheckoutPageState extends State<CheckoutPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildBusinessHeaderCard(
+    BuildContext context,
+    Business? business,
+    CartState cartState,
+  ) {
+    final activeCart = cartState.activeCart;
+    final shopName = business?.name ?? (activeCart?.businessName ?? 'İşletme');
+    final shopLogo = business?.logoUrl ?? (activeCart?.businessLogoUrl ?? '');
+    final shopCategory = business?.type.label ?? 'Sipariş';
+    final itemCount = activeCart?.totalItemCount ?? cartState.items.length;
+    final subtotal = activeCart?.subtotal ?? cartState.totalAmount;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFFFFF5EE), // Hoppa Soft Orange Tint
+            Color(0xFFFFFFFF),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFFD5C2), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFE95D22).withValues(alpha: 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFFFD5C2)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: shopLogo.isNotEmpty
+                  ? Image.network(
+                      shopLogo,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => const Icon(
+                        Icons.storefront_rounded,
+                        color: Color(0xFFE95D22),
+                        size: 24,
+                      ),
+                    )
+                  : const Icon(
+                      Icons.storefront_rounded,
+                      color: Color(0xFFE95D22),
+                      size: 24,
+                    ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE95D22),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.storefront_rounded, color: Colors.white, size: 11),
+                          SizedBox(width: 4),
+                          Text(
+                            "Sipariş Edilen İşletme",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      shopCategory,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  shopName,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  "$itemCount Ürün • Toplam ₺${subtotal.toStringAsFixed(2)}",
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFFE95D22),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

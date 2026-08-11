@@ -13,6 +13,7 @@ import 'package:consumer_app/apps/consumer/address/delivery_provider.dart';
 import 'package:consumer_app/apps/consumer/business/business_provider.dart';
 import 'package:core_shared/shared/core/utils/quantity_formatter.dart';
 import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
+import 'package:core_shared/shared/models/business.dart';
 import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository.dart';
 import 'package:consumer_app/apps/consumer/profile/wallet_page.dart';
 
@@ -547,6 +548,10 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // --- 0. SİPARİŞ EDİLEN İŞLETME KARTI ---
+                  _buildBusinessHeaderCard(context, selectedBusiness, cartState),
+                  const SizedBox(height: 20),
+
                   // --- 1. SİPARİŞ NOTU ---
                   _sectionTitle("Sipariş Notu", Icons.note_alt_outlined),
                   const SizedBox(height: 12),
@@ -1815,6 +1820,144 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
           ),
         ],
       ],
+    );
+  }
+
+  Widget _buildBusinessHeaderCard(
+    BuildContext context,
+    Business? business,
+    CartState cartState,
+  ) {
+    final activeCart = cartState.activeCart;
+    final shopName = business?.name ?? (activeCart?.businessName ?? 'İşletme');
+    final shopLogo = business?.logoUrl ?? (activeCart?.businessLogoUrl ?? '');
+    final shopCategory = business?.type.label ?? 'Sipariş';
+    final itemCount = activeCart?.totalItemCount ?? cartState.items.length;
+    final subtotal = activeCart?.subtotal ?? cartState.totalAmount;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFFFFF5EE), // Hoppa Soft Orange Tint
+            Color(0xFFFFFFFF),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFFD5C2), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFE95D22).withValues(alpha: 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFFFD5C2)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: shopLogo.isNotEmpty
+                  ? Image.network(
+                      shopLogo,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => const Icon(
+                        Icons.storefront_rounded,
+                        color: Color(0xFFE95D22),
+                        size: 24,
+                      ),
+                    )
+                  : const Icon(
+                      Icons.storefront_rounded,
+                      color: Color(0xFFE95D22),
+                      size: 24,
+                    ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE95D22),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.storefront_rounded, color: Colors.white, size: 11),
+                          SizedBox(width: 4),
+                          Text(
+                            "Sipariş Edilen İşletme",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      shopCategory,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  shopName,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  "$itemCount Ürün • Toplam ₺${subtotal.toStringAsFixed(2)}",
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFFE95D22),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

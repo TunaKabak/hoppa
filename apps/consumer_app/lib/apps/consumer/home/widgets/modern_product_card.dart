@@ -554,35 +554,10 @@ class ModernProductCard extends ConsumerWidget {
       ref.read(cartProvider.notifier).addToCart(businessProduct);
     } catch (e) {
       final msg = e.toString();
-      if (msg.contains("Farklı bir dükkandan") || msg.contains("sepeti temizlemelisiniz")) {
-        _showErrorDialog(context, ref);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(msg.replaceAll("Exception: ", ""))),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg.replaceAll("Exception: ", ""))),
+      );
     }
-  }
-
-  void _showErrorDialog(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (ctx) => HoppaDialog(
-        icon: Icons.shopping_basket_outlined,
-        iconColor: const Color(0xFFFF5200),
-        title: "Farklı Dükkan",
-        content: "Sepetinizde başka bir dükkana ait ürünler var. Sepeti temizleyip bu dükkandan devam etmek ister misiniz?",
-        cancelText: "İptal",
-        confirmText: "Sepeti Temizle ve Ekle",
-        isDestructive: true,
-        onCancel: () => Navigator.pop(ctx),
-        onConfirm: () {
-          Navigator.pop(ctx);
-          ref.read(cartProvider.notifier).clearCart();
-          ref.read(cartProvider.notifier).addToCart(businessProduct);
-        },
-      ),
-    );
   }
 
   Widget _buildFavoriteButton(BuildContext context, WidgetRef ref) {

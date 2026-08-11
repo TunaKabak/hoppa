@@ -14,9 +14,10 @@ import 'package:consumer_app/apps/consumer/cart/widgets/compact_checkout_bar.dar
 import 'package:consumer_app/apps/consumer/auth/consumer_login_page.dart';
 import 'package:core_auth/core_auth.dart';
 import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
-import 'package:consumer_app/apps/consumer/business/shop_detail_page.dart';
 import 'package:consumer_app/apps/consumer/widgets/hoppa_dialog.dart';
 import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository.dart';
+import 'package:consumer_app/apps/consumer/main_layout/controllers/floating_nav_controller.dart';
+import 'package:core_shared/shared/models/business.dart';
 
 class CartPage extends ConsumerStatefulWidget {
   const CartPage({super.key});
@@ -27,13 +28,36 @@ class CartPage extends ConsumerStatefulWidget {
 
 class _CartPageState extends ConsumerState<CartPage> {
   String _groupBy = 'none';
+  final ScrollController _tabsScrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _tabsScrollController.dispose();
+    super.dispose();
+  }
 
   void _handleClose(BuildContext context) {
+    ref.read(floatingNavControllerProvider.notifier).showBars();
     if (Navigator.canPop(context)) {
       Navigator.pop(context);
     } else {
       p.Provider.of<NavigationProvider>(context, listen: false).setIndex(0);
     }
+  }
+
+  void _scrollToTab(int index) {
+    if (!_tabsScrollController.hasClients) return;
+    const double estimatedTabWidth = 175.0;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final targetOffset = (index * estimatedTabWidth) - (screenWidth / 2) + (estimatedTabWidth / 2);
+    final maxScroll = _tabsScrollController.position.maxScrollExtent;
+    final minScroll = _tabsScrollController.position.minScrollExtent;
+
+    _tabsScrollController.animateTo(
+      targetOffset.clamp(minScroll, maxScroll),
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   @override
@@ -115,13 +139,15 @@ class _CartPageState extends ConsumerState<CartPage> {
                             color: Colors.white,
                           ),
                         ),
-                        if (cartState.items.isNotEmpty && selectedBusiness != null) ...[
+                        if (cartState.carts.isNotEmpty) ...[
                           const SizedBox(height: 2),
                           Text(
-                            selectedBusiness.name,
+                            cartState.hasMultipleCarts
+                                ? "${cartState.carts.length} İşletmede Aktif Sepet"
+                                : (selectedBusiness?.name ?? "Sepet"),
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.white.withOpacity(0.9),
+                              color: Colors.white.withValues(alpha: 0.9),
                               fontWeight: FontWeight.w500,
                             ),
                             maxLines: 1,
@@ -131,11 +157,47 @@ class _CartPageState extends ConsumerState<CartPage> {
                       ],
                     ),
                   ),
-                  if (cartState.items.isNotEmpty)
-                    IconButton(
+                  if (cartState.carts.isNotEmpty)
+                    PopupMenuButton<String>(
                       icon: const Icon(Icons.delete_sweep_outlined, color: Colors.white),
-                      tooltip: "Tüm Sepeti Boşalt",
-                      onPressed: () => _showClearCartDialog(context, ref.read(cartProvider.notifier)),
+                      tooltip: "Sepet Temizleme Seçenekleri",
+                      onSelected: (value) {
+                        if (value == 'current') {
+                          final activeId = cartState.currentBusinessId;
+                          if (activeId != null) {
+                            _showClearSingleCartDialog(
+                              context,
+                              ref.read(cartProvider.notifier),
+                              cartState.carts[activeId],
+                            );
+                          }
+                        } else if (value == 'all') {
+                          _showClearCartDialog(context, ref.read(cartProvider.notifier));
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        if (cartState.hasMultipleCarts)
+                          const PopupMenuItem(
+                            value: 'current',
+                            child: Row(
+                              children: [
+                                Icon(Icons.delete_outline, color: Colors.deepOrange, size: 20),
+                                SizedBox(width: 8),
+                                Text("Bu İşletmenin Sepetini Boşalt"),
+                              ],
+                            ),
+                          ),
+                        const PopupMenuItem(
+                          value: 'all',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete_forever_outlined, color: Colors.red, size: 20),
+                              SizedBox(width: 8),
+                              Text("Tüm Sepetleri Boşalt"),
+                            ],
+                          ),
+                        ),
+                      ],
                     )
                   else
                     const SizedBox(width: 48), // Denge için
@@ -157,169 +219,337 @@ class _CartPageState extends ConsumerState<CartPage> {
                     topLeft: Radius.circular(24),
                     topRight: Radius.circular(24),
                   ),
-                  child: cartState.items.isEmpty
+                  child: cartState.carts.isEmpty
                       ? _buildEmptyCart(context, colorScheme)
                       : Column(
                           children: [
-                CompactDeliveryStatus(
-                  currentCartTotal: cartState.totalAmount,
-                  minOrderLimit: requiredMinAmount,
-                  freeDeliveryLimit: hasFreeDeliveryCampaign ? 0.0 : (selectedBusiness?.freeDeliveryThreshold ?? 0.0),
-                ),
-                if (cartState.items.isNotEmpty)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    color: Colors.white,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Icon(
-                          Icons.filter_list,
-                          size: 20,
-                          color: Colors.grey[600],
-                        ),
-                        const SizedBox(width: 8),
-                        const Text(
-                          "Grupla: ",
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(width: 8),
-                        DropdownButton<String>(
-                          value: _groupBy,
-                          items: const [
-                            DropdownMenuItem(
-                              value: 'none',
-                              child: Text("Listele (Varsayılan)"),
+                            // ÇOKLU İŞLETME SEKMELERİ (MULTIPLE CARTS SELECTOR)
+                            if (cartState.hasMultipleCarts)
+                              _buildBusinessCartTabs(context, cartState, businessProvider),
+
+                            CompactDeliveryStatus(
+                              currentCartTotal: cartState.totalAmount,
+                              minOrderLimit: requiredMinAmount,
+                              freeDeliveryLimit: hasFreeDeliveryCampaign ? 0.0 : (selectedBusiness?.freeDeliveryThreshold ?? 0.0),
                             ),
-                            DropdownMenuItem(
-                              value: 'category',
-                              child: Text("Kategoriye Göre"),
+                            if (cartState.items.isNotEmpty)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 8,
+                                ),
+                                color: Colors.white,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    Icon(
+                                      Icons.filter_list,
+                                      size: 20,
+                                      color: Colors.grey[600],
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const Text(
+                                      "Grupla: ",
+                                      style: TextStyle(fontWeight: FontWeight.bold),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    DropdownButton<String>(
+                                      value: _groupBy,
+                                      items: const [
+                                        DropdownMenuItem(
+                                          value: 'none',
+                                          child: Text("Listele (Varsayılan)"),
+                                        ),
+                                        DropdownMenuItem(
+                                          value: 'category',
+                                          child: Text("Kategoriye Göre"),
+                                        ),
+                                        DropdownMenuItem(
+                                          value: 'brand',
+                                          child: Text("Markaya Göre"),
+                                        ),
+                                      ],
+                                      onChanged: (val) => setState(() => _groupBy = val!),
+                                      underline: Container(),
+                                      style: TextStyle(
+                                        color: colorScheme.primary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      icon: Icon(
+                                        Icons.keyboard_arrow_down,
+                                        color: colorScheme.primary,
+                                      ),
+                                      isDense: true,
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                            Expanded(
+                              child: _groupBy == 'none'
+                                  ? ListView.separated(
+                                      padding: const EdgeInsets.all(16),
+                                      itemCount: cartState.items.length,
+                                      separatorBuilder: (context, index) =>
+                                          const SizedBox(height: 16),
+                                      itemBuilder: (context, index) {
+                                        final item = cartState.items[index];
+                                        Campaign? campaign;
+                                        try {
+                                          campaign = activeCampaigns.firstWhere(
+                                            (c) => c.targetProducts.contains(
+                                              item.businessProduct.productBarcode,
+                                            ),
+                                          );
+                                        } catch (_) {}
+
+                                        return ModernProductCard(
+                                          businessProduct: item.businessProduct,
+                                          isListView: true,
+                                          isCompact: true,
+                                          campaign: campaign,
+                                        );
+                                      },
+                                    )
+                                  : _buildGroupedList(cartState, activeCampaigns, colorScheme),
                             ),
-                            DropdownMenuItem(
-                              value: 'brand',
-                              child: Text("Markaya Göre"),
+
+                            TextButton.icon(
+                              onPressed: () {
+                                ref.read(floatingNavControllerProvider.notifier).showBars();
+                                if (cartState.items.isNotEmpty) {
+                                  try {
+                                    final shopId = cartState.items.first.businessProduct.businessId;
+                                    final shopsAsync = ref.read(consumerShopsProvider);
+                                    final shops = shopsAsync.value ?? [];
+                                    final shop = shops.firstWhere((s) => s.id == shopId);
+                                    
+                                    businessProvider.setCategory(shop.type.label);
+                                    businessProvider.selectBusiness(shop);
+                                    
+                                    p.Provider.of<NavigationProvider>(context, listen: false).setIndex(0);
+                                    if (Navigator.canPop(context)) {
+                                      Navigator.pop(context);
+                                    }
+                                  } catch (e) {
+                                    _handleClose(context);
+                                  }
+                                } else {
+                                  _handleClose(context);
+                                }
+                              },
+                              icon: const Icon(Icons.arrow_back, size: 16),
+                              label: const Text(
+                                "Alışverişe Devam Et",
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                              ),
+                              style: TextButton.styleFrom(
+                                minimumSize: const Size(double.infinity, 36),
+                                foregroundColor: colorScheme.primary,
+                                padding: const EdgeInsets.symmetric(vertical: 4),
+                              ),
+                            ),
+                            CompactCheckoutBar(
+                              subTotal: cartState.totalAmount,
+                              deliveryFee: deliveryFee,
+                              total: finalTotal,
+                              canCheckout: canCheckout,
+                              onCheckout: () {
+                                final authState = ref.read(authControllerProvider);
+                                if (authState is! AuthAuthenticated) {
+                                  Navigator.of(
+                                    context,
+                                    rootNavigator: true,
+                                  ).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => const LoginPage(fromCheckout: true),
+                                    ),
+                                  );
+                                } else {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const CheckoutPage(),
+                                    ),
+                                  );
+                                }
+                              },
                             ),
                           ],
-                          onChanged: (val) => setState(() => _groupBy = val!),
-                          underline: Container(),
-                          style: TextStyle(
-                            color: colorScheme.primary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          icon: Icon(
-                            Icons.keyboard_arrow_down,
-                            color: colorScheme.primary,
-                          ),
-                          isDense: true,
                         ),
-                      ],
-                    ),
-                  ),
-
-                Expanded(
-                  child: _groupBy == 'none'
-                      ? ListView.separated(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: cartState.items.length,
-                          separatorBuilder: (context, index) =>
-                              const SizedBox(height: 16),
-                          itemBuilder: (context, index) {
-                            final item = cartState.items[index];
-                            Campaign? campaign;
-                            try {
-                              campaign = activeCampaigns.firstWhere(
-                                (c) => c.targetProducts.contains(
-                                  item.businessProduct.productBarcode,
-                                ),
-                              );
-                            } catch (_) {}
-
-                            return ModernProductCard(
-                              businessProduct: item.businessProduct,
-                              isListView: true,
-                              isCompact: true,
-                              campaign: campaign,
-                            );
-                          },
-                        )
-                      : _buildGroupedList(cartState, activeCampaigns, colorScheme),
                 ),
-
-                TextButton.icon(
-                  onPressed: () {
-                    if (cartState.items.isNotEmpty) {
-                      try {
-                        final shopId = cartState.items.first.businessProduct.businessId;
-                        final shopsAsync = ref.read(consumerShopsProvider);
-                        final shops = shopsAsync.value ?? [];
-                        final shop = shops.firstWhere((s) => s.id == shopId);
-                        
-                        businessProvider.setCategory(shop.type.label);
-                        businessProvider.selectBusiness(shop);
-                        
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ModernShopDetailPage(shop: shop),
-                          ),
-                        );
-                      } catch (e) {
-                        _handleClose(context);
-                      }
-                    } else {
-                      _handleClose(context);
-                    }
-                  },
-                  icon: const Icon(Icons.arrow_back, size: 16),
-                  label: const Text(
-                    "Alışverişe Devam Et",
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                  ),
-                  style: TextButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 36),
-                    foregroundColor: colorScheme.primary,
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                  ),
-                ),
-                CompactCheckoutBar(
-                  subTotal: cartState.totalAmount,
-                  deliveryFee: deliveryFee,
-                  total: finalTotal,
-                  canCheckout: canCheckout,
-                  onCheckout: () {
-                    final authState = ref.read(authControllerProvider);
-                    if (authState is! AuthAuthenticated) {
-                      Navigator.of(
-                        context,
-                        rootNavigator: true,
-                      ).push(
-                        MaterialPageRoute(
-                          builder: (context) => const LoginPage(fromCheckout: true),
-                        ),
-                      );
-                    } else {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const CheckoutPage(),
-                        ),
-                      );
-                    }
-                  },
-                ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
-    ],
-  ),
-),
     );
   }
+
+  Widget _buildBusinessCartTabs(
+    BuildContext context,
+    CartState cartState,
+    BusinessProvider businessProvider,
+  ) {
+    return Container(
+      height: 64,
+      width: double.infinity,
+      color: Colors.grey.shade50,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: cartState.carts.length,
+        itemBuilder: (context, index) {
+          final cart = cartState.carts.values.elementAt(index);
+          final isSelected = cart.businessId == cartState.currentBusinessId;
+
+          return Builder(
+            builder: (itemContext) {
+              if (isSelected) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (itemContext.mounted) {
+                    Scrollable.ensureVisible(
+                      itemContext,
+                      alignment: 0.5,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOutCubic,
+                    );
+                  }
+                });
+              }
+
+              return GestureDetector(
+                onTap: () {
+                  ref.read(cartProvider.notifier).selectActiveCart(cart.businessId);
+                  Scrollable.ensureVisible(
+                    itemContext,
+                    alignment: 0.5,
+                    duration: const Duration(milliseconds: 350),
+                    curve: Curves.easeOutCubic,
+                  );
+                  final shopsAsync = ref.read(consumerShopsProvider);
+                  final shops = shopsAsync.value ?? [];
+                  try {
+                    final shop = shops.firstWhere((s) => s.id == cart.businessId);
+                    businessProvider.selectBusiness(shop);
+                  } catch (_) {}
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  margin: const EdgeInsets.only(right: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isSelected ? const Color(0xFFFFF0EB) : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isSelected ? const Color(0xFFE95D22) : Colors.grey.shade300,
+                      width: isSelected ? 1.5 : 1.0,
+                    ),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: const Color(0xFFE95D22).withValues(alpha: 0.15),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : [],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: cart.businessLogoUrl != null && cart.businessLogoUrl!.isNotEmpty
+                              ? Image.network(
+                                  cart.businessLogoUrl!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) => const Icon(
+                                    Icons.storefront_rounded,
+                                    color: Color(0xFFE95D22),
+                                    size: 18,
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.storefront_rounded,
+                                  color: Color(0xFFE95D22),
+                                  size: 18,
+                                ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                cart.businessName,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: isSelected ? const Color(0xFFE95D22) : Colors.black87,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (isSelected) ...[
+                                const SizedBox(width: 4),
+                                const Icon(
+                                  Icons.check_circle,
+                                  size: 13,
+                                  color: Color(0xFFE95D22),
+                                ),
+                              ],
+                            ],
+                          ),
+                          Text(
+                            "${cart.totalItemCount} Ürün • ₺${cart.subtotal.toStringAsFixed(2)}",
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: isSelected ? const Color(0xFFE95D22).withValues(alpha: 0.8) : Colors.grey[600],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(width: 6),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () => _showClearSingleCartDialog(
+                          context,
+                          ref.read(cartProvider.notifier),
+                          cart,
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(4.0),
+                          child: Icon(
+                            Icons.close_rounded,
+                            size: 16,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
 
   Widget _buildGroupedList(CartState cartState, List<Campaign> activeCampaigns, ColorScheme colorScheme) {
     final theme = Theme.of(context);
@@ -485,10 +715,10 @@ class _CartPageState extends ConsumerState<CartPage> {
       builder: (context) => HoppaDialog(
         icon: Icons.delete_sweep_outlined,
         iconColor: const Color(0xFFFF5200),
-        title: "Sepeti Boşalt",
-        content: "Sepetindeki tüm ürünleri silmek istediğine emin misin?",
+        title: "Tüm Sepetleri Boşalt",
+        content: "Tüm işletmelerdeki sepetlerinizi temizlemek istediğinize emin misiniz?",
         cancelText: "Vazgeç",
-        confirmText: "Evet, Boşalt",
+        confirmText: "Evet, Hepsini Boşalt",
         isDestructive: true,
         onCancel: () => Navigator.pop(context),
         onConfirm: () {
@@ -498,4 +728,30 @@ class _CartPageState extends ConsumerState<CartPage> {
       ),
     );
   }
+
+  void _showClearSingleCartDialog(
+    BuildContext context,
+    CartNotifier cartNotifier,
+    BusinessCart? businessCart,
+  ) {
+    if (businessCart == null) return;
+    showDialog(
+      context: context,
+      builder: (context) => HoppaDialog(
+        icon: Icons.delete_outline,
+        iconColor: const Color(0xFFFF5200),
+        title: "${businessCart.businessName} Sepeti Boşaltılsın mı?",
+        content: "Bu işletmedeki tüm ürünler sepetinizden kaldırılacaktır.",
+        cancelText: "Vazgeç",
+        confirmText: "Evet, Boşalt",
+        isDestructive: true,
+        onCancel: () => Navigator.pop(context),
+        onConfirm: () {
+          cartNotifier.clearCart(businessCart.businessId);
+          Navigator.pop(context);
+        },
+      ),
+    );
+  }
 }
+

@@ -10,16 +10,20 @@ import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository
 import 'package:core_shared/shared/core/utils/quantity_formatter.dart';
 import 'package:core_shared/shared/models/cart_item.dart';
 
-class CartState {
+class BusinessCart {
+  final String businessId;
+  final String businessName;
+  final String? businessLogoUrl;
   final List<CartItem> items;
-  final String? currentBusinessId;
 
-  CartState({
+  BusinessCart({
+    required this.businessId,
+    required this.businessName,
+    this.businessLogoUrl,
     required this.items,
-    this.currentBusinessId,
   });
 
-  double get totalAmount {
+  double get subtotal {
     double total = 0.0;
     for (var item in items) {
       total += item.businessProduct.price * item.quantity;
@@ -27,13 +31,77 @@ class CartState {
     return total;
   }
 
-  CartState copyWith({
+  int get totalItemCount {
+    int total = 0;
+    for (var item in items) {
+      total += item.quantity.ceil();
+    }
+    return total;
+  }
+
+  BusinessCart copyWith({
+    String? businessId,
+    String? businessName,
+    String? businessLogoUrl,
     List<CartItem>? items,
-    String? currentBusinessId,
+  }) {
+    return BusinessCart(
+      businessId: businessId ?? this.businessId,
+      businessName: businessName ?? this.businessName,
+      businessLogoUrl: businessLogoUrl ?? this.businessLogoUrl,
+      items: items ?? this.items,
+    );
+  }
+}
+
+class CartState {
+  final Map<String, BusinessCart> carts;
+  final String? activeBusinessId;
+
+  CartState({
+    required this.carts,
+    this.activeBusinessId,
+  });
+
+  BusinessCart? get activeCart {
+    if (activeBusinessId != null && carts.containsKey(activeBusinessId)) {
+      return carts[activeBusinessId];
+    }
+    return carts.isNotEmpty ? carts.values.first : null;
+  }
+
+  // Backward compatibility getters (Active selected business cart)
+  List<CartItem> get items => activeCart?.items ?? [];
+  String? get currentBusinessId => activeCart?.businessId;
+  double get totalAmount => activeCart?.subtotal ?? 0.0;
+
+  // Multi-cart specific getters
+  double get grandTotal {
+    double total = 0.0;
+    for (var cart in carts.values) {
+      total += cart.subtotal;
+    }
+    return total;
+  }
+
+  int get totalItemCountAllCarts {
+    int total = 0;
+    for (var cart in carts.values) {
+      total += cart.totalItemCount;
+    }
+    return total;
+  }
+
+  int get activeCartCount => carts.length;
+  bool get hasMultipleCarts => carts.length > 1;
+
+  CartState copyWith({
+    Map<String, BusinessCart>? carts,
+    String? activeBusinessId,
   }) {
     return CartState(
-      items: items ?? this.items,
-      currentBusinessId: currentBusinessId ?? this.currentBusinessId,
+      carts: carts ?? this.carts,
+      activeBusinessId: activeBusinessId ?? this.activeBusinessId,
     );
   }
 }
@@ -41,45 +109,44 @@ class CartState {
 class CartNotifier extends StateNotifier<CartState> {
   final Ref ref;
 
-  CartNotifier(this.ref) : super(CartState(items: []));
+  CartNotifier(this.ref) : super(CartState(carts: {}));
 
   void addToCart(BusinessProduct product) {
     final businessId = product.businessId;
 
-    // Dükkan aktiflik kontrolü (Double Lock)
+    // Dükkan aktiflik ve bilgi alma kontrolü
     final shopsAsync = ref.read(consumerShopsProvider);
     final shops = shopsAsync.value ?? [];
+    String shopName = "İşletme";
+    String? shopLogoUrl;
+
     if (shops.isNotEmpty) {
       try {
         final shop = shops.firstWhere((s) => s.id == businessId);
         if (!shop.isOpen) {
           throw Exception("Bu dükkan kapalı olduğu için sepetinize ürün eklenemez.");
         }
-      } catch (_) {
-        // Eğer dükkan listede bulunamazsa devam edebilir veya hata fırlatılabilir.
-        // Şimdilik pas geçiyoruz.
-      }
-    }
-
-    // ALTIN KURAL: Farklı dükkan kontrolü
-    if (state.items.isNotEmpty && state.currentBusinessId != null) {
-      if (state.currentBusinessId != businessId) {
-        throw Exception("Farklı bir dükkandan ürün eklemek için sepeti temizlemelisiniz");
-      }
+        shopName = shop.name;
+        shopLogoUrl = shop.logoUrl;
+      } catch (_) {}
     }
 
     if (!product.isAvailable) {
       throw Exception("Ürün şu anda temin edilemiyor.");
     }
 
-    final index = state.items.indexWhere(
+    final newCarts = Map<String, BusinessCart>.from(state.carts);
+    final existingCart = newCarts[businessId];
+    final items = existingCart != null ? List<CartItem>.from(existingCart.items) : <CartItem>[];
+
+    final index = items.indexWhere(
       (item) => item.businessProduct.id == product.id,
     );
 
     final step = product.product.stepSize;
     final minQty = product.product.minQuantity;
-    double currentQty = index >= 0 ? state.items[index].quantity : 0.0;
-    
+    double currentQty = index >= 0 ? items[index].quantity : 0.0;
+
     double newQty;
     if (currentQty <= 0.0) {
       newQty = minQty;
@@ -91,64 +158,144 @@ class CartNotifier extends StateNotifier<CartState> {
       throw Exception("Stok yetersiz!");
     }
 
-    final newItems = List<CartItem>.from(state.items);
     if (index >= 0) {
-      newItems[index] = state.items[index].copyWith(quantity: newQty);
+      items[index] = items[index].copyWith(quantity: newQty);
     } else {
-      newItems.add(CartItem(
+      items.add(CartItem(
         businessProduct: product,
         quantity: newQty,
       ));
     }
 
-    state = CartState(
-      items: newItems,
-      currentBusinessId: businessId,
+    final updatedCart = BusinessCart(
+      businessId: businessId,
+      businessName: existingCart?.businessName ?? shopName,
+      businessLogoUrl: existingCart?.businessLogoUrl ?? shopLogoUrl,
+      items: items,
+    );
+
+    newCarts[businessId] = updatedCart;
+
+    state = state.copyWith(
+      carts: newCarts,
+      activeBusinessId: businessId,
     );
   }
 
-  void removeFromCart(String productId) {
-    final index = state.items.indexWhere(
+  void removeFromCart(String productId, [String? targetBusinessId]) {
+    String? businessId = targetBusinessId;
+
+    if (businessId == null) {
+      for (var entry in state.carts.entries) {
+        if (entry.value.items.any((item) => item.businessProduct.id == productId)) {
+          businessId = entry.key;
+          break;
+        }
+      }
+    }
+
+    if (businessId == null || !state.carts.containsKey(businessId)) return;
+
+    final newCarts = Map<String, BusinessCart>.from(state.carts);
+    final existingCart = newCarts[businessId]!;
+    final items = List<CartItem>.from(existingCart.items);
+
+    final index = items.indexWhere(
       (item) => item.businessProduct.id == productId,
     );
 
     if (index >= 0) {
-      final item = state.items[index];
+      final item = items[index];
       final step = item.businessProduct.product.stepSize;
       final minQty = item.businessProduct.product.minQuantity;
 
-      final newItems = List<CartItem>.from(state.items);
       if (QuantityFormatter.roundDouble(item.quantity - step) >= minQty - 0.001) {
-        newItems[index] = item.copyWith(
+        items[index] = item.copyWith(
           quantity: QuantityFormatter.roundDouble(item.quantity - step),
         );
+        newCarts[businessId] = existingCart.copyWith(items: items);
       } else {
-        newItems.removeAt(index);
+        items.removeAt(index);
+        if (items.isEmpty) {
+          newCarts.remove(businessId);
+        } else {
+          newCarts[businessId] = existingCart.copyWith(items: items);
+        }
+      }
+
+      String? newActiveId = state.activeBusinessId;
+      if (!newCarts.containsKey(newActiveId)) {
+        newActiveId = newCarts.isNotEmpty ? newCarts.keys.first : null;
       }
 
       state = CartState(
-        items: newItems,
-        currentBusinessId: newItems.isEmpty ? null : state.currentBusinessId,
+        carts: newCarts,
+        activeBusinessId: newActiveId,
       );
     }
   }
 
-  void clearCart() {
-    state = CartState(items: [], currentBusinessId: null);
+  void selectActiveCart(String businessId) {
+    if (state.carts.containsKey(businessId)) {
+      state = state.copyWith(activeBusinessId: businessId);
+    }
   }
 
-  void removeGroup(String groupBy, String groupName) {
-    final newItems = state.items.where((item) {
+  void clearCart([String? targetBusinessId]) {
+    if (targetBusinessId != null) {
+      final newCarts = Map<String, BusinessCart>.from(state.carts)..remove(targetBusinessId);
+      String? newActiveId = state.activeBusinessId;
+      if (newActiveId == targetBusinessId || !newCarts.containsKey(newActiveId)) {
+        newActiveId = newCarts.isNotEmpty ? newCarts.keys.first : null;
+      }
+      state = CartState(
+        carts: newCarts,
+        activeBusinessId: newActiveId,
+      );
+    } else {
+      state = CartState(carts: {}, activeBusinessId: null);
+    }
+  }
+
+  void removeGroup(String groupBy, String groupName, [String? targetBusinessId]) {
+    final businessId = targetBusinessId ?? state.activeBusinessId;
+    if (businessId == null || !state.carts.containsKey(businessId)) return;
+
+    final existingCart = state.carts[businessId]!;
+    final newItems = existingCart.items.where((item) {
       final key = groupBy == 'brand'
           ? item.businessProduct.product.brand
           : item.businessProduct.product.category;
       return key != groupName;
     }).toList();
 
+    final newCarts = Map<String, BusinessCart>.from(state.carts);
+    if (newItems.isEmpty) {
+      newCarts.remove(businessId);
+    } else {
+      newCarts[businessId] = existingCart.copyWith(items: newItems);
+    }
+
+    String? newActiveId = state.activeBusinessId;
+    if (!newCarts.containsKey(newActiveId)) {
+      newActiveId = newCarts.isNotEmpty ? newCarts.keys.first : null;
+    }
+
     state = CartState(
-      items: newItems,
-      currentBusinessId: newItems.isEmpty ? null : state.currentBusinessId,
+      carts: newCarts,
+      activeBusinessId: newActiveId,
     );
+  }
+
+  double getItemQuantity(String productId) {
+    for (var cart in state.carts.values) {
+      for (var item in cart.items) {
+        if (item.businessProduct.id == productId) {
+          return item.quantity;
+        }
+      }
+    }
+    return 0.0;
   }
 }
 
@@ -206,4 +353,5 @@ double getRequiredMinAmount(Business? business, Address? userAddress) {
 
   return requiredAmount;
 }
+
 
