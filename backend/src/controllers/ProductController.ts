@@ -215,12 +215,22 @@ export class ProductController {
           optionGroups: optionGroups && Array.isArray(optionGroups) ? {
             create: optionGroups.map((og: any) => ({
               name: og.name,
+              description: og.description || null,
+              type: og.type || "EXTRA",
+              selectionType: og.selectionType || "CHECKBOX",
               minSelections: og.minSelections !== undefined ? parseInt(og.minSelections.toString()) : 0,
               maxSelections: og.maxSelections !== undefined ? parseInt(og.maxSelections.toString()) : 1,
+              freeSelectionsCount: og.freeSelectionsCount !== undefined ? parseInt(og.freeSelectionsCount.toString()) : 0,
+              displayOrder: og.displayOrder !== undefined ? parseInt(og.displayOrder.toString()) : 0,
               options: og.options && Array.isArray(og.options) ? {
                 create: og.options.map((opt: any) => ({
                   name: opt.name,
                   price: opt.price !== undefined ? parseFloat(opt.price.toString()) : 0.00,
+                  isDefault: opt.isDefault === true || opt.isDefault === "true",
+                  isRemovable: opt.isRemovable === true || opt.isRemovable === "true",
+                  maxQuantity: opt.maxQuantity !== undefined ? parseInt(opt.maxQuantity.toString()) : 1,
+                  linkedProductId: opt.linkedProductId || null,
+                  displayOrder: opt.displayOrder !== undefined ? parseInt(opt.displayOrder.toString()) : 0,
                   isActive: opt.isActive !== undefined ? (opt.isActive === true || opt.isActive === "true") : true
                 }))
               } : undefined
@@ -447,12 +457,22 @@ export class ProductController {
             optionGroups: optionGroups && Array.isArray(optionGroups) ? {
               create: optionGroups.map((og: any) => ({
                 name: og.name,
+                description: og.description || null,
+                type: og.type || "EXTRA",
+                selectionType: og.selectionType || "CHECKBOX",
                 minSelections: og.minSelections !== undefined ? parseInt(og.minSelections.toString()) : 0,
                 maxSelections: og.maxSelections !== undefined ? parseInt(og.maxSelections.toString()) : 1,
+                freeSelectionsCount: og.freeSelectionsCount !== undefined ? parseInt(og.freeSelectionsCount.toString()) : 0,
+                displayOrder: og.displayOrder !== undefined ? parseInt(og.displayOrder.toString()) : 0,
                 options: og.options && Array.isArray(og.options) ? {
                   create: og.options.map((opt: any) => ({
                     name: opt.name,
                     price: opt.price !== undefined ? parseFloat(opt.price.toString()) : 0.00,
+                    isDefault: opt.isDefault === true || opt.isDefault === "true",
+                    isRemovable: opt.isRemovable === true || opt.isRemovable === "true",
+                    maxQuantity: opt.maxQuantity !== undefined ? parseInt(opt.maxQuantity.toString()) : 1,
+                    linkedProductId: opt.linkedProductId || null,
+                    displayOrder: opt.displayOrder !== undefined ? parseInt(opt.displayOrder.toString()) : 0,
                     isActive: opt.isActive !== undefined ? (opt.isActive === true || opt.isActive === "true") : true
                   }))
                 } : undefined

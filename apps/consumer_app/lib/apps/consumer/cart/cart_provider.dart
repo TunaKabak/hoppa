@@ -10,6 +10,8 @@ import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository
 import 'package:core_shared/shared/core/utils/quantity_formatter.dart';
 import 'package:core_shared/shared/models/cart_item.dart';
 
+import 'package:core_shared/shared/models/product.dart';
+
 class BusinessCart {
   final String businessId;
   final String businessName;
@@ -26,7 +28,7 @@ class BusinessCart {
   double get subtotal {
     double total = 0.0;
     for (var item in items) {
-      total += item.businessProduct.price * item.quantity;
+      total += item.itemTotal;
     }
     return total;
   }
@@ -166,6 +168,58 @@ class CartNotifier extends StateNotifier<CartState> {
         quantity: newQty,
       ));
     }
+
+    final updatedCart = BusinessCart(
+      businessId: businessId,
+      businessName: existingCart?.businessName ?? shopName,
+      businessLogoUrl: existingCart?.businessLogoUrl ?? shopLogoUrl,
+      items: items,
+    );
+
+    newCarts[businessId] = updatedCart;
+
+    state = state.copyWith(
+      carts: newCarts,
+      activeBusinessId: businessId,
+    );
+  }
+
+  void addToCartWithOptions(
+    BusinessProduct product,
+    List<SelectedProductOption> options,
+    double quantity,
+  ) {
+    final businessId = product.businessId;
+
+    final shopsAsync = ref.read(consumerShopsProvider);
+    final shops = shopsAsync.value ?? [];
+    String shopName = "İşletme";
+    String? shopLogoUrl;
+
+    if (shops.isNotEmpty) {
+      try {
+        final shop = shops.firstWhere((s) => s.id == businessId);
+        if (!shop.isOpen) {
+          throw Exception("Bu dükkan kapalı olduğu için sepetinize ürün eklenemez.");
+        }
+        shopName = shop.name;
+        shopLogoUrl = shop.logoUrl;
+      } catch (_) {}
+    }
+
+    if (!product.isAvailable) {
+      throw Exception("Ürün şu anda temin edilemiyor.");
+    }
+
+    final newCarts = Map<String, BusinessCart>.from(state.carts);
+    final existingCart = newCarts[businessId];
+    final items = existingCart != null ? List<CartItem>.from(existingCart.items) : <CartItem>[];
+
+    items.add(CartItem(
+      businessProduct: product,
+      quantity: quantity,
+      selectedOptions: options,
+    ));
 
     final updatedCart = BusinessCart(
       businessId: businessId,
