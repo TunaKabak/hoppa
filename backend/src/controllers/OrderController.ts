@@ -343,8 +343,11 @@ export class OrderController {
               unitPrice: unitPrice,
               options: item.options && Array.isArray(item.options) ? {
                 create: item.options.map((opt: any) => ({
+                  groupName: opt.groupName || "",
                   name: opt.name,
                   price: parseFloat(opt.price || 0),
+                  quantity: opt.quantity !== undefined ? parseInt(opt.quantity.toString()) : 1,
+                  actionType: opt.actionType || "ADD",
                   optionId: opt.optionId || null
                 }))
               } : undefined

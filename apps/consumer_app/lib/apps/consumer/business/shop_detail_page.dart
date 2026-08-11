@@ -17,6 +17,7 @@ import 'package:consumer_app/apps/consumer/widgets/shop_badge.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:core_shared/shared/models/campaign.dart';
 import 'package:consumer_app/apps/consumer/business/campaign_products_page.dart';
+import 'package:consumer_app/apps/consumer/business/widgets/food_product_customization_sheet.dart';
 import 'package:consumer_app/apps/consumer/main_layout/voice_assistant_dialog.dart';
 
 class ModernShopDetailPage extends ConsumerStatefulWidget {
@@ -1235,12 +1236,37 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                               final product = filteredProducts[index];
                               return GestureDetector(
                                 onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => ProductDetailPage(businessProduct: product),
-                                    ),
-                                  );
+                                  if (product.product.optionGroups.isNotEmpty) {
+                                    showModalBottomSheet(
+                                      context: context,
+                                      isScrollControlled: true,
+                                      backgroundColor: Colors.transparent,
+                                      builder: (ctx) => FoodProductCustomizationSheet(
+                                        product: product.product,
+                                        onAddToCart: (prod, options, qty) {
+                                          ref.read(cartProvider.notifier).addToCartWithOptions(
+                                            product,
+                                            options,
+                                            qty.toDouble(),
+                                          );
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text("${product.product.name} sepetinize eklendi!"),
+                                              backgroundColor: Colors.green,
+                                              duration: const Duration(seconds: 2),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    );
+                                  } else {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => ProductDetailPage(businessProduct: product),
+                                      ),
+                                    );
+                                  }
                                 },
                                 child: ModernProductCard(
                                   businessProduct: product,

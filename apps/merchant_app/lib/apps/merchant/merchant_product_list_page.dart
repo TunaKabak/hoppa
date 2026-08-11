@@ -8,6 +8,7 @@ import 'package:merchant_app/apps/merchant/merchant_ai_scanner_page.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:core_shared/shared/core/services/media_service.dart';
 import 'package:core_auth/core_auth.dart';
+import 'package:merchant_app/apps/merchant/services/food_option_preset_service.dart';
 
 class MerchantProductListPage extends ConsumerStatefulWidget {
   final String businessId;
@@ -2560,6 +2561,8 @@ class _MerchantProductListPageState
     VoidCallback onChanged,
   ) {
     final theme = Theme.of(context);
+    final presets = FoodOptionPresetService.getPresets();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2567,7 +2570,7 @@ class _MerchantProductListPageState
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              "Seçenek Grupları ve Ekstralar",
+              "Seçenek Grupları, Yan Ürünler & Ekstralar",
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -2579,7 +2582,42 @@ class _MerchantProductListPageState
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
+        // Fast Preset Selector Bar
+        Text(
+          "Hazır Yemek Şablonları ile Hızlı Doldur:",
+          style: TextStyle(fontSize: 12, color: Colors.grey[700], fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 6),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: presets.map((preset) {
+              return Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: ActionChip(
+                  avatar: const Icon(Icons.bolt, size: 16, color: Colors.orange),
+                  label: Text(preset.title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  backgroundColor: Colors.orange.shade50,
+                  side: BorderSide(color: Colors.orange.shade200),
+                  onPressed: () {
+                    for (var og in preset.optionGroups) {
+                      groups.add(Map<String, dynamic>.from(og));
+                    }
+                    onChanged();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text("${preset.title} eklendi!"),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        const SizedBox(height: 12),
         if (groups.isEmpty)
           Container(
             padding: const EdgeInsets.all(16),
@@ -2591,7 +2629,7 @@ class _MerchantProductListPageState
             ),
             child: const Center(
               child: Text(
-                "Bu ürün için henüz bir seçenek grubu eklenmemiş. (Soslar, İçecekler vb.)",
+                "Bu ürün için henüz bir seçenek grubu eklenmemiş. Yukarıdaki hazır şablonları kullanabilir veya manuel grup ekleyebilirsiniz.",
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.grey, fontSize: 13),
               ),
@@ -2601,6 +2639,21 @@ class _MerchantProductListPageState
           final idx = entry.key;
           final group = entry.value;
           final List<dynamic> options = group['options'] ?? [];
+          final String groupType = group['type'] ?? 'EXTRA';
+          final int freeCount = group['freeSelectionsCount'] ?? 0;
+
+          Color badgeColor = Colors.blue;
+          String groupTypeName = "Ekstra";
+          if (groupType == 'VARIATION') {
+            badgeColor = Colors.purple;
+            groupTypeName = "Porsiyon/Boyut";
+          } else if (groupType == 'INGREDIENT') {
+            badgeColor = Colors.teal;
+            groupTypeName = "Malzeme";
+          } else if (groupType == 'SIDE_PRODUCT') {
+            badgeColor = Colors.deepOrange;
+            groupTypeName = "Yan Ürün";
+          }
 
           return Card(
             margin: const EdgeInsets.only(bottom: 12),
@@ -2616,10 +2669,16 @@ class _MerchantProductListPageState
                 children: [
                   Row(
                     children: [
-                      const Icon(
-                        Icons.list_alt,
-                        color: Colors.blueGrey,
-                        size: 20,
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: badgeColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          groupTypeName,
+                          style: TextStyle(color: badgeColor, fontSize: 10, fontWeight: FontWeight.bold),
+                        ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
@@ -2632,10 +2691,10 @@ class _MerchantProductListPageState
                         ),
                       ),
                       Text(
-                        "(Min: ${group['minSelections']}, Max: ${group['maxSelections']})",
-                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                        "(Min: ${group['minSelections']}, Max: ${group['maxSelections']}${freeCount > 0 ? ', $freeCount Bedava' : ''})",
+                        style: TextStyle(color: Colors.grey[600], fontSize: 11),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 4),
                       IconButton(
                         icon: const Icon(
                           Icons.delete_outline,
@@ -2649,23 +2708,55 @@ class _MerchantProductListPageState
                       ),
                     ],
                   ),
-                  const Divider(),
+                  if (group['description'] != null && (group['description'] as String).isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2.0, bottom: 6.0),
+                      child: Text(
+                        group['description'],
+                        style: TextStyle(fontSize: 11, color: Colors.grey[600], fontStyle: FontStyle.italic),
+                      ),
+                    ),
+                  const Divider(height: 12),
                   ...options.asMap().entries.map((optEntry) {
                     final optIdx = optEntry.key;
                     final opt = optEntry.value;
+                    final bool isRemovable = opt['isRemovable'] == true;
+                    final bool isDefault = opt['isDefault'] == true;
+                    final double optPrice = (opt['price'] != null) ? double.parse(opt['price'].toString()) : 0.0;
+
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4.0),
                       child: Row(
                         children: [
-                          const Icon(
-                            Icons.arrow_right,
+                          Icon(
+                            isRemovable ? Icons.remove_circle : (isDefault ? Icons.check_circle : Icons.circle_outlined),
                             size: 16,
-                            color: Colors.grey,
+                            color: isRemovable ? Colors.red.shade400 : (isDefault ? Colors.green : Colors.grey),
                           ),
+                          const SizedBox(width: 6),
                           Expanded(
-                            child: Text(
-                              "${opt['name']} (+${(opt['price'] ?? 0.0).toStringAsFixed(2)} ₺)",
-                              style: const TextStyle(fontSize: 13),
+                            child: RichText(
+                              text: TextSpan(
+                                style: const TextStyle(fontSize: 13, color: Colors.black87),
+                                children: [
+                                  TextSpan(text: opt['name']),
+                                  if (optPrice > 0)
+                                    TextSpan(
+                                      text: " (+${optPrice.toStringAsFixed(2)} ₺)",
+                                      style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+                                    ),
+                                  if (isRemovable)
+                                    TextSpan(
+                                      text: " [Çıkarılabilir İçerik]",
+                                      style: TextStyle(color: Colors.red.shade700, fontSize: 11, fontWeight: FontWeight.w600),
+                                    ),
+                                  if (isDefault)
+                                    const TextSpan(
+                                      text: " (Varsayılan)",
+                                      style: TextStyle(color: Colors.grey, fontSize: 11),
+                                    ),
+                                ],
+                              ),
                             ),
                           ),
                           IconButton(
@@ -2712,92 +2803,143 @@ class _MerchantProductListPageState
     VoidCallback onChanged,
   ) {
     final nameController = TextEditingController();
+    final descController = TextEditingController();
     final minController = TextEditingController(text: "0");
     final maxController = TextEditingController(text: "1");
+    final freeController = TextEditingController(text: "0");
+    String selectedType = 'EXTRA';
+    String selectedSelectionType = 'CHECKBOX';
     final dialogFormKey = GlobalKey<FormState>();
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text(
-          "Yeni Seçenek Grubu",
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        content: Form(
-          key: dialogFormKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: "Grup Adı (Sos Seçimi, İçecekler)",
-                  border: OutlineInputBorder(),
-                ),
-                validator: (v) =>
-                    (v == null || v.isEmpty) ? "Zorunlu alan" : null,
-              ),
-              const SizedBox(height: 12),
-              Row(
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text(
+            "Yeni Seçenek Grubu",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: SingleChildScrollView(
+            child: Form(
+              key: dialogFormKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: minController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: "Minimum Seçim",
-                        border: OutlineInputBorder(),
-                        helperText: "0 = İsteğe bağlı",
-                      ),
-                      validator: (v) {
-                        if (v == null || v.isEmpty) return "Zorunlu";
-                        if (int.tryParse(v) == null) return "Sayı girin";
-                        return null;
-                      },
+                  DropdownButtonFormField<String>(
+                    value: selectedType,
+                    decoration: const InputDecoration(
+                      labelText: "Grup Türü",
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'VARIATION', child: Text('Boyut / Porsiyon')),
+                      DropdownMenuItem(value: 'INGREDIENT', child: Text('Malzeme Seçimi (Çıkar/Ekle)')),
+                      DropdownMenuItem(value: 'SIDE_PRODUCT', child: Text('Yan Ürün & Promosyonlu İçecek')),
+                      DropdownMenuItem(value: 'EXTRA', child: Text('Sos & Ekstralar')),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        setDialogState(() {
+                          selectedType = val;
+                          if (val == 'VARIATION') {
+                            selectedSelectionType = 'RADIO';
+                            minController.text = "1";
+                            maxController.text = "1";
+                          } else if (val == 'INGREDIENT') {
+                            selectedSelectionType = 'CHECKBOX';
+                            minController.text = "0";
+                            maxController.text = "10";
+                          }
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      labelText: "Grup Adı (Örn: Sos Seçimi, Porsiyon)",
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (v) => (v == null || v.isEmpty) ? "Zorunlu alan" : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: descController,
+                    decoration: const InputDecoration(
+                      labelText: "Yardımcı Not (Örn: Lütfen porsiyon seçiniz)",
+                      border: OutlineInputBorder(),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
-                      controller: maxController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: "Maksimum Seçim",
-                        border: OutlineInputBorder(),
-                        helperText: "1 = Tekli, >1 = Çoklu",
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: minController,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: "Min Seçim",
+                            border: OutlineInputBorder(),
+                            helperText: "0 = İsteğe bağlı",
+                          ),
+                          validator: (v) => (v == null || v.isEmpty || int.tryParse(v) == null) ? "Geçersiz" : null,
+                        ),
                       ),
-                      validator: (v) {
-                        if (v == null || v.isEmpty) return "Zorunlu";
-                        if (int.tryParse(v) == null) return "Sayı girin";
-                        return null;
-                      },
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextFormField(
+                          controller: maxController,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: "Max Seçim",
+                            border: OutlineInputBorder(),
+                            helperText: "1 = Tekli, >1 = Çoklu",
+                          ),
+                          validator: (v) => (v == null || v.isEmpty || int.tryParse(v) == null) ? "Geçersiz" : null,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: freeController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: "Ücretsiz Seçim Hakkı (Kota)",
+                      border: OutlineInputBorder(),
+                      helperText: "Örn: 2 seçerseniz ilk 2 sos ücretsiz olur.",
                     ),
                   ),
                 ],
               ),
-            ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text("İptal"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (!dialogFormKey.currentState!.validate()) return;
+                groups.add({
+                  'name': nameController.text.trim(),
+                  'description': descController.text.trim(),
+                  'type': selectedType,
+                  'selectionType': selectedSelectionType,
+                  'minSelections': int.parse(minController.text),
+                  'maxSelections': int.parse(maxController.text),
+                  'freeSelectionsCount': int.tryParse(freeController.text) ?? 0,
+                  'options': <Map<String, dynamic>>[],
+                });
+                Navigator.pop(ctx);
+                onChanged();
+              },
+              child: const Text("Ekle"),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text("İptal"),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (!dialogFormKey.currentState!.validate()) return;
-              groups.add({
-                'name': nameController.text.trim(),
-                'minSelections': int.parse(minController.text),
-                'maxSelections': int.parse(maxController.text),
-                'options': <Map<String, dynamic>>[],
-              });
-              Navigator.pop(ctx);
-              onChanged();
-            },
-            child: const Text("Ekle"),
-          ),
-        ],
       ),
     );
   }
@@ -2805,68 +2947,81 @@ class _MerchantProductListPageState
   void _showAddOptionDialog(List<dynamic> options, VoidCallback onChanged) {
     final nameController = TextEditingController();
     final priceController = TextEditingController(text: "0");
+    bool isRemovable = false;
+    bool isDefault = false;
     final dialogFormKey = GlobalKey<FormState>();
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text(
-          "Yeni Seçenek",
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        content: Form(
-          key: dialogFormKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: "Seçenek Adı (Ketçap, Büyük Boy)",
-                  border: OutlineInputBorder(),
-                ),
-                validator: (v) =>
-                    (v == null || v.isEmpty) ? "Zorunlu alan" : null,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text(
+            "Yeni Seçenek Ekle",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: SingleChildScrollView(
+            child: Form(
+              key: dialogFormKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      labelText: "Seçenek Adı (Ketçap, Soğan Olmasın)",
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (v) => (v == null || v.isEmpty) ? "Zorunlu alan" : null,
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: priceController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(
+                      labelText: "Fiyat Farkı / İndirimli Yan Ürün Fiyatı (₺)",
+                      border: OutlineInputBorder(),
+                      prefixText: "₺ ",
+                    ),
+                    validator: (v) => (v == null || v.isEmpty || double.tryParse(v) == null) ? "Geçerli fiyat girin" : null,
+                  ),
+                  const SizedBox(height: 12),
+                  SwitchListTile(
+                    title: const Text("Çıkarılabilir Malzeme mi?"),
+                    subtitle: const Text("Örn: 'Soğan Olmasın', 'Turşu Olmasın'. Seçildiğinde mutfağa çıkarılacak uyarısı düşer."),
+                    value: isRemovable,
+                    onChanged: (val) => setDialogState(() => isRemovable = val),
+                  ),
+                  SwitchListTile(
+                    title: const Text("Varsayılan Seçili Gelsin mi?"),
+                    value: isDefault,
+                    onChanged: (val) => setDialogState(() => isDefault = val),
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: priceController,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: const InputDecoration(
-                  labelText: "Fiyat Farkı (₺) - Opsiyonel",
-                  border: OutlineInputBorder(),
-                  prefixText: "₺ ",
-                ),
-                validator: (v) {
-                  if (v == null || v.isEmpty) return "Zorunlu";
-                  if (double.tryParse(v) == null) return "Sayı girin";
-                  return null;
-                },
-              ),
-            ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text("İptal"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (!dialogFormKey.currentState!.validate()) return;
+                options.add({
+                  'name': nameController.text.trim(),
+                  'price': double.parse(priceController.text),
+                  'isRemovable': isRemovable,
+                  'isDefault': isDefault,
+                  'isActive': true,
+                });
+                Navigator.pop(ctx);
+                onChanged();
+              },
+              child: const Text("Ekle"),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text("İptal"),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (!dialogFormKey.currentState!.validate()) return;
-              options.add({
-                'name': nameController.text.trim(),
-                'price': double.parse(priceController.text),
-                'isActive': true,
-              });
-              Navigator.pop(ctx);
-              onChanged();
-            },
-            child: const Text("Ekle"),
-          ),
-        ],
       ),
     );
   }

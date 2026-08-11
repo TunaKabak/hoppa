@@ -1,13 +1,41 @@
+enum OptionGroupType {
+  variation,
+  ingredient,
+  sideProduct,
+  extra,
+}
+
+enum SelectionType {
+  radio,
+  checkbox,
+  counter,
+}
+
+enum OptionAction {
+  add,
+  remove,
+}
+
 class ProductOption {
   final String id;
   final String name;
   final double price;
+  final bool isDefault;
+  final bool isRemovable;
+  final int maxQuantity;
+  final String? linkedProductId;
+  final int displayOrder;
   final bool isActive;
 
   ProductOption({
     required this.id,
     required this.name,
     required this.price,
+    this.isDefault = false,
+    this.isRemovable = false,
+    this.maxQuantity = 1,
+    this.linkedProductId,
+    this.displayOrder = 0,
     this.isActive = true,
   });
 
@@ -16,6 +44,11 @@ class ProductOption {
       id: map['id'] ?? '',
       name: map['name'] ?? '',
       price: map['price'] != null ? (double.tryParse(map['price'].toString()) ?? 0.0) : 0.0,
+      isDefault: map['isDefault'] ?? false,
+      isRemovable: map['isRemovable'] ?? false,
+      maxQuantity: map['maxQuantity'] as int? ?? 1,
+      linkedProductId: map['linkedProductId'] as String?,
+      displayOrder: map['displayOrder'] as int? ?? 0,
       isActive: map['isActive'] ?? true,
     );
   }
@@ -25,6 +58,11 @@ class ProductOption {
       'id': id,
       'name': name,
       'price': price,
+      'isDefault': isDefault,
+      'isRemovable': isRemovable,
+      'maxQuantity': maxQuantity,
+      'linkedProductId': linkedProductId,
+      'displayOrder': displayOrder,
       'isActive': isActive,
     };
   }
@@ -33,15 +71,25 @@ class ProductOption {
 class ProductOptionGroup {
   final String id;
   final String name;
+  final String? description;
+  final String type; // VARIATION, INGREDIENT, SIDE_PRODUCT, EXTRA
+  final String selectionType; // RADIO, CHECKBOX, COUNTER
   final int minSelections;
   final int maxSelections;
+  final int freeSelectionsCount;
+  final int displayOrder;
   final List<ProductOption> options;
 
   ProductOptionGroup({
     required this.id,
     required this.name,
+    this.description,
+    this.type = 'EXTRA',
+    this.selectionType = 'CHECKBOX',
     required this.minSelections,
     required this.maxSelections,
+    this.freeSelectionsCount = 0,
+    this.displayOrder = 0,
     required this.options,
   });
 
@@ -54,8 +102,13 @@ class ProductOptionGroup {
     return ProductOptionGroup(
       id: map['id'] ?? '',
       name: map['name'] ?? '',
+      description: map['description'] as String?,
+      type: (map['type'] as String?)?.toUpperCase() ?? 'EXTRA',
+      selectionType: (map['selectionType'] as String?)?.toUpperCase() ?? 'CHECKBOX',
       minSelections: map['minSelections'] as int? ?? 0,
       maxSelections: map['maxSelections'] as int? ?? 1,
+      freeSelectionsCount: map['freeSelectionsCount'] as int? ?? 0,
+      displayOrder: map['displayOrder'] as int? ?? 0,
       options: parsedOpts,
     );
   }
@@ -64,9 +117,54 @@ class ProductOptionGroup {
     return {
       'id': id,
       'name': name,
+      'description': description,
+      'type': type,
+      'selectionType': selectionType,
       'minSelections': minSelections,
       'maxSelections': maxSelections,
+      'freeSelectionsCount': freeSelectionsCount,
+      'displayOrder': displayOrder,
       'options': options.map((o) => o.toMap()).toList(),
+    };
+  }
+}
+
+class SelectedProductOption {
+  final String? optionId;
+  final String groupName;
+  final String name;
+  final double price;
+  final int quantity;
+  final String actionType; // ADD, REMOVE
+
+  SelectedProductOption({
+    this.optionId,
+    required this.groupName,
+    required this.name,
+    required this.price,
+    this.quantity = 1,
+    this.actionType = 'ADD',
+  });
+
+  factory SelectedProductOption.fromMap(Map<String, dynamic> map) {
+    return SelectedProductOption(
+      optionId: map['optionId'] as String?,
+      groupName: map['groupName'] ?? '',
+      name: map['name'] ?? '',
+      price: map['price'] != null ? (double.tryParse(map['price'].toString()) ?? 0.0) : 0.0,
+      quantity: map['quantity'] as int? ?? 1,
+      actionType: map['actionType'] ?? 'ADD',
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'optionId': optionId,
+      'groupName': groupName,
+      'name': name,
+      'price': price,
+      'quantity': quantity,
+      'actionType': actionType,
     };
   }
 }
