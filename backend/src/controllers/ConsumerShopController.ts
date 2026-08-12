@@ -30,12 +30,17 @@ function formatProduct(product: any) {
 function checkIsOpen(shop: any): boolean {
   if (!shop.isActive) return false;
 
+  if (!shop.workingHours) {
+    // Çalışma saatleri henüz girilmemişse dükkan aktifse AÇIK kabul et
+    return true;
+  }
+
   const countryCode = shop.merchant?.countryCode || "TR";
   const tz = (countryCode === "CY" || countryCode === "KKTC") ? "Europe/Nicosia" : "Europe/Istanbul";
 
   const now = new Date();
   
-  const formatter = new Intl.DateTimeFormat("en-US", {
+  const formatter = new Intl.DateTimeFormat("tr-TR", {
     timeZone: tz,
     hour: "numeric",
     minute: "numeric",
@@ -46,7 +51,7 @@ function checkIsOpen(shop: any): boolean {
   const parts = formatter.formatToParts(now);
   let currentHour = 0;
   let currentMinute = 0;
-  let weekdayName = "";
+  let weekdayNameTR = "";
   
   for (const part of parts) {
     if (part.type === "hour") {
@@ -54,27 +59,31 @@ function checkIsOpen(shop: any): boolean {
     } else if (part.type === "minute") {
       currentMinute = parseInt(part.value, 10);
     } else if (part.type === "weekday") {
-      weekdayName = part.value.toLowerCase();
+      weekdayNameTR = part.value.toLowerCase();
     }
   }
 
-  if (shop.workingHours && typeof shop.workingHours === 'object') {
-    const wh = shop.workingHours as any;
-    const todaySchedule = wh[weekdayName];
+  const wh = shop.workingHours;
+
+  // 1. Dizi Formatı (Array): [{ day: 'Çarşamba', open: '09:00', close: '23:00', isClosed: false }]
+  if (Array.isArray(wh)) {
+    const todaySchedule = wh.find((w: any) => 
+      w.day?.toLowerCase() === weekdayNameTR || 
+      w.day?.toLowerCase() === weekdayNameTR.replace('ı', 'i')
+    );
+
     if (todaySchedule) {
-      if (todaySchedule.isOpen === false) {
-        return false;
-      } else if (todaySchedule.openTime && todaySchedule.closeTime) {
-        const [openH, openM] = todaySchedule.openTime.split(':').map(Number);
-        const [closeH, closeM] = todaySchedule.closeTime.split(':').map(Number);
+      if (todaySchedule.isClosed) return false;
+      if (todaySchedule.open && todaySchedule.close) {
+        const [openH, openM] = todaySchedule.open.split(':').map(Number);
+        const [closeH, closeM] = todaySchedule.close.split(':').map(Number);
 
         const currentTotalMins = currentHour * 60 + currentMinute;
         const openTotalMins = openH * 60 + openM;
         let closeTotalMins = closeH * 60 + closeM;
 
-        if (closeTotalMins < openTotalMins) {
-          // Ertesi güne sarkma durumu, örn: 08:00 - 02:00
-          closeTotalMins += 24 * 60;
+        if (closeTotalMins <= openTotalMins) {
+          closeTotalMins += 24 * 60; // Gece yarısını geçen saatler (Örn: 10:00 - 02:00)
         }
 
         let checkMins = currentTotalMins;
@@ -87,10 +96,38 @@ function checkIsOpen(shop: any): boolean {
         }
       }
     }
-  } else {
-    // Varsayıvan kontrol: 08:00 - 22:00
-    if (currentHour < 8 || currentHour >= 22) {
-      return false;
+    return true;
+  }
+
+  // 2. Obje Formatı (Object): { wednesday: { isOpen: true, openTime: '09:00', closeTime: '22:00' } }
+  if (typeof wh === 'object') {
+    const enFormatter = new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "long" });
+    const enWeekday = enFormatter.format(now).toLowerCase();
+    const todaySchedule = wh[enWeekday];
+
+    if (todaySchedule) {
+      if (todaySchedule.isOpen === false) return false;
+      if (todaySchedule.openTime && todaySchedule.closeTime) {
+        const [openH, openM] = todaySchedule.openTime.split(':').map(Number);
+        const [closeH, closeM] = todaySchedule.closeTime.split(':').map(Number);
+
+        const currentTotalMins = currentHour * 60 + currentMinute;
+        const openTotalMins = openH * 60 + openM;
+        let closeTotalMins = closeH * 60 + closeM;
+
+        if (closeTotalMins <= openTotalMins) {
+          closeTotalMins += 24 * 60;
+        }
+
+        let checkMins = currentTotalMins;
+        if (currentTotalMins < openTotalMins && closeTotalMins > 24 * 60) {
+          checkMins += 24 * 60;
+        }
+
+        if (checkMins < openTotalMins || checkMins >= closeTotalMins) {
+          return false;
+        }
+      }
     }
   }
 

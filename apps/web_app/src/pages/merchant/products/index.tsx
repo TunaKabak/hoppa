@@ -220,9 +220,9 @@ export default function MerchantProductsPage() {
   return (
     <MerchantLayout title="Ürün & Menü Portalı" activeTab="products">
       <div className="space-y-6">
-        {/* Header Toolbar */}
-        <div className={`flex flex-col lg:flex-row lg:items-center justify-between gap-4 border rounded-3xl p-6 transition-colors ${
-          isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+        {/* Header Toolbar - Hoppa Branded Header */}
+        <div className={`sticky top-0 z-30 backdrop-blur-md flex flex-col lg:flex-row lg:items-center justify-between gap-4 border rounded-3xl p-6 transition-all ${
+          isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white/90 border-slate-200 shadow-md'
         }`}>
           <div>
             <div className="flex items-center gap-3">
