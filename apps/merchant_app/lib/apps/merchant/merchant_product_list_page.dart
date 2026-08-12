@@ -2452,19 +2452,22 @@ class _MerchantProductListPageState
     required String title,
     required String suffix,
   }) {
-    final controller = TextEditingController(text: currentValue.toString());
+    final controller = TextEditingController(
+      text: type == 'price' ? currentValue.toStringAsFixed(2) : currentValue.toInt().toString(),
+    );
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(title),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
         content: TextField(
           controller: controller,
-          keyboardType: TextInputType.number,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
           autofocus: true,
           decoration: InputDecoration(
             suffixText: suffix,
             border: const OutlineInputBorder(),
+            prefixText: type == 'price' ? '₺ ' : null,
           ),
         ),
         actions: [
@@ -2473,22 +2476,42 @@ class _MerchantProductListPageState
             child: const Text("İptal"),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               final val = double.tryParse(controller.text);
               if (val != null) {
-                if (type == 'price') {
-                  ref.read(productControllerProvider.notifier).updateProduct(
-                    p.id,
-                    {'price': val},
-                  );
-                } else {
-                  ref.read(productControllerProvider.notifier).updateProduct(
-                    p.id,
-                    {'stock': val.toInt()},
-                  );
+                Navigator.pop(ctx);
+                try {
+                  if (type == 'price') {
+                    await ref.read(productControllerProvider.notifier).updateProduct(
+                          p.id,
+                          {'price': val},
+                        );
+                  } else {
+                    await ref.read(productControllerProvider.notifier).updateProduct(
+                          p.id,
+                          {'stock': val.toInt()},
+                        );
+                  }
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text("${p.name} güncellendi!"),
+                        backgroundColor: Colors.green,
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text("Güncelleme hatası: $e"),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
                 }
               }
-              Navigator.pop(ctx);
             },
             child: const Text("Kaydet"),
           ),
@@ -3328,15 +3351,27 @@ class _EditProductDialogState extends State<_EditProductDialog> {
     _dialogOptionGroups = widget.product.optionGroups
         .map(
           (g) => {
+            'id': g.id,
             'name': g.name,
+            'description': g.description,
+            'type': g.type,
+            'selectionType': g.selectionType,
             'minSelections': g.minSelections,
             'maxSelections': g.maxSelections,
+            'freeSelectionsCount': g.freeSelectionsCount,
+            'displayOrder': g.displayOrder,
             'options': g.options
                 .map(
                   (o) => {
+                    'id': o.id,
                     'name': o.name,
                     'price': o.price,
+                    'isDefault': o.isDefault,
+                    'isRemovable': o.isRemovable,
+                    'maxQuantity': o.maxQuantity,
+                    'linkedProductId': o.linkedProductId,
                     'isActive': o.isActive,
+                    'displayOrder': o.displayOrder,
                   },
                 )
                 .toList(),

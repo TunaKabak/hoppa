@@ -820,4 +820,186 @@ export class ProductController {
       return res.status(500).json({ error: true, message: error.message });
     }
   }
+
+  // Seçili ürünlerin stok durumunu toplu günceller
+  async bulkUpdateStock(req: Request, res: Response) {
+    try {
+      const merchantId = req.user?.id;
+      if (!merchantId) return res.status(401).json({ error: true, message: "Yetkisiz erişim" });
+
+      const shop = await prisma.shop.findUnique({ where: { merchantId } });
+      if (!shop) return res.status(404).json({ error: true, message: "Dükkan bulunamadı" });
+
+      const { productIds, isActive, trackStock, stockQuantity } = req.body;
+      if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+        return res.status(400).json({ error: true, message: "Lütfen en az bir ürün seçiniz." });
+      }
+
+      const updateData: any = {};
+      if (typeof isActive === "boolean") updateData.isActive = isActive;
+      if (typeof trackStock === "boolean") updateData.trackStock = trackStock;
+      if (typeof stockQuantity === "number") updateData.stockQuantity = stockQuantity;
+
+      const result = await prisma.product.updateMany({
+        where: {
+          id: { in: productIds },
+          shopId: shop.id // Strict Merchant Isolation Guard
+        },
+        data: updateData
+      });
+
+      return res.status(200).json({
+        error: false,
+        message: `${result.count} adet ürün stok bilgisi güncellendi.`
+      });
+    } catch (error: any) {
+      return res.status(500).json({ error: true, message: error.message });
+    }
+  }
+
+  // Seçili ürünlerin fiyatlarını toplu günceller (Yüzdesel veya Sabit)
+  async bulkUpdatePrice(req: Request, res: Response) {
+    try {
+      const merchantId = req.user?.id;
+      if (!merchantId) return res.status(401).json({ error: true, message: "Yetkisiz erişim" });
+
+      const shop = await prisma.shop.findUnique({ where: { merchantId } });
+      if (!shop) return res.status(404).json({ error: true, message: "Dükkan bulunamadı" });
+
+      const { productIds, updateType, value } = req.body;
+      if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+        return res.status(400).json({ error: true, message: "Lütfen en az bir ürün seçiniz." });
+      }
+      if (typeof value !== "number" || isNaN(value) || value < 0) {
+        return res.status(400).json({ error: true, message: "Geçerli bir değer girilmelidir." });
+      }
+
+      const products = await prisma.product.findMany({
+        where: {
+          id: { in: productIds },
+          shopId: shop.id
+        }
+      });
+
+      let updatedCount = 0;
+      for (const prod of products) {
+        let currentPrice = Number(prod.price);
+        let newPrice = currentPrice;
+
+        if (updateType === "PERCENTAGE_INCREASE") {
+          newPrice = currentPrice * (1 + value / 100);
+        } else if (updateType === "PERCENTAGE_DECREASE") {
+          newPrice = Math.max(0, currentPrice * (1 - value / 100));
+        } else if (updateType === "FIXED_ADD") {
+          newPrice = currentPrice + value;
+        } else if (updateType === "SET_PRICE") {
+          newPrice = value;
+        }
+
+        newPrice = Math.round(newPrice * 100) / 100;
+
+        await prisma.product.update({
+          where: { id: prod.id },
+          data: {
+            price: newPrice,
+            regularPrice: prod.discountRate > 0 ? Number(prod.regularPrice) : newPrice
+          }
+        });
+        updatedCount++;
+      }
+
+      return res.status(200).json({
+        error: false,
+        message: `${updatedCount} adet ürünün fiyatı güncellendi.`
+      });
+    } catch (error: any) {
+      return res.status(500).json({ error: true, message: error.message });
+    }
+  }
+
+  // Bir ürünün opsiyon gruplarını ve ekstralarını kaydeder/günceller
+  async upsertOptionGroups(req: Request, res: Response) {
+    try {
+      const merchantId = req.user?.id;
+      if (!merchantId) return res.status(401).json({ error: true, message: "Yetkisiz erişim" });
+
+      const shop = await prisma.shop.findUnique({ where: { merchantId } });
+      if (!shop) return res.status(404).json({ error: true, message: "Dükkan bulunamadı" });
+
+      const productId = req.params.id as string;
+      const product = await prisma.product.findFirst({
+        where: { id: productId, shopId: shop.id }
+      });
+      if (!product) return res.status(404).json({ error: true, message: "Ürün bulunamadı veya yetkiniz yok." });
+
+      const { optionGroups } = req.body;
+      if (!Array.isArray(optionGroups)) {
+        return res.status(400).json({ error: true, message: "Opsiyon grupları bir dizi olmalıdır." });
+      }
+
+      // Mevcut option group'ları temizle ve yenilerini oluştur (Atomic Replacement)
+      await prisma.productOptionGroup.deleteMany({
+        where: { productId: productId }
+      });
+
+      for (let i = 0; i < optionGroups.length; i++) {
+        const group = optionGroups[i];
+        if (!group.name || group.name.trim() === "") continue;
+
+        const createdGroup = await prisma.productOptionGroup.create({
+          data: {
+            productId: productId,
+            name: group.name.trim(),
+            description: group.description || null,
+            type: group.type || "EXTRA",
+            selectionType: group.selectionType || "CHECKBOX",
+            minSelections: Number(group.minSelections) || 0,
+            maxSelections: Number(group.maxSelections) || 1,
+            freeSelectionsCount: Number(group.freeSelectionsCount) || 0,
+            displayOrder: i
+          }
+        });
+
+        if (Array.isArray(group.options)) {
+          for (let j = 0; j < group.options.length; j++) {
+            const opt = group.options[j];
+            if (!opt.name || opt.name.trim() === "") continue;
+
+            await prisma.productOption.create({
+              data: {
+                optionGroupId: createdGroup.id,
+                name: opt.name.trim(),
+                price: typeof opt.price === "number" ? opt.price : 0.00,
+                isDefault: opt.isDefault === true,
+                isRemovable: opt.isRemovable === true,
+                maxQuantity: Number(opt.maxQuantity) || 1,
+                displayOrder: j,
+                isActive: opt.isActive !== false
+              }
+            });
+          }
+        }
+      }
+
+      const updatedProduct = await prisma.product.findUnique({
+        where: { id: productId },
+        include: {
+          category: { include: { parent: true } },
+          unit: true,
+          brand: true,
+          globalProduct: true,
+          optionGroups: { include: { options: true } }
+        }
+      });
+
+      return res.status(200).json({
+        error: false,
+        message: "Ürün opsiyon grupları başarıyla kaydedildi.",
+        data: formatProduct(updatedProduct)
+      });
+    } catch (error: any) {
+      return res.status(500).json({ error: true, message: error.message });
+    }
+  }
 }
+

@@ -47,4 +47,32 @@ export class CategoryController {
       return res.status(500).json({ error: true, message: error.message });
     }
   }
+
+  async getMerchantCategories(req: Request, res: Response) {
+    try {
+      const merchantId = req.user?.id;
+      let shopType = req.query.shopType as string | undefined;
+
+      if (merchantId && !shopType) {
+        const shop = await prisma.shop.findUnique({ where: { merchantId } });
+        if (shop) {
+          shopType = shop.type;
+        }
+      }
+
+      const categories = await prisma.category.findMany({
+        where: shopType ? { shopType } : undefined,
+        include: {
+          children: true,
+          parent: true
+        },
+        orderBy: { name: "asc" }
+      });
+
+      return res.status(200).json({ error: false, data: categories });
+    } catch (error: any) {
+      return res.status(500).json({ error: true, message: error.message });
+    }
+  }
 }
+

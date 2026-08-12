@@ -121,17 +121,21 @@ class ProductController extends AsyncNotifier<List<MerchantProduct>> {
   }
 
   Future<void> addProduct(Map<String, dynamic> data) async {
-    // Optimistic or strict? Strict for now.
+    final currentVal = state.value;
     state = const AsyncLoading();
     try {
       final repo = ref.read(merchantProductRepositoryProvider);
       final payload = Map<String, dynamic>.from(data);
 
       await repo.createProduct(payload);
-      // Refetch
       state = AsyncData(await _fetchProducts());
     } catch (e, st) {
-      state = AsyncError(e, st);
+      if (currentVal != null) {
+        state = AsyncData(currentVal);
+      } else {
+        state = AsyncError(e, st);
+      }
+      rethrow;
     }
   }
 
@@ -141,13 +145,18 @@ class ProductController extends AsyncNotifier<List<MerchantProduct>> {
     int? stock,
     bool trackStock,
   ) async {
+    final currentVal = state.value;
     state = const AsyncLoading();
     try {
       final repo = ref.read(merchantProductRepositoryProvider);
       await repo.addFromCatalog(barcode, price, stock, trackStock);
       state = AsyncData(await _fetchProducts());
     } catch (e, st) {
-      state = AsyncError(e, st);
+      if (currentVal != null) {
+        state = AsyncData(currentVal);
+      } else {
+        state = AsyncError(e, st);
+      }
       rethrow;
     }
   }
@@ -155,18 +164,24 @@ class ProductController extends AsyncNotifier<List<MerchantProduct>> {
   Future<void> bulkAddProductFromCatalog(
     List<Map<String, dynamic>> items,
   ) async {
+    final currentVal = state.value;
     state = const AsyncLoading();
     try {
       final repo = ref.read(merchantProductRepositoryProvider);
       await repo.bulkAddFromCatalog(items);
       state = AsyncData(await _fetchProducts());
     } catch (e, st) {
-      state = AsyncError(e, st);
+      if (currentVal != null) {
+        state = AsyncData(currentVal);
+      } else {
+        state = AsyncError(e, st);
+      }
       rethrow;
     }
   }
 
   Future<void> updateProduct(String id, Map<String, dynamic> data) async {
+    final currentVal = state.value;
     state = const AsyncLoading();
     try {
       final repo = ref.read(merchantProductRepositoryProvider);
@@ -175,18 +190,29 @@ class ProductController extends AsyncNotifier<List<MerchantProduct>> {
       await repo.updateProduct(id, payload);
       state = AsyncData(await _fetchProducts());
     } catch (e, st) {
-      state = AsyncError(e, st);
+      if (currentVal != null) {
+        state = AsyncData(currentVal);
+      } else {
+        state = AsyncError(e, st);
+      }
+      rethrow;
     }
   }
 
   Future<void> deleteProduct(String id) async {
+    final currentVal = state.value;
     state = const AsyncLoading();
     try {
       final repo = ref.read(merchantProductRepositoryProvider);
       await repo.deleteProduct(id);
       state = AsyncData(await _fetchProducts());
     } catch (e, st) {
-      state = AsyncError(e, st);
+      if (currentVal != null) {
+        state = AsyncData(currentVal);
+      } else {
+        state = AsyncError(e, st);
+      }
+      rethrow;
     }
   }
 
@@ -195,35 +221,11 @@ class ProductController extends AsyncNotifier<List<MerchantProduct>> {
       final repo = ref.read(merchantProductRepositoryProvider);
       await repo.updateProduct(id, {'isActive': isActive});
 
-      // Update local state without full refetch for speed
+      // Update local state cleanly using copyWith preserving optionGroups
       if (state.hasValue) {
         final products = state.value!.map((p) {
           if (p.id == id) {
-            return MerchantProduct(
-              id: p.id,
-              shopId: p.shopId,
-              categoryId: p.categoryId,
-              name: p.name,
-              description: p.description,
-              price: p.price,
-              discountPrice: p.discountPrice,
-              stock: p.stock,
-              imageUrl: p.imageUrl,
-              isActive: isActive,
-              barcode: p.barcode,
-              brand: p.brand,
-              stockQuantity: p.stockQuantity,
-              weightOrVolume: p.weightOrVolume,
-              preparationTime: p.preparationTime,
-              hasDeposit: p.hasDeposit,
-              depositPrice: p.depositPrice,
-              unit: p.unit,
-              minQuantity: p.minQuantity,
-              stepSize: p.stepSize,
-              trackStock: p.trackStock,
-              regularPrice: p.regularPrice,
-              discountRate: p.discountRate,
-            );
+            return p.copyWith(isActive: isActive);
           }
           return p;
         }).toList();
