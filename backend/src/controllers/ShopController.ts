@@ -164,36 +164,30 @@ export class ShopController {
   async openCloseShop(req: Request, res: Response) {
     try {
       const merchantId = req.user?.id;
-      const { isActive } = req.body;
-
       if (!merchantId) return res.status(401).json({ error: true, message: "Kullanıcı bilgisi eksik." });
 
-      if (isActive) {
-        const shop = await prisma.shop.findUnique({
-          where: { merchantId },
-          include: { merchant: true }
-        });
+      const shop = await prisma.shop.findUnique({
+        where: { merchantId },
+        include: { merchant: true }
+      });
 
-        if (!shop) return res.status(404).json({ error: true, message: "Dükkan bulunamadı." });
+      if (!shop) return res.status(404).json({ error: true, message: "Dükkan bulunamadı." });
 
-        const { latitude, longitude, workingHours } = shop;
-        const { businessPhone, identityNumber } = shop.merchant;
-        const taxNumber = shop.taxNumber || shop.merchant.taxNumber;
-
-        if (!latitude || !longitude || !workingHours || !businessPhone || (!identityNumber && !taxNumber)) {
-          return res.status(400).json({
-            error: true,
-            message: "Lütfen Dükkan ve Resmi İşletme (Kimlik/Vergi) ayarlarınızı tamamlayın."
-          });
-        }
-      }
+      // req.body.isActive tanımlıysa onu kullan, değilse mevcut durumun tersini al
+      let newActiveState = typeof req.body?.isActive === 'boolean' 
+        ? req.body.isActive 
+        : !shop.isActive;
 
       const updated = await prisma.shop.update({
         where: { merchantId },
-        data: { isActive }
+        data: { isActive: newActiveState }
       });
 
-      return res.status(200).json({ error: false, data: updated });
+      return res.status(200).json({ 
+        error: false, 
+        message: updated.isActive ? "Dükkanınız sipariş alımına AÇILDI." : "Dükkanınız sipariş alımına KAPATILDI.",
+        data: updated 
+      });
     } catch (error: any) {
       return res.status(500).json({ error: true, message: error.message });
     }

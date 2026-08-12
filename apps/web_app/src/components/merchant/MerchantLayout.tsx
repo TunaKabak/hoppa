@@ -3,7 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { 
   Store, Package, ShoppingBag, BarChart3, Settings, LogOut, 
-  ChevronRight, Power, Menu, X, Sun, Moon 
+  ChevronRight, Power, Menu, X, Sun, Moon, Tag 
 } from 'lucide-react';
 import { getMerchantProfile, getMerchantToken, clearMerchantAuth, merchantApiFetch } from '../../utils/merchant-auth';
 import { useMerchantTheme } from '../../context/MerchantThemeContext';
@@ -11,7 +11,7 @@ import { useMerchantTheme } from '../../context/MerchantThemeContext';
 interface MerchantLayoutProps {
   children: React.ReactNode;
   title?: string;
-  activeTab?: 'products' | 'orders' | 'dashboard' | 'settings';
+  activeTab?: 'products' | 'orders' | 'dashboard' | 'campaigns' | 'settings';
 }
 
 export default function MerchantLayout({ children, title = 'Ürün Yönetimi', activeTab = 'products' }: MerchantLayoutProps) {
@@ -21,6 +21,7 @@ export default function MerchantLayout({ children, title = 'Ürün Yönetimi', a
   const [isShopActive, setIsShopActive] = useState<boolean>(true);
   const [isTogglingShop, setIsTogglingShop] = useState<boolean>(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+  const [pendingOrdersCount, setPendingOrdersCount] = useState<number>(0);
 
   useEffect(() => {
     const token = getMerchantToken();
@@ -33,6 +34,7 @@ export default function MerchantLayout({ children, title = 'Ürün Yönetimi', a
 
     setProfile(currentProfile);
     fetchShopDetails();
+    fetchPendingOrders();
   }, []);
 
   const fetchShopDetails = async () => {
@@ -43,6 +45,18 @@ export default function MerchantLayout({ children, title = 'Ürün Yönetimi', a
       }
     } catch (err) {
       console.error('Dükkan detayları alınamadı:', err);
+    }
+  };
+
+  const fetchPendingOrders = async () => {
+    try {
+      const res = await merchantApiFetch('/merchant/orders');
+      if (res.data && Array.isArray(res.data)) {
+        const pending = res.data.filter((o: any) => o.status === 'PENDING').length;
+        setPendingOrdersCount(pending);
+      }
+    } catch (err) {
+      console.error('Sipariş rozeti alınamadı:', err);
     }
   };
 
@@ -67,8 +81,9 @@ export default function MerchantLayout({ children, title = 'Ürün Yönetimi', a
 
   const navItems = [
     { id: 'products', label: 'Ürün & Menü Portalı', icon: Package, href: '/merchant/products' },
-    { id: 'orders', label: 'Canlı Siparişler', icon: ShoppingBag, href: '/merchant/orders' },
+    { id: 'orders', label: 'Canlı Siparişler', icon: ShoppingBag, href: '/merchant/orders', badge: pendingOrdersCount },
     { id: 'dashboard', label: 'Performans & Analiz', icon: BarChart3, href: '/merchant/dashboard' },
+    { id: 'campaigns', label: 'Kampanya & Reklam', icon: Tag, href: '/merchant/campaigns' },
     { id: 'settings', label: 'Mağaza Ayarları', icon: Settings, href: '/merchant/settings' },
   ];
 
@@ -114,7 +129,7 @@ export default function MerchantLayout({ children, title = 'Ürün Yönetimi', a
 
         {/* Sidebar Navigation */}
         <aside className={`
-          fixed md:static inset-y-0 left-0 z-50 w-72 border-r flex flex-col justify-between p-6 transform transition-all duration-300
+          fixed md:sticky md:top-0 md:h-screen inset-y-0 left-0 z-50 w-72 shrink-0 border-r flex flex-col justify-between p-6 overflow-y-auto transform transition-all duration-300
           ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'}
           ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}>
@@ -122,9 +137,11 @@ export default function MerchantLayout({ children, title = 'Ürün Yönetimi', a
             {/* Hoppa Branded Logo */}
             <div className="hidden md:flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-[#FF6B00] text-white flex items-center justify-center font-black shadow-lg shadow-[#FF6B00]/30 ring-2 ring-[#FF6B00]/20">
-                  <Store className="w-7 h-7 text-white" />
-                </div>
+                <img 
+                  src="/logo-square-orange.png" 
+                  alt="Hoppa Logo" 
+                  className="w-11 h-11 rounded-2xl object-cover shadow-lg shadow-[#FF6B00]/30 ring-2 ring-[#FF6B00]/20" 
+                />
                 <div>
                   <h1 className="font-black text-xl tracking-tight">
                     Hoppa <span className="text-[#FF6B00]">Satıcı</span>
@@ -189,7 +206,15 @@ export default function MerchantLayout({ children, title = 'Ürün Yönetimi', a
                       <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-slate-400'}`} />
                       <span>{item.label}</span>
                     </div>
-                    {isActive && <ChevronRight className="w-4 h-4 text-white" />}
+
+                    <div className="flex items-center gap-2">
+                      {item.badge && item.badge > 0 ? (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-black bg-amber-500 text-white animate-pulse">
+                          {item.badge}
+                        </span>
+                      ) : null}
+                      {isActive && <ChevronRight className="w-4 h-4 text-white" />}
+                    </div>
                   </button>
                 );
               })}
