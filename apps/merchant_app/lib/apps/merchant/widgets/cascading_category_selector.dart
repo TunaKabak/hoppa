@@ -75,6 +75,13 @@ class _CascadingCategorySelectorState extends ConsumerState<CascadingCategorySel
               }
             }
           }
+          if (!_isInitialized && _selectedRoot == null && categories.isNotEmpty) {
+            _selectedRoot = categories.first;
+            _selectedSub = null;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              widget.onChanged(_selectedRoot!.id, _selectedRoot!.name);
+            });
+          }
           _isInitialized = true;
         }
 

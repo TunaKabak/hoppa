@@ -54,6 +54,60 @@ class MerchantProduct {
     this.optionGroups = const [],
   });
 
+  MerchantProduct copyWith({
+    String? id,
+    String? shopId,
+    String? categoryId,
+    String? name,
+    String? description,
+    double? price,
+    double? discountPrice,
+    int? stock,
+    String? imageUrl,
+    bool? isActive,
+    String? barcode,
+    String? brand,
+    int? stockQuantity,
+    String? weightOrVolume,
+    int? preparationTime,
+    bool? hasDeposit,
+    double? depositPrice,
+    String? unit,
+    double? minQuantity,
+    double? stepSize,
+    bool? trackStock,
+    double? regularPrice,
+    int? discountRate,
+    List<ProductOptionGroup>? optionGroups,
+  }) {
+    return MerchantProduct(
+      id: id ?? this.id,
+      shopId: shopId ?? this.shopId,
+      categoryId: categoryId ?? this.categoryId,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      price: price ?? this.price,
+      discountPrice: discountPrice ?? this.discountPrice,
+      stock: stock ?? this.stock,
+      imageUrl: imageUrl ?? this.imageUrl,
+      isActive: isActive ?? this.isActive,
+      barcode: barcode ?? this.barcode,
+      brand: brand ?? this.brand,
+      stockQuantity: stockQuantity ?? this.stockQuantity,
+      weightOrVolume: weightOrVolume ?? this.weightOrVolume,
+      preparationTime: preparationTime ?? this.preparationTime,
+      hasDeposit: hasDeposit ?? this.hasDeposit,
+      depositPrice: depositPrice ?? this.depositPrice,
+      unit: unit ?? this.unit,
+      minQuantity: minQuantity ?? this.minQuantity,
+      stepSize: stepSize ?? this.stepSize,
+      trackStock: trackStock ?? this.trackStock,
+      regularPrice: regularPrice ?? this.regularPrice,
+      discountRate: discountRate ?? this.discountRate,
+      optionGroups: optionGroups ?? this.optionGroups,
+    );
+  }
+
   factory MerchantProduct.fromMap(Map<String, dynamic> map) {
     final double priceVal = map['price'] != null
         ? (double.tryParse(map['price'].toString()) ?? 0.0)

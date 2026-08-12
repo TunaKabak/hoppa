@@ -8,9 +8,12 @@ import { MerchantAIController } from "../controllers/MerchantAIController";
 
 import { prisma } from "../config/db";
 
+import { CategoryController } from "../controllers/CategoryController";
+
 const router = Router();
 const shopController = new ShopController();
 const productController = new ProductController();
+const categoryController = new CategoryController();
 const orderController = new OrderController();
 const shopCampaignController = new ShopCampaignController();
 const merchantAIController = new MerchantAIController();
@@ -56,9 +59,15 @@ router.get("/shop", (req, res) => shopController.getMyShop(req, res));
 router.put("/shop", (req, res) => shopController.updateMyShop(req, res));
 router.post("/shop/toggle-status", (req, res) => shopController.openCloseShop(req, res));
 
+// Category / Kategori İşlemleri
+router.get("/categories", (req, res) => categoryController.getMerchantCategories(req, res));
+
 // Product / Ürün İşlemleri
 router.get("/products", (req, res) => productController.getProductsByShop(req, res));
 router.post("/products", (req, res) => productController.createProduct(req, res));
+router.put("/products/bulk-stock", (req, res) => productController.bulkUpdateStock(req, res));
+router.put("/products/bulk-price", (req, res) => productController.bulkUpdatePrice(req, res));
+router.post("/products/:id/option-groups", (req, res) => productController.upsertOptionGroups(req, res));
 router.get("/products/catalog", (req, res) => productController.searchCatalog(req, res));
 router.get("/products/catalog/filters", (req, res) => productController.getCatalogFilters(req, res));
 router.post("/products/catalog/add", (req, res) => productController.addFromCatalog(req, res));

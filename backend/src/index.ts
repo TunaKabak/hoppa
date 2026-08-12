@@ -62,17 +62,20 @@ app.use(globalRateLimiter);
 // Statically serve the local uploads directory for development fallback
 app.use("/uploads", express.static(path.join(__dirname, "../public/uploads")));
 
-// Middleware
 const allowedOrigins = [
-  'http://localhost:3000',                  // Lokal testler için
-  'https://www.hoppanow.com',               // Canlı Web UI ana adresi
-  'https://hoppanow.com'                    // www olmadan yönlendirme adresi
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://localhost:3002',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:3001',
+  'https://www.hoppanow.com',
+  'https://hoppanow.com'
 ];
 
 app.use(cors({
   origin: (origin, callback) => {
     // Mobil uygulamalar (origin null/undefined gönderebilir) veya izin verilen domainler
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+    if (!origin || allowedOrigins.indexOf(origin) !== -1 || origin.startsWith('http://localhost:')) {
       callback(null, true);
     } else {
       callback(new Error('CORS Policy: Bu kök dizinden istek gönderilemez.'));
