@@ -115,16 +115,18 @@ class ConsumerShopRepository {
           ? json['headerImageUrl']
           : 'https://via.placeholder.com/150';
       map['isOpen'] = json['isOpen'] ?? json['isActive'] ?? true;
-      map['minBasketAmount'] = json['minOrderAmount'] != null
-          ? double.tryParse(json['minOrderAmount'].toString()) ?? 0.0
-          : 0.0;
-      map['deliveryRadius'] = json['deliveryRadiusKm'] != null
-          ? (json['deliveryRadiusKm'] as num).toDouble()
-          : 5.0;
-      map['averageRating'] = json['averageRating'] != null
-          ? double.tryParse(json['averageRating'].toString()) ?? 5.0
-          : 5.0;
-      map['reviewCount'] = json['reviewCount'] as int? ?? 0;
+      map['minBasketAmount'] = double.tryParse(json['minOrderAmount']?.toString() ?? '') ??
+          double.tryParse(json['minBasketAmount']?.toString() ?? '') ??
+          0.0;
+      map['deliveryRadius'] = double.tryParse(json['deliveryRadiusKm']?.toString() ?? '') ??
+          double.tryParse(json['deliveryRadius']?.toString() ?? '') ??
+          5.0;
+      map['averageRating'] = double.tryParse(json['averageRating']?.toString() ?? '') ?? 5.0;
+      map['reviewCount'] = int.tryParse(json['reviewCount']?.toString() ?? '') ?? 0;
+      map['baseDeliveryFee'] = double.tryParse(json['baseDeliveryFee']?.toString() ?? '') ?? 30.0;
+      if (json['freeDeliveryThreshold'] != null) {
+        map['freeDeliveryThreshold'] = double.tryParse(json['freeDeliveryThreshold'].toString());
+      }
 
       if (json['type'] != null) {
         map['type'] = json['type'].toString().toLowerCase();

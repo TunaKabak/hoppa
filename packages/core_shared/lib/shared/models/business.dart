@@ -66,28 +66,28 @@ class Business {
       phone: data['phone'] ?? '',
       logoUrl: data['logoUrl'] ?? '',
       headerImageUrl: data['headerImageUrl'] ?? '',
-      latitude: (data['latitude'] ?? 0.0).toDouble(),
-      longitude: (data['longitude'] ?? 0.0).toDouble(),
+      latitude: double.tryParse(data['latitude']?.toString() ?? '') ?? 0.0,
+      longitude: double.tryParse(data['longitude']?.toString() ?? '') ?? 0.0,
       isOpen: data['isOpen'] ?? true,
       type: BusinessType.fromString(data['type'] ?? 'market'),
       categories: List<String>.from(data['categories'] ?? []),
       openingTime: data['openingTime'] ?? "08:00",
       closingTime: data['closingTime'] ?? "22:00",
-      minBasketAmount: (data['minBasketAmount'] ?? 0.0).toDouble(),
+      minBasketAmount: double.tryParse(data['minBasketAmount']?.toString() ?? '') ?? 0.0,
       averageDeliveryTime: data['averageDeliveryTime'] ?? "30-45 dk",
-      deliveryRadius: (data['deliveryRadius'] ?? 5.0).toDouble(),
+      deliveryRadius: double.tryParse(data['deliveryRadius']?.toString() ?? '') ?? 5.0,
       workingHours: Map<String, dynamic>.from(data['workingHours'] ?? {}),
       deliveryTiers:
           (data['deliveryTiers'] as List<dynamic>?)
               ?.map((t) => DeliveryTier.fromMap(Map<String, dynamic>.from(t)))
               .toList() ??
           [],
-      baseDeliveryFee: (data['baseDeliveryFee'] ?? 30.0).toDouble(),
+      baseDeliveryFee: double.tryParse(data['baseDeliveryFee']?.toString() ?? '') ?? 30.0,
       freeDeliveryThreshold: data['freeDeliveryThreshold'] != null 
-          ? (data['freeDeliveryThreshold']).toDouble() 
+          ? double.tryParse(data['freeDeliveryThreshold']?.toString() ?? '') 
           : null,
-      averageRating: (data['averageRating'] ?? 5.0).toDouble(),
-      reviewCount: data['reviewCount'] ?? 0,
+      averageRating: double.tryParse(data['averageRating']?.toString() ?? '') ?? 5.0,
+      reviewCount: int.tryParse(data['reviewCount']?.toString() ?? '') ?? 0,
       allowedPaymentMethods: List<String>.from(data['allowedPaymentMethods'] ?? const ['CASH_ON_DELIVERY', 'CARD_ON_DELIVERY', 'ONLINE_PAYMENT']),
       allowedFulfillmentModels: List<String>.from(data['allowedFulfillmentModels'] ?? const ['PLATFORM_DELIVERY', 'PICKUP']),
       tags: List<String>.from(data['tags'] ?? []),

@@ -91,7 +91,7 @@ export default function MerchantCampaignsPage() {
   };
 
   return (
-    <MerchantLayout title="Kampanya & Sponsorluk Portalı" activeTab="settings">
+    <MerchantLayout title="Kampanya & Sponsorluk Portalı" activeTab="campaigns">
       <div className="space-y-6">
         {/* Top Header */}
         <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 border rounded-3xl p-6 transition-colors ${
@@ -235,7 +235,9 @@ export default function MerchantCampaignsPage() {
                       required
                       value={discountValue}
                       onChange={(e) => setDiscountValue(Number(e.target.value))}
-                      className="w-full border border-[#FF6B00] rounded-xl p-3 text-sm font-bold text-[#FF6B00] outline-none bg-white dark:bg-slate-950"
+                      className={`w-full border border-[#FF6B00] rounded-xl p-3 text-sm font-bold text-[#FF6B00] outline-none ${
+                        isDark ? 'bg-slate-950' : 'bg-white'
+                      }`}
                     />
                   </div>
                 </div>
