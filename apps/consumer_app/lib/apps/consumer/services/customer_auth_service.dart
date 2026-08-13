@@ -12,8 +12,9 @@ class CustomerAuthService {
 
   // --- KULLANICI KONTROLÜ ---
   Stream<DocumentSnapshot<Map<String, dynamic>>> getUserStream() {
-    if (_auth.currentUser == null) return const Stream.empty();
-    return _db.collection('users').doc(_auth.currentUser!.uid).snapshots();
+    final user = _auth.currentUser;
+    if (user == null || user.uid.trim().isEmpty) return const Stream.empty();
+    return _db.collection('users').doc(user.uid).snapshots();
   }
 
   Future<bool> checkUserExists(String phoneNumber) async {
@@ -36,6 +37,7 @@ class CustomerAuthService {
     String? name,
     String? surname,
   }) async {
+    if (user.uid.trim().isEmpty) return;
     await _db.collection('users').doc(user.uid).set({
       'email': user.email,
       'phone': user.phoneNumber,
@@ -48,11 +50,12 @@ class CustomerAuthService {
   }
 
   Future<Map<String, dynamic>?> getUserData() async {
-    if (_auth.currentUser == null) return null;
+    final user = _auth.currentUser;
+    if (user == null || user.uid.trim().isEmpty) return null;
     try {
       final doc = await _db
           .collection('users')
-          .doc(_auth.currentUser!.uid)
+          .doc(user.uid)
           .get();
       return doc.data();
     } catch (e) {
@@ -62,10 +65,11 @@ class CustomerAuthService {
   }
 
   Stream<Map<String, dynamic>?> getUserDataStream() {
-    if (_auth.currentUser == null) return Stream.value(null);
+    final user = _auth.currentUser;
+    if (user == null || user.uid.trim().isEmpty) return Stream.value(null);
     return _db
         .collection('users')
-        .doc(_auth.currentUser!.uid)
+        .doc(user.uid)
         .snapshots()
         .map((doc) => doc.data());
   }

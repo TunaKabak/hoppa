@@ -47,15 +47,15 @@ export default function MerchantSettingsPage() {
     try {
       const res = await merchantApiFetch('/merchant/shop');
       if (res.data) {
-        setBusinessName(res.data.name || res.data.businessName || '');
-        setPhoneNumber(res.data.phone || '');
+        setBusinessName(res.data.businessName || res.data.name || '');
+        setPhoneNumber(res.data.businessPhone || res.data.phone || '');
         setAddress(res.data.address || '');
-        setMinOrderAmount(res.data.minOrderAmount || 50);
+        setMinOrderAmount(res.data.minOrderAmount || res.data.minimumOrderAmount || 50);
         setDeliveryRadiusKm(res.data.deliveryRadiusKm || 5);
         setLatitude(res.data.latitude || 35.1856);
         setLongitude(res.data.longitude || 33.3823);
         setIban(res.data.iban || 'TR560006200000000000000000');
-        setLogoUrl(res.data.logoUrl || '');
+        setLogoUrl(res.data.logoUrl || res.data.imageUrl || '');
         if (res.data.workingHours && Array.isArray(res.data.workingHours)) {
           setWorkingHours(res.data.workingHours);
         }
@@ -83,7 +83,9 @@ export default function MerchantSettingsPage() {
         method: 'PUT',
         body: JSON.stringify({
           name: businessName,
+          businessName,
           phone: phoneNumber,
+          businessPhone: phoneNumber,
           address,
           minOrderAmount: Number(minOrderAmount),
           deliveryRadiusKm: Number(deliveryRadiusKm),
@@ -91,6 +93,7 @@ export default function MerchantSettingsPage() {
           longitude: Number(longitude),
           iban,
           logoUrl,
+          imageUrl: logoUrl,
           workingHours,
         }),
       });
