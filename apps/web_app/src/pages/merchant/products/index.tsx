@@ -502,7 +502,9 @@ export default function MerchantProductsPage() {
                                   if (e.key === 'Enter') handleSaveInlinePrice(p.id);
                                   if (e.key === 'Escape') setEditingPriceId(null);
                                 }}
-                                className="w-20 border border-[#FF6B00] rounded p-1 text-xs font-bold text-[#FF6B00] text-right outline-none bg-white dark:bg-slate-950"
+                                className={`w-20 border border-[#FF6B00] rounded p-1 text-xs font-bold text-[#FF6B00] text-right outline-none ${
+                                  isDark ? 'bg-slate-950' : 'bg-white'
+                                }`}
                               />
                               <button onClick={() => handleSaveInlinePrice(p.id)} className="p-1 text-[#FF6B00]">
                                 <Check className="w-4 h-4" />
@@ -732,7 +734,9 @@ export default function MerchantProductsPage() {
                   step="1"
                   value={bulkPriceValue}
                   onChange={(e) => setBulkPriceValue(Number(e.target.value))}
-                  className="w-full border border-[#FF6B00] rounded-xl p-3 text-sm font-black text-[#FF6B00] outline-none bg-white dark:bg-slate-950"
+                  className={`w-full border border-[#FF6B00] rounded-xl p-3 text-sm font-black text-[#FF6B00] outline-none ${
+                    isDark ? 'bg-slate-950' : 'bg-white'
+                  }`}
                 />
               </div>
             </div>

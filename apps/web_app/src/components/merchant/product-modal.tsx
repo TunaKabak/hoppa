@@ -324,7 +324,9 @@ export default function ProductModal({ product, onClose, onSuccess, onOpenOption
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="0.00"
-                className="w-full border border-[#FF6B00] rounded-xl p-3 text-sm font-black text-[#FF6B00] outline-none bg-white dark:bg-slate-950"
+                className={`w-full border border-[#FF6B00] rounded-xl p-3 text-sm font-black text-[#FF6B00] outline-none ${
+                  isDark ? 'bg-slate-950' : 'bg-white'
+                }`}
               />
             </div>
 

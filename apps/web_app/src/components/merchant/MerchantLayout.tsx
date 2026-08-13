@@ -5,7 +5,10 @@ import {
   Store, Package, ShoppingBag, BarChart3, Settings, LogOut, 
   ChevronRight, Power, Menu, X, Sun, Moon, Tag 
 } from 'lucide-react';
-import { getMerchantProfile, getMerchantToken, clearMerchantAuth, merchantApiFetch } from '../../utils/merchant-auth';
+import { 
+  getMerchantProfile, getMerchantToken, clearMerchantAuth, merchantApiFetch, 
+  getSelectedShopId, setSelectedShopId 
+} from '../../utils/merchant-auth';
 import { useMerchantTheme } from '../../context/MerchantThemeContext';
 
 interface MerchantLayoutProps {
@@ -22,6 +25,10 @@ export default function MerchantLayout({ children, title = 'Ürün Yönetimi', a
   const [isTogglingShop, setIsTogglingShop] = useState<boolean>(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [pendingOrdersCount, setPendingOrdersCount] = useState<number>(0);
+  const [allShops, setAllShops] = useState<any[]>([]);
+  const [selectedShopIdState, setSelectedShopIdState] = useState<string>('');
+
+  const isAdmin = profile?.role === 'super_admin' || profile?.role === 'admin';
 
   useEffect(() => {
     const token = getMerchantToken();
@@ -33,9 +40,32 @@ export default function MerchantLayout({ children, title = 'Ürün Yönetimi', a
     }
 
     setProfile(currentProfile);
+    setSelectedShopIdState(getSelectedShopId() || '');
+
+    if (currentProfile.role === 'super_admin' || currentProfile.role === 'admin') {
+      fetchAdminShops();
+    }
+
     fetchShopDetails();
     fetchPendingOrders();
   }, []);
+
+  const fetchAdminShops = async () => {
+    try {
+      const res = await merchantApiFetch('/consumer/shops');
+      if (res.data && Array.isArray(res.data)) {
+        setAllShops(res.data);
+      }
+    } catch (err) {
+      console.error('Tüm dükkanlar alınamadı:', err);
+    }
+  };
+
+  const handleShopChange = (shopId: string) => {
+    setSelectedShopId(shopId || null);
+    setSelectedShopIdState(shopId || '');
+    router.reload();
+  };
 
   const fetchShopDetails = async () => {
     try {
@@ -161,6 +191,32 @@ export default function MerchantLayout({ children, title = 'Ürün Yönetimi', a
                 {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
             </div>
+
+            {/* Super Admin Shop Context Selector */}
+            {isAdmin && (
+              <div className="mb-4">
+                <label className="block text-[11px] font-black text-[#FF6B00] uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                  <span>Yönetici Mağaza Seçimi</span>
+                  <span className="px-1.5 py-0.5 rounded text-[9px] bg-[#FF6B00]/15 text-[#FF6B00] font-bold">ADMIN</span>
+                </label>
+                <select
+                  value={selectedShopIdState}
+                  onChange={(e) => handleShopChange(e.target.value)}
+                  className={`w-full border rounded-xl p-2.5 text-xs font-bold outline-none transition-colors ${
+                    isDark 
+                      ? 'bg-slate-950 border-slate-700 text-slate-100' 
+                      : 'bg-white border-slate-300 text-slate-900 shadow-sm'
+                  }`}
+                >
+                  <option value="">-- Kendi Mağazam / Varsayılan --</option>
+                  {allShops.map((shop) => (
+                    <option key={shop.id} value={shop.id}>
+                      {shop.name} ({shop.type?.toUpperCase() || 'MAĞAZA'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Business Info & Live Status Toggle */}
             <div className={`border rounded-2xl p-4 mb-6 transition-colors ${

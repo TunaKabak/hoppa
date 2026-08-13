@@ -223,7 +223,9 @@ export default function CatalogImportModal({ onClose, onSuccess }: CatalogImport
                               step="0.5"
                               value={sel.price}
                               onChange={(e) => handlePriceChange(key, Number(e.target.value))}
-                              className="w-full border border-[#00A651]/40 rounded-lg p-1.5 text-xs font-bold text-[#00A651] text-center outline-none bg-white dark:bg-slate-900"
+                              className={`w-full border border-[#00A651]/40 rounded-lg p-1.5 text-xs font-bold text-[#00A651] text-center outline-none ${
+                                isDark ? 'bg-slate-900' : 'bg-white'
+                              }`}
                             />
                           </div>
                           <div>

@@ -72,7 +72,9 @@ export default function MerchantDashboardPage() {
             </div>
           </div>
 
-          <div className="flex items-center bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-1">
+          <div className={`flex items-center border rounded-xl p-1 ${
+            isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
+          }`}>
             <button
               onClick={() => setTimeRange('today')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${

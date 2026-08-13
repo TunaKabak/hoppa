@@ -307,7 +307,9 @@ export default function OptionGroupBuilder({ product, onClose, onSuccess }: Opti
                             value={opt.price}
                             onChange={(e) => handleOptionChange(gIdx, oIdx, 'price', Number(e.target.value))}
                             placeholder="0.00"
-                            className="w-full border border-[#FF6B00] rounded-lg p-2 text-xs font-bold text-[#FF6B00] outline-none bg-white dark:bg-slate-950"
+                            className={`w-full border border-[#FF6B00] rounded-lg p-2 text-xs font-bold text-[#FF6B00] outline-none ${
+                              isDark ? 'bg-slate-950' : 'bg-white'
+                            }`}
                           />
                         </div>
 

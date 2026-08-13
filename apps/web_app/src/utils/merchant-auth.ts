@@ -11,6 +11,7 @@ export interface MerchantProfile {
 
 const TOKEN_KEY = 'hoppa_merchant_token';
 const MERCHANT_KEY = 'hoppa_merchant_profile';
+const SELECTED_SHOP_KEY = 'hoppa_merchant_selected_shop';
 
 export const getMerchantToken = (): string | null => {
   if (typeof window === 'undefined') return null;
@@ -28,6 +29,20 @@ export const getMerchantProfile = (): MerchantProfile | null => {
   }
 };
 
+export const getSelectedShopId = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(SELECTED_SHOP_KEY);
+};
+
+export const setSelectedShopId = (shopId: string | null) => {
+  if (typeof window === 'undefined') return;
+  if (shopId) {
+    localStorage.setItem(SELECTED_SHOP_KEY, shopId);
+  } else {
+    localStorage.removeItem(SELECTED_SHOP_KEY);
+  }
+};
+
 export const setMerchantAuth = (token: string, merchant: MerchantProfile) => {
   if (typeof window === 'undefined') return;
   localStorage.setItem(TOKEN_KEY, token);
@@ -38,6 +53,7 @@ export const clearMerchantAuth = () => {
   if (typeof window === 'undefined') return;
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(MERCHANT_KEY);
+  localStorage.removeItem(SELECTED_SHOP_KEY);
 };
 
 export const getApiBaseUrl = (): string => {
@@ -50,6 +66,7 @@ export const merchantApiFetch = async (endpoint: string, options: RequestInit = 
   }
 
   const token = getMerchantToken();
+  const selectedShopId = getSelectedShopId();
   const baseUrl = getApiBaseUrl();
   const url = `${baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
 
@@ -60,6 +77,10 @@ export const merchantApiFetch = async (endpoint: string, options: RequestInit = 
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  if (selectedShopId) {
+    headers['x-business-id'] = selectedShopId;
   }
 
   const response = await fetch(url, {

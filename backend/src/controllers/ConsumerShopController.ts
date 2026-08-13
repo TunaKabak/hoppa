@@ -213,16 +213,19 @@ export class ConsumerShopController {
 
         if (!isNaN(userLat) && !isNaN(userLng)) {
           const shopsWithDistance = enrichedShops.map((shop: any) => {
-            if (shop.latitude === null || shop.longitude === null) {
+            const sLat = shop.latitude != null ? Number(shop.latitude) : null;
+            const sLng = shop.longitude != null ? Number(shop.longitude) : null;
+
+            if (sLat === null || sLng === null || isNaN(sLat) || isNaN(sLng)) {
               return { ...shop, distanceKm: 0 };
             }
 
             const R = 6371; // Earth's radius in km
-            const dLat = (shop.latitude - userLat) * Math.PI / 180;
-            const dLng = (shop.longitude - userLng) * Math.PI / 180;
+            const dLat = (sLat - userLat) * Math.PI / 180;
+            const dLng = (sLng - userLng) * Math.PI / 180;
             const a =
               Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-              Math.cos(userLat * Math.PI / 180) * Math.cos(shop.latitude * Math.PI / 180) *
+              Math.cos(userLat * Math.PI / 180) * Math.cos(sLat * Math.PI / 180) *
               Math.sin(dLng / 2) * Math.sin(dLng / 2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
             const distance = Math.round(R * c * 10) / 10;
@@ -232,7 +235,7 @@ export class ConsumerShopController {
 
           // Yarıçap içindeki dükkanları filtrele
           let filteredShops = shopsWithDistance.filter((shop: any) => {
-            if (shop.latitude === null || shop.longitude === null) return true;
+            if (shop.latitude == null || shop.longitude == null) return true;
             const maxRadius = filterRadius || shop.deliveryRadiusKm || 15.0;
             return shop.distanceKm <= maxRadius;
           });
