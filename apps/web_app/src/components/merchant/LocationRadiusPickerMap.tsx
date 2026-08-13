@@ -1,21 +1,34 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { MapPin, Navigation, Compass, Search, Loader2, X } from 'lucide-react';
+import { MapPin, Navigation, Compass, Search, Loader2, X, Trash2, Shapes, Circle } from 'lucide-react';
 import { useMerchantTheme } from '../../context/MerchantThemeContext';
+
+export interface LocationPolygonPoint {
+  lat: number;
+  lng: number;
+}
 
 interface LocationRadiusPickerMapProps {
   latitude: number;
   longitude: number;
   radiusKm: number;
+  isPolygonMode?: boolean;
+  deliveryPolygon?: LocationPolygonPoint[];
   onLocationChange: (lat: number, lng: number) => void;
   onRadiusChange: (radiusKm: number) => void;
+  onPolygonModeChange?: (isPolygon: boolean) => void;
+  onPolygonChange?: (polygon: LocationPolygonPoint[]) => void;
 }
 
 export default function LocationRadiusPickerMap({
   latitude,
   longitude,
   radiusKm,
+  isPolygonMode = false,
+  deliveryPolygon = [],
   onLocationChange,
   onRadiusChange,
+  onPolygonModeChange,
+  onPolygonChange,
 }: LocationRadiusPickerMapProps) {
   const { theme } = useMerchantTheme();
   const isDark = theme === 'dark';
@@ -24,6 +37,8 @@ export default function LocationRadiusPickerMap({
   const mapInstanceRef = useRef<any>(null);
   const markerInstanceRef = useRef<any>(null);
   const circleInstanceRef = useRef<any>(null);
+  const polygonInstanceRef = useRef<any>(null);
+  const vertexMarkersRef = useRef<any[]>([]);
 
   // Address Search & Dropdown State
   const [searchQuery, setSearchQuery] = useState('');
@@ -136,9 +151,17 @@ export default function LocationRadiusPickerMap({
 
     map.on('click', (e: any) => {
       const { lat, lng } = e.latlng;
-      marker.setLatLng([lat, lng]);
-      circle.setLatLng([lat, lng]);
-      onLocationChange(lat, lng);
+      // Ref value or latest state checked via callback
+      if ((window as any)._isPolygonModeActive) {
+        if (onPolygonChange) {
+          const currentPoly = (window as any)._currentDeliveryPolygon || [];
+          onPolygonChange([...currentPoly, { lat, lng }]);
+        }
+      } else {
+        marker.setLatLng([lat, lng]);
+        circle.setLatLng([lat, lng]);
+        onLocationChange(lat, lng);
+      }
     });
 
     mapInstanceRef.current = map;
@@ -146,6 +169,13 @@ export default function LocationRadiusPickerMap({
     circleInstanceRef.current = circle;
   };
 
+  // Keep global window refs updated for event handlers
+  useEffect(() => {
+    (window as any)._isPolygonModeActive = isPolygonMode;
+    (window as any)._currentDeliveryPolygon = deliveryPolygon;
+  }, [isPolygonMode, deliveryPolygon]);
+
+  // Update map visual layers on state change
   useEffect(() => {
     if (!mapInstanceRef.current) return;
     const L = (window as any).L;
@@ -153,13 +183,59 @@ export default function LocationRadiusPickerMap({
 
     if (latitude && longitude && markerInstanceRef.current) {
       markerInstanceRef.current.setLatLng([latitude, longitude]);
-      circleInstanceRef.current.setLatLng([latitude, longitude]);
+      if (circleInstanceRef.current) circleInstanceRef.current.setLatLng([latitude, longitude]);
     }
 
     if (circleInstanceRef.current) {
-      circleInstanceRef.current.setRadius(radiusKm * 1000);
+      if (isPolygonMode) {
+        circleInstanceRef.current.remove();
+      } else {
+        circleInstanceRef.current.addTo(mapInstanceRef.current);
+        circleInstanceRef.current.setRadius(radiusKm * 1000);
+      }
     }
-  }, [latitude, longitude, radiusKm]);
+
+    // Clear old polygon layer & vertex markers
+    if (polygonInstanceRef.current) {
+      polygonInstanceRef.current.remove();
+      polygonInstanceRef.current = null;
+    }
+    vertexMarkersRef.current.forEach((m) => m.remove());
+    vertexMarkersRef.current = [];
+
+    // Render Polygon Mode Layer if active
+    if (isPolygonMode && deliveryPolygon && deliveryPolygon.length > 0) {
+      const latLngs = deliveryPolygon.map((pt) => [pt.lat, pt.lng]);
+      const polygonLayer = L.polygon(latLngs, {
+        color: '#3B82F6',
+        fillColor: '#3B82F6',
+        fillOpacity: 0.2,
+        weight: 2,
+      }).addTo(mapInstanceRef.current);
+      polygonInstanceRef.current = polygonLayer;
+
+      // Add vertex dot markers
+      deliveryPolygon.forEach((pt, idx) => {
+        const dot = L.circleMarker([pt.lat, pt.lng], {
+          radius: 6,
+          color: '#2563EB',
+          fillColor: '#FFFFFF',
+          fillOpacity: 1,
+          weight: 2,
+        }).addTo(mapInstanceRef.current);
+
+        dot.on('click', (e: any) => {
+          L.DomEvent.stopPropagation(e);
+          if (onPolygonChange) {
+            const updated = deliveryPolygon.filter((_, i) => i !== idx);
+            onPolygonChange(updated);
+          }
+        });
+
+        vertexMarkersRef.current.push(dot);
+      });
+    }
+  }, [latitude, longitude, radiusKm, isPolygonMode, deliveryPolygon]);
 
   // Live Auto-suggest Debounced Search as user types
   const handleQueryChange = (text: string) => {
@@ -240,6 +316,48 @@ export default function LocationRadiusPickerMap({
 
   return (
     <div className="space-y-4 font-sans">
+      {/* Mode Switcher: Radius vs Polygon Mode */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl border bg-slate-50 dark:bg-slate-950 dark:border-slate-800">
+        <div>
+          <span className="text-xs font-black uppercase tracking-wider text-slate-400 block">
+            Teslimat Bölgesi Modu
+          </span>
+          <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 mt-0.5">
+            {isPolygonMode 
+              ? 'Özel Poligon Modu: Haritaya tıklayarak dükkanınızın teslimat sınır alanını belirleyin.' 
+              : 'Dairesel Yarıçap Modu: Dükkanınız merkezli sabit kilometre teslimat yarıçapı.'}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-1.5 p-1 bg-slate-200 dark:bg-slate-900 rounded-xl shrink-0">
+          <button
+            type="button"
+            onClick={() => onPolygonModeChange && onPolygonModeChange(false)}
+            className={`px-4 py-2 rounded-lg text-xs font-extrabold flex items-center gap-2 transition-all ${
+              !isPolygonMode 
+                ? 'bg-white dark:bg-slate-800 text-[#FF6B00] shadow-sm' 
+                : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Circle className="w-3.5 h-3.5" />
+            <span>Yarıçap (KM)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onPolygonModeChange && onPolygonModeChange(true)}
+            className={`px-4 py-2 rounded-lg text-xs font-extrabold flex items-center gap-2 transition-all ${
+              isPolygonMode 
+                ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm' 
+                : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+            }`}
+          >
+            <Shapes className="w-3.5 h-3.5" />
+            <span>Özel Poligon</span>
+          </button>
+        </div>
+      </div>
+
       {/* Top Address Search & GPS Toolbar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         {/* Relative Container for Floating Auto-suggest Dropdown */}
@@ -275,7 +393,7 @@ export default function LocationRadiusPickerMap({
             ) : null}
           </div>
 
-          {/* ABSOLUTE FLOATING DROPDOWN MENU (Öneriler Alan Kaplamadan Üstte Açar) */}
+          {/* ABSOLUTE FLOATING DROPDOWN MENU */}
           {showDropdown && searchResults.length > 0 && (
             <div className={`absolute top-full left-0 right-0 z-50 mt-1.5 p-2 border rounded-2xl shadow-2xl backdrop-blur-xl max-h-60 overflow-y-auto space-y-1 transition-all ${
               isDark ? 'bg-slate-900/95 border-slate-800 text-white' : 'bg-white/95 border-slate-200 text-slate-900'
@@ -317,35 +435,93 @@ export default function LocationRadiusPickerMap({
 
       {/* Map Container Canvas */}
       <div className="relative rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-md">
-        <div ref={mapContainerRef} className="w-full h-96 z-10" />
+        <div ref={mapContainerRef} className="w-full h-96 z-10 cursor-crosshair" />
 
-        {/* Floating Delivery Radius Indicator */}
-        <div className="absolute top-3 right-3 z-20 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-slate-200 dark:border-slate-800 text-xs font-black shadow-lg flex items-center gap-2">
-          <Compass className="w-4 h-4 text-[#FF6B00]" />
-          <span>Teslimat Yarıçapı: <span className="text-[#FF6B00]">{radiusKm} KM</span></span>
-        </div>
+        {/* Floating Mode Indicator Badge */}
+        {!isPolygonMode ? (
+          <div className="absolute top-3 right-3 z-20 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-slate-200 dark:border-slate-800 text-xs font-black shadow-lg flex items-center gap-2">
+            <Compass className="w-4 h-4 text-[#FF6B00]" />
+            <span>Teslimat Yarıçapı: <span className="text-[#FF6B00]">{radiusKm} KM</span></span>
+          </div>
+        ) : (
+          <div className="absolute top-3 right-3 z-20 bg-blue-900/90 text-white backdrop-blur-md px-3.5 py-2 rounded-2xl border border-blue-700 text-xs font-black shadow-lg flex items-center gap-3">
+            <Shapes className="w-4 h-4 text-blue-300" />
+            <span>Poligon Köşe Sayısı: <span className="text-amber-300">{deliveryPolygon.length}</span></span>
+            {deliveryPolygon.length > 0 && (
+              <button
+                type="button"
+                onClick={() => onPolygonChange && onPolygonChange([])}
+                className="px-2 py-0.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-[11px] font-extrabold flex items-center gap-1 transition-all"
+              >
+                <Trash2 className="w-3 h-3" />
+                <span>Temizle</span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Interactive Delivery Radius Slider */}
-      <div className={`p-4 rounded-2xl border transition-colors ${
-        isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'
-      }`}>
-        <div className="flex justify-between items-center mb-2">
-          <label className="block text-xs font-bold text-slate-400 uppercase">
-            Teslimat Yarıçapı Çemberi (1 - 25 KM)
-          </label>
-          <span className="text-sm font-black text-[#FF6B00]">{radiusKm} KM</span>
+      {/* Mode Controls */}
+      {!isPolygonMode ? (
+        <div className={`p-4 rounded-2xl border transition-colors ${
+          isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'
+        }`}>
+          <div className="flex justify-between items-center mb-2">
+            <label className="block text-xs font-bold text-slate-400 uppercase">
+              Teslimat Yarıçapı Çemberi (1 - 25 KM)
+            </label>
+            <span className="text-sm font-black text-[#FF6B00]">{radiusKm} KM</span>
+          </div>
+          <input
+            type="range"
+            min="1"
+            max="25"
+            step="0.5"
+            value={radiusKm}
+            onChange={(e) => onRadiusChange(Number(e.target.value))}
+            className="w-full accent-[#FF6B00] cursor-pointer"
+          />
         </div>
-        <input
-          type="range"
-          min="1"
-          max="25"
-          step="0.5"
-          value={radiusKm}
-          onChange={(e) => onRadiusChange(Number(e.target.value))}
-          className="w-full accent-[#FF6B00] cursor-pointer"
-        />
-      </div>
+      ) : (
+        <div className={`p-4 rounded-2xl border transition-colors ${
+          isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'
+        }`}>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-extrabold text-blue-600 dark:text-blue-400 uppercase">
+                Özel Poligon Bölge Noktaları
+              </p>
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
+                Haritadaki herhangi bir yere tıklayarak poligon köşesi ekleyin. Bir noktayı kaldırmak için üzerine tıklayın.
+              </p>
+            </div>
+            {deliveryPolygon.length > 0 && (
+              <button
+                type="button"
+                onClick={() => onPolygonChange && onPolygonChange([])}
+                className="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-extrabold text-xs flex items-center gap-1.5 transition-all"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Tüm Noktaları Sil</span>
+              </button>
+            )}
+          </div>
+
+          {deliveryPolygon.length === 0 ? (
+            <div className="mt-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-bold">
+              ⚠️ Henüz poligon noktası eklenmedi. Teslimat alanınızı oluşturmak için haritada en az 3 nokta işaretleyin.
+            </div>
+          ) : deliveryPolygon.length < 3 ? (
+            <div className="mt-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-bold">
+              ⚠️ Geçerli bir bölge alanı için en az 3 köşe noktası gereklidir ({deliveryPolygon.length}/3 eklendi).
+            </div>
+          ) : (
+            <div className="mt-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold flex items-center gap-2">
+              <span>✓ Poligon alanı başarıyla tanımlandı ({deliveryPolygon.length} köşe noktası).</span>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
