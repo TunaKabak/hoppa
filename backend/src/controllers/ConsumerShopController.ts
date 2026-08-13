@@ -341,7 +341,11 @@ export class ConsumerShopController {
       const categoryTree = await prisma.category.findMany({
         where: {
           parentId: null, // Sadece en üst seviye (Root) kategoriler
-          shopType: shopType // İlgili dükkan tipine göre (Örn: MARKET, RESTAURANT)
+          OR: [
+            { shopType: shopType },
+            { children: { some: { products: { some: { shopId: shopId, isActive: true } } } } },
+            { products: { some: { shopId: shopId, isActive: true } } }
+          ]
         },
         include: {
           children: {

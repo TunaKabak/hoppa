@@ -435,20 +435,45 @@ class _BusinessSelectionPageState extends ConsumerState<BusinessSelectionPage> {
                                     var businesses =
                                         List<Business>.from(allBusinesses);
 
-                                    // 1. KATEGORİ FİLTRELEME (Yemek, Market, Su, Çiçek)
+                                    // 1. KATEGORİ FİLTRELEME (Restoran & Yemek, Market, Su, Çiçek vb.)
                                     if (widget.category != null) {
-                                      businesses = businesses
-                                          .where(
-                                            (b) =>
-                                                b.categories.contains(
-                                                    widget.category) ||
-                                                b.type.label ==
-                                                    widget.category ||
-                                                b.type.name.toLowerCase() ==
-                                                    widget.category!
-                                                        .toLowerCase(),
-                                          )
-                                          .toList();
+                                      final catLower = widget.category!.toLowerCase();
+                                      businesses = businesses.where((b) {
+                                        // A. Tam metin veya kategori dizisi eşleşmesi
+                                        if (b.categories.any((c) => c.toLowerCase() == catLower)) return true;
+                                        final typeNameLower = b.type.name.toLowerCase();
+                                        final typeLabelLower = b.type.label.toLowerCase();
+
+                                        if (typeNameLower == catLower || typeLabelLower == catLower) return true;
+
+                                        // B. Takma ad (Alias) ve Grup Eşleştirmeleri
+                                        if (catLower.contains('restoran') || catLower.contains('yemek') || catLower == 'restaurant') {
+                                          return typeNameLower == 'restaurant' || typeNameLower == 'cafe' || typeLabelLower == 'yemek' || typeLabelLower == 'cafe';
+                                        }
+                                        if (catLower.contains('market')) {
+                                          return typeNameLower == 'market' || typeLabelLower == 'market';
+                                        }
+                                        if (catLower.contains('manav') || catLower.contains('meyve') || catLower.contains('sebze')) {
+                                          return typeNameLower == 'greengrocer' || typeLabelLower == 'manav';
+                                        }
+                                        if (catLower.contains('kasap') || catLower.contains('et') || catLower.contains('şarküteri')) {
+                                          return typeNameLower == 'butcher' || typeLabelLower == 'kasap';
+                                        }
+                                        if (catLower.contains('su')) {
+                                          return typeNameLower == 'water' || typeLabelLower == 'su';
+                                        }
+                                        if (catLower.contains('çiçek') || catLower.contains('cicek') || catLower.contains('flower')) {
+                                          return typeNameLower == 'florist' || typeLabelLower == 'çiçek';
+                                        }
+                                        if (catLower.contains('fırın') || catLower.contains('firin') || catLower.contains('pastane') || catLower.contains('bakery')) {
+                                          return typeNameLower == 'bakery' || typeLabelLower == 'fırın';
+                                        }
+                                        if (catLower.contains('kuruyemiş') || catLower.contains('kuruyemis') || catLower.contains('nuts')) {
+                                          return typeNameLower == 'nuts' || typeLabelLower == 'kuruyemiş';
+                                        }
+
+                                        return false;
+                                      }).toList();
                                     }
 
                                     // 2. MESAFEYE GÖRE FILTRELEME
