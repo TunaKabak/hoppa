@@ -227,6 +227,7 @@ class ConsumerShopRepository {
       'discountRate': discountRateVal,
       'sku': json['sku'],
       'prettyName': json['prettyName'],
+      'optionGroups': json['optionGroups'] ?? [],
     };
 
     final map = {
@@ -409,6 +410,7 @@ class ConsumerShopRepository {
           'discountRate': discountRateVal,
           'sku': productJson['sku'],
           'prettyName': productJson['prettyName'],
+          'optionGroups': productJson['optionGroups'] ?? [],
         };
 
         final map = {
