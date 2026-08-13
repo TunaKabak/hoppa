@@ -60,13 +60,7 @@ export const getApiBaseUrl = (): string => {
   if (process.env.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL;
   }
-  if (typeof window !== 'undefined') {
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    if (!isLocal) {
-      return 'https://hoppa-backend.onrender.com/api';
-    }
-  }
-  return 'http://localhost:3000/api';
+  return 'https://hoppa-backend.onrender.com/api';
 };
 
 export const merchantApiFetch = async (endpoint: string, options: RequestInit = {}) => {
