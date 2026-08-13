@@ -212,13 +212,11 @@ export class ConsumerShopController {
         const filterRadius = radius ? Number(radius) : null;
 
         if (!isNaN(userLat) && !isNaN(userLng)) {
-          const filteredShops = enrichedShops.filter((shop: any) => {
-            // Lokasyonu girilmemiş dükkanlar için fallback olarak her durumda göster
+          const shopsWithDistance = enrichedShops.map((shop: any) => {
             if (shop.latitude === null || shop.longitude === null) {
-              return true;
+              return { ...shop, distanceKm: 0 };
             }
 
-            // Haversine formülü ile mesafe hesabı (km cinsinden)
             const R = 6371; // Earth's radius in km
             const dLat = (shop.latitude - userLat) * Math.PI / 180;
             const dLng = (shop.longitude - userLng) * Math.PI / 180;
@@ -227,18 +225,33 @@ export class ConsumerShopController {
               Math.cos(userLat * Math.PI / 180) * Math.cos(shop.latitude * Math.PI / 180) *
               Math.sin(dLng / 2) * Math.sin(dLng / 2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            const distance = R * c;
+            const distance = Math.round(R * c * 10) / 10;
 
-            // Dükkanın teslimat yarıçapı (varsayılan 5 km)
-            const maxRadius = filterRadius || shop.deliveryRadiusKm || 5.0;
-            return distance <= maxRadius;
+            return { ...shop, distanceKm: distance };
           });
+
+          // Yarıçap içindeki dükkanları filtrele
+          let filteredShops = shopsWithDistance.filter((shop: any) => {
+            if (shop.latitude === null || shop.longitude === null) return true;
+            const maxRadius = filterRadius || shop.deliveryRadiusKm || 15.0;
+            return shop.distanceKm <= maxRadius;
+          });
+
+          // Mesafe bazlı yakın dükkanlar ilk sırada
+          filteredShops.sort((a: any, b: any) => a.distanceKm - b.distanceKm);
+
+          // FALLBACK SAFEGUARD: Eğer kullanıcının GPS lokasyonu yarıçap dışında kaldığı için 0 dükkan bulunduysa,
+          // ekranın boş gelmesini önlemek için tüm dükkanları en yakından uzağa sıralayarak getir.
+          if (filteredShops.length === 0) {
+            shopsWithDistance.sort((a: any, b: any) => a.distanceKm - b.distanceKm);
+            return res.status(200).json({ error: false, data: shopsWithDistance });
+          }
 
           return res.status(200).json({ error: false, data: filteredShops });
         }
       }
 
-      // Fallback: Koordinatlar yoksa veya geçersizse tüm dükkanları getir
+      // Fallback: Koordinatlar yoksa tüm dükkanları getir
       return res.status(200).json({ error: false, data: enrichedShops });
     } catch (error: any) {
       return res.status(500).json({ error: true, message: error.message });
