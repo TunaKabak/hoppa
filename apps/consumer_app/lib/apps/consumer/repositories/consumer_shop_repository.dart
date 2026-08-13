@@ -96,44 +96,56 @@ class ConsumerShopRepository {
   }
 
   Future<List<Business>> getShops({double? latitude, double? longitude}) async {
-    String endpoint = '/api/consumer/shops';
-    if (latitude != null && longitude != null) {
-      endpoint += '?latitude=$latitude&longitude=$longitude';
+    try {
+      String endpoint = '/api/consumer/shops';
+      if (latitude != null && longitude != null) {
+        endpoint += '?latitude=$latitude&longitude=$longitude';
+      }
+      final response = await _apiClient.get(endpoint, requiresAuth: false);
+      final data = response['data'] as List<dynamic>?;
+      if (data == null) return [];
+
+      final List<Business> shops = [];
+      for (var json in data) {
+        try {
+          final id = json['id'] as String? ?? '';
+          final map = Map<String, dynamic>.from(json as Map);
+
+          // Map API field differences and apply image URL validation fallbacks
+          map['logoUrl'] = _isValidImageUrl(json['imageUrl'])
+              ? json['imageUrl']
+              : 'https://via.placeholder.com/150';
+          map['headerImageUrl'] = _isValidImageUrl(json['headerImageUrl'])
+              ? json['headerImageUrl']
+              : 'https://via.placeholder.com/150';
+          map['isOpen'] = json['isOpen'] ?? json['isActive'] ?? true;
+          map['minBasketAmount'] = double.tryParse(json['minOrderAmount']?.toString() ?? '') ??
+              double.tryParse(json['minBasketAmount']?.toString() ?? '') ??
+              0.0;
+          map['deliveryRadius'] = double.tryParse(json['deliveryRadiusKm']?.toString() ?? '') ??
+              double.tryParse(json['deliveryRadius']?.toString() ?? '') ??
+              5.0;
+          map['averageRating'] = double.tryParse(json['averageRating']?.toString() ?? '') ?? 5.0;
+          map['reviewCount'] = int.tryParse(json['reviewCount']?.toString() ?? '') ?? 0;
+          map['baseDeliveryFee'] = double.tryParse(json['baseDeliveryFee']?.toString() ?? '') ?? 30.0;
+          if (json['freeDeliveryThreshold'] != null) {
+            map['freeDeliveryThreshold'] = double.tryParse(json['freeDeliveryThreshold'].toString());
+          }
+
+          if (json['type'] != null) {
+            map['type'] = json['type'].toString().toLowerCase();
+          }
+
+          shops.add(Business.fromMap(map, id));
+        } catch (itemErr, itemStack) {
+          debugPrint("Error parsing shop item: $itemErr\n$itemStack");
+        }
+      }
+      return shops;
+    } catch (e, stack) {
+      debugPrint("Error in getShops: $e\n$stack");
+      rethrow;
     }
-    final response = await _apiClient.get(endpoint);
-    final data = response['data'] as List<dynamic>?;
-    if (data == null) return [];
-    return data.map((json) {
-      final id = json['id'] as String? ?? '';
-      final map = Map<String, dynamic>.from(json);
-
-      // Map API field differences and apply image URL validation fallbacks
-      map['logoUrl'] = _isValidImageUrl(json['imageUrl'])
-          ? json['imageUrl']
-          : 'https://via.placeholder.com/150';
-      map['headerImageUrl'] = _isValidImageUrl(json['headerImageUrl'])
-          ? json['headerImageUrl']
-          : 'https://via.placeholder.com/150';
-      map['isOpen'] = json['isOpen'] ?? json['isActive'] ?? true;
-      map['minBasketAmount'] = double.tryParse(json['minOrderAmount']?.toString() ?? '') ??
-          double.tryParse(json['minBasketAmount']?.toString() ?? '') ??
-          0.0;
-      map['deliveryRadius'] = double.tryParse(json['deliveryRadiusKm']?.toString() ?? '') ??
-          double.tryParse(json['deliveryRadius']?.toString() ?? '') ??
-          5.0;
-      map['averageRating'] = double.tryParse(json['averageRating']?.toString() ?? '') ?? 5.0;
-      map['reviewCount'] = int.tryParse(json['reviewCount']?.toString() ?? '') ?? 0;
-      map['baseDeliveryFee'] = double.tryParse(json['baseDeliveryFee']?.toString() ?? '') ?? 30.0;
-      if (json['freeDeliveryThreshold'] != null) {
-        map['freeDeliveryThreshold'] = double.tryParse(json['freeDeliveryThreshold'].toString());
-      }
-
-      if (json['type'] != null) {
-        map['type'] = json['type'].toString().toLowerCase();
-      }
-
-      return Business.fromMap(map, id);
-    }).toList();
   }
 
   Map<String, String> _parseCategoryHierarchy(dynamic categoryJson) {
