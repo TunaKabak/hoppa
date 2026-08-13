@@ -57,10 +57,12 @@ export const clearMerchantAuth = () => {
 };
 
 export const getApiBaseUrl = (): string => {
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL;
+  let rawUrl = process.env.NEXT_PUBLIC_API_URL || 'https://hoppa-backend.onrender.com/api';
+  rawUrl = rawUrl.trim().replace(/\/+$/, '');
+  if (!rawUrl.endsWith('/api')) {
+    rawUrl += '/api';
   }
-  return 'https://hoppa-backend.onrender.com/api';
+  return rawUrl;
 };
 
 export const merchantApiFetch = async (endpoint: string, options: RequestInit = {}) => {

@@ -6,8 +6,9 @@ const prisma = new PrismaClient();
 export class ShopController {
   async getMyShop(req: Request, res: Response) {
     try {
-      const isSuperAdmin = req.user?.role === "super_admin";
-      const queryShopId = req.query.shopId as string;
+      const isSuperAdmin = req.user?.role === "super_admin" || req.user?.role === "admin";
+      const shopIdHeader = (req.headers["x-business-id"] || req.headers["x-shop-id"]) as string;
+      const queryShopId = (req.query.shopId as string) || shopIdHeader;
 
       let shop;
       if (isSuperAdmin && queryShopId) {
@@ -48,6 +49,9 @@ export class ShopController {
 
         const enrichedShop = {
           ...shop,
+          businessName: shop.name || shop.merchant?.businessName,
+          phone: shop.merchant?.businessPhone,
+          logoUrl: shop.imageUrl,
           activeCommissionRate,
           activePromotions
         };
@@ -63,8 +67,9 @@ export class ShopController {
 
   async updateMyShop(req: Request, res: Response) {
     try {
-      const isSuperAdmin = req.user?.role === "super_admin";
-      const queryShopId = req.query.shopId as string;
+      const isSuperAdmin = req.user?.role === "super_admin" || req.user?.role === "admin";
+      const shopIdHeader = (req.headers["x-business-id"] || req.headers["x-shop-id"]) as string;
+      const queryShopId = (req.query.shopId as string) || shopIdHeader;
 
       let targetShop;
       if (isSuperAdmin && queryShopId) {
@@ -85,9 +90,10 @@ export class ShopController {
       }
 
       const {
-        name, description, address, latitude, longitude,
-        deliveryRadiusKm, deliveryPolygon, workingHours, minOrderAmount, minimumOrderAmount, minimumOrderLimit, imageUrl, headerImageUrl,
-        taxNumber, businessPhone, identityNumber,
+        name, businessName, description, address, latitude, longitude,
+        deliveryRadiusKm, deliveryPolygon, workingHours, minOrderAmount, minimumOrderAmount, minimumOrderLimit,
+        imageUrl, logoUrl, headerImageUrl,
+        taxNumber, phone, phoneNumber, businessPhone, identityNumber,
         deliveryPricingType, baseDeliveryFee, deliveryFeePerKm, freeDeliveryThreshold, deliveryTime,
         allowedPaymentMethods, allowedFulfillmentModels, campaignText
       } = req.body;
@@ -116,42 +122,52 @@ export class ShopController {
         }
       }
 
+      const finalName = name || businessName;
+      const finalLogoUrl = imageUrl || logoUrl;
+      const finalPhone = businessPhone || phone || phoneNumber;
+      const finalMinOrderAmount = minOrderAmount ?? minimumOrderAmount;
+
       // Build merchant update payload dynamically
       const merchantUpdate: any = {};
-      if (businessPhone !== undefined) merchantUpdate.businessPhone = businessPhone;
+      if (finalPhone !== undefined) merchantUpdate.businessPhone = finalPhone;
       if (identityNumber !== undefined) merchantUpdate.identityNumber = identityNumber;
+      if (finalName !== undefined) merchantUpdate.businessName = finalName;
+
+      const shopData: any = {};
+      if (finalName !== undefined) shopData.name = finalName;
+      if (description !== undefined) shopData.description = description;
+      if (address !== undefined) shopData.address = address;
+      if (latitude !== undefined) shopData.latitude = latitude !== null ? Number(latitude) : null;
+      if (longitude !== undefined) shopData.longitude = longitude !== null ? Number(longitude) : null;
+      if (deliveryRadiusKm !== undefined) shopData.deliveryRadiusKm = Number(deliveryRadiusKm);
+      if (deliveryPolygon !== undefined) shopData.deliveryPolygon = deliveryPolygon;
+      if (workingHours !== undefined) shopData.workingHours = workingHours;
+      if (finalMinOrderAmount !== undefined) {
+        shopData.minOrderAmount = Number(finalMinOrderAmount);
+        shopData.minimumOrderAmount = Number(finalMinOrderAmount);
+      }
+      if (minimumOrderLimit !== undefined) shopData.minimumOrderLimit = Number(minimumOrderLimit);
+      if (deliveryPricingType !== undefined) shopData.deliveryPricingType = deliveryPricingType;
+      if (baseDeliveryFee !== undefined) shopData.baseDeliveryFee = Number(baseDeliveryFee);
+      if (deliveryFeePerKm !== undefined) shopData.deliveryFeePerKm = Number(deliveryFeePerKm);
+      if (freeDeliveryThreshold !== undefined) shopData.freeDeliveryThreshold = freeDeliveryThreshold !== null ? Number(freeDeliveryThreshold) : null;
+      if (deliveryTime !== undefined) shopData.deliveryTime = deliveryTime;
+      if (finalLogoUrl !== undefined) shopData.imageUrl = finalLogoUrl;
+      if (headerImageUrl !== undefined) shopData.headerImageUrl = headerImageUrl;
+      if (taxNumber !== undefined) shopData.taxNumber = taxNumber;
+      if (allowedPaymentMethods !== undefined) shopData.allowedPaymentMethods = allowedPaymentMethods;
+      if (allowedFulfillmentModels !== undefined) shopData.allowedFulfillmentModels = allowedFulfillmentModels;
+      if (campaignText !== undefined) shopData.campaignText = campaignText;
+
+      if (Object.keys(merchantUpdate).length > 0) {
+        shopData.merchant = {
+          update: merchantUpdate
+        };
+      }
 
       const updated = await prisma.shop.update({
         where: { id: targetShop.id },
-        data: {
-          name,
-          description,
-          address,
-          latitude,
-          longitude,
-          deliveryRadiusKm,
-          deliveryPolygon,
-          workingHours,
-          minOrderAmount: minimumOrderAmount ?? minOrderAmount,
-          minimumOrderAmount: minimumOrderAmount ?? minOrderAmount,
-          minimumOrderLimit: minimumOrderLimit !== undefined ? minimumOrderLimit : undefined,
-          deliveryPricingType,
-          baseDeliveryFee,
-          deliveryFeePerKm,
-          freeDeliveryThreshold,
-          deliveryTime,
-          imageUrl,
-          headerImageUrl,
-          taxNumber,
-          allowedPaymentMethods,
-          allowedFulfillmentModels,
-          campaignText,
-          ...(Object.keys(merchantUpdate).length > 0 ? {
-            merchant: {
-              update: merchantUpdate
-            }
-          } : {})
-        },
+        data: shopData,
         include: { merchant: { select: { businessName: true, status: true, businessPhone: true, identityNumber: true, taxNumber: true } } }
       });
 
