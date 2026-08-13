@@ -372,9 +372,51 @@ class _BusinessSelectionPageState extends ConsumerState<BusinessSelectionPage> {
                                   skipLoadingOnReload: true,
                                   loading: () => const Center(
                                       child: CircularProgressIndicator()),
-                                  error: (err, stack) => const Center(
-                                      child: Text(
-                                          "Dükkanlar yüklenirken bir hata oluştu. Lütfen tekrar deneyin.")),
+                                  error: (err, stack) {
+                                    debugPrint("BusinessSelectionPage Error: $err\n$stack");
+                                    return Center(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(24),
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            const Icon(
+                                              Icons.storefront_outlined,
+                                              size: 56,
+                                              color: Color(0xFFE95D22),
+                                            ),
+                                            const SizedBox(height: 12),
+                                            Text(
+                                              "Dükkanlar yüklenirken bir hata oluştu.",
+                                              style: GoogleFonts.poppins(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                                color: Colors.grey.shade800,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                            const SizedBox(height: 16),
+                                            ElevatedButton.icon(
+                                              onPressed: () => ref.invalidate(consumerShopsProvider),
+                                              icon: const Icon(Icons.refresh_rounded, size: 18),
+                                              label: const Text("Tekrar Deneyin"),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: const Color(0xFFE95D22),
+                                                foregroundColor: Colors.white,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(12),
+                                                ),
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: 20,
+                                                  vertical: 12,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
                                   data: (allBusinesses) {
                                     if (allBusinesses.isEmpty) {
                                       return const Center(

@@ -57,7 +57,16 @@ export const clearMerchantAuth = () => {
 };
 
 export const getApiBaseUrl = (): string => {
-  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  if (typeof window !== 'undefined') {
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (!isLocal) {
+      return 'https://hoppa-backend.onrender.com/api';
+    }
+  }
+  return 'http://localhost:3000/api';
 };
 
 export const merchantApiFetch = async (endpoint: string, options: RequestInit = {}) => {
@@ -83,22 +92,47 @@ export const merchantApiFetch = async (endpoint: string, options: RequestInit = 
     headers['x-business-id'] = selectedShopId;
   }
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    });
 
-  const data = await response.json();
+    const contentType = response.headers.get('content-type') || '';
+    let data: any = {};
 
-  if (!response.ok) {
-    if (response.status === 401) {
-      clearMerchantAuth();
-      if (typeof window !== 'undefined' && window.location.pathname.startsWith('/merchant') && !window.location.pathname.includes('/login')) {
-        window.location.href = '/merchant/login';
+    if (contentType.includes('application/json')) {
+      try {
+        data = await response.json();
+      } catch (_) {
+        data = { message: 'Sunucudan geçersiz JSON yanıtı alındı.' };
+      }
+    } else {
+      const text = await response.text();
+      if (response.status === 404) {
+        throw new Error(`API Uç Noktası Bulunamadı (404): ${endpoint}`);
+      } else if (response.status >= 500) {
+        throw new Error('Sunucu servis veremiyor (500/502). Lütfen az sonra tekrar deneyin.');
+      } else {
+        throw new Error(`Beklenmeyen yanıt alındı (${response.status}).`);
       }
     }
-    throw new Error(data.message || 'API Hatası oluştu.');
-  }
 
-  return data;
+    if (!response.ok) {
+      if (response.status === 401) {
+        clearMerchantAuth();
+        if (typeof window !== 'undefined' && window.location.pathname.startsWith('/merchant') && !window.location.pathname.includes('/login')) {
+          window.location.href = '/merchant/login';
+        }
+      }
+      throw new Error(data.message || 'API Hatası oluştu.');
+    }
+
+    return data;
+  } catch (err: any) {
+    if (err.name === 'TypeError' && err.message?.includes('fetch')) {
+      throw new Error('Sunucuya bağlanılamıyor. Lütfen internet bağlantınızı kontrol edin.');
+    }
+    throw err;
+  }
 };

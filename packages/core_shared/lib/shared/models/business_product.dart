@@ -29,8 +29,11 @@ class BusinessProduct {
 
   factory BusinessProduct.fromMap(Map<String, dynamic> data, String id) {
     final trackStock = data['trackStock'] as bool? ?? false;
-    final stockQuantity = data['stockQuantity'] as int? ?? 0;
-    final double priceVal = (data['price'] ?? 0.0).toDouble();
+    final stockQuantity = int.tryParse(data['stockQuantity']?.toString() ?? '') ?? 0;
+    final double priceVal = double.tryParse(data['price']?.toString() ?? '') ?? 0.0;
+    final double regularPriceVal = double.tryParse(data['regularPrice']?.toString() ?? '') ?? priceVal;
+    final int discountRateVal = int.tryParse(data['discountRate']?.toString() ?? '') ?? 0;
+
     return BusinessProduct(
       id: id,
       businessId: data['businessId'] ?? '',
@@ -40,9 +43,9 @@ class BusinessProduct {
       isAvailable: data['isAvailable'] ?? true,
       trackStock: trackStock,
       stockQuantity: stockQuantity,
-      regularPrice: (data['regularPrice'] ?? priceVal).toDouble(),
-      discountRate: data['discountRate'] as int? ?? 0,
-      product: Product.fromMap(data['product_details'] ?? {}),
+      regularPrice: regularPriceVal,
+      discountRate: discountRateVal,
+      product: Product.fromMap(Map<String, dynamic>.from(data['product_details'] ?? {})),
     );
   }
 

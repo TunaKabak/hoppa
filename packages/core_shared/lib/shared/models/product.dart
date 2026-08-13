@@ -46,9 +46,9 @@ class ProductOption {
       price: map['price'] != null ? (double.tryParse(map['price'].toString()) ?? 0.0) : 0.0,
       isDefault: map['isDefault'] ?? false,
       isRemovable: map['isRemovable'] ?? false,
-      maxQuantity: map['maxQuantity'] as int? ?? 1,
+      maxQuantity: int.tryParse(map['maxQuantity']?.toString() ?? '') ?? 1,
       linkedProductId: map['linkedProductId'] as String?,
-      displayOrder: map['displayOrder'] as int? ?? 0,
+      displayOrder: int.tryParse(map['displayOrder']?.toString() ?? '') ?? 0,
       isActive: map['isActive'] ?? true,
     );
   }
@@ -95,9 +95,12 @@ class ProductOptionGroup {
 
   factory ProductOptionGroup.fromMap(Map<String, dynamic> map) {
     var rawOpts = map['options'] as List<dynamic>? ?? [];
-    List<ProductOption> parsedOpts = rawOpts
-        .map((o) => ProductOption.fromMap(Map<String, dynamic>.from(o)))
-        .toList();
+    List<ProductOption> parsedOpts = [];
+    for (var o in rawOpts) {
+      try {
+        parsedOpts.add(ProductOption.fromMap(Map<String, dynamic>.from(o as Map)));
+      } catch (_) {}
+    }
 
     return ProductOptionGroup(
       id: map['id'] ?? '',
@@ -105,10 +108,10 @@ class ProductOptionGroup {
       description: map['description'] as String?,
       type: (map['type'] as String?)?.toUpperCase() ?? 'EXTRA',
       selectionType: (map['selectionType'] as String?)?.toUpperCase() ?? 'CHECKBOX',
-      minSelections: map['minSelections'] as int? ?? 0,
-      maxSelections: map['maxSelections'] as int? ?? 1,
-      freeSelectionsCount: map['freeSelectionsCount'] as int? ?? 0,
-      displayOrder: map['displayOrder'] as int? ?? 0,
+      minSelections: int.tryParse(map['minSelections']?.toString() ?? '') ?? 0,
+      maxSelections: int.tryParse(map['maxSelections']?.toString() ?? '') ?? 1,
+      freeSelectionsCount: int.tryParse(map['freeSelectionsCount']?.toString() ?? '') ?? 0,
+      displayOrder: int.tryParse(map['displayOrder']?.toString() ?? '') ?? 0,
       options: parsedOpts,
     );
   }
