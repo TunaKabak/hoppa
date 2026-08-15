@@ -18,7 +18,7 @@ export class OrderController {
         return res.status(401).json({ error: true, message: "Kullanıcı bilgisi eksik veya yetkisiz." });
       }
 
-      const { shopId, items, deliveryAddress, addressId, notes, paymentMethod, cardDetails, dontRingBell, leaveAtDoor, fulfillmentModel, referringSource, shopCampaignId, substitutionPreference } = req.body;
+      const { shopId, items, deliveryAddress, addressId, notes, paymentMethod, cardDetails, dontRingBell, leaveAtDoor, fulfillmentModel, referringSource, shopCampaignId, substitutionPreference, useWallet, walletAmount } = req.body;
 
       if (!shopId) {
         return res.status(400).json({ error: true, message: "Dükkan bilgisi (shopId) zorunludur." });
@@ -357,16 +357,44 @@ export class OrderController {
 
         let paymentUrl = undefined;
 
-        if (method === "ONLINE_PAYMENT") {
+        const orderTotal = Number(totalAmount) + Number(finalDeliveryFee);
+        let remainingAmount = orderTotal;
+        let walletDeducted = 0;
+
+        // Hoppa Cüzdan kullanımı (Switch açık veya yöntem WALLET ise)
+        if (useWallet || method === "WALLET") {
+          const wallet = await WalletService.getOrCreateWallet(consumerId, tx);
+          const currentBalance = Number(wallet.balance);
+
+          if (currentBalance > 0) {
+            walletDeducted = Math.min(currentBalance, orderTotal);
+            await WalletService.withdraw(
+              consumerId,
+              walletDeducted,
+              `Sipariş Ödemesi (Sipariş No: ${createdOrder.id})`,
+              tx
+            );
+            remainingAmount = orderTotal - walletDeducted;
+          }
+        }
+
+        if (remainingAmount <= 0) {
+          // Sipariş tamamen Hoppa Cüzdan ile ödendi
+          await tx.order.update({
+            where: { id: createdOrder.id },
+            data: {
+              paymentMethod: "WALLET",
+              paymentStatus: "SUCCESS"
+            }
+          });
+        } else if (method === "ONLINE_PAYMENT") {
           if (!cardDetails) {
             throw new Error("Online ödeme için kart bilgileri gereklidir.");
           }
 
-          const orderTotal = Number(totalAmount) + Number(finalDeliveryFee);
-
           const routeResponse = await PaymentRoutingService.routePayment({
             orderId: createdOrder.id,
-            amount: orderTotal,
+            amount: remainingAmount,
             cardDetails
           });
 
@@ -385,19 +413,7 @@ export class OrderController {
 
           paymentUrl = routeResponse.paymentUrl;
         } else if (method === "WALLET") {
-          const orderTotal = Number(totalAmount) + Number(finalDeliveryFee);
-          await WalletService.withdraw(
-            consumerId, 
-            orderTotal, 
-            `Sipariş Ödemesi (Sipariş No: ${createdOrder.id})`, 
-            tx
-          );
-
-          // Siparişin ödeme durumunu başarılı yap
-          await tx.order.update({
-            where: { id: createdOrder.id },
-            data: { paymentStatus: "SUCCESS" }
-          });
+          throw new Error("Hoppa Cüzdan bakiyeniz bu sipariş için yetersizdir.");
         }
 
         return { createdOrder, paymentUrl };
