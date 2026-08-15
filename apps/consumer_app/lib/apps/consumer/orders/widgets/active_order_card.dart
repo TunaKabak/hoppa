@@ -5,6 +5,7 @@ import 'package:core_auth/core_auth.dart';
 import 'package:consumer_app/apps/consumer/repositories/consumer_order_repository.dart';
 import 'package:core_shared/shared/models/order_status.dart';
 import 'package:consumer_app/apps/consumer/orders/order_detail_page.dart';
+import 'package:consumer_app/apps/consumer/orders/order_tracking_page.dart';
 import 'package:core_shared/shared/models/order.dart' as model;
 
 class ActiveOrderCard extends ConsumerStatefulWidget {
@@ -554,25 +555,57 @@ class _SingleActiveOrderCardState extends State<_SingleActiveOrderCard> {
                     order.deliveryMethod,
                   ),
                   const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => OrderDetailPage(order: order),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => OrderDetailPage(order: order),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.receipt_long_rounded, size: 16),
+                          label: const Text("Detay"),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.orange.shade800,
+                            side: BorderSide(color: Colors.orange.shade200),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                          ),
                         ),
-                      );
-                    },
-                    icon: const Icon(Icons.receipt_long_rounded, size: 18),
-                    label: const Text("Sipariş Detayına Git"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange.shade50,
-                      foregroundColor: Colors.orange.shade800,
-                      elevation: 0,
-                      minimumSize: const Size(double.infinity, 40),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      side: BorderSide(color: Colors.orange.shade200),
-                    ),
+                      ),
+                      if (order.status == OrderStatus.onWay.value || 
+                          order.status == 'ON_THE_WAY' || 
+                          order.status == OrderStatus.preparing.value ||
+                          order.status == 'PREPARING') ...[
+                        const SizedBox(width: 8),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => OrderTrackingPage(order: order),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.two_wheeler_rounded, size: 18),
+                            label: const Text("Canlı Takip Et"),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFFF6B00),
+                              foregroundColor: Colors.white,
+                              elevation: 2,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ],

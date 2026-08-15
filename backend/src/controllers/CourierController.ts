@@ -49,6 +49,29 @@ export class CourierController {
   }
 
   /**
+   * Kuryenin Anlık Konumunu Getir
+   * GET /api/consumer/couriers/:id/location
+   */
+  public async getCourierLocation(req: Request, res: Response): Promise<void> {
+    try {
+      const id = String(req.params.id);
+      const location = await prisma.courierLocation.findUnique({
+        where: { courierId: id },
+      });
+
+      if (!location) {
+        res.status(404).json({ error: true, message: "Kurye konumu bulunamadı." });
+        return;
+      }
+
+      res.status(200).json({ error: false, data: location });
+    } catch (error: any) {
+      console.error("Kurye konum getirme hatası:", error);
+      res.status(500).json({ error: true, message: error.message || "Konum alınamadı." });
+    }
+  }
+
+  /**
    * Kuryeye Atanmış Aktif Siparişleri Getir
    * GET /api/couriers/orders
    */

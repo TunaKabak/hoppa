@@ -500,6 +500,101 @@ export class OrderController {
   }
 
   /**
+   * Tüketici için canlı sipariş ve kurye takip verilerini getir
+   * GET /api/consumer/orders/:id/tracking
+   */
+  async getOrderTracking(req: Request, res: Response) {
+    try {
+      const consumerId = req.user?.id;
+      const id = String(req.params.id);
+
+      if (!consumerId) {
+        return res.status(401).json({ error: true, message: "Kullanıcı bilgisi eksik." });
+      }
+
+      const order = await prisma.order.findFirst({
+        where: {
+          id,
+          consumerId,
+        },
+        include: {
+          shop: {
+            include: {
+              merchant: true,
+            },
+          },
+          address: true,
+          courier: {
+            include: {
+              locations: {
+                orderBy: { updatedAt: 'desc' },
+                take: 1,
+              },
+            },
+          },
+          items: {
+            include: {
+              product: { select: { name: true, imageUrl: true } },
+              options: true,
+            },
+          },
+        },
+      });
+
+      if (!order) {
+        return res.status(404).json({ error: true, message: "Sipariş bulunamadı." });
+      }
+
+      const latestLocation = order.courier?.locations?.[0] || null;
+
+      const trackingData = {
+        order: {
+          id: order.id,
+          status: order.status,
+          createdAt: order.createdAt,
+          fulfillmentModel: order.fulfillmentModel,
+          deliveryAddress: order.deliveryAddress,
+          addressLatitude: order.address?.latitude || 35.1856,
+          addressLongitude: order.address?.longitude || 33.3823,
+          customerNote: order.customerNote,
+          dontRingBell: order.dontRingBell,
+          leaveAtDoor: order.leaveAtDoor,
+          totalAmount: order.totalAmount,
+          deliveryFee: order.deliveryFee,
+        },
+        shop: {
+          id: order.shop.id,
+          name: order.shop.name,
+          imageUrl: order.shop.imageUrl,
+          address: order.shop.address,
+          latitude: order.shop.latitude || 35.1856,
+          longitude: order.shop.longitude || 33.3823,
+          phone: (order.shop as any).phone || (order.shop as any).merchant?.phone || '',
+        },
+        courier: order.courier ? {
+          id: order.courier.id,
+          name: order.courier.name,
+          phoneNumber: order.courier.phoneNumber,
+          vehiclePlate: order.courier.vehiclePlate,
+          vehicleType: order.courier.vehicleType,
+          isActive: order.courier.isActive,
+          location: latestLocation ? {
+            latitude: latestLocation.latitude,
+            longitude: latestLocation.longitude,
+            bearing: latestLocation.bearing,
+            updatedAt: latestLocation.updatedAt,
+          } : null,
+        } : null,
+      };
+
+      return res.status(200).json({ error: false, data: trackingData });
+    } catch (error: any) {
+      console.error("Tracking fetch error:", error);
+      return res.status(500).json({ error: true, message: error.message });
+    }
+  }
+
+  /**
    * Giriş yapan satıcının kendi dükkanına ait siparişler
    */
   async getMerchantOrders(req: Request, res: Response) {

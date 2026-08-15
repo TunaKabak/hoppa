@@ -5,6 +5,7 @@ import { ProductController } from "../controllers/ProductController";
 import { OrderController } from "../controllers/OrderController";
 import { ShopCampaignController } from "../controllers/ShopCampaignController";
 import { MerchantAIController } from "../controllers/MerchantAIController";
+import { MediaController } from "../controllers/media.controller";
 
 import { prisma } from "../config/db";
 
@@ -17,6 +18,7 @@ const categoryController = new CategoryController();
 const orderController = new OrderController();
 const shopCampaignController = new ShopCampaignController();
 const merchantAIController = new MerchantAIController();
+const mediaController = new MediaController();
 
 // Tüm merchant rotaları authMiddleware'den geçmeli
 router.use(authMiddleware);
@@ -95,5 +97,9 @@ router.get("/campaigns", (req, res) => shopCampaignController.getMyCampaigns(req
 // Yapay Zeka (AI) ve Tahminleme İşlemleri
 router.post("/ai/scan-menu", (req, res) => merchantAIController.scanMenu(req, res));
 router.get("/ai/predictive-stock", (req, res) => merchantAIController.getPredictiveStock(req, res));
+
+// Medya / Görsel Yükleme İşlemleri
+router.post("/media/upload", (req, res) => mediaController.uploadDirect(req, res));
+router.post("/media/upload-url", (req, res) => mediaController.getUploadUrl(req, res));
 
 export default router;
