@@ -316,23 +316,32 @@ export default function MerchantOrdersPage() {
 
               <div>
                 <p className="font-bold uppercase text-[10px]">Müşteri Bilgisi:</p>
-                <p className="font-bold">{selectedOrderForReceipt.user?.fullName || 'Müşteri'}</p>
-                <p>{selectedOrderForReceipt.user?.phoneNumber || ''}</p>
+                <p className="font-bold">
+                  {selectedOrderForReceipt.consumer
+                    ? `${selectedOrderForReceipt.consumer.name || ''} ${selectedOrderForReceipt.consumer.surname || ''}`.trim()
+                    : (selectedOrderForReceipt.user?.fullName || selectedOrderForReceipt.customerName || 'Müşteri')}
+                </p>
+                <p>{selectedOrderForReceipt.consumer?.phone || selectedOrderForReceipt.user?.phoneNumber || selectedOrderForReceipt.customerPhone || ''}</p>
                 <p className="text-[10px] text-slate-600 mt-0.5">{selectedOrderForReceipt.deliveryAddress || 'Teslimat adresi'}</p>
               </div>
 
               <div className="border-t border-b border-slate-300 py-2 space-y-1">
-                {(selectedOrderForReceipt.items || []).map((item: any, idx: number) => (
-                  <div key={idx} className="flex justify-between font-bold">
-                    <span>{item.quantity}x {item.product?.name || item.name}</span>
-                    <span>₺{(item.price * item.quantity).toFixed(2)}</span>
-                  </div>
-                ))}
+                {(selectedOrderForReceipt.items || []).map((item: any, idx: number) => {
+                  const itemUnitPrice = Number(item.unitPrice ?? item.price ?? item.product?.price ?? 0);
+                  const itemQty = Number(item.quantity) || 1;
+                  const itemTotal = itemUnitPrice * itemQty;
+                  return (
+                    <div key={idx} className="flex justify-between font-bold">
+                      <span>{itemQty}x {item.product?.name || item.name || 'Ürün'}</span>
+                      <span>₺{itemTotal.toFixed(2)}</span>
+                    </div>
+                  );
+                })}
               </div>
 
               <div className="flex justify-between font-black text-sm">
                 <span>TOPLAM TUTAR:</span>
-                <span>₺{Number(selectedOrderForReceipt.totalAmount).toFixed(2)}</span>
+                <span>₺{Number(selectedOrderForReceipt.totalAmount ?? selectedOrderForReceipt.total ?? selectedOrderForReceipt.finalAmount ?? 0).toFixed(2)}</span>
               </div>
             </div>
 
@@ -406,7 +415,11 @@ export default function MerchantOrdersPage() {
 // Single Order Card Component
 function OrderCard({ order, isDark, onApprove, onDeliver, onComplete, onCancel, onPrint }: any) {
   const items = order.items || [];
-  const itemCount = items.reduce((acc: number, i: any) => acc + (i.quantity || 1), 0);
+  const itemCount = items.reduce((acc: number, i: any) => acc + (Number(i.quantity) || 1), 0);
+  const customerName = order.consumer
+    ? `${order.consumer.name || ''} ${order.consumer.surname || ''}`.trim()
+    : (order.user?.fullName || order.customerName || 'Müşteri');
+  const orderTotal = Number(order.totalAmount ?? order.total ?? order.finalAmount ?? 0);
 
   return (
     <div className={`border rounded-2xl p-4 space-y-3 transition-all ${
@@ -434,18 +447,23 @@ function OrderCard({ order, isDark, onApprove, onDeliver, onComplete, onCancel, 
 
       {/* Customer Info */}
       <div className="text-xs">
-        <p className="font-bold truncate">{order.user?.fullName || 'Müşteri'}</p>
+        <p className="font-bold truncate">{customerName || 'Müşteri'}</p>
         <p className="text-slate-500 dark:text-slate-400 text-[11px] line-clamp-1">{order.deliveryAddress || 'Adres bilgisi yok'}</p>
       </div>
 
       {/* Items Summary */}
       <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs space-y-1">
-        {items.slice(0, 3).map((item: any, idx: number) => (
-          <div key={idx} className="flex justify-between font-semibold">
-            <span className="truncate">{item.quantity}x {item.product?.name || item.name}</span>
-            <span className="text-slate-500 font-bold shrink-0 ml-2">₺{(item.price * item.quantity).toFixed(2)}</span>
-          </div>
-        ))}
+        {items.slice(0, 3).map((item: any, idx: number) => {
+          const itemUnitPrice = Number(item.unitPrice ?? item.price ?? item.product?.price ?? 0);
+          const itemQty = Number(item.quantity) || 1;
+          const itemTotal = itemUnitPrice * itemQty;
+          return (
+            <div key={idx} className="flex justify-between font-semibold">
+              <span className="truncate">{itemQty}x {item.product?.name || item.name || 'Ürün'}</span>
+              <span className="text-slate-500 font-bold shrink-0 ml-2">₺{itemTotal.toFixed(2)}</span>
+            </div>
+          );
+        })}
         {items.length > 3 && (
           <p className="text-[10px] text-slate-400 font-bold text-center pt-1">
             +{items.length - 3} ürün daha...
@@ -457,7 +475,7 @@ function OrderCard({ order, isDark, onApprove, onDeliver, onComplete, onCancel, 
       <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
         <div>
           <span className="text-[10px] text-slate-400 uppercase font-bold block">Toplam</span>
-          <span className="text-sm font-black text-[#FF6B00]">₺{Number(order.totalAmount).toFixed(2)}</span>
+          <span className="text-sm font-black text-[#FF6B00]">₺{orderTotal.toFixed(2)}</span>
         </div>
 
         <div className="flex items-center gap-1.5">

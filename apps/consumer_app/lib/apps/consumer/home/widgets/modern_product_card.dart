@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:provider/provider.dart' as p;
 import 'package:core_shared/shared/models/business_product.dart';
+import 'package:core_shared/shared/models/cart_item.dart';
 import 'package:consumer_app/apps/consumer/cart/cart_provider.dart';
 import 'package:core_shared/shared/models/campaign.dart';
 import 'package:consumer_app/apps/consumer/favorites/favorite_provider.dart';
@@ -11,9 +12,11 @@ import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository
 import 'package:core_shared/shared/core/utils/quantity_formatter.dart';
 import 'package:consumer_app/apps/consumer/cart/cart_validation.dart';
 import 'package:consumer_app/apps/consumer/widgets/hoppa_dialog.dart';
+import 'package:consumer_app/apps/consumer/widgets/selected_options_breakdown.dart';
 
 class ModernProductCard extends ConsumerWidget {
   final BusinessProduct businessProduct;
+  final CartItem? cartItem;
   final bool isListView;
   final bool isCompact;
   final Campaign? campaign;
@@ -21,6 +24,7 @@ class ModernProductCard extends ConsumerWidget {
   const ModernProductCard({
     super.key,
     required this.businessProduct,
+    this.cartItem,
     this.isListView = false,
     this.isCompact = false,
     this.campaign,
@@ -56,16 +60,16 @@ class ModernProductCard extends ConsumerWidget {
     final double price = businessProduct.price;
     final int discountRate = businessProduct.discountRate;
 
-    double activePrice = price;
+    double activePrice = cartItem != null ? cartItem!.unitPrice : price;
     double? oldPrice;
     int activeDiscountRate = discountRate;
 
     if (discountRate > 0) {
       oldPrice = regularPrice;
-      activePrice = price;
+      if (cartItem == null) activePrice = price;
     }
 
-    if (campaign != null) {
+    if (campaign != null && cartItem == null) {
       final campaignPrice = campaign!.calculateDiscountedPrice(price);
       if (campaignPrice < activePrice) {
         oldPrice = price;
@@ -183,6 +187,14 @@ class ModernProductCard extends ConsumerWidget {
                       color: Colors.black87,
                     ),
                   ),
+                  if (cartItem != null && cartItem!.selectedOptions.isNotEmpty) ...[
+                    SelectedOptionsBreakdown(
+                      options: cartItem!.selectedOptions,
+                      quantity: cartItem!.quantity,
+                      basePrice: businessProduct.price,
+                      isCompact: true,
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,

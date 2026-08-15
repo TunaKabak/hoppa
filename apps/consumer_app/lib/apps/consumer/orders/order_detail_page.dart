@@ -14,6 +14,7 @@ import 'package:core_shared/shared/models/order_status.dart';
 import 'package:consumer_app/apps/consumer/orders/order_tracking_page.dart';
 import 'package:consumer_app/apps/consumer/orders/widgets/rate_order_dialog.dart';
 import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
+import 'package:consumer_app/apps/consumer/widgets/selected_options_breakdown.dart';
 
 class OrderDetailPage extends ConsumerStatefulWidget {
   final model.Order? order;
@@ -749,9 +750,19 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
   }
 
   Widget _buildOrderItem(model.OrderItem item) {
+    // Baz birim fiyatı hesapla
+    double extrasUnit = 0.0;
+    for (var o in item.options) {
+      if (o.actionType != 'REMOVE') {
+        extrasUnit += o.price * o.quantity;
+      }
+    }
+    final double baseUnitPrice = (item.price - extrasUnit) > 0 ? (item.price - extrasUnit) : item.price;
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -769,14 +780,29 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              item.name,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.name,
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                ),
+                if (item.options.isNotEmpty) ...[
+                  SelectedOptionsBreakdown(
+                    options: item.options,
+                    quantity: item.quantity,
+                    basePrice: baseUnitPrice,
+                    isCompact: false,
+                    showSummary: item.quantity > 1,
+                  ),
+                ],
+              ],
             ),
           ),
+          const SizedBox(width: 8),
           Text(
             "${(item.price * item.quantity).toStringAsFixed(2)} ₺",
-            style: const TextStyle(fontWeight: FontWeight.bold),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
           ),
         ],
       ),

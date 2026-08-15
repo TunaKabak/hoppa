@@ -319,15 +319,110 @@ class _MerchantOrderListPageState extends ConsumerState<MerchantOrderListPage> {
                 const Divider(),
                 ...items.map(
                   (item) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: Row(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          "${item.quantity.toInt()}x",
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade50,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                "${item.quantity % 1 == 0 ? item.quantity.toInt() : item.quantity}x",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue.shade800,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                item.name.isNotEmpty ? item.name : "Bilinmeyen Ürün",
+                                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                              ),
+                            ),
+                            Text(
+                              "${(item.price * item.quantity).toStringAsFixed(2)} ₺",
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(child: Text(item.name.isNotEmpty ? item.name : "Bilinmeyen Ürün")),
+                        if (item.options.isNotEmpty) ...[
+                          Padding(
+                            padding: const EdgeInsets.only(left: 32, top: 4),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: item.options.map((opt) {
+                                final isRemove = opt.actionType == 'REMOVE';
+                                final double optUnitPrice = opt.price * opt.quantity;
+                                final double optTotal = optUnitPrice * item.quantity;
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 1.5),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        isRemove
+                                            ? Icons.remove_circle_outline
+                                            : (opt.price > 0
+                                                ? Icons.add_circle_outline
+                                                : Icons.check_circle_outline),
+                                        size: 13,
+                                        color: isRemove
+                                            ? Colors.red
+                                            : (opt.price > 0
+                                                ? Colors.green
+                                                : Colors.orange),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          opt.name,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            decoration: isRemove ? TextDecoration.lineThrough : null,
+                                            color: isRemove ? Colors.red : Colors.grey.shade800,
+                                            fontWeight: isRemove ? FontWeight.normal : FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                      if (isRemove)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                          decoration: BoxDecoration(
+                                            color: Colors.red.shade50,
+                                            borderRadius: BorderRadius.circular(3),
+                                          ),
+                                          child: const Text(
+                                            "Çıkarıldı",
+                                            style: TextStyle(color: Colors.red, fontSize: 9, fontWeight: FontWeight.bold),
+                                          ),
+                                        )
+                                      else if (opt.price > 0)
+                                        Text(
+                                          item.quantity > 1
+                                              ? "+${optTotal.toStringAsFixed(2)} ₺ (${item.quantity % 1 == 0 ? item.quantity.toInt() : item.quantity}x)"
+                                              : "+${optUnitPrice.toStringAsFixed(2)} ₺",
+                                          style: const TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold),
+                                        )
+                                      else
+                                        Text(
+                                          "Dahil",
+                                          style: TextStyle(color: Colors.grey.shade600, fontSize: 10),
+                                        ),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),

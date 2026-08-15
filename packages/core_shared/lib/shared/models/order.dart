@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:core_shared/shared/models/order_status.dart';
+import 'package:core_shared/shared/models/product.dart';
 
 class Order {
   final String id;
@@ -118,27 +119,7 @@ class Order {
 
     final itemsRaw = data['items'] as List<dynamic>? ?? [];
     final parsedItems = itemsRaw.map((item) {
-      final itemMap = Map<String, dynamic>.from(item);
-      final productId = itemMap['productId'] ?? itemMap['product_id'] ?? '';
-      
-      // REST API format has nested product name: product: { name }
-      String name = itemMap['name'] ?? '';
-      if (itemMap['product'] != null && itemMap['product'] is Map) {
-        name = itemMap['product']['name'] ?? name;
-      }
-      
-      final price = itemMap['unitPrice'] != null 
-          ? (double.tryParse(itemMap['unitPrice'].toString()) ?? 0.0)
-          : (double.tryParse((itemMap['price'] ?? 0.0).toString()) ?? 0.0);
-          
-      final quantity = (double.tryParse((itemMap['quantity'] ?? 0.0).toString()) ?? 0.0);
-      
-      return OrderItem(
-        productId: productId,
-        name: name,
-        price: price,
-        quantity: quantity,
-      );
+      return OrderItem.fromMap(Map<String, dynamic>.from(item as Map));
     }).toList();
 
     return Order(
@@ -228,20 +209,38 @@ class OrderItem {
   final String name;
   final double price;
   final double quantity;
+  final List<SelectedProductOption> options;
 
   OrderItem({
     required this.productId,
     required this.name,
     required this.price,
     required this.quantity,
+    this.options = const [],
   });
 
   factory OrderItem.fromMap(Map<String, dynamic> data) {
+    String name = data['name'] ?? '';
+    if (data['product'] != null && data['product'] is Map) {
+      name = data['product']['name'] ?? name;
+    }
+
+    final rawOptions = data['options'] as List<dynamic>? ?? [];
+    final parsedOptions = rawOptions.map((opt) {
+      if (opt is Map) {
+        return SelectedProductOption.fromMap(Map<String, dynamic>.from(opt));
+      }
+      return SelectedProductOption(groupName: '', name: opt.toString(), price: 0.0);
+    }).toList();
+
     return OrderItem(
-      productId: data['product_id'] ?? '',
-      name: data['name'] ?? '',
-      price: (data['price'] ?? 0.0).toDouble(),
-      quantity: (data['quantity'] ?? 0.0).toDouble(),
+      productId: data['productId'] ?? data['product_id'] ?? '',
+      name: name,
+      price: data['unitPrice'] != null
+          ? (double.tryParse(data['unitPrice'].toString()) ?? 0.0)
+          : (double.tryParse((data['price'] ?? 0.0).toString()) ?? 0.0),
+      quantity: (double.tryParse((data['quantity'] ?? 0.0).toString()) ?? 0.0),
+      options: parsedOptions,
     );
   }
 
@@ -251,6 +250,7 @@ class OrderItem {
       'name': name,
       'price': price,
       'quantity': quantity,
+      'options': options.map((o) => o.toMap()).toList(),
     };
   }
 }

@@ -1,6 +1,9 @@
 import 'package:core_shared/shared/models/business_type.dart';
 import 'package:core_shared/shared/models/delivery_tier.dart';
 
+export 'package:core_shared/shared/models/business_type.dart';
+export 'package:core_shared/shared/models/delivery_tier.dart';
+
 class Business {
   final String id;
   final String name;
