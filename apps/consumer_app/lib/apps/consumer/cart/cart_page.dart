@@ -119,82 +119,87 @@ class _CartPageState extends ConsumerState<CartPage> {
           children: [
             HoppaHeader(
               height: 70,
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => _handleClose(context),
-                  ),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text(
-                          "Sepetim",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        if (cartState.carts.isNotEmpty) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            cartState.hasMultipleCarts
-                                ? "${cartState.carts.length} İşletmede Aktif Sepet"
-                                : (selectedBusiness?.name ?? "Sepet"),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.white.withValues(alpha: 0.9),
-                              fontWeight: FontWeight.w500,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ],
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white),
+                      onPressed: () => _handleClose(context),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
                     ),
-                  ),
-                  if (cartState.carts.isNotEmpty)
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: () {
-                          if (cartState.hasMultipleCarts) {
-                            _showClearCartOptionsSheet(context, ref.read(cartProvider.notifier), cartState);
-                          } else {
-                            final activeId = cartState.currentBusinessId;
-                            if (activeId != null) {
-                              _showClearSingleCartDialog(
-                                context,
-                                ref.read(cartProvider.notifier),
-                                cartState.carts[activeId],
-                              );
-                            } else {
-                              _showClearCartDialog(context, ref.read(cartProvider.notifier));
-                            }
-                          }
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            "Sepetim",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
                           ),
-                          child: const Icon(
-                            Icons.delete_outline_rounded,
-                            color: Colors.white,
-                            size: 20,
+                          if (cartState.carts.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              cartState.hasMultipleCarts
+                                  ? "${cartState.carts.length} İşletmede Aktif Sepet"
+                                  : (selectedBusiness?.name ?? "Sepet"),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.white.withValues(alpha: 0.9),
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    if (cartState.carts.isNotEmpty)
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () {
+                            if (cartState.hasMultipleCarts) {
+                              _showClearCartOptionsSheet(context, ref.read(cartProvider.notifier), cartState);
+                            } else {
+                              final activeId = cartState.currentBusinessId;
+                              if (activeId != null) {
+                                _showClearSingleCartDialog(
+                                  context,
+                                  ref.read(cartProvider.notifier),
+                                  cartState.carts[activeId],
+                                );
+                              } else {
+                                _showClearCartDialog(context, ref.read(cartProvider.notifier));
+                              }
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                            ),
+                            child: const Icon(
+                              Icons.delete_outline_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
                           ),
                         ),
-                      ),
-                    )
-                  else
-                    const SizedBox(width: 40), // Denge için
-                ],
+                      )
+                    else
+                      const SizedBox(width: 40), // Denge için
+                  ],
+                ),
               ),
             ),
             Expanded(

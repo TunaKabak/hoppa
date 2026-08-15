@@ -58,7 +58,14 @@ class AccountBottomSheet extends ConsumerWidget {
           topRight: Radius.circular(24),
         ),
       ),
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+      padding: EdgeInsets.fromLTRB(
+        24,
+        16,
+        24,
+        MediaQuery.of(context).viewPadding.bottom > 0
+            ? MediaQuery.of(context).viewPadding.bottom + 8
+            : 20,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,

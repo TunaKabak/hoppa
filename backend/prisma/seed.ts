@@ -3,166 +3,461 @@ import bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
 
-const richCategories = [
-  // RESTAURANT (YEMEK)
-  {
-    name: "Kebaplar & Izgaralar",
-    shopType: "RESTAURANT",
-    children: ["Adana & Urfa", "Dürümler", "Tavuk Şiş", "Karışık Izgara"]
-  },
-  {
-    name: "Pide & Lahmacun",
-    shopType: "RESTAURANT",
-    children: ["Lahmacun", "Kıymalı Pide", "Kaşarlı Pide", "Karışık Pide"]
-  },
-  {
-    name: "Pizza & Fast Food",
-    shopType: "RESTAURANT",
-    children: ["Pizzalar", "Hamburgerler", "Patates Kızartması", "Sandviçler"]
-  },
-  {
-    name: "Ev Yemekleri & Çorbalar",
-    shopType: "RESTAURANT",
-    children: ["Çorbalar", "Zeytinyağlılar", "Ana Yemekler", "Pilav & Makarna"]
-  },
-  {
-    name: "Tatlılar",
-    shopType: "RESTAURANT",
-    children: ["Şerbetli Tatlılar", "Sütlü Tatlılar", "Pastalar"]
-  },
-  {
-    name: "İçecekler",
-    shopType: "RESTAURANT",
-    children: ["Gazlı İçecekler", "Su & Ayran", "Meyve Suları"]
-  },
+// ============================================================================
+// 4 ANA SEKTÖR PROFESYONEL VE HİYERARŞİK KATEGORİ AĞACI
+// ============================================================================
 
-  // MARKET
+export const richCategories = [
+  // --------------------------------------------------------------------------
+  // 🛒 1. MARKET (Süpermarket & Hızlı Market)
+  // --------------------------------------------------------------------------
   {
-    name: "Temel Gıda",
+    name: "Meyve & Sebze",
     shopType: "MARKET",
-    children: ["Bakliyat", "Sıvı Yağlar", "Şeker & Tuz", "Un & Makarna"]
+    color: "#E8F5E9",
+    children: [
+      "Taze Meyveler",
+      "Taze Sebzeler",
+      "Yeşillikler & Otlar",
+      "Egzotik Meyveler",
+      "Organik & Doğal"
+    ]
   },
   {
     name: "Süt & Kahvaltılık",
     shopType: "MARKET",
-    children: ["Peynir", "Zeytin", "Yumurta", "Tereyağı & Margarin", "Süt"]
+    color: "#FFF8E1",
+    children: [
+      "Süt & Yoğurt",
+      "Peynir Çeşitleri",
+      "Yumurta",
+      "Tereyağı & Margarin",
+      "Zeytin & Reçel & Bal",
+      "Kahvaltılık Gevrek & Ezmeler"
+    ]
   },
   {
-    name: "Atıştırmalık",
+    name: "Fırın & Unlu Mamuller",
     shopType: "MARKET",
-    children: ["Bisküvi & Kek", "Çikolata & Gofret", "Cips & Kuruyemiş"]
+    color: "#EFEBE9",
+    children: [
+      "Ekmek Çeşitleri",
+      "Simit & Poğaça & Börek",
+      "Paket Ekmekler & Lavaş",
+      "Unlu Tatlılar"
+    ]
   },
   {
-    name: "Fırın",
+    name: "Et, Tavuk & Şarküteri",
     shopType: "MARKET",
-    children: ["Ekmek", "Simit & Poğaça", "Unlu Mamuller"]
+    color: "#FFEBEE",
+    children: [
+      "Kırmızı Et (Dana/Kuzu)",
+      "Beyaz Et (Tavuk/Hindi)",
+      "Salam & Sucuk & Sosis",
+      "Pastırma & Kavurma",
+      "Deniz Ürünleri"
+    ]
+  },
+  {
+    name: "Temel Gıda & Bakliyat",
+    shopType: "MARKET",
+    color: "#FFF3E0",
+    children: [
+      "Pirinç & Bulgur & Bakliyat",
+      "Sıvı Yağlar & Zeytinyağı",
+      "Makarna & Erişte",
+      "Un & İrmik & Şeker & Tuz",
+      "Salça & Konserve & Soslar"
+    ]
+  },
+  {
+    name: "Atıştırmalık & Tatlı",
+    shopType: "MARKET",
+    color: "#FCE4EC",
+    children: [
+      "Çikolata & Gofret",
+      "Bisküvi & Kek",
+      "Cips & Çerez",
+      "Şekerleme & Sakız",
+      "Dondurma"
+    ]
   },
   {
     name: "İçecekler",
     shopType: "MARKET",
-    children: ["Gazlı İçecekler", "Meyve Suları", "Çay & Kahve", "Su & Maden Suyu"]
+    color: "#E0F7FA",
+    children: [
+      "Gazlı İçecekler",
+      "Su & Maden Suyu",
+      "Meyve Suyu & Soğuk Çay",
+      "Çay & Kahve",
+      "Ayran & Kefir & Şalgam"
+    ]
   },
   {
-    name: "Temizlik & Hijyen",
+    name: "Donuk & Hazır Gıda",
     shopType: "MARKET",
-    children: ["Deterjanlar", "Kağıt Ürünleri", "Kişisel Bakım"]
+    color: "#E1F5FE",
+    children: [
+      "Dondurulmuş Sebze & Meyve",
+      "Hazır Yemekler & Pizza & Hamur",
+      "Donuk Et & Balık"
+    ]
   },
   {
-    name: "Sebzeler",
+    name: "Deterjan & Ev Temizliği",
     shopType: "MARKET",
-    children: ["Yeşillikler", "Patates & Soğan", "Domates & Biber", "Mevsim Sebzeleri"]
+    color: "#EDE7F6",
+    children: [
+      "Çamaşır Yıkama",
+      "Bulaşık Yıkama",
+      "Ev & Yüzey Temizleyiciler",
+      "Kağıt Ürünleri",
+      "Oda Kokusu & Temizlik Gereçleri"
+    ]
   },
   {
-    name: "Meyveler",
+    name: "Kişisel Bakım & Kozmetik",
     shopType: "MARKET",
-    children: ["Narenciye", "Egzotik Meyveler", "Mevsim Meyveleri"]
+    color: "#F3E5F5",
+    children: [
+      "Şampuan & Saç Bakımı",
+      "Duş Jeli & Sabun",
+      "Ağız & Diş Bakımı",
+      "Tıraş & Deodorant",
+      "Cilt & Vücut Bakımı"
+    ]
   },
   {
-    name: "Kırmızı Et",
+    name: "Bebek Dünyası",
     shopType: "MARKET",
-    children: ["Dana Eti", "Kuzu Eti", "Kıymalar"]
+    color: "#E8EAF6",
+    children: [
+      "Bebek Bezi & Islak Mendil",
+      "Bebek Maması & Ek Gıda",
+      "Bebek Bakım & Şampuan"
+    ]
   },
   {
-    name: "Beyaz Et",
+    name: "Evcil Hayvan",
     shopType: "MARKET",
-    children: ["Tavuk Eti", "Hindi Eti"]
+    color: "#F1F8E9",
+    children: [
+      "Kedi Maması & Kumu",
+      "Köpek Maması & Ödüller",
+      "Kuş & Kemirgen Yemleri"
+    ]
   },
 
-  // WATER (SU)
+  // --------------------------------------------------------------------------
+  // 🍔 2. RESTORAN / YEMEK (Yemek & Restoran Menüleri)
+  // --------------------------------------------------------------------------
+  {
+    name: "Burger & Sandviç",
+    shopType: "RESTAURANT",
+    color: "#FFF3E0",
+    children: [
+      "Gurme Burgerler",
+      "Tavuk Burgerler",
+      "Sandviç & Tost",
+      "Mini / Slider Burgerler"
+    ]
+  },
+  {
+    name: "Pizza & İtalyan",
+    shopType: "RESTAURANT",
+    color: "#FFEBEE",
+    children: [
+      "Klasik Pizzalar",
+      "Gurme / Özel Pizzalar",
+      "Makarnalar & Penne",
+      "Calzone & Focaccia"
+    ]
+  },
+  {
+    name: "Kebap, Döner & Izgara",
+    shopType: "RESTAURANT",
+    color: "#FBE9E7",
+    children: [
+      "Dürüm Döner & Porsiyon Döner",
+      "Adana & Urfa Kebap",
+      "Tavuk Şiş & Kanat",
+      "Köfte & Karışık Izgara"
+    ]
+  },
+  {
+    name: "Pide & Lahmacun",
+    shopType: "RESTAURANT",
+    color: "#EFEBE9",
+    children: [
+      "Lahmacunlar",
+      "Kıymalı & Kaşarlı Pideler",
+      "Kuşbaşılı Pide",
+      "Trabzon / Kapalı Pide"
+    ]
+  },
+  {
+    name: "Ev Yemekleri & Çorbalar",
+    shopType: "RESTAURANT",
+    color: "#FFF8E1",
+    children: [
+      "Günün Çorbaları",
+      "Sulu & Zeytinyağlı Yemekler",
+      "Pilavlar & Makarnalar",
+      "Meze & Yan Ürünler"
+    ]
+  },
+  {
+    name: "Salata & Sağlıklı Beslenme",
+    shopType: "RESTAURANT",
+    color: "#E8F5E9",
+    children: [
+      "Fit / Diyet Salatalar",
+      "Tavuklu & Ton Balıklı Salata",
+      "Bowl & Sağlıklı Tabaklar",
+      "Detoks İçecekleri"
+    ]
+  },
+  {
+    name: "Dünya Mutfağı & Sokak Lezzetleri",
+    shopType: "RESTAURANT",
+    color: "#EDE7F6",
+    children: [
+      "Taco & Meksika",
+      "Noodle & Asya",
+      "Çıtır Tavuk Kovaları",
+      "Çiğ Köfte & Dürümler"
+    ]
+  },
+  {
+    name: "Tatlılar & Waffle",
+    shopType: "RESTAURANT",
+    color: "#FCE4EC",
+    children: [
+      "Waffle & Krep",
+      "Şerbetli Tatlılar & Baklava",
+      "Sütlü Tatlılar & Cheesecake",
+      "Sufle & Pasta"
+    ]
+  },
+  {
+    name: "Kafe, İçecek & Kahve",
+    shopType: "RESTAURANT",
+    color: "#E0F7FA",
+    children: [
+      "Sıcak & Soğuk Kahveler",
+      "Taze Sıkma Meyve Suları",
+      "Milkshake & Smoothie",
+      "Meşrubatlar"
+    ]
+  },
+
+  // --------------------------------------------------------------------------
+  // 💧 3. SU & İÇECEK (Damacana, Maden Suyu & Toptan İçecek)
+  // --------------------------------------------------------------------------
   {
     name: "Damacana Su",
     shopType: "WATER",
-    children: ["19L Damacana", "Cam Damacana"]
+    color: "#E1F5FE",
+    children: [
+      "19L Polikarbon Damacana",
+      "15L / 19L Cam Damacana",
+      "Boş Damacana Değişimi"
+    ]
   },
   {
-    name: "Pet Şişe Su",
+    name: "Pet Şişe & Çoklu Paketler",
     shopType: "WATER",
-    children: ["5L Su", "1.5L Su", "0.5L Su"]
+    color: "#E0F7FA",
+    children: [
+      "0.33L & 0.5L Koli Su",
+      "1.5L & 5L Su Paketleri",
+      "10L Pratik Su"
+    ]
+  },
+  {
+    name: "Doğal Maden Suyu & Soda",
+    shopType: "WATER",
+    color: "#E8F5E9",
+    children: [
+      "Sade Doğal Maden Suyu",
+      "Meyve Aromalı Maden Suyu",
+      "Gazoz & Tonik"
+    ]
+  },
+  {
+    name: "Koli & Toptan Meşrubat",
+    shopType: "WATER",
+    color: "#FFF3E0",
+    children: [
+      "Koli Gazlı İçecekler",
+      "Koli Meyve Suyu & Soğuk Çay",
+      "Koli Ayran & İçecekler"
+    ]
+  },
+  {
+    name: "Su Pompası & Ekipmanlar",
+    shopType: "WATER",
+    color: "#EDE7F6",
+    children: [
+      "Manuel El Pompası",
+      "Şarjlı / Otomatik Damacana Pompası",
+      "Su Sebili & Aksesuarlar"
+    ]
   },
 
-  // FLOWER (ÇİÇEK)
+  // --------------------------------------------------------------------------
+  // 🌹 4. ÇİÇEK & HEDİYE (Tasarım Çiçekler, Bitkiler & Hediyelik)
+  // --------------------------------------------------------------------------
   {
-    name: "Canlı Çiçekler",
+    name: "Tasarım Buketler",
     shopType: "FLOWER",
-    children: ["Saksı Çiçekleri", "Buketler", "Güller"]
+    color: "#FCE4EC",
+    children: [
+      "Gül Buketleri",
+      "Papatya & Kır Çiçekleri",
+      "Lilyum & Şakayık",
+      "Karışık Tasarım Buketler"
+    ]
   },
   {
-    name: "Yapay Çiçekler & Hediyelikler",
+    name: "Saksı Çiçekleri & İç Mekan Bitkileri",
     shopType: "FLOWER",
-    children: ["Yapay Çiçekler", "Çikolata & Balon"]
+    color: "#E8F5E9",
+    children: [
+      "Orkide Çeşitleri",
+      "Sukulent & Kaktüs",
+      "Barış Çiçeği & Bonsai",
+      "Salon Bitkileri"
+    ]
+  },
+  {
+    name: "Kutuda & Vazoda Çiçekler",
+    shopType: "FLOWER",
+    color: "#FFF8E1",
+    children: [
+      "Silindir Kutuda Güller",
+      "Cam Vazoda Aranjmanlar",
+      "Işıklı / Özel Ahşap Kutulu Çiçekler"
+    ]
+  },
+  {
+    name: "Hediye & Özel Gün Setleri",
+    shopType: "FLOWER",
+    color: "#F3E5F5",
+    children: [
+      "Çikolatalı Çiçek Sepetleri",
+      "Peluş Oyuncak & Çiçek",
+      "Doğum Günü & Tebrik Setleri",
+      "Hediye Kartları"
+    ]
+  },
+  {
+    name: "Kurutulmuş & Solmayan Çiçekler",
+    shopType: "FLOWER",
+    color: "#EFEBE9",
+    children: [
+      "Şoklanmış Solmayan Güller",
+      "Kuru Çiçek Aranjmanları",
+      "Teraryum Tasarımları"
+    ]
   }
 ];
 
+// ============================================================================
+// TEMİZLEME VE TOHUMLAMA MOTORU
+// ============================================================================
+
+async function cleanStaleProductsAndCategories() {
+  console.log("🧹 Veritabanındaki eski/geçici ürünler, opsiyonlar ve kategoriler temizleniyor...");
+
+  try {
+    // 1. Bağımlı alt kayıtları doğru hiyerarşik sırada temizle
+    await prisma.favoriteProduct.deleteMany({});
+    await prisma.orderItemOption.deleteMany({});
+    await prisma.orderItem.deleteMany({});
+    await prisma.paymentTransaction.deleteMany({});
+    await prisma.couponUsage.deleteMany({});
+    await prisma.review.deleteMany({});
+    await prisma.order.deleteMany({});
+    await prisma.productOption.deleteMany({});
+    await prisma.productOptionGroup.deleteMany({});
+    await prisma.product.deleteMany({});
+    await prisma.globalProduct.deleteMany({});
+
+    // 2. Kategorileri temizle (Önce alt kategoriler, sonra kök kategoriler)
+    await prisma.category.deleteMany({
+      where: { parentId: { not: null } }
+    });
+    await prisma.category.deleteMany({});
+
+    console.log("✅ Eski ürün ve kategori verileri başarıyla temizlendi.");
+  } catch (error: any) {
+    console.error("⚠️ Temizleme sırasında hata:", error.message);
+  }
+}
+
+async function seedUnits() {
+  console.log("Seeding units...");
+  const units = [
+    { code: "ADET", nameTr: "Adet", nameEn: "Pieces" },
+    { code: "KG", nameTr: "Kilogram", nameEn: "Kilogram" },
+    { code: "GRAM", nameTr: "Gram", nameEn: "Gram" },
+    { code: "LITRE", nameTr: "Litre", nameEn: "Liter" },
+    { code: "PAKET", nameTr: "Paket", nameEn: "Package" },
+    { code: "PORSIYON", nameTr: "Porsiyon", nameEn: "Portion" },
+    { code: "DEMET", nameTr: "Demet", nameEn: "Bunch" },
+    { code: "KOLI", nameTr: "Koli", nameEn: "Box" }
+  ];
+
+  for (const u of units) {
+    await prisma.unit.upsert({
+      where: { code: u.code },
+      update: { nameTr: u.nameTr, nameEn: u.nameEn },
+      create: { code: u.code, nameTr: u.nameTr, nameEn: u.nameEn }
+    });
+  }
+  console.log("✅ Standart birimler başarıyla tohumlandı.");
+}
+
 async function seedRichCategories() {
-  console.log("Seeding rich hierarchical categories...");
+  console.log("Seeding 4-sector professional hierarchical categories...");
+  const crypto = require("crypto");
+
   for (const group of richCategories) {
-    let root = await prisma.category.findFirst({
-      where: {
+    // 1. Kök kategori oluştur
+    const root = await prisma.category.create({
+      data: {
+        id: crypto.randomUUID(),
         name: group.name,
         shopType: group.shopType,
+        color: group.color,
         parentId: null
       }
     });
-    
-    if (!root) {
-      root = await prisma.category.create({
-        data: {
-          id: require('crypto').randomUUID(),
-          name: group.name,
-          shopType: group.shopType,
-          parentId: null
-        }
-      });
-    }
-    
-    for (const childName of group.children) {
-      const child = await prisma.category.findFirst({
-        where: {
+
+    // 2. Alt kategorileri toplu (createMany) oluştur
+    if (group.children && group.children.length > 0) {
+      await prisma.category.createMany({
+        data: group.children.map(childName => ({
+          id: crypto.randomUUID(),
           name: childName,
           shopType: group.shopType,
+          color: group.color,
           parentId: root.id
-        }
+        }))
       });
-      
-      if (!child) {
-        await prisma.category.create({
-          data: {
-            id: require('crypto').randomUUID(),
-            name: childName,
-            shopType: group.shopType,
-            parentId: root.id
-          }
-        });
-      }
     }
   }
-  console.log("✅ Hierarchical categories seeded successfully.");
+  console.log("✅ 4 ana sektör için tüm hiyerarşik kategori ağacı başarıyla tohumlandı.");
 }
 
 async function findCategoryByName(name: string, shopType: string): Promise<string> {
+  const crypto = require("crypto");
   const cat = await prisma.category.findFirst({
     where: { 
-      name: { contains: name, mode: 'insensitive' },
+      name: { contains: name, mode: "insensitive" },
       shopType: shopType
     }
   });
@@ -170,7 +465,7 @@ async function findCategoryByName(name: string, shopType: string): Promise<strin
   
   const newCat = await prisma.category.create({
     data: {
-      id: require('crypto').randomUUID(),
+      id: crypto.randomUUID(),
       name: name,
       shopType: shopType
     }
@@ -188,8 +483,8 @@ async function seedShopWithProducts(
   addressStr: string,
   campaignText: string | null,
   categoriesAndProducts: {
-    categoryName: string,
-    products: { name: string, price: number, description?: string }[]
+    categoryName: string;
+    products: { name: string; price: number; description?: string }[];
   }[],
   ratings: number[],
   comments: string[],
@@ -197,15 +492,16 @@ async function seedShopWithProducts(
   passwordHash: string,
   unitAdetId: string
 ) {
-  // 1. Create Merchant
+  // 1. Create/Update Merchant
   const merchant = await prisma.merchant.upsert({
     where: { email },
-    update: { status: "ACTIVE", phone, passwordHash },
+    update: { status: "ACTIVE", phone, passwordHash, merchantType: type as any },
     create: {
       email,
       passwordHash,
       businessName,
       phone,
+      merchantType: type as any,
       status: "ACTIVE",
       role: "merchant",
       agreedToTerms: true,
@@ -214,7 +510,7 @@ async function seedShopWithProducts(
     }
   });
 
-  // 2. Create Shop
+  // 2. Create/Update Shop
   const shop = await prisma.shop.upsert({
     where: { merchantId: merchant.id },
     update: {
@@ -252,610 +548,295 @@ async function seedShopWithProducts(
   for (const catGroup of categoriesAndProducts) {
     const categoryId = await findCategoryByName(catGroup.categoryName, type);
     for (const p of catGroup.products) {
-      const existing = await prisma.product.findFirst({
-        where: { shopId: shop.id, name: p.name }
+      await prisma.product.create({
+        data: {
+          shopId: shop.id,
+          categoryId,
+          unitId: unitAdetId,
+          name: p.name,
+          regularPrice: p.price,
+          price: p.price,
+          stockQuantity: 100,
+          description: p.description || "",
+          isActive: true
+        }
       });
-      if (!existing) {
-        await prisma.product.create({
-          data: {
-            shopId: shop.id,
-            categoryId,
-            unitId: unitAdetId,
-            name: p.name,
-            regularPrice: p.price,
-            price: p.price,
-            stockQuantity: 100,
-            description: p.description || "",
-            isActive: true
-          }
-        });
-      }
     }
   }
 
   // 4. Create reviews & calculate averageRating
-  const existingReviews = await prisma.review.findMany({ where: { shopId: shop.id } });
-  if (existingReviews.length < ratings.length) {
-    await prisma.review.deleteMany({ where: { shopId: shop.id } });
-    
-    let totalRating = 0;
-    for (let i = 0; i < ratings.length; i++) {
-      const rating = ratings[i];
-      const comment = comments[i] || null;
+  await prisma.review.deleteMany({ where: { shopId: shop.id } });
+  
+  let totalRating = 0;
+  for (let i = 0; i < ratings.length; i++) {
+    const rating = ratings[i];
+    const comment = comments[i] || null;
 
-      let address = await prisma.address.findFirst({ where: { userId: consumerId } });
-      if (!address) {
-        address = await prisma.address.create({
-          data: {
-            userId: consumerId,
-            title: "Ev",
-            city: "Gazimağusa",
-            district: "Karakol",
-            fullAddress: "Karakol, Gazimağusa",
-            latitude: lat,
-            longitude: lng
-          }
-        });
-      }
-
-      const order = await prisma.order.create({
+    let address = await prisma.address.findFirst({ where: { userId: consumerId } });
+    if (!address) {
+      address = await prisma.address.create({
         data: {
-          consumerId,
-          shopId: shop.id,
-          addressId: address.id,
-          deliveryAddress: addressStr,
-          totalAmount: 150.0,
-          status: "DELIVERED",
-          paymentMethod: "CASH_ON_DELIVERY",
-          paymentStatus: "SUCCESS"
-        }
-      });
-
-      await prisma.review.create({
-        data: {
-          rating,
-          comment,
           userId: consumerId,
-          shopId: shop.id,
-          orderId: order.id
+          title: "Ev",
+          city: "Gazimağusa",
+          district: "Karakol",
+          fullAddress: "Karakol, Gazimağusa",
+          latitude: lat,
+          longitude: lng
         }
       });
-      totalRating += rating;
     }
 
-    await prisma.shop.update({
-      where: { id: shop.id },
+    const order = await prisma.order.create({
       data: {
-        averageRating: parseFloat((totalRating / ratings.length).toFixed(2)),
-        reviewCount: ratings.length
+        consumerId: consumerId,
+        shopId: shop.id,
+        addressId: address.id,
+        status: "DELIVERED",
+        totalAmount: 150.0,
+        deliveryAddress: address.fullAddress,
+        deliveryFee: 15.0
       }
     });
+
+    await prisma.review.create({
+      data: {
+        shopId: shop.id,
+        userId: consumerId,
+        orderId: order.id,
+        rating,
+        serviceRating: rating,
+        speedRating: rating,
+        tasteRating: rating,
+        comment,
+        status: "APPROVED"
+      }
+    });
+    totalRating += rating;
   }
 
-  console.log(`✅ Seeded Shop: ${businessName} (Rating: ${(ratings.reduce((a,b)=>a+b,0)/ratings.length).toFixed(1)})`);
+  const avg = ratings.length > 0 ? Number((totalRating / ratings.length).toFixed(1)) : 5.0;
+  await prisma.shop.update({
+    where: { id: shop.id },
+    data: {
+      averageRating: avg,
+      reviewCount: ratings.length,
+      avgServiceRating: avg,
+      avgSpeedRating: avg,
+      avgTasteRating: avg
+    }
+  });
+
   return shop.id;
 }
 
+// ============================================================================
+// ANA ÇALIŞTIRMA FONKSİYONU
+// ============================================================================
+
 async function main() {
-  console.log("Cleaning old data...");
-  await prisma.shopPromotion.deleteMany();
-  await prisma.review.deleteMany();
-  await prisma.orderItemOption.deleteMany();
-  await prisma.orderItem.deleteMany();
-  await prisma.paymentTransaction.deleteMany();
-  await prisma.order.deleteMany();
-  await prisma.product.deleteMany();
-  await prisma.shop.deleteMany();
-  await prisma.merchant.deleteMany();
-  
-  await prisma.address.deleteMany();
-  await prisma.deviceToken.deleteMany();
-  await prisma.savedCard.deleteMany();
-  await prisma.favoriteProduct.deleteMany();
-  await prisma.favoriteShop.deleteMany();
-  await prisma.walletTransaction.deleteMany();
-  await prisma.wallet.deleteMany();
-  await prisma.courier.deleteMany();
-  
-  await prisma.user.deleteMany({ where: { role: { not: "SUPER_ADMIN" } } });
-  console.log("✅ Database cleaned.");
+  console.log("🚀 Hoppa Profesyonel Veritabanı ve Kategori Tohumlama Başlatılıyor...");
 
-  const passwordHash = await bcrypt.hash("123456", 12);
+  // 1. ESKİ ÜRÜNLERİ VE KATEGORİLERİ TEMİZLE
+  await cleanStaleProductsAndCategories();
 
-  // Seed rich categories
+  // 2. STANDART BİRİMLERİ TOHUMLA
+  await seedUnits();
+  const unitAdet = await prisma.unit.findUnique({ where: { code: "ADET" } });
+  if (!unitAdet) throw new Error("ADET birimi bulunamadı!");
+
+  // 3. 4 ANA SEKTÖR HİYERARŞİK KATEGORİ AĞACINI TOHUMLA
   await seedRichCategories();
 
-  // 1. SUPER ADMIN OLUŞTUR
-  const superAdmin = await prisma.user.upsert({
-    where: { phone: "+905550000000" },
-    update: { role: "SUPER_ADMIN" },
+  // 4. TEST TÜKETİCİ KULLANICISI
+  const testConsumer = await prisma.user.upsert({
+    where: { phone: "+905338880000" },
+    update: { name: "Ahmet", surname: "Yılmaz" },
     create: {
-      phone: "+905550000000",
-      role: "SUPER_ADMIN",
-      name: "Super",
-      surname: "Admin",
-    },
-  });
-  console.log("✅ Super Admin User Created:", superAdmin.phone);
-
-  const adminMerchant = await prisma.merchant.upsert({
-    where: { email: "admin@test.com" },
-    update: {
-      status: "ACTIVE",
-      phone: "+905550000000",
-      role: "super_admin",
-    },
-    create: {
-      email: "admin@test.com",
-      passwordHash: passwordHash,
-      businessName: "Sistem Yönetimi",
-      phone: "+905550000000",
-      status: "ACTIVE",
-      role: "super_admin",
-      agreedToTerms: true,
-      ownerFirstName: "Super",
-      ownerLastName: "Admin",
-    },
-  });
-  console.log("✅ Super Admin Merchant Account Created:", adminMerchant.email);
-
-  // 2. KURYEYİ OLUŞTUR
-  const courierUser = await prisma.user.create({
-    data: {
-      phone: "+905555555555",
-      role: "courier",
-      name: "Süleyman",
-      surname: "Kurye",
+      phone: "+905338880000",
+      email: "ahmet@test.com",
+      name: "Ahmet",
+      surname: "Yılmaz",
+      role: "user"
     }
   });
 
-  const defaultCourier = await prisma.courier.upsert({
-    where: { phoneNumber: "+905555555555" },
-    update: { userId: courierUser.id },
-    create: {
-      userId: courierUser.id,
-      name: "Süleyman Kurye",
-      phoneNumber: "+905555555555",
-      vehiclePlate: "34 HO 9999",
-      isActive: true,
-    },
-  });
-  console.log("✅ Default Courier Created:", defaultCourier.name);
+  const passwordHash = await bcrypt.hash("123456", 10);
 
-  // 3. TÜKETİCİ KULLANICISINI OLUŞTUR
-  const testConsumer = await prisma.user.create({
-    data: {
-      phone: "+905553333333",
-      role: "user",
-      name: "Tuna",
-      surname: "Kabak",
-    },
-  });
-  console.log("✅ Consumer User Created:", testConsumer.name);
-
-  // 4. BİRİMLERİ OLUŞTUR
-  let unitAdet = await prisma.unit.findUnique({ where: { code: "ADET" } });
-  if (!unitAdet) {
-    unitAdet = await prisma.unit.create({ data: { code: "ADET", nameTr: "Adet", nameEn: "Pieces" } });
-  }
-
-  // 5. İŞLETME KATEGORİLERİ (Home Screen Buttons) OLUŞTUR
-  const businessCategories = [
-    { name: "Market", icon: "shopping_basket", color: "#00B359", subtitle: "Market alışverişi", avgDeliveryTime: "20-30 dk", badge: "popular", imageUrl: "/uploads/market_bg.png", order: 0 },
-    { name: "Yemek", icon: "restaurant", color: "#E53935", subtitle: "Yemek siparişi", avgDeliveryTime: "25-35 dk", badge: "popular", imageUrl: "/uploads/restaurant_bg.png", order: 1 },
-    { name: "Su", icon: "water_drop", color: "#0288D1", subtitle: "Su ve içecek", avgDeliveryTime: "15-25 dk", badge: null, imageUrl: "/uploads/su_bg.png", order: 2 },
-    { name: "Çiçek", icon: "local_florist", color: "#EC407A", subtitle: "Çiçek siparişi", avgDeliveryTime: "30-45 dk", badge: null, imageUrl: "/uploads/cicek_bg.png", order: 3 },
-  ];
-
-  await prisma.businessCategory.deleteMany();
-  for (const cat of businessCategories) {
-    await prisma.businessCategory.create({
-      data: cat
-    });
-  }
-  console.log("✅ Business Categories seeded successfully.");
-
-  // 6. KKTC KONUMLU DÜKKAN TOHUMLARINI BAŞLAT
+  // 5. 4 ANA SEKTÖR TEMSİLCİ İŞLETMELERİ
   const shopsData = [
-    // --- RESTAURANTS ---
-    {
-      email: "magusakebap@test.com",
-      name: "Mağusa Kebap Dünyası",
-      type: "RESTAURANT",
-      phone: "+905338880001",
-      lat: 35.1250,
-      lng: 33.9380,
-      address: "Gazi Mustafa Kemal Bulvarı, Gazimağusa",
-      campaign: "Seçili Kebaplarda %15 İndirim!",
-      categories: [
-        {
-          categoryName: "Kebaplar & Izgaralar",
-          products: [
-            { name: "Kuzu Şiş", price: 320.0, description: "Közlenmiş domates ve biber ile" },
-            { name: "Adana Kebap", price: 290.0, description: "Lavaş ve soğan piyazı ile" }
-          ]
-        },
-        {
-          categoryName: "Pide & Lahmacun",
-          products: [
-            { name: "Kıymalı Pide", price: 180.0, description: "Kaşarlı ve kıymalı çıtır pide" },
-            { name: "Antep Lahmacun", price: 80.0, description: "Bol malzemeli çıtır lahmacun" }
-          ]
-        },
-        {
-          categoryName: "Tatlılar",
-          products: [
-            { name: "Fıstıklı Künefe", price: 150.0, description: "Sıcak ve şerbetli künefe" }
-          ]
-        }
-      ],
-      ratings: [5, 5, 4],
-      comments: ["Kebaplar enfes!", "Çok lezzetli ve hızlı geldi.", "Lahmacun sıcaktı."]
-    },
-    {
-      email: "bogazicipide@test.com",
-      name: "Yeniboğaziçi Pide & Lahmacun",
-      type: "RESTAURANT",
-      phone: "+905338880002",
-      lat: 35.1950,
-      lng: 33.9050,
-      address: "Salamis Yolu, Yeniboğaziçi",
-      campaign: "2 Lahmacun Alana 1 Ayran Bedava!",
-      categories: [
-        {
-          categoryName: "Pide & Lahmacun",
-          products: [
-            { name: "Kuşbaşılı Pide", price: 200.0, description: "Taze kuzu eti ve kaşar ile" },
-            { name: "Sade Lahmacun", price: 70.0, description: "Klasik çıtır lahmacun" }
-          ]
-        },
-        {
-          categoryName: "Pizza & Fast Food",
-          products: [
-            { name: "Karışık Pizza", price: 220.0, description: "Sucuk, sosis, mısır, zeytin" }
-          ]
-        },
-        {
-          categoryName: "Ev Yemekleri & Çorbalar",
-          products: [
-            { name: "Süzme Mercimek Çorbası", price: 80.0, description: "Kıtır ekmek ve limon ile" }
-          ]
-        }
-      ],
-      ratings: [5, 4],
-      comments: ["Hızlı servis, güzel lahmacun.", "Pideler sıcak ve çıtırdı."]
-    },
-    {
-      email: "iskelebalik@test.com",
-      name: "İskele Sahil Balık & Meze",
-      type: "RESTAURANT",
-      phone: "+905338880003",
-      lat: 35.2750,
-      lng: 33.8950,
-      address: "Sahil Yolu, İskele",
-      campaign: "Mezelerde 3 Al 2 Öde Fırsatı!",
-      categories: [
-        {
-          categoryName: "Kebaplar & Izgaralar",
-          products: [
-            { name: "Izgara Çipura", price: 380.0, description: "Akdeniz yeşillikleri ile" },
-            { name: "Kalamar Tava", price: 250.0, description: "Tarator sos eşliğinde" }
-          ]
-        },
-        {
-          categoryName: "Ev Yemekleri & Çorbalar",
-          products: [
-            { name: "Balık Çorbası", price: 110.0, description: "Özel şef çorbası" }
-          ]
-        },
-        {
-          categoryName: "İçecekler",
-          products: [
-            { name: "Şalgam Suyu 1L", price: 40.0, description: "Acılı veya acısız şalgam" }
-          ]
-        }
-      ],
-      ratings: [5, 5],
-      comments: ["Balıklar taptaze ve lezzetli.", "Kalamar harikaydı, servis başarılı."]
-    },
-    // --- MARKETS ---
+    // 🛒 MARKET
     {
       email: "magusasupermarket@test.com",
-      name: "Mağusa Merkez Süpermarket",
+      name: "Gazimağusa Süpermarket",
       type: "MARKET",
-      phone: "+905338880004",
-      lat: 35.1420,
-      lng: 33.9180,
-      address: "Karakol Bölgesi, Gazimağusa",
-      campaign: "Temel Gıdada Büyük Hafta Sonu İndirimi!",
+      phone: "+905338881111",
+      lat: 35.1250,
+      lng: 33.9350,
+      address: "Salamis Yolu No: 12, Gazimağusa",
+      campaign: "200 TL üzeri sepette 30 TL İndirim!",
       categories: [
         {
-          categoryName: "Temel Gıda",
+          categoryName: "Meyve & Sebze",
           products: [
-            { name: "Pilavlık Pirinç 1 Kg", price: 45.0, description: "Pilavlık ithal pirinç" },
-            { name: "Sızma Zeytinyağı 1L", price: 290.0, description: "Kızıltepe soğuk sıkım zeytinyağı" }
+            { name: "Muz Yerli (Kg)", price: 45.0, description: "Taze yerli Anamur muzu" },
+            { name: "Domates Salkım (Kg)", price: 35.0, description: "Kırmızı taze salkım domates" }
           ]
         },
         {
           categoryName: "Süt & Kahvaltılık",
           products: [
-            { name: "Ezine Peyniri 500g", price: 130.0, description: "Tam yağlı olgunlaştırılmış peynir" },
-            { name: "Siyah Zeytin 500g", price: 95.0, description: "Gemlik doğal zeytin" }
+            { name: "Tam Yağlı Süt 1L", price: 38.0, description: "Günlük taze pastörize süt" },
+            { name: "Hellim Peyniri 250g", price: 85.0, description: "Geleneksel Kıbrıs köy hellimi" }
           ]
         },
         {
-          categoryName: "Atıştırmalık",
+          categoryName: "Fırın & Unlu Mamuller",
           products: [
-            { name: "Sütlü Çikolata", price: 25.0, description: "Fıstıklı sütlü tablet çikolata" }
-          ]
-        }
-      ],
-      ratings: [5, 4, 5],
-      comments: ["Aradığım her şey var.", "Kurye çok hızlı getirdi.", "Ürünler taze ve eksiksiz."]
-    },
-    {
-      email: "bogazicimarket@test.com",
-      name: "Yeniboğaziçi Koop Market",
-      type: "MARKET",
-      phone: "+905338880005",
-      lat: 35.1980,
-      lng: 33.9010,
-      address: "Atatürk Caddesi, Yeniboğaziçi",
-      campaign: "Manav Ürünlerinde Net %20 İndirim!",
-      categories: [
-        {
-          categoryName: "Sebzeler",
-          products: [
-            { name: "Salkım Domates 1 Kg", price: 35.0, description: "Taze salkım sera domatesi" },
-            { name: "Patates 1 Kg", price: 20.0, description: "Kızartmalık patates" }
-          ]
-        },
-        {
-          categoryName: "Meyveler",
-          products: [
-            { name: "Mandalina 1 Kg", price: 30.0, description: "Yerli sulu mandalina" }
-          ]
-        },
-        {
-          categoryName: "Fırın",
-          products: [
-            { name: "Köy Ekmeği", price: 25.0, description: "Taş fırında pişmiş köy ekmeği" }
-          ]
-        }
-      ],
-      ratings: [5, 5],
-      comments: ["Sebze meyveler aşırı taze.", "Koop kalitesi tartışılmaz."]
-    },
-    {
-      email: "iskelemarket@test.com",
-      name: "İskele Long Beach Market",
-      type: "MARKET",
-      phone: "+905338880006",
-      lat: 35.2300,
-      lng: 33.9050,
-      address: "Long Beach Bulvarı, İskele",
-      campaign: "500 TL Üzeri Alışverişe Ücretsiz Kargo!",
-      categories: [
-        {
-          categoryName: "Atıştırmalık",
-          products: [
-            { name: "Karışık Çerez 200g", price: 80.0, description: "Fındık, badem, kaju karışık" },
-            { name: "Patates Cipsi Klasik", price: 35.0, description: "Aile boyu tuzlu patates cipsi" }
-          ]
-        },
-        {
-          categoryName: "İçecekler",
-          products: [
-            { name: "Soğuk Çay Şeftali 1.5L", price: 38.0, description: "Ferahlatıcı soğuk şeftali çayı" }
-          ]
-        },
-        {
-          categoryName: "Temizlik & Hijyen",
-          products: [
-            { name: "Sıvı Sabun 500ml", price: 45.0, description: "Nemlendirici zeytinyağlı sıvı sabun" }
-          ]
-        }
-      ],
-      ratings: [5, 4],
-      comments: ["Hızlı ve temiz getirdiler.", "Long beach için cankurtaran."]
-    },
-    // --- WATER SHOPS ---
-    {
-      email: "magusaozsu@test.com",
-      name: "Mağusa Özsu Damacana",
-      type: "WATER",
-      phone: "+905338880007",
-      lat: 35.1300,
-      lng: 33.9350,
-      address: "Topçu Bulvarı, Gazimağusa",
-      campaign: "İlk Damacana Siparişine Özel Depozito Bizden!",
-      categories: [
-        {
-          categoryName: "Damacana Su",
-          products: [
-            { name: "19L Damacana Su", price: 75.0, description: "Polikarbonat damacana su dolumu" },
-            { name: "Cam Damacana 19L", price: 95.0, description: "Doğal cam şişe damacana dolumu" }
-          ]
-        },
-        {
-          categoryName: "Pet Şişe Su",
-          products: [
-            { name: "5L Su", price: 25.0, description: "Pratik pet şişe su" }
-          ]
-        },
-        {
-          categoryName: "İçecekler",
-          products: [
-            { name: "Doğal Maden Suyu 6'lı", price: 45.0, description: "Kızılay doğal maden suyu" }
-          ]
-        }
-      ],
-      ratings: [5, 5, 5],
-      comments: ["Servis süper hızlı, damacana temizdi.", "Su kalitesi çok iyi.", "Sıcak günde hızlıca getirdiler."]
-    },
-    {
-      email: "bogazicisu@test.com",
-      name: "Yeniboğaziçi Su Dağıtım",
-      type: "WATER",
-      phone: "+905338880008",
-      lat: 35.1920,
-      lng: 33.9080,
-      address: "Salamis Sitesi Çevresi, Yeniboğaziçi",
-      campaign: "3 Damacana Alana 1 Tane Bedava!",
-      categories: [
-        {
-          categoryName: "Damacana Su",
-          products: [
-            { name: "19L Damacana Su", price: 75.0, description: "Yeniboğaziçi hızlı dolum" }
-          ]
-        },
-        {
-          categoryName: "Pet Şişe Su",
-          products: [
-            { name: "1.5L Su 6'lı Paket", price: 48.0, description: "6 adet 1.5L pet şişe" },
-            { name: "0.5L Su 24'lü Koli", price: 75.0, description: "24 adet pratik 0.5L su" }
-          ]
-        },
-        {
-          categoryName: "İçecekler",
-          products: [
-            { name: "Limonata 1L", price: 40.0, description: "El yapımı ferah limonata" }
-          ]
-        }
-      ],
-      ratings: [5, 4],
-      comments: ["Hızlı getirdiler.", "Limonatası efsane lezzetli."]
-    },
-    {
-      email: "iskelecansu@test.com",
-      name: "İskele Can Su",
-      type: "WATER",
-      phone: "+905338880009",
-      lat: 35.2700,
-      lng: 33.8900,
-      address: "Belediye Caddesi, İskele",
-      campaign: "Hızlı Teslimat Garantili Damacana!",
-      categories: [
-        {
-          categoryName: "Damacana Su",
-          products: [
-            { name: "19L Damacana Su", price: 75.0, description: "Doğal kaynak suyu dolumu" }
-          ]
-        },
-        {
-          categoryName: "Pet Şişe Su",
-          products: [
-            { name: "5L Su 4'lü Paket", price: 90.0, description: "4 adet 5L pet şişe" }
-          ]
-        },
-        {
-          categoryName: "İçecekler",
-          products: [
-            { name: "Tonik 4'lü", price: 55.0, description: "Ferahlatıcı tonik paketi" }
-          ]
-        }
-      ],
-      ratings: [5, 5],
-      comments: ["15 dakikada kapıdaydı.", "Çok kibar kurye."]
-    },
-    // --- FLOWER SHOPS ---
-    {
-      email: "magusacicek@test.com",
-      name: "Mağusa Çiçek Bahçesi",
-      type: "FLOWER",
-      phone: "+905338880010",
-      lat: 35.1350,
-      lng: 33.9280,
-      address: "Karakol Sokak, Gazimağusa",
-      campaign: "Kırmızı Güllerde Net %25 İndirim!",
-      categories: [
-        {
-          categoryName: "Canlı Çiçekler",
-          products: [
-            { name: "Kırmızı Gül Buketi (11 adet)", price: 450.0, description: "Taze kesilmiş güller" },
-            { name: "Renkli Lale Buketi", price: 380.0, description: "Baharın habercisi laleler" }
-          ]
-        },
-        {
-          categoryName: "Yapay Çiçekler & Hediyelikler",
-          products: [
-            { name: "Peluş Ayıcık Hediyeli", price: 200.0, description: "Şirin beyaz ayıcık" }
-          ]
-        },
-        {
-          categoryName: "Fırın",
-          products: [
-            { name: "Çikolatalı Çilek Kutusu", price: 280.0, description: "Bitter çikolata kaplı çilekler" }
+            { name: "Taş Fırın Somun Ekmek", price: 15.0, description: "Sıcak çıtır fırın ekmeği" }
           ]
         }
       ],
       ratings: [5, 5, 4],
-      comments: ["Buket çok özenliydi.", "Eşime sürpriz yaptık, çok sevdi.", "Güller taptazeydi."]
+      comments: ["Hızlı market teslimatı.", "Ürünler çok taze geldi."]
     },
+
+    // 🍔 RESTORAN / YEMEK
     {
-      email: "bogazicicicek@test.com",
-      name: "Yeniboğaziçi Butik Çiçek",
-      type: "FLOWER",
-      phone: "+905338880011",
-      lat: 35.2000,
-      lng: 33.9000,
-      address: "Salamis Yolu Çıkışı, Yeniboğaziçi",
-      campaign: "Tüm Saksı Çiçeklerinde Toprak Hediyeli!",
+      email: "magusakebap@test.com",
+      name: "Mağusa Kebap & Döner Sarayı",
+      type: "RESTAURANT",
+      phone: "+905338882222",
+      lat: 35.1200,
+      lng: 33.9400,
+      address: "İsmet İnönü Bulvarı No: 45, Gazimağusa",
+      campaign: "Tüm Dürümlerde İkinciye %50 İndirim!",
       categories: [
         {
-          categoryName: "Canlı Çiçekler",
+          categoryName: "Kebap, Döner & Izgara",
           products: [
-            { name: "Orkide Saksı (Çift Dallı)", price: 650.0, description: "Şık saksısında beyaz orkide" },
-            { name: "Aloe Vera Saksı", price: 150.0, description: "Ev ve ofis için arındırıcı aloe vera" }
+            { name: "Özel Yaprak Et Döner Dürüm", price: 180.0, description: "Lavaş arası yaprak et döner, patates, domates" },
+            { name: "Adana Kebap Porsiyon", price: 260.0, description: "Közlenmiş biber, domates ve pilav eşliğinde" },
+            { name: "Izgara Köfte Porsiyon", price: 220.0, description: "Özel kasap köftesi, patates kızartması ile" }
           ]
         },
         {
-          categoryName: "Yapay Çiçekler & Hediyelikler",
+          categoryName: "Pide & Lahmacun",
           products: [
-            { name: "Sonsuz Gül Fanus", price: 350.0, description: "solmayan şık fanus gülü" }
+            { name: "Çıtır Lahmacun", price: 75.0, description: "İnce hamur, yeşillik ve limon ile" },
+            { name: "Kaşarlı Kıymalı Pide", price: 190.0, description: "Özel fırınlanmış çıtır pide" }
           ]
         },
         {
-          categoryName: "Ev Yemekleri & Çorbalar",
+          categoryName: "Tatlılar & Waffle",
           products: [
-            { name: "Dekoratif Taş Saksı", price: 120.0, description: "Modern saksı" }
+            { name: "Fıstıklı Künefe", price: 120.0, description: "Sıcak şerbetli ve kaymaklı" }
+          ]
+        }
+      ],
+      ratings: [5, 4, 5],
+      comments: ["Döneri çok lezzetli ve sıcaktı.", "Porsiyonlar oldukça doyurucu."]
+    },
+
+    // 🍕 RESTORAN 2 (Pizza & Burger)
+    {
+      email: "bellaitalia@test.com",
+      name: "Bella Italia Pizza & Burger",
+      type: "RESTAURANT",
+      phone: "+905338885555",
+      lat: 35.1280,
+      lng: 33.9310,
+      address: "Doğu Akdeniz Cad. No: 18, Gazimağusa",
+      campaign: "Büyük Boy Pizzalarda Kola Hediye!",
+      categories: [
+        {
+          categoryName: "Pizza & İtalyan",
+          products: [
+            { name: "Margarita Pizza (Büyük)", price: 220.0, description: "Mozerella, özel domates sosu, fesleğen" },
+            { name: "Karışık Süper Pizza", price: 270.0, description: "Sucuk, salam, mantar, zeytin, mısır, mozerella" }
+          ]
+        },
+        {
+          categoryName: "Burger & Sandviç",
+          products: [
+            { name: "Double Cheeseburger Menü", price: 240.0, description: "2x100g dana köfte, cheddar, patates ve içecek" }
           ]
         }
       ],
       ratings: [5, 5],
-      comments: ["Orkide harika paketlenmişti.", "Çok tatlı bir çiçekçi."]
+      comments: ["Pizzası harika çıtırdı.", "Kurye çok hızlı getirdi."]
     },
+
+    // 💧 SU & İÇECEK
     {
-      email: "iskeleflower@test.com",
-      name: "İskele Papatya Çiçekçilik",
-      type: "FLOWER",
-      phone: "+905338880012",
-      lat: 35.2780,
-      lng: 33.8980,
-      address: "Merkez Yolu, İskele",
-      campaign: "Açılışa Özel Tüm Buketlerde %10 İndirim!",
+      email: "kuzeysu@test.com",
+      name: "Kuzey Su & Damacana Dağıtım",
+      type: "WATER",
+      phone: "+905338883333",
+      lat: 35.1300,
+      lng: 33.9300,
+      address: "Sanayi Bölgesi 2. Sokak, Gazimağusa",
+      campaign: "İlk Damacana Siparişine Pompa Hediye!",
       categories: [
         {
-          categoryName: "Canlı Çiçekler",
+          categoryName: "Damacana Su",
           products: [
-            { name: "Papatya Aşkı Buketi", price: 290.0, description: "Taze kır papatyaları" }
+            { name: "19L Doğal Kaynak Suyu Damacana", price: 55.0, description: "Doğal kaynak suyu, pH 7.8" },
+            { name: "15L Cam Damacana Su", price: 75.0, description: "Sağlıklı cam damacana dolumu" }
           ]
         },
         {
-          categoryName: "Yapay Çiçekler & Hediyelikler",
+          categoryName: "Pet Şişe & Çoklu Paketler",
           products: [
-            { name: "Kokulu Mum Seti", price: 140.0, description: "Lavanta ve vanilya kokulu mumlar" }
+            { name: "0.5L Su Kolisi (24'lü)", price: 90.0, description: "24 adet 0.5L pet şişe" },
+            { name: "5L Pet Şişe Su (4'lü Paket)", price: 80.0, description: "4 adet 5L pet şişe" }
           ]
         },
         {
-          categoryName: "İçecekler",
+          categoryName: "Su Pompası & Ekipmanlar",
           products: [
-            { name: "Balon Buketi (3'lü)", price: 90.0, description: "folyo balonlar" }
+            { name: "Şarjlı Otomatik Damacana Pompası", price: 180.0, description: "USB ile şarj edilebilir dokunmatik pompa" }
+          ]
+        }
+      ],
+      ratings: [5, 5],
+      comments: ["15 dakikada kapıdaydı.", "Suyu çok lezzetli ve yumuşak."]
+    },
+
+    // 🌹 ÇİÇEK & HEDİYE
+    {
+      email: "kardelencicek@test.com",
+      name: "Kardelen Çiçek & Tasarım Hediyelik",
+      type: "FLOWER",
+      phone: "+905338884444",
+      lat: 35.1230,
+      lng: 33.9380,
+      address: "Karakol Mah. Çiçek Sokak No: 7, Gazimağusa",
+      campaign: "Sevgililer Gününe Özel Kırmızı Güllerde İndirim!",
+      categories: [
+        {
+          categoryName: "Tasarım Buketler",
+          products: [
+            { name: "11 Kırmızı Gül Buketi", price: 450.0, description: "Taze ekvator kırmızı güller ve özel kraft ambalaj" },
+            { name: "Renkli Papatya Buketi", price: 280.0, description: "Bahar kokulu taze kır papatyaları" }
+          ]
+        },
+        {
+          categoryName: "Saksı Çiçekleri & İç Mekan Bitkileri",
+          products: [
+            { name: "Çift Dallı Beyaz Orkide", price: 550.0, description: "Seramik saksıda asil beyaz orkide" },
+            { name: "Sukulent Aranjman Bahçesi", price: 240.0, description: "Özel ahşap kasede 4'lü sukulent" }
+          ]
+        },
+        {
+          categoryName: "Hediye & Özel Gün Setleri",
+          products: [
+            { name: "Gurme Çikolata & Peluş Ayıcık Seti", price: 320.0, description: "Özel kutulu lezzet çikolataları ve sevimli ayıcık" }
           ]
         }
       ],
       ratings: [5, 4],
-      comments: ["Hızlı ve güzel teslimat.", "Papatyalar çok güzel kokuyordu."]
+      comments: ["Çiçekler capcanlı ve çok taze ulaştı.", "Not kartı da çok özenli yazılmıştı."]
     }
   ];
 
@@ -881,54 +862,40 @@ async function main() {
     seededIds[s.email] = shopId;
   }
 
-  // 7. AKTİF KAMPANYALAR/SPONSORLUKLAR TOHUMLA
+  // 6. AKTİF KAMPANYALAR/SPONSORLUKLAR
   const start = new Date();
   const end = new Date();
   end.setDate(end.getDate() + 30);
 
-  await prisma.shopPromotion.create({
-    data: {
-      shopId: seededIds["magusakebap@test.com"],
-      promoType: "MAIN_SCREEN",
-      startDate: start,
-      endDate: end,
-      isActive: true
-    }
-  });
+  await prisma.shopPromotion.deleteMany({});
 
-  await prisma.shopPromotion.create({
-    data: {
-      shopId: seededIds["magusasupermarket@test.com"],
-      promoType: "MAIN_SCREEN",
-      startDate: start,
-      endDate: end,
-      isActive: true
-    }
-  });
+  if (seededIds["magusasupermarket@test.com"]) {
+    await prisma.shopPromotion.create({
+      data: {
+        shopId: seededIds["magusasupermarket@test.com"],
+        promoType: "MAIN_SCREEN",
+        startDate: start,
+        endDate: end,
+        isActive: true
+      }
+    });
+  }
 
-  await prisma.shopPromotion.create({
-    data: {
-      shopId: seededIds["bogazicipide@test.com"],
-      promoType: "CATEGORY",
-      startDate: start,
-      endDate: end,
-      isActive: true
-    }
-  });
-
-  await prisma.shopPromotion.create({
-    data: {
-      shopId: seededIds["iskelemarket@test.com"],
-      promoType: "CATEGORY",
-      startDate: start,
-      endDate: end,
-      isActive: true
-    }
-  });
+  if (seededIds["magusakebap@test.com"]) {
+    await prisma.shopPromotion.create({
+      data: {
+        shopId: seededIds["magusakebap@test.com"],
+        promoType: "MAIN_SCREEN",
+        startDate: start,
+        endDate: end,
+        isActive: true
+      }
+    });
+  }
 
   console.log("✅ Shop Promotions (Sponsorships) seeded successfully.");
 
-  // 8. KURYELER İÇİN ARAÇ SEÇENEKLERİNİ TOHUMLA
+  // 7. KURYELER İÇİN ARAÇ SEÇENEKLERİ
   const vehicleOptions = [
     { 
       code: "MOTORCYCLE", 
@@ -944,7 +911,7 @@ async function main() {
     },
     { 
       code: "COMPANY_MOTORCYCLE", 
-      nameTr: "Araç İstiyorum", nameEn: "Vehicle Wanted", nameRu: "Нужен transport",
+      nameTr: "Araç İstiyorum", nameEn: "Vehicle Wanted", nameRu: "Нужен транспорт",
       subTr: "Şirket Motosu", subEn: "Company Motorcycle", subRu: "Мотоцикл компании",
       isActive: false 
     },
@@ -982,7 +949,7 @@ async function main() {
   }
   console.log("✅ Vehicle Options Seeded successfully.");
 
-  // 9. SUPABASE REALTIME REPLİKASYONUNU AKTİF ET
+  // 8. SUPABASE REALTIME REPLİKASYONU
   try {
     await prisma.$executeRawUnsafe(
       'ALTER PUBLICATION supabase_realtime ADD TABLE "CourierLocation";'

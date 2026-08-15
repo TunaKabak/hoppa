@@ -793,6 +793,8 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
                     quantity: item.quantity,
                     basePrice: baseUnitPrice,
                     isCompact: false,
+                    isCollapsible: true,
+                    initiallyExpanded: true,
                     showSummary: item.quantity > 1,
                   ),
                 ],
