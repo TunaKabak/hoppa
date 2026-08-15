@@ -49,18 +49,23 @@ class AccountBottomSheet extends ConsumerWidget {
 
     final maxHeight = MediaQuery.of(context).size.height * 0.85;
 
-    return SafeArea(
-      top: false,
-      child: Container(
-        constraints: BoxConstraints(maxHeight: maxHeight),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(24),
-            topRight: Radius.circular(24),
-          ),
+    return Container(
+      constraints: BoxConstraints(maxHeight: maxHeight),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(24),
+          topRight: Radius.circular(24),
         ),
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+      ),
+      padding: EdgeInsets.fromLTRB(
+        24,
+        16,
+        24,
+        MediaQuery.of(context).viewPadding.bottom > 0
+            ? MediaQuery.of(context).viewPadding.bottom + 8
+            : 20,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -452,7 +457,6 @@ class AccountBottomSheet extends ConsumerWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
                   ],
                 ],
               ),
@@ -460,9 +464,8 @@ class AccountBottomSheet extends ConsumerWidget {
           ),
         ],
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildMenuTile({
     required IconData icon,
