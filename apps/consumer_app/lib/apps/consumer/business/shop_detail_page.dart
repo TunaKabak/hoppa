@@ -1134,6 +1134,12 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                           ),
                     ),
 
+                  // Popüler Lezzetler / Çok Satanlar Vitrini (Tümü seçiliyken)
+                  if (selectedCategory == 'Tümü' && searchQuery.isEmpty && allProductsAsync.hasValue)
+                    SliverToBoxAdapter(
+                      child: _buildPopularSection(allProductsAsync.value ?? []),
+                    ),
+
                   // Sorting and Grid size controls
                   SliverToBoxAdapter(
                     child: Padding(
@@ -1351,6 +1357,110 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
               child: const Icon(Icons.arrow_upward, color: Colors.white),
             )
           : null,
+    );
+  }
+
+  Widget _buildPopularSection(List<BusinessProduct> allProducts) {
+    if (allProducts.isEmpty) return const SizedBox.shrink();
+
+    // Filtrele: Opsiyonlu, menü veya popüler ürünler
+    final popularList = allProducts.where((p) => 
+      p.product.optionGroups.isNotEmpty || 
+      p.product.category.toLowerCase().contains('popüler') ||
+      p.product.category.toLowerCase().contains('menü') ||
+      p.product.category.toLowerCase().contains('burger') ||
+      p.product.category.toLowerCase().contains('pizza')
+    ).take(8).toList();
+
+    final displayList = popularList.isNotEmpty ? popularList : allProducts.take(5).toList();
+    if (displayList.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 8, 14, 10),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF6B00).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.local_fire_department_rounded, color: Color(0xFFFF6B00), size: 18),
+              ),
+              const SizedBox(width: 8),
+              const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Popüler Lezzetler",
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFF1E293B),
+                    ),
+                  ),
+                  Text(
+                    "İşletmenin en çok tercih edilenleri",
+                    style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 220,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            itemCount: displayList.length,
+            itemBuilder: (context, index) {
+              final bp = displayList[index];
+              return Container(
+                width: 155,
+                margin: const EdgeInsets.only(right: 10, bottom: 6),
+                child: GestureDetector(
+                  onTap: () {
+                    if (bp.product.optionGroups.isNotEmpty) {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (ctx) => FoodProductCustomizationSheet(
+                          product: bp.product,
+                          onAddToCart: (prod, options, qty) {
+                            ref.read(cartProvider.notifier).addToCartWithOptions(
+                              bp,
+                              options,
+                              qty.toDouble(),
+                            );
+                          },
+                        ),
+                      );
+                    } else {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ProductDetailPage(businessProduct: bp),
+                        ),
+                      );
+                    }
+                  },
+                  child: ModernProductCard(
+                    businessProduct: bp,
+                    isListView: false,
+                    isCompact: true,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 6),
+      ],
     );
   }
 }

@@ -16,6 +16,7 @@ import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository
 import 'package:consumer_app/apps/consumer/auth/consumer_login_page.dart';
 import 'package:core_shared/shared/core/services/navigation_provider.dart';
 import 'package:consumer_app/apps/consumer/cart/widgets/floating_cart_card.dart';
+import 'package:consumer_app/apps/consumer/cart/cart_provider.dart';
 import 'package:core_shared/shared/models/business.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -573,9 +574,14 @@ class SelectionCategoryPage extends rp.ConsumerWidget {
                         ),
                       ),
                     ),
-                  const SizedBox(height: 16),
-                      ],
-                    ),
+                  rp.Consumer(
+                    builder: (context, ref, child) {
+                      final hasCarts = ref.watch(cartProvider).carts.isNotEmpty;
+                      return SizedBox(height: hasCarts ? 100 : 32);
+                    },
+                  ),
+                ],
+              ),
                   ),
                 ),
               ),

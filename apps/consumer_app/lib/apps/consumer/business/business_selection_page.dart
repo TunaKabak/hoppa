@@ -15,6 +15,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
 import 'package:consumer_app/apps/consumer/providers/consumer_location_controller.dart';
 import 'package:consumer_app/apps/consumer/cart/widgets/floating_cart_card.dart';
+import 'package:consumer_app/apps/consumer/cart/cart_provider.dart';
 
 final selectedBusinessFiltersProvider =
     StateProvider<List<String>>((ref) => []);
@@ -779,6 +780,12 @@ class _BusinessSelectionPageState extends ConsumerState<BusinessSelectionPage> {
                                                   ),
                                                 ),
                                               ),
+                                            // Sepette ürün varken alttaki floating cart bar'ın işletme kartlarını kapatmaması için dinamik boşluk
+                                            SliverToBoxAdapter(
+                                              child: SizedBox(
+                                                height: ref.watch(cartProvider).carts.isNotEmpty ? 100 : 32,
+                                              ),
+                                            ),
                                           ],
                                         ],
                                       ),

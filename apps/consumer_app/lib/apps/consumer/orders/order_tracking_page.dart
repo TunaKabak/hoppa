@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:core_auth/core_auth.dart';
 import 'package:core_shared/shared/models/order.dart' as model;
 import 'package:core_shared/shared/models/courier_location.dart';
+import 'package:consumer_app/apps/consumer/widgets/selected_options_breakdown.dart';
 
 // Tüketici tarafında kurye konumunu dinleyen Supabase Realtime StreamProvider
 final courierLocationStreamProvider = StreamProvider.family<CourierLocation?, String>((ref, courierId) {
@@ -351,28 +352,6 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> with Tick
               TileLayer(
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.hoppa.consumer',
-              ),
-
-              // Route Polylines
-              PolylineLayer(
-                polylines: [
-                  // Shop -> Courier Line (Subtle Gray/Indigo line)
-                  if (_shopLatLng != null && _courierLatLng != null)
-                    Polyline(
-                      points: [_shopLatLng!, _courierLatLng!],
-                      strokeWidth: 3.5,
-                      color: Colors.indigo.withValues(alpha: 0.5),
-                      pattern: StrokePattern.dashed(segments: const [8.0, 6.0]),
-                    ),
-
-                  // Courier -> Customer Destination Line (Vibrant Glowing Orange)
-                  if (_courierLatLng != null)
-                    Polyline(
-                      points: [_courierLatLng!, _destinationLatLng],
-                      strokeWidth: 5.0,
-                      color: brandOrange,
-                    ),
-                ],
               ),
 
               // Map Markers
@@ -894,6 +873,80 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> with Tick
                 if (_currentOrder.orderNote.isNotEmpty)
                   _buildPreferenceBadge("💬 Not: ${_currentOrder.orderNote}"),
               ],
+            ),
+          ],
+
+          // Sipariş Kalemleri ve Opsiyon Detayları
+          if (_currentOrder.items.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: ExpansionTile(
+                shape: const Border(),
+                collapsedShape: const Border(),
+                tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
+                childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+                dense: true,
+                leading: const Icon(Icons.receipt_long_rounded, color: Color(0xFFFF6B00), size: 20),
+                title: Text(
+                  "${_currentOrder.items.length} Ürün • ${_currentOrder.totalAmount.toStringAsFixed(2)} ₺",
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1E293B)),
+                ),
+                children: _currentOrder.items.map((item) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            "${item.quantity % 1 == 0 ? item.quantity.toInt() : item.quantity}x",
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item.name,
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                              ),
+                              if (item.options.isNotEmpty)
+                                SelectedOptionsBreakdown(
+                                  options: item.options,
+                                  quantity: item.quantity,
+                                  isCompact: true,
+                                  isCollapsible: true,
+                                  initiallyExpanded: false,
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          "${(item.price * item.quantity).toStringAsFixed(2)} ₺",
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
             ),
           ],
         ],

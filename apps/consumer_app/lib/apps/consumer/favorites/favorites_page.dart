@@ -6,6 +6,7 @@ import 'package:consumer_app/apps/consumer/favorites/favorite_provider.dart';
 import 'package:consumer_app/apps/consumer/home/widgets/modern_product_card.dart';
 import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository.dart';
 import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
+import 'package:consumer_app/apps/consumer/product/product_detail_page.dart';
 
 class FavoritesPage extends ConsumerStatefulWidget {
   const FavoritesPage({super.key});
@@ -148,9 +149,19 @@ class _FavoritesPageState extends ConsumerState<FavoritesPage> {
 
                                 return Stack(
                                   children: [
-                                    ModernProductCard(
-                                      businessProduct: product,
-                                      isCompact: true,
+                                    GestureDetector(
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => ProductDetailPage(businessProduct: product),
+                                          ),
+                                        );
+                                      },
+                                      child: ModernProductCard(
+                                        businessProduct: product,
+                                        isCompact: true,
+                                      ),
                                     ),
                                     if (!isAvailable)
                                       Positioned.fill(

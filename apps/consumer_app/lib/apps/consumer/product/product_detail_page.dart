@@ -15,6 +15,7 @@ import 'package:core_shared/shared/core/utils/quantity_formatter.dart';
 import 'package:consumer_app/apps/consumer/cart/cart_validation.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:consumer_app/apps/consumer/widgets/hoppa_dialog.dart';
+import 'package:consumer_app/apps/consumer/business/shop_detail_page.dart';
 
 class ProductDetailPage extends ConsumerStatefulWidget {
   final BusinessProduct businessProduct;
@@ -402,6 +403,121 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                           color: Colors.grey.shade700,
                         ),
                       ),
+
+                      // Satıcı İşletme Bilgisi
+                      if (shops.isNotEmpty) ...[
+                        const SizedBox(height: 24),
+                        const Divider(height: 1),
+                        const SizedBox(height: 16),
+                        Text(
+                          "Satıcı İşletme",
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Builder(
+                          builder: (context) {
+                            final shop = shops.firstWhere(
+                              (s) => s.id == widget.businessProduct.businessId,
+                              orElse: () => shops.first,
+                            );
+                            return InkWell(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ModernShopDetailPage(shop: shop),
+                                  ),
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(16),
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF8FAFC),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 44,
+                                      height: 44,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFF6B00).withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: const Icon(
+                                        Icons.storefront_rounded,
+                                        color: Color(0xFFFF6B00),
+                                        size: 24,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  shop.name,
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 14,
+                                                    color: Color(0xFF1E293B),
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: (shop.isOpen ? const Color(0xFF00A651) : Colors.red).withValues(alpha: 0.12),
+                                                  borderRadius: BorderRadius.circular(6),
+                                                ),
+                                                child: Text(
+                                                  shop.isOpen ? "Açık" : "Kapalı",
+                                                  style: TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: shop.isOpen ? const Color(0xFF00A651) : Colors.red,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            "İşletmeyi ve diğer ürünleri gör",
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w500,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const Icon(
+                                      Icons.arrow_forward_ios_rounded,
+                                      size: 14,
+                                      color: Colors.grey,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+
                       const SizedBox(height: 100), // Alt boşluk
                     ],
                   ),

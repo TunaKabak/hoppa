@@ -11,8 +11,8 @@ import 'package:core_auth/core_auth.dart';
 import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository.dart';
 import 'package:core_shared/shared/core/utils/quantity_formatter.dart';
 import 'package:consumer_app/apps/consumer/cart/cart_validation.dart';
-import 'package:consumer_app/apps/consumer/widgets/hoppa_dialog.dart';
 import 'package:consumer_app/apps/consumer/widgets/selected_options_breakdown.dart';
+import 'package:consumer_app/apps/consumer/business/widgets/food_product_customization_sheet.dart';
 
 class ModernProductCard extends ConsumerWidget {
   final BusinessProduct businessProduct;
@@ -345,6 +345,35 @@ class ModernProductCard extends ConsumerWidget {
                   child: _buildFavoriteButton(context, ref),
                 ),
 
+                // SEÇENEKLİ / ÖZELLEŞTİRİLEBİLİR ROZETİ
+                if (product.optionGroups.isNotEmpty)
+                  Positioned(
+                    bottom: isCompact ? 4 : 8,
+                    left: isCompact ? 4 : 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.65),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.tune_rounded, size: 10, color: Colors.white),
+                          SizedBox(width: 3),
+                          Text(
+                            "Seçenekli",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
                 // MİKTAR KONTROLÜ (Sağa Hizalı)
                 Positioned(
                   bottom: isCompact ? 4 : 8,
@@ -562,6 +591,28 @@ class ModernProductCard extends ConsumerWidget {
 
   void _handleAdd(BuildContext context, WidgetRef ref) {
     if (!CartValidation.checkLoginAndAddress(context, ref)) return;
+
+    // Eğer ürünün opsiyonları varsa (ekstralar, boyutlar, soslar, çıkarmalar vb.),
+    // doğrudan sepete eklemek yerine kullanıcının seçim yapabilmesi için özelleştirme modalını aç
+    if (businessProduct.product.optionGroups.isNotEmpty) {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => FoodProductCustomizationSheet(
+          product: businessProduct.product,
+          onAddToCart: (prod, options, qty) {
+            ref.read(cartProvider.notifier).addToCartWithOptions(
+              businessProduct,
+              options,
+              qty.toDouble(),
+            );
+          },
+        ),
+      );
+      return;
+    }
+
     try {
       ref.read(cartProvider.notifier).addToCart(businessProduct);
     } catch (e) {
