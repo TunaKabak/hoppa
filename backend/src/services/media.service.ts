@@ -2,8 +2,50 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { s3Client, R2_BUCKET_NAME, PUBLIC_CDN_URL, isR2Configured } from "../config/r2.config";
 import crypto from "crypto";
+import fs from "fs";
+import path from "path";
 
 export class MediaService {
+  /**
+   * Directly uploads a file buffer to Cloudflare R2 or local disk storage
+   */
+  async uploadDirectFile(
+    fileName: string,
+    mimeType: string,
+    buffer: Buffer,
+    baseUrl: string
+  ): Promise<{ fileKey: string; publicUrl: string }> {
+    const uuid = crypto.randomUUID();
+    const sanitizedExt = fileName.split(".").pop()?.toLowerCase() || "jpg";
+    const fileKey = `${uuid}.${sanitizedExt}`;
+
+    if (!isR2Configured) {
+      const uploadDir = path.join(__dirname, "../../public/uploads");
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      const filePath = path.join(uploadDir, fileKey);
+      await fs.promises.writeFile(filePath, buffer);
+
+      const publicUrl = `${baseUrl}/uploads/${fileKey}`;
+      return { fileKey, publicUrl };
+    }
+
+    const command = new PutObjectCommand({
+      Bucket: R2_BUCKET_NAME,
+      Key: fileKey,
+      Body: buffer,
+      ContentType: mimeType,
+    });
+
+    await s3Client.send(command);
+
+    const cdnBase = PUBLIC_CDN_URL.replace(/\/$/, "");
+    const publicUrl = `${cdnBase}/${fileKey}`;
+
+    return { fileKey, publicUrl };
+  }
+
   /**
    * Generates a short-lived presigned upload URL and public CDN URL for Cloudflare R2 direct uploads.
    * If R2 is not configured, falls back to generating a local mock upload URL pointing directly to this server.
@@ -20,8 +62,8 @@ export class MediaService {
   ): Promise<{ uploadUrl: string; fileKey: string; publicUrl: string }> {
     // Generate a secure, unique UUIDv4 filename to completely prevent overwrite collisions and path traversal
     const uuid = crypto.randomUUID();
-    const sanitizedExt = fileName.split(".").pop()?.toLowerCase() || "";
-    const fileKey = sanitizedExt ? `${uuid}.${sanitizedExt}` : uuid;
+    const sanitizedExt = fileName.split(".").pop()?.toLowerCase() || "jpg";
+    const fileKey = `${uuid}.${sanitizedExt}`;
 
     // Fallback: If Cloudflare R2 is not configured, generate a local mock upload endpoint
     if (!isR2Configured) {

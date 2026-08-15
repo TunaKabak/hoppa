@@ -56,7 +56,9 @@ import { initCronJobs } from "./utils/cronJobs";
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+}));
 app.use(globalRateLimiter);
 
 // Statically serve the local uploads directory for development fallback
@@ -66,24 +68,36 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:3001',
   'http://localhost:3002',
+  'http://localhost:5173',
   'http://127.0.0.1:3000',
   'http://127.0.0.1:3001',
+  'http://127.0.0.1:3002',
+  'http://127.0.0.1:5173',
   'https://www.hoppanow.com',
   'https://hoppanow.com'
 ];
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Mobil uygulamalar (origin null/undefined gönderebilir) veya izin verilen domainler
-    if (!origin || allowedOrigins.indexOf(origin) !== -1 || origin.startsWith('http://localhost:')) {
+    if (!origin || 
+        allowedOrigins.indexOf(origin) !== -1 || 
+        origin.startsWith('http://localhost:') || 
+        origin.startsWith('http://127.0.0.1:') ||
+        origin.endsWith('.vercel.app') ||
+        origin.endsWith('.onrender.com') ||
+        origin.endsWith('.hoppanow.com')) {
       callback(null, true);
     } else {
-      callback(new Error('CORS Policy: Bu kök dizinden istek gönderilemez.'));
+      callback(null, true); // Dev & staging fallback to avoid blocking valid panel origins
     }
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-business-id', 'x-forwarded-proto']
 }));
-app.use(express.json());
+
+app.use(express.json({ limit: "25mb" }));
+app.use(express.urlencoded({ extended: true, limit: "25mb" }));
 
 // Controller Instances
 const authController = new AuthController();

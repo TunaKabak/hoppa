@@ -12,6 +12,7 @@ import { ProfileController } from "../controllers/ProfileController";
 import { SavedCardController } from "../controllers/SavedCardController";
 import { CouponController } from "../controllers/CouponController";
 import { ShopCampaignController } from "../controllers/ShopCampaignController";
+import { CourierController } from "../controllers/CourierController";
 import walletRoutes from "./walletRoutes";
 import referralRoutes from "./referralRoutes";
 
@@ -25,6 +26,7 @@ const businessCategoryController = new BusinessCategoryController();
 const savedCardController = new SavedCardController();
 const couponController = new CouponController();
 const shopCampaignController = new ShopCampaignController();
+const courierController = new CourierController();
 
 // --- Public / Optional Auth Endpoints (Misafir Modu Gezinti) ---
 router.get("/shops", optionalAuthMiddleware, (req: Request, res: Response) => consumerShopController.getActiveShops(req, res));
@@ -65,7 +67,11 @@ router.post("/favorites/products/toggle", (req: Request, res: Response) => favor
 // Order Operations
 router.post("/orders", (req: Request, res: Response) => orderController.createOrder(req, res));
 router.get("/orders", (req: Request, res: Response) => orderController.getConsumerOrders(req, res));
+router.get("/orders/:id/tracking", (req: Request, res: Response) => orderController.getOrderTracking(req, res));
 router.post("/orders/:id/cancel", (req: Request, res: Response) => orderController.cancelOrder(req, res));
+
+// Courier Location Tracking
+router.get("/couriers/:id/location", (req: Request, res: Response) => courierController.getCourierLocation(req, res));
 
 // Address Operations
 router.get("/addresses", (req: Request, res: Response) => addressController.getAddresses(req, res));

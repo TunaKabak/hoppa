@@ -8,6 +8,7 @@ import {
   Building2, FileText, Image as ImageIcon, CreditCard, Truck, ShieldAlert, Sparkles, Copy, Trash2
 } from 'lucide-react';
 import { merchantApiFetch, getMerchantToken } from '../../../utils/merchant-auth';
+import { uploadMerchantMedia } from '../../../utils/media-upload';
 import { useMerchantTheme } from '../../../context/MerchantThemeContext';
 import { KKTC_CITIES, KKTC_DISTRICTS } from '../../../data/kktcDistricts';
 
@@ -247,34 +248,8 @@ export default function MerchantSettingsPage() {
     else setIsUploadingHeader(true);
 
     try {
-      const mimeType = file.type || 'image/jpeg';
-      const presignRes = await merchantApiFetch('/media/upload-url', {
-        method: 'POST',
-        body: JSON.stringify({
-          fileName: file.name,
-          mimeType: mimeType,
-          contentType: mimeType,
-          fileSize: file.size,
-        }),
-      });
+      const finalUrl = await uploadMerchantMedia(file);
 
-      const { uploadUrl, fileKey, publicUrl } = presignRes.data;
-      const token = getMerchantToken();
-
-      const uploadRes = await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': mimeType,
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: file,
-      });
-
-      if (!uploadRes.ok) {
-        throw new Error('Görsel sunucuya yüklenemedi.');
-      }
-
-      const finalUrl = publicUrl || `/uploads/${fileKey}`;
       if (type === 'logo') {
         setLogoUrl(finalUrl);
       } else {
