@@ -12,7 +12,6 @@ import 'package:consumer_app/apps/consumer/product/product_detail_page.dart';
 import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository.dart';
 import 'package:core_shared/shared/models/shop_category_data.dart';
 import 'package:consumer_app/apps/consumer/home/widgets/campaign_carousel.dart';
-import 'package:consumer_app/apps/consumer/widgets/hoppa_dialog.dart';
 import 'package:consumer_app/apps/consumer/widgets/shop_badge.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:core_shared/shared/models/campaign.dart';
@@ -1248,13 +1247,6 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                                             product,
                                             options,
                                             qty.toDouble(),
-                                          );
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(
-                                              content: Text("${product.product.name} sepetinize eklendi!"),
-                                              backgroundColor: Colors.green,
-                                              duration: const Duration(seconds: 2),
-                                            ),
                                           );
                                         },
                                       ),

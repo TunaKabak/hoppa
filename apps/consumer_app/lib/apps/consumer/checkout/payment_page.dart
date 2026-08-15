@@ -15,7 +15,7 @@ import 'package:core_shared/shared/core/utils/quantity_formatter.dart';
 import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
 import 'package:core_shared/shared/models/business.dart';
 import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository.dart';
-import 'package:consumer_app/apps/consumer/profile/wallet_page.dart';
+import 'package:consumer_app/apps/consumer/widgets/selected_options_breakdown.dart';
 
 class PaymentPage extends ConsumerStatefulWidget {
   final Address deliveryAddress;
@@ -60,6 +60,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
 
   double _walletBalance = 0.0;
   bool _isLoadingWallet = false;
+  bool _useWalletBalance = false;
 
   final Color kPrimaryColor = const Color(0xFF00A651);
   final Color kSecondaryColor = const Color(0xFFFF6B00);
@@ -188,23 +189,20 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
 
       String? addressId = widget.isPickUp ? userAddress?.id : widget.deliveryAddress.id;
 
-      Map<String, dynamic>? cardDetails;
-      if (_paymentMethod == 'wallet') {
-        final activeCampaigns = ref.read(cartCampaignsProvider).value ?? [];
-        bool hasFreeDeliveryCampaign = activeCampaigns.any((c) => c.type.name.toUpperCase() == "FREE_DELIVERY_FIRST_ORDERS");
-        double deliveryFee = selectedBusiness?.baseDeliveryFee ?? 30.0;
-        if (selectedBusiness?.freeDeliveryThreshold != null && cartState.totalAmount >= selectedBusiness!.freeDeliveryThreshold!) {
-          deliveryFee = 0.0;
-        }
-        if (hasFreeDeliveryCampaign || widget.isPickUp) {
-          deliveryFee = 0.0;
-        }
-        double orderTotal = cartState.totalAmount + deliveryFee;
+      final activeCampaigns = ref.read(cartCampaignsProvider).value ?? [];
+      bool hasFreeDeliveryCampaign = activeCampaigns.any((c) => c.type.name.toUpperCase() == "FREE_DELIVERY_FIRST_ORDERS");
+      double deliveryFee = selectedBusiness?.baseDeliveryFee ?? 30.0;
+      if (selectedBusiness?.freeDeliveryThreshold != null && cartState.totalAmount >= selectedBusiness!.freeDeliveryThreshold!) {
+        deliveryFee = 0.0;
+      }
+      if (hasFreeDeliveryCampaign || widget.isPickUp) {
+        deliveryFee = 0.0;
+      }
+      double orderTotal = cartState.totalAmount + deliveryFee;
+      final bool isFullyCoveredByWallet = _useWalletBalance && _walletBalance >= orderTotal;
 
-        if (_walletBalance < orderTotal) {
-          throw Exception("Hoppa Cüzdan bakiyeniz bu sipariş için yetersizdir. Mevcut bakiye: ₺${_walletBalance.toStringAsFixed(2)}, Sipariş Tutarı: ₺${orderTotal.toStringAsFixed(2)}. Lütfen bakiye yükleyin veya başka bir ödeme yöntemi seçin.");
-        }
-      } else if (_paymentMethod == 'online_payment') {
+      Map<String, dynamic>? cardDetails;
+      if (!isFullyCoveredByWallet && _paymentMethod == 'online_payment') {
         if (_selectedCardId == null) {
           throw Exception("Lütfen bir ödeme yöntemi seçin veya yeni kart bilgilerini girin.");
         }
@@ -286,11 +284,14 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
         'items': cartState.items.map((item) => {
           'productId': item.businessProduct.id,
           'quantity': item.quantity.round(),
+          'options': item.selectedOptions.map((opt) => opt.toMap()).toList(),
         }).toList(),
         if (addressId != null) 'addressId': addressId,
         'deliveryAddress': cleanAddress,
         'notes': orderNote,
-        'paymentMethod': _paymentMethod == 'wallet' ? 'WALLET' : _paymentMethod.toUpperCase(),
+        'paymentMethod': isFullyCoveredByWallet ? 'WALLET' : _paymentMethod.toUpperCase(),
+        'useWallet': _useWalletBalance,
+        if (_useWalletBalance && !isFullyCoveredByWallet && _walletBalance > 0) 'walletAmount': _walletBalance,
         if (cardDetails != null) 'cardDetails': cardDetails,
         'dontRingBell': _dontRingBell,
         'leaveAtDoor': _leaveAtDoor,
@@ -304,7 +305,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
       final paymentUrl = result['paymentUrl'] as String?;
 
       // Save card to profile if checked
-      if (_paymentMethod == 'online_payment' && _selectedCardId == 'new' && _saveNewCard) {
+      if (!isFullyCoveredByWallet && _paymentMethod == 'online_payment' && _selectedCardId == 'new' && _saveNewCard) {
         try {
           final apiClient = ref.read(apiClientProvider);
           final cardTitleText = _saveCardTitleController.text.trim();
@@ -322,8 +323,13 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
         }
       }
 
-      // Clear cart locally
-      cartNotifier.clearCart();
+      // Clear ONLY the ordered business's cart locally, preserving other business carts
+      final orderedBusinessId = cartState.currentBusinessId;
+      if (orderedBusinessId != null) {
+        cartNotifier.clearCart(orderedBusinessId);
+      } else {
+        cartNotifier.clearCart();
+      }
       ref.read(activeReferringSourceProvider.notifier).state = 'ORGANIC';
       ref.read(activeShopCampaignIdProvider.notifier).state = null;
 
@@ -483,6 +489,9 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     }
 
     double total = cartState.totalAmount + deliveryFee;
+    double walletDeduction = _useWalletBalance ? (_walletBalance >= total ? total : _walletBalance) : 0.0;
+    double payableAmount = (total - walletDeduction) < 0 ? 0.0 : (total - walletDeduction);
+    bool isFullyWallet = _useWalletBalance && _walletBalance >= total;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
@@ -610,26 +619,26 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 14,
-                                  color: (_paymentMethod != 'online_payment' && _paymentMethod != 'wallet') ? Colors.grey : Colors.black87,
+                                  color: (_paymentMethod != 'online_payment' && !isFullyWallet) ? Colors.grey : Colors.black87,
                                 ),
                               ),
                               subtitle: Text(
-                                (_paymentMethod != 'online_payment' && _paymentMethod != 'wallet')
+                                (_paymentMethod != 'online_payment' && !isFullyWallet)
                                     ? "Kapıda ödeme seçildiğinde temassız teslimat yapılamaz."
                                     : "Sipariş kapınıza bırakılır, temassız teslim edilir.",
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: (_paymentMethod != 'online_payment' && _paymentMethod != 'wallet') ? Colors.grey.shade400 : Colors.grey,
+                                  color: (_paymentMethod != 'online_payment' && !isFullyWallet) ? Colors.grey.shade400 : Colors.grey,
                                 ),
                               ),
                               secondary: Icon(
                                 Icons.door_front_door_outlined,
-                                color: (_paymentMethod != 'online_payment' && _paymentMethod != 'wallet')
+                                color: (_paymentMethod != 'online_payment' && !isFullyWallet)
                                     ? Colors.grey.shade300
                                     : (_leaveAtDoor ? kPrimaryColor : Colors.grey),
                               ),
                               activeColor: kPrimaryColor,
-                              onChanged: (_paymentMethod != 'online_payment' && _paymentMethod != 'wallet')
+                              onChanged: (_paymentMethod != 'online_payment' && !isFullyWallet)
                                   ? null
                                   : (bool value) {
                                       setState(() {
@@ -661,314 +670,303 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                   const SizedBox(height: 24),
 
                   // --- 2. ÖDEME YÖNTEMİ ---
-                  _sectionTitle("Ödeme Yöntemi", Icons.wallet_outlined),
+                  _sectionTitle("Ödeme Yöntemi", Icons.payment_rounded),
                   const SizedBox(height: 12),
-                  IntrinsicHeight(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (supportsOnline)
-                          Expanded(
-                            child: _buildPaymentOption(
-                              title: 'Kredi Kartı',
-                              icon: Icons.credit_card,
-                              isSelected: _paymentMethod == 'online_payment',
-                              onTap: () => setState(() => _paymentMethod = 'online_payment'),
-                            ),
-                          ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: _buildPaymentOption(
-                            title: 'Hoppa Cüzdanım',
-                            icon: Icons.account_balance_wallet_rounded,
-                            isSelected: _paymentMethod == 'wallet',
-                            subtitle: _isLoadingWallet
-                                ? 'Yükleniyor...'
-                                : '₺${_walletBalance.toStringAsFixed(2)}',
-                            onTap: () => setState(() => _paymentMethod = 'wallet'),
-                          ),
+
+                  // Hoppa Cüzdan Switch Kartı
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: _useWalletBalance ? const Color(0xFFFFF7F2) : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: _useWalletBalance ? const Color(0xFFE95D22) : Colors.grey.shade200,
+                        width: _useWalletBalance ? 1.5 : 1.0,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.02),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
-                        if (supportsPayAtDoor) const SizedBox(width: 6),
-                        if (supportsPayAtDoor)
-                          Expanded(
-                            child: _buildPaymentOption(
-                              title: widget.isPickUp ? 'Mağazada' : 'Kapıda',
-                              icon: widget.isPickUp ? Icons.store_outlined : Icons.local_shipping_outlined,
-                              isSelected: _paymentMethod == 'cash_on_delivery' || _paymentMethod == 'card_on_delivery',
-                              onTap: () {
-                                setState(() {
-                                  _paymentMethod = supportsCash ? 'cash_on_delivery' : 'card_on_delivery';
-                                  _leaveAtDoor = false;
-                                });
-                              },
-                            ),
-                          ),
                       ],
                     ),
-                  ),
-                  AnimatedCrossFade(
-                    duration: const Duration(milliseconds: 300),
-                    crossFadeState: _paymentMethod == 'wallet'
-                        ? CrossFadeState.showFirst
-                        : CrossFadeState.showSecond,
-                    firstChild: Container(
-                      margin: const EdgeInsets.only(top: 12),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: _walletBalance >= total ? kPrimaryColor : Colors.orange.shade300,
-                          width: 1.5,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: (_walletBalance >= total ? kPrimaryColor : Colors.orange).withValues(alpha: 0.05),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFE95D22).withValues(alpha: 0.1),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFFE95D22), size: 20),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  const Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text("Hoppa Cüzdanım", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                      Text("Anlık Bakiye Kullanımı", style: TextStyle(fontSize: 11, color: Colors.grey)),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                              Text(
-                                "₺${_walletBalance.toStringAsFixed(2)}",
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: _walletBalance >= total ? kPrimaryColor : Colors.orange.shade800,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          if (_walletBalance >= total)
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
                             Container(
-                              padding: const EdgeInsets.all(10),
+                              padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: kPrimaryColor.withValues(alpha: 0.08),
-                                borderRadius: BorderRadius.circular(10),
+                                color: const Color(0xFFE95D22).withValues(alpha: 0.1),
+                                shape: BoxShape.circle,
                               ),
-                              child: Row(
+                              child: const Icon(
+                                Icons.account_balance_wallet_rounded,
+                                color: Color(0xFFE95D22),
+                                size: 22,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Icon(Icons.check_circle_rounded, color: kPrimaryColor, size: 18),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      "Bakiyeniz yeterli. Sipariş tutarı (₺${total.toStringAsFixed(2)}) Hoppa Cüzdanınızdan düşülecektir.",
-                                      style: TextStyle(color: kPrimaryColor, fontSize: 12, fontWeight: FontWeight.bold),
+                                  const Text(
+                                    "Hoppa Cüzdan Bakiyesini Kullan",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: Color(0xFF1E293B),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    _isLoadingWallet
+                                        ? "Bakiye yükleniyor..."
+                                        : "Kullanılabilir Bakiye: ₺${_walletBalance.toStringAsFixed(2)}",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: _walletBalance > 0 ? const Color(0xFF00A651) : Colors.grey.shade600,
                                     ),
                                   ),
                                 ],
                               ),
-                            )
-                          else
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: Colors.orange.shade50,
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: Colors.orange.shade200),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.warning_amber_rounded, color: Colors.orange.shade800, size: 18),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          "Bakiyeniz bu sipariş için yetersizdir. Eksik tutar: ₺${(total - _walletBalance).toStringAsFixed(2)}",
-                                          style: TextStyle(color: Colors.orange.shade900, fontSize: 12, fontWeight: FontWeight.bold),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                SizedBox(
-                                  height: 42,
-                                  child: ElevatedButton.icon(
-                                    onPressed: () async {
-                                      await Navigator.push(
-                                        context,
-                                        MaterialPageRoute(builder: (context) => const WalletPage()),
-                                      );
-                                      _fetchWalletBalance();
+                            ),
+                            Switch.adaptive(
+                              value: _useWalletBalance,
+                              activeColor: const Color(0xFFE95D22),
+                              onChanged: _walletBalance <= 0
+                                  ? null
+                                  : (val) {
+                                      setState(() {
+                                        _useWalletBalance = val;
+                                        if (val && _walletBalance >= total) {
+                                          _leaveAtDoor = true;
+                                        }
+                                      });
                                     },
-                                    icon: const Icon(Icons.add_circle_outline_rounded, color: Colors.white, size: 18),
-                                    label: const Text("Cüzdana Bakiye Yükle", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFFE95D22),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                      elevation: 0,
+                            ),
+                          ],
+                        ),
+                        if (_useWalletBalance) ...[
+                          const SizedBox(height: 10),
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: isFullyWallet
+                                  ? const Color(0xFFE8F5E9)
+                                  : const Color(0xFFFFF3E0),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isFullyWallet
+                                      ? Icons.check_circle_rounded
+                                      : Icons.info_outline_rounded,
+                                  color: isFullyWallet
+                                      ? const Color(0xFF00A651)
+                                      : const Color(0xFFE65100),
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    isFullyWallet
+                                        ? "Bakiyeniz yeterli. Sipariş tutarının tamamı (₺${total.toStringAsFixed(2)}) Hoppa Cüzdanınızdan tahsil edilecektir."
+                                        : "₺${_walletBalance.toStringAsFixed(2)} cüzdandan düşülecek. Kalan ₺${payableAmount.toStringAsFixed(2)} seçili ödeme yönteminizle tahsil edilecektir.",
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: isFullyWallet
+                                          ? const Color(0xFF00A651)
+                                          : const Color(0xFFE65100),
                                     ),
                                   ),
                                 ),
                               ],
                             ),
-                        ],
-                      ),
-                    ),
-                    secondChild: const SizedBox(width: double.infinity, height: 0),
-                  ),
-                  AnimatedCrossFade(
-                    duration: const Duration(milliseconds: 300),
-                    crossFadeState: (supportsCash || supportsCard) && (_paymentMethod == 'cash_on_delivery' || _paymentMethod == 'card_on_delivery')
-                        ? CrossFadeState.showFirst
-                        : CrossFadeState.showSecond,
-                    firstChild: Container(
-                      margin: const EdgeInsets.only(top: 12),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.grey.shade200),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            "Nasıl ödemek istersiniz?",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          IntrinsicHeight(
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                if (supportsCash)
-                                  Expanded(
-                                    child: _buildPaymentOption(
-                                      title: widget.isPickUp ? 'Nakit' : 'Kapıda Nakit',
-                                      icon: Icons.money_rounded,
-                                      isSelected: _paymentMethod == 'cash_on_delivery',
-                                      isSubOption: true,
-                                      onTap: () => setState(() {
-                                        _paymentMethod = 'cash_on_delivery';
-                                        _leaveAtDoor = false;
-                                      }),
-                                    ),
-                                  ),
-                                if (supportsCash && supportsCard) const SizedBox(width: 8),
-                                if (supportsCard)
-                                  Expanded(
-                                    child: _buildPaymentOption(
-                                      title: widget.isPickUp ? 'Kart' : 'Kapıda Kredi Kartı',
-                                      icon: Icons.credit_card_rounded,
-                                      isSelected: _paymentMethod == 'card_on_delivery',
-                                      isSubOption: true,
-                                      onTap: () => setState(() {
-                                        _paymentMethod = 'card_on_delivery';
-                                        _leaveAtDoor = false;
-                                      }),
-                                    ),
-                                  ),
-                              ],
-                            ),
                           ),
                         ],
-                      ),
-                    ),
-                    secondChild: const SizedBox(width: double.infinity, height: 0),
-                  ),
-                  AnimatedCrossFade(
-                    duration: const Duration(milliseconds: 300),
-                    crossFadeState: _paymentMethod == 'online_payment'
-                        ? CrossFadeState.showFirst
-                        : CrossFadeState.showSecond,
-                    firstChild: Padding(
-                      padding: const EdgeInsets.only(top: 12),
-                      child: _buildCreditCardForm(),
-                    ),
-                    secondChild: const SizedBox(width: double.infinity, height: 0),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // --- ÜRÜN TÜKENİRSE TERCİHİ ---
-                  _sectionTitle("Ürün Tükenirse Ne Yapalım?", Icons.help_outline),
-                  const SizedBox(height: 12),
-                  IntrinsicHeight(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(
-                          child: _buildPaymentOption(
-                            title: widget.isPickUp ? 'Benzer Ürünle Değiştir' : 'Benzer Ürün Gönder',
-                            icon: Icons.cached_rounded,
-                            isSelected: _substitutionPreference == 'SUBSTITUTE',
-                            onTap: () => setState(() => _substitutionPreference = 'SUBSTITUTE'),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildPaymentOption(
-                            title: 'Ürünü İptal Et / İade',
-                            icon: Icons.cancel_outlined,
-                            isSelected: _substitutionPreference == 'REFUND',
-                            onTap: () => setState(() => _substitutionPreference = 'REFUND'),
-                          ),
-                        ),
                       ],
                     ),
                   ),
-                  if (_substitutionPreference == 'REFUND' && shopCampaignId != null)
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      margin: const EdgeInsets.only(top: 12),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.amber.shade300),
-                      ),
+
+                  const SizedBox(height: 12),
+
+                  // Ana Ödeme Yöntemleri Seçimi (Kredi Kartı vs Kapıda / Mağazada)
+                  if (!isFullyWallet) ...[
+                    IntrinsicHeight(
                       child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Icon(Icons.warning_amber_rounded, color: Colors.amber.shade800),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              "Dikkat: İade seçeneğinde, eksilen ürün nedeniyle sepet tutarınız minimum limit altına düşerse aktif kampanyanız veya kupon indiriminiz iptal olabilir.",
-                              style: TextStyle(
-                                color: Colors.amber.shade900,
-                                fontWeight: FontWeight.w500,
-                                fontSize: 12,
+                          if (supportsOnline)
+                            Expanded(
+                              child: _buildPaymentOption(
+                                title: 'Kredi Kartı',
+                                icon: Icons.credit_card,
+                                isSelected: _paymentMethod == 'online_payment',
+                                onTap: () => setState(() => _paymentMethod = 'online_payment'),
                               ),
+                            ),
+                          if (supportsPayAtDoor && supportsOnline) const SizedBox(width: 8),
+                          if (supportsPayAtDoor)
+                            Expanded(
+                              child: _buildPaymentOption(
+                                title: widget.isPickUp ? 'Mağazada' : 'Kapıda',
+                                icon: widget.isPickUp ? Icons.store_outlined : Icons.local_shipping_outlined,
+                                isSelected: _paymentMethod == 'cash_on_delivery' || _paymentMethod == 'card_on_delivery',
+                                onTap: () {
+                                  setState(() {
+                                    _paymentMethod = supportsCash ? 'cash_on_delivery' : 'card_on_delivery';
+                                    _leaveAtDoor = false;
+                                  });
+                                },
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    AnimatedCrossFade(
+                      duration: const Duration(milliseconds: 300),
+                      crossFadeState: (supportsCash || supportsCard) && (_paymentMethod == 'cash_on_delivery' || _paymentMethod == 'card_on_delivery')
+                          ? CrossFadeState.showFirst
+                          : CrossFadeState.showSecond,
+                      firstChild: Container(
+                        margin: const EdgeInsets.only(top: 12),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "Nasıl ödemek istersiniz?",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            IntrinsicHeight(
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  if (supportsCash)
+                                    Expanded(
+                                      child: _buildPaymentOption(
+                                        title: widget.isPickUp ? 'Nakit' : 'Kapıda Nakit',
+                                        icon: Icons.money_rounded,
+                                        isSelected: _paymentMethod == 'cash_on_delivery',
+                                        isSubOption: true,
+                                        onTap: () => setState(() {
+                                          _paymentMethod = 'cash_on_delivery';
+                                          _leaveAtDoor = false;
+                                        }),
+                                      ),
+                                    ),
+                                  if (supportsCash && supportsCard) const SizedBox(width: 8),
+                                  if (supportsCard)
+                                    Expanded(
+                                      child: _buildPaymentOption(
+                                        title: widget.isPickUp ? 'Kart' : 'Kapıda Kredi Kartı',
+                                        icon: Icons.credit_card_rounded,
+                                        isSelected: _paymentMethod == 'card_on_delivery',
+                                        isSubOption: true,
+                                        onTap: () => setState(() {
+                                          _paymentMethod = 'card_on_delivery';
+                                          _leaveAtDoor = false;
+                                        }),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      secondChild: const SizedBox(width: double.infinity, height: 0),
+                    ),
+                    AnimatedCrossFade(
+                      duration: const Duration(milliseconds: 300),
+                      crossFadeState: _paymentMethod == 'online_payment'
+                          ? CrossFadeState.showFirst
+                          : CrossFadeState.showSecond,
+                      firstChild: Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: _buildCreditCardForm(),
+                      ),
+                      secondChild: const SizedBox(width: double.infinity, height: 0),
+                    ),
+                  ],
+
+                  if (selectedBusiness?.type != BusinessType.restaurant &&
+                      selectedBusiness?.type != BusinessType.cafe &&
+                      selectedBusiness?.type.label != 'Yemek') ...[
+                    const SizedBox(height: 24),
+
+                    // --- ÜRÜN TÜKENİRSE TERCİHİ ---
+                    _sectionTitle("Ürün Tükenirse Ne Yapalım?", Icons.help_outline),
+                    const SizedBox(height: 12),
+                    IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            child: _buildPaymentOption(
+                              title: widget.isPickUp ? 'Benzer Ürünle Değiştir' : 'Benzer Ürün Gönder',
+                              icon: Icons.cached_rounded,
+                              isSelected: _substitutionPreference == 'SUBSTITUTE',
+                              onTap: () => setState(() => _substitutionPreference = 'SUBSTITUTE'),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _buildPaymentOption(
+                              title: 'Ürünü İptal Et / İade',
+                              icon: Icons.cancel_outlined,
+                              isSelected: _substitutionPreference == 'REFUND',
+                              onTap: () => setState(() => _substitutionPreference = 'REFUND'),
                             ),
                           ),
                         ],
                       ),
                     ),
+                    if (_substitutionPreference == 'REFUND' && shopCampaignId != null)
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        margin: const EdgeInsets.only(top: 12),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.amber.shade300),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.warning_amber_rounded, color: Colors.amber.shade800),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                "Dikkat: İade seçeneğinde, eksilen ürün nedeniyle sepet tutarınız minimum limit altına düşerse aktif kampanyanız veya kupon indiriminiz iptal olabilir.",
+                                style: TextStyle(
+                                  color: Colors.amber.shade900,
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
 
                   const SizedBox(height: 24),
 
@@ -1017,7 +1015,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                               16,
                             ),
                             children: cartState.items.map((item) {
-                              double price = item.businessProduct.price;
+                              double price = item.unitPrice;
                               if (activeCampaigns.isNotEmpty) {
                                 try {
                                   final campaign = activeCampaigns
@@ -1032,43 +1030,72 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                                 } catch (_) {}
                               }
 
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 8.0),
-                                child: Row(
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 10.0),
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF8FAFC),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Container(
-                                      width: 28,
-                                      height: 28,
-                                      alignment: Alignment.center,
-                                      decoration: BoxDecoration(
-                                        color: Colors.grey[100],
-                                        borderRadius: BorderRadius.circular(6),
-                                        border: Border.all(
-                                          color: Colors.grey.shade300,
+                                    Row(
+                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                      children: [
+                                        // Belirgin ve Net Adet Rozeti
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFFFF0EB),
+                                            borderRadius: BorderRadius.circular(6),
+                                            border: Border.all(color: const Color(0xFFE95D22).withValues(alpha: 0.3)),
+                                          ),
+                                          child: Text(
+                                            "${QuantityFormatter.formatValue(item.quantity)} Adet",
+                                            style: const TextStyle(
+                                              color: Color(0xFFE95D22),
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 12,
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                      child: Text(
-                                        QuantityFormatter.formatValue(item.quantity),
-                                        style: TextStyle(
-                                          color: kPrimaryColor,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 11,
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            item.businessProduct.product.name,
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF1E293B),
+                                            ),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
                                         ),
-                                      ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          "${(price * item.quantity).toStringAsFixed(2)} ₺",
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                            color: Color(0xFF1E293B),
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Text(
-                                        item.businessProduct.product.name,
-                                        style: const TextStyle(fontSize: 14),
+                                    if (item.selectedOptions.isNotEmpty) ...[
+                                      const SizedBox(height: 6),
+                                      SelectedOptionsBreakdown(
+                                        options: item.selectedOptions,
+                                        quantity: item.quantity,
+                                        basePrice: item.businessProduct.price,
+                                        isCollapsible: true,
+                                        initiallyExpanded: false,
+                                        showSummary: item.quantity > 1,
                                       ),
-                                    ),
-                                    Text(
-                                      "${(price * item.quantity).toStringAsFixed(2)} ₺",
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
+                                    ],
                                   ],
                                 ),
                               );
@@ -1133,6 +1160,32 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                                   ),
                                 ],
                               ),
+                              if (walletDeduction > 0) ...[
+                                const SizedBox(height: 8),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Row(
+                                      children: [
+                                        Icon(Icons.account_balance_wallet_rounded, size: 14, color: Color(0xFF00A651)),
+                                        SizedBox(width: 4),
+                                        Text(
+                                          "Hoppa Cüzdan Bakiyesi",
+                                          style: TextStyle(color: Color(0xFF00A651), fontSize: 14, fontWeight: FontWeight.w600),
+                                        ),
+                                      ],
+                                    ),
+                                    Text(
+                                      "-${walletDeduction.toStringAsFixed(2)} ₺",
+                                      style: const TextStyle(
+                                        color: Color(0xFF00A651),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                               const Padding(
                                 padding: EdgeInsets.symmetric(vertical: 12),
                                 child: Divider(),
@@ -1141,15 +1194,15 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Text(
-                                    "Genel Toplam",
-                                    style: TextStyle(
+                                  Text(
+                                    walletDeduction > 0 ? "Ödenecek Tutar" : "Genel Toplam",
+                                    style: const TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 18,
                                     ),
                                   ),
                                   Text(
-                                    "${total.toStringAsFixed(2)} ₺",
+                                    "${payableAmount.toStringAsFixed(2)} ₺",
                                     style: TextStyle(
                                       fontWeight: FontWeight.w900,
                                       fontSize: 24,
@@ -1282,12 +1335,17 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                 ),
                 child: _isLoading
                     ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text(
-                        "Siparişi Tamamla",
-                        style: TextStyle(
-                          fontSize: 18,
+                    : Text(
+                        isFullyWallet
+                            ? "Siparişi Cüzdanla Onayla (₺${total.toStringAsFixed(2)})"
+                            : (walletDeduction > 0
+                                ? "Siparişi Onayla (Kalan ₺${payableAmount.toStringAsFixed(2)})"
+                                : "Siparişi Onayla (₺${total.toStringAsFixed(2)})"),
+                        style: const TextStyle(
+                          fontSize: 17,
                           fontWeight: FontWeight.bold,
                         ),
+                        textAlign: TextAlign.center,
                       ),
               ),
             ),

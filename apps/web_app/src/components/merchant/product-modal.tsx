@@ -63,11 +63,14 @@ export default function ProductModal({ product, onClose, onSuccess, onOpenOption
 
     setIsUploading(true);
     try {
+      const mimeType = file.type || 'image/jpeg';
       const presignRes = await merchantApiFetch('/media/upload-url', {
         method: 'POST',
         body: JSON.stringify({
           fileName: file.name,
-          contentType: file.type,
+          mimeType: mimeType,
+          contentType: mimeType,
+          fileSize: file.size,
         }),
       });
 
@@ -77,7 +80,7 @@ export default function ProductModal({ product, onClose, onSuccess, onOpenOption
       const uploadRes = await fetch(uploadUrl, {
         method: 'PUT',
         headers: {
-          'Content-Type': file.type,
+          'Content-Type': mimeType,
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
         body: file,
@@ -87,7 +90,8 @@ export default function ProductModal({ product, onClose, onSuccess, onOpenOption
         throw new Error('Görsel sunucuya yüklenemedi.');
       }
 
-      setImageUrl(publicUrl || `/uploads/${fileKey}`);
+      const finalUrl = publicUrl || `/uploads/${fileKey}`;
+      setImageUrl(finalUrl);
     } catch (err: any) {
       alert(err.message || 'Görsel yüklenirken hata oluştu.');
     } finally {

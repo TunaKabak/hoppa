@@ -17,7 +17,6 @@ import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
 import 'package:consumer_app/apps/consumer/widgets/hoppa_dialog.dart';
 import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository.dart';
 import 'package:consumer_app/apps/consumer/main_layout/controllers/floating_nav_controller.dart';
-import 'package:core_shared/shared/models/business.dart';
 
 class CartPage extends ConsumerStatefulWidget {
   const CartPage({super.key});
@@ -158,49 +157,43 @@ class _CartPageState extends ConsumerState<CartPage> {
                     ),
                   ),
                   if (cartState.carts.isNotEmpty)
-                    PopupMenuButton<String>(
-                      icon: const Icon(Icons.delete_sweep_outlined, color: Colors.white),
-                      tooltip: "Sepet Temizleme Seçenekleri",
-                      onSelected: (value) {
-                        if (value == 'current') {
-                          final activeId = cartState.currentBusinessId;
-                          if (activeId != null) {
-                            _showClearSingleCartDialog(
-                              context,
-                              ref.read(cartProvider.notifier),
-                              cartState.carts[activeId],
-                            );
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () {
+                          if (cartState.hasMultipleCarts) {
+                            _showClearCartOptionsSheet(context, ref.read(cartProvider.notifier), cartState);
+                          } else {
+                            final activeId = cartState.currentBusinessId;
+                            if (activeId != null) {
+                              _showClearSingleCartDialog(
+                                context,
+                                ref.read(cartProvider.notifier),
+                                cartState.carts[activeId],
+                              );
+                            } else {
+                              _showClearCartDialog(context, ref.read(cartProvider.notifier));
+                            }
                           }
-                        } else if (value == 'all') {
-                          _showClearCartDialog(context, ref.read(cartProvider.notifier));
-                        }
-                      },
-                      itemBuilder: (context) => [
-                        if (cartState.hasMultipleCarts)
-                          const PopupMenuItem(
-                            value: 'current',
-                            child: Row(
-                              children: [
-                                Icon(Icons.delete_outline, color: Colors.deepOrange, size: 20),
-                                SizedBox(width: 8),
-                                Text("Bu İşletmenin Sepetini Boşalt"),
-                              ],
-                            ),
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
                           ),
-                        const PopupMenuItem(
-                          value: 'all',
-                          child: Row(
-                            children: [
-                              Icon(Icons.delete_forever_outlined, color: Colors.red, size: 20),
-                              SizedBox(width: 8),
-                              Text("Tüm Sepetleri Boşalt"),
-                            ],
+                          child: const Icon(
+                            Icons.delete_outline_rounded,
+                            color: Colors.white,
+                            size: 20,
                           ),
                         ),
-                      ],
+                      ),
                     )
                   else
-                    const SizedBox(width: 48), // Denge için
+                    const SizedBox(width: 40), // Denge için
                 ],
               ),
             ),
@@ -305,6 +298,7 @@ class _CartPageState extends ConsumerState<CartPage> {
 
                                         return ModernProductCard(
                                           businessProduct: item.businessProduct,
+                                          cartItem: item,
                                           isListView: true,
                                           isCompact: true,
                                           campaign: campaign,
@@ -631,6 +625,7 @@ class _CartPageState extends ConsumerState<CartPage> {
                 padding: const EdgeInsets.only(bottom: 16.0),
                 child: ModernProductCard(
                   businessProduct: item.businessProduct,
+                  cartItem: item,
                   isListView: true,
                   isCompact: true,
                   campaign: campaign,
@@ -705,6 +700,128 @@ class _CartPageState extends ConsumerState<CartPage> {
             child: const Text("Alışverişe Başla"),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showClearCartOptionsSheet(
+    BuildContext context,
+    CartNotifier cartNotifier,
+    CartState cartState,
+  ) {
+    final activeId = cartState.currentBusinessId;
+    final activeCart = activeId != null ? cartState.carts[activeId] : null;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(24),
+            topRight: Radius.circular(24),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Handle bar
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Row(
+              children: [
+                Icon(Icons.delete_sweep_outlined, color: Color(0xFFE53935), size: 22),
+                SizedBox(width: 8),
+                Text(
+                  "Sepeti Boşalt",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Poppins',
+                    color: Color(0xFF1E293B),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (activeCart != null)
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF0EB),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.storefront_outlined, color: Color(0xFFE95D22), size: 22),
+                  ),
+                  title: const Text(
+                    "Bu İşletmenin Sepetini Boşalt",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  subtitle: Text(
+                    "${activeCart.businessName} (${activeCart.totalItemCount} ürün)",
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                  ),
+                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _showClearSingleCartDialog(context, cartNotifier, activeCart);
+                  },
+                ),
+              ),
+            Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFECEC),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFFFCDD2)),
+              ),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.delete_forever_outlined, color: Color(0xFFE53935), size: 22),
+                ),
+                title: const Text(
+                  "Tüm Sepetleri Boşalt",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFFE53935)),
+                ),
+                subtitle: Text(
+                  "${cartState.carts.length} farklı işletmedeki tüm ürünler temizlenir",
+                  style: const TextStyle(fontSize: 12, color: Color(0xFF991B1B)),
+                ),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFFE53935)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showClearCartDialog(context, cartNotifier);
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

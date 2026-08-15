@@ -44,8 +44,9 @@ class _FoodProductCustomizationSheetState extends State<FoodProductCustomization
     }
   }
 
-  double get _calculatedUnitPrice {
-    double basePrice = widget.product.shownPrice ?? widget.product.regularPrice ?? 0.0;
+  double get _basePrice => widget.product.shownPrice ?? widget.product.regularPrice ?? 0.0;
+
+  double get _extrasUnitTotal {
     double extrasTotal = 0.0;
 
     for (var group in widget.product.optionGroups) {
@@ -61,7 +62,6 @@ class _FoodProductCustomizationSheetState extends State<FoodProductCustomization
         if (freeQuota > 0) {
           paidIndex++;
           if (paidIndex <= freeQuota) {
-            // Free selection within quota
             continue;
           }
         }
@@ -69,8 +69,10 @@ class _FoodProductCustomizationSheetState extends State<FoodProductCustomization
       }
     }
 
-    return basePrice + extrasTotal;
+    return extrasTotal;
   }
+
+  double get _calculatedUnitPrice => _basePrice + _extrasUnitTotal;
 
   double get _totalPrice => _calculatedUnitPrice * _quantity;
 
@@ -148,37 +150,16 @@ class _FoodProductCustomizationSheetState extends State<FoodProductCustomization
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Row(
               children: [
-                if (widget.product.imageUrl.isNotEmpty && !widget.product.imageUrl.contains('placehold'))
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      widget.product.imageUrl,
-                      width: 64,
-                      height: 64,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Icon(Icons.fastfood, size: 40, color: Colors.orange),
-                    ),
-                  )
-                else
-                  Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      color: Colors.orange.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.lunch_dining, size: 36, color: Colors.orange),
-                  ),
-                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         widget.product.name,
-                        style: theme.textTheme.titleMedium?.copyWith(
+                        style: const TextStyle(
+                          fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          fontSize: 17,
+                          color: Colors.black87,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -187,38 +168,34 @@ class _FoodProductCustomizationSheetState extends State<FoodProductCustomization
                         const SizedBox(height: 2),
                         Text(
                           widget.product.description,
-                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
-                      const SizedBox(height: 4),
-                      Text(
-                        "₺${(widget.product.shownPrice ?? widget.product.regularPrice ?? 0.0).toStringAsFixed(2)}",
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFFE95D22),
-                        ),
-                      ),
                     ],
                   ),
                 ),
+                const SizedBox(width: 8),
                 IconButton(
-                  icon: const Icon(Icons.close),
+                  icon: const Icon(Icons.close, color: Colors.grey),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
             ),
           ),
+
           const Divider(height: 1),
 
-          // Scrollable Option Groups
+          // Option Groups List
           Expanded(
             child: ListView.separated(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               itemCount: widget.product.optionGroups.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 20),
+              separatorBuilder: (context, index) => const Divider(height: 24),
               itemBuilder: (context, index) {
                 final group = widget.product.optionGroups[index];
                 return _buildOptionGroupSection(group);
@@ -226,22 +203,71 @@ class _FoodProductCustomizationSheetState extends State<FoodProductCustomization
             ),
           ),
 
-          // Bottom Action Area
+          // Bottom Action Bar
           Container(
-            padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.of(context).padding.bottom + 12),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
+                  color: Colors.black.withValues(alpha: 0.06),
+                  offset: const Offset(0, -3),
                   blurRadius: 10,
-                  offset: const Offset(0, -4),
                 ),
               ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Canlı Hesaplama ve Birim Fiyat Şeridi
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.calculate_outlined, size: 16, color: Color(0xFF64748B)),
+                          const SizedBox(width: 6),
+                          Text(
+                            "Baz: ${_basePrice.toStringAsFixed(2)} ₺",
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF64748B),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          if (_extrasUnitTotal > 0) ...[
+                            const Text(" + ", style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                            Text(
+                              "Ekstralar: +${_extrasUnitTotal.toStringAsFixed(2)} ₺",
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF00A651),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      Text(
+                        "Birim: ${_calculatedUnitPrice.toStringAsFixed(2)} ₺",
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
                 // Validation error chip if mandatory choices missing
                 if (validationErr != null)
                   Container(
@@ -329,6 +355,17 @@ class _FoodProductCustomizationSheetState extends State<FoodProductCustomization
                               "• ₺${_totalPrice.toStringAsFixed(2)}",
                               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                             ),
+                            if (_quantity > 1) ...[
+                              const SizedBox(width: 4),
+                              Text(
+                                "(${_quantity} adet)",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white.withValues(alpha: 0.85),
+                                  fontWeight: FontWeight.normal,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -386,14 +423,6 @@ class _FoodProductCustomizationSheetState extends State<FoodProductCustomization
               style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
             ),
           ),
-        if (group.freeSelectionsCount > 0)
-          Padding(
-            padding: const EdgeInsets.only(top: 2.0, bottom: 6.0),
-            child: Text(
-              "🎁 İlk ${group.freeSelectionsCount} seçim ücretsiz!",
-              style: const TextStyle(fontSize: 11, color: Colors.green, fontWeight: FontWeight.bold),
-            ),
-          ),
         const SizedBox(height: 8),
 
         // Radio / Variation Pills
@@ -404,16 +433,48 @@ class _FoodProductCustomizationSheetState extends State<FoodProductCustomization
             children: group.options.map((opt) {
               final isSelected = groupSelections.containsKey(opt.id);
               return ChoiceChip(
-                label: Text(
-                  opt.price > 0 ? "${opt.name} (+₺${opt.price.toStringAsFixed(0)})" : opt.name,
-                  style: TextStyle(
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                    color: isSelected ? Colors.white : Colors.black87,
-                  ),
+                label: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      opt.name,
+                      style: TextStyle(
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                        color: isSelected ? Colors.white : Colors.black87,
+                        fontSize: 13,
+                      ),
+                    ),
+                    if (opt.price > 0) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? Colors.white.withValues(alpha: 0.25)
+                              : const Color(0xFFE8F5E9),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          "+${opt.price.toStringAsFixed(2)} ₺",
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: isSelected ? Colors.white : const Color(0xFF00A651),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 selected: isSelected,
                 selectedColor: const Color(0xFFE95D22),
                 backgroundColor: Colors.grey.shade100,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(
+                    color: isSelected ? const Color(0xFFE95D22) : Colors.grey.shade300,
+                  ),
+                ),
                 onSelected: (val) {
                   setState(() {
                     if (val) {
@@ -445,17 +506,9 @@ class _FoodProductCustomizationSheetState extends State<FoodProductCustomization
                     if (isSelected) {
                       _selections[group.id]?.remove(opt.id);
                     } else {
-                      // Check max selections limit
                       if (group.maxSelections > 1 && groupSelections.length >= group.maxSelections) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text("En fazla ${group.maxSelections} seçim yapabilirsiniz."),
-                            duration: const Duration(seconds: 2),
-                          ),
-                        );
                         return;
                       }
-
                       _selections[group.id] ??= {};
                       _selections[group.id]![opt.id] = SelectedProductOption(
                         optionId: opt.id,
@@ -467,51 +520,79 @@ class _FoodProductCustomizationSheetState extends State<FoodProductCustomization
                     }
                   });
                 },
-                borderRadius: BorderRadius.circular(8),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  margin: const EdgeInsets.symmetric(vertical: 3),
+                  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 10.0),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? (isRemovable ? const Color(0xFFFFF5F5) : const Color(0xFFFFF9F6))
+                        : Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: isSelected
+                          ? (isRemovable ? const Color(0xFFFFCDD2) : const Color(0xFFFFCCBC))
+                          : Colors.grey.shade200,
+                    ),
+                  ),
                   child: Row(
                     children: [
                       Icon(
                         isSelected
-                            ? (isRemovable ? Icons.cancel : Icons.check_box)
-                            : Icons.check_box_outline_blank,
+                            ? (isRemovable ? Icons.cancel : Icons.check_circle)
+                            : Icons.radio_button_unchecked,
                         color: isSelected
-                            ? (isRemovable ? Colors.red : const Color(0xFFE95D22))
-                            : Colors.grey,
-                        size: 22,
+                            ? (isRemovable ? const Color(0xFFE53935) : const Color(0xFFE95D22))
+                            : Colors.grey.shade400,
+                        size: 20,
                       ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           opt.name,
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 13.5,
                             decoration: (isSelected && isRemovable) ? TextDecoration.lineThrough : null,
-                            color: (isSelected && isRemovable) ? Colors.red : Colors.black87,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            color: (isSelected && isRemovable) ? const Color(0xFFE53935) : Colors.black87,
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                           ),
                         ),
                       ),
                       if (isRemovable && isSelected)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: Colors.red.shade50,
-                            borderRadius: BorderRadius.circular(4),
+                            color: const Color(0xFFFFECEC),
+                            borderRadius: BorderRadius.circular(6),
                           ),
                           child: const Text(
                             "ÇIKARILDI",
-                            style: TextStyle(color: Colors.red, fontSize: 10, fontWeight: FontWeight.bold),
+                            style: TextStyle(color: Color(0xFFE53935), fontSize: 10, fontWeight: FontWeight.bold),
                           ),
                         )
                       else if (opt.price > 0)
-                        Text(
-                          "+₺${opt.price.toStringAsFixed(2)}",
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green,
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE8F5E9),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            "+${opt.price.toStringAsFixed(2)} ₺",
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF00A651),
+                            ),
+                          ),
+                        )
+                      else
+                        const Text(
+                          "Ücretsiz",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF718096),
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                     ],

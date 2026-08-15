@@ -33,28 +33,11 @@ class BusinessSelectionPage extends ConsumerStatefulWidget {
 }
 
 class _BusinessSelectionPageState extends ConsumerState<BusinessSelectionPage> {
-  late ScrollController _scrollController;
-  bool _isCollapsed = false;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    _scrollController = ScrollController();
-    _scrollController.addListener(_scrollListener);
-  }
-
-  void _scrollListener() {
-    if (_scrollController.hasClients) {
-      if (_scrollController.offset > 50 && !_isCollapsed) {
-        setState(() {
-          _isCollapsed = true;
-        });
-      } else if (_scrollController.offset <= 50 && _isCollapsed) {
-        setState(() {
-          _isCollapsed = false;
-        });
-      }
-    }
   }
 
   @override
@@ -123,227 +106,106 @@ class _BusinessSelectionPageState extends ConsumerState<BusinessSelectionPage> {
 
             return Column(
               children: [
-                // FIXED MODERN CURVED COLORFUL HEADER (Hepsiburada / Yemeksepeti Style)
+                // SLEEK FIXED COMPACT HEADER
                 HoppaHeader(
-                  height: _isCollapsed ? 60.0 : 154.0,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.arrow_back_rounded,
-                                  color: Colors.white),
-                              onPressed: () {
-                                // Kategoriyi temizle -> Kategori Seçimine döner
-                                p.Provider.of<BusinessProvider>(
-                                  context,
-                                  listen: false,
-                                ).clearCategory();
-                              },
-                            ),
-                            Expanded(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    pageTitle,
-                                    style: GoogleFonts.poppins(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: _isCollapsed ? 14 : 16,
+                  height: 68.0,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 22),
+                          onPressed: () {
+                            // Kategoriyi temizle -> Kategori Seçimine döner
+                            p.Provider.of<BusinessProvider>(
+                              context,
+                              listen: false,
+                            ).clearCategory();
+                          },
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                pageTitle,
+                                style: GoogleFonts.poppins(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              InkWell(
+                                borderRadius: BorderRadius.circular(8),
+                                onTap: () async {
+                                  final selectedAddress = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const AddressListPage(isSelectionMode: true),
                                     ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  if (_isCollapsed && address != null) ...[
-                                    const SizedBox(height: 2),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(
-                                          Icons.location_on_rounded,
-                                          color: Colors.white70,
-                                          size: 11,
+                                  );
+                                  if (selectedAddress != null) {
+                                    deliveryProvider.setAddress(selectedAddress);
+                                  }
+                                },
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.location_on_rounded,
+                                      color: Colors.white70,
+                                      size: 13,
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Flexible(
+                                      child: Text(
+                                        address != null ? "${address.title} (${address.district})" : "Teslimat Adresi Seçin",
+                                        style: GoogleFonts.inter(
+                                          color: Colors.white.withValues(alpha: 0.95),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
                                         ),
-                                        const SizedBox(width: 2),
-                                        Flexible(
-                                          child: Text(
-                                            address.title,
-                                            style: GoogleFonts.inter(
-                                              color: Colors.white.withValues(alpha: 0.9),
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      ],
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 2),
+                                    const Icon(
+                                      Icons.keyboard_arrow_down_rounded,
+                                      color: Colors.white70,
+                                      size: 15,
                                     ),
                                   ],
-                                ],
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: () => AccountBottomSheet.show(context),
-                              child: Container(
-                                margin: const EdgeInsets.only(right: 8),
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: Colors.transparent,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                      color:
-                                          Colors.white.withValues(alpha: 0.5)),
-                                ),
-                                child: const Icon(
-                                  Icons.person_outline_rounded,
-                                  color: Colors.white,
-                                  size: 20,
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                      // Floating Address Bar Card (integrated into orange gradient header)
-                      AnimatedSize(
-                        duration: const Duration(milliseconds: 200),
-                        curve: Curves.easeInOut,
-                        child: _isCollapsed
-                            ? const SizedBox.shrink()
-                            : Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const SizedBox(height: 8),
-                                  Padding(
-                                    padding:
-                                        const EdgeInsets.symmetric(horizontal: 16),
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        gradient: const LinearGradient(
-                                          colors: [
-                                            Color(
-                                                0xFFFFF3EE), // Soft orange peach tint
-                                            Colors.white,
-                                          ],
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                        ),
-                                        borderRadius: BorderRadius.circular(16),
-                                        border: Border.all(
-                                            color: const Color(
-                                                0xFFFFDDD2)), // Warm orange border
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black
-                                                .withValues(alpha: 0.08),
-                                            blurRadius: 10,
-                                            offset: const Offset(0, 4),
-                                          ),
-                                        ],
-                                      ),
-                                      child: Material(
-                                        color: Colors.transparent,
-                                        borderRadius: BorderRadius.circular(16),
-                                        child: InkWell(
-                                          borderRadius: BorderRadius.circular(16),
-                                          splashColor: const Color(0xFFE95D22)
-                                              .withValues(alpha: 0.1),
-                                          onTap: () async {
-                                            final selectedAddress =
-                                                await Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (context) =>
-                                                    const AddressListPage(
-                                                        isSelectionMode: true),
-                                              ),
-                                            );
-                                            if (selectedAddress != null) {
-                                              deliveryProvider
-                                                  .setAddress(selectedAddress);
-                                            }
-                                          },
-                                          child: Padding(
-                                            padding: const EdgeInsets.all(14),
-                                            child: Row(
-                                              children: [
-                                                // Circular Location Icon Badge
-                                                Container(
-                                                  padding: const EdgeInsets.all(10),
-                                                  decoration: BoxDecoration(
-                                                    color: const Color(0xFFE95D22)
-                                                        .withValues(alpha: 0.08),
-                                                    shape: BoxShape.circle,
-                                                  ),
-                                                  child: const Icon(
-                                                    Icons.location_on_rounded,
-                                                    color: Color(0xFFE95D22),
-                                                    size: 22,
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 14),
-                                                // Address Info text
-                                                Expanded(
-                                                  child: Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment.start,
-                                                    children: [
-                                                      Text(
-                                                        address != null
-                                                            ? "Teslimat: ${address.title}"
-                                                            : "Nereye Gönderilsin?",
-                                                        style: TextStyle(
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                          fontSize: 14,
-                                                          fontFamily: 'Poppins',
-                                                          color:
-                                                              Colors.grey.shade900,
-                                                        ),
-                                                      ),
-                                                      const SizedBox(height: 3),
-                                                      Text(
-                                                        address != null
-                                                            ? "${address.district}, ${address.city}"
-                                                            : "Lütfen bir teslimat adresi belirtin",
-                                                        style: TextStyle(
-                                                          color:
-                                                              Colors.grey.shade600,
-                                                          fontSize: 12,
-                                                          fontFamily: 'Inter',
-                                                        ),
-                                                        maxLines: 1,
-                                                        overflow:
-                                                            TextOverflow.ellipsis,
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 8),
-                                                const Icon(
-                                                  Icons.keyboard_arrow_down_rounded,
-                                                  color: Colors.grey,
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                      ),
-                    ],
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () => AccountBottomSheet.show(context),
+                          child: Container(
+                            margin: const EdgeInsets.only(right: 8),
+                            padding: const EdgeInsets.all(7),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                            ),
+                            child: const Icon(
+                              Icons.person_outline_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 Expanded(

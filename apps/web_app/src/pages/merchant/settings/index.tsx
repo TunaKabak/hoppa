@@ -247,11 +247,14 @@ export default function MerchantSettingsPage() {
     else setIsUploadingHeader(true);
 
     try {
+      const mimeType = file.type || 'image/jpeg';
       const presignRes = await merchantApiFetch('/media/upload-url', {
         method: 'POST',
         body: JSON.stringify({
           fileName: file.name,
-          contentType: file.type,
+          mimeType: mimeType,
+          contentType: mimeType,
+          fileSize: file.size,
         }),
       });
 
@@ -261,7 +264,7 @@ export default function MerchantSettingsPage() {
       const uploadRes = await fetch(uploadUrl, {
         method: 'PUT',
         headers: {
-          'Content-Type': file.type,
+          'Content-Type': mimeType,
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: file,
