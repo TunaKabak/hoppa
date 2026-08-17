@@ -107,12 +107,16 @@ const merchantAuthController = new MerchantAuthController();
 app.post("/api/auth/handshake", handshakeRateLimiter, (req, res) => authController.handshake(req, res));
 app.post("/api/auth/request-otp", handshakeMiddleware, otpRateLimiter, validateBody(requestOtpSchema), (req, res) => authController.requestOtp(req, res));
 app.post("/api/auth/verify-otp", validateBody(verifyOtpSchema), (req, res) => authController.verifyOtp(req, res));
+app.post("/api/auth/refresh", (req, res) => authController.refreshToken(req, res));
+app.post("/api/auth/logout", (req, res) => authController.logout(req, res));
 app.get("/api/auth/check-phone/:phone", (req, res) => authController.checkPhoneExists(req, res));
 
 // --- Merchant Auth Routes (E-posta + Şifre tabanlı) ---
 app.post("/api/merchant/auth/login", (req, res) => merchantAuthController.login(req, res));
 app.post("/api/merchant/auth/register", (req, res) => merchantAuthController.register(req, res));
 app.post("/api/merchant/auth/submit-revision", (req, res) => merchantAuthController.submitRevision(req, res));
+app.post("/api/merchant/auth/refresh", (req, res) => merchantAuthController.refreshToken(req, res));
+app.post("/api/merchant/auth/logout", (req, res) => merchantAuthController.logout(req, res));
 
 // --- API Domain Routes ---
 app.use("/api/merchant", merchantRoutes);

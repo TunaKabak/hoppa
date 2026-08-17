@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+    <rect width="64" height="64" rx="18" fill="url(#bg_snack)"/>
+    <!-- Chocolate Bar -->
+    <rect x="14" y="22" width="22" height="30" rx="3" fill="#4E342E" stroke="#3E2723" stroke-width="1.5"/>
+    <rect x="16" y="24" width="8" height="6" rx="1" fill="#6D4C41"/>
+    <rect x="26" y="24" width="8" height="6" rx="1" fill="#6D4C41"/>
+    <rect x="16" y="32" width="8" height="6" rx="1" fill="#6D4C41"/>
+    <rect x="26" y="32" width="8" height="6" rx="1" fill="#6D4C41"/>
+    <path d="M14 40L36 36V52H14V40Z" fill="#D32F2F"/>
+    <!-- Cookie -->
+    <circle cx="42" cy="38" r="11" fill="#FFB74D" stroke="#E65100" stroke-width="1.5"/>
+    <circle cx="38" cy="34" r="1.5" fill="#4E342E"/>
+    <circle cx="44" cy="34" r="1.5" fill="#4E342E"/>
+    <circle cx="46" cy="40" r="1.5" fill="#4E342E"/>
+    <circle cx="39" cy="42" r="1.5" fill="#4E342E"/>
+    <circle cx="43" cy="45" r="1" fill="#4E342E"/>
+    <defs>
+      <linearGradient id="bg_snack" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#FCE4EC"/>
+        <stop offset="1" stop-color="#F8BBD0"/>
+      </linearGradient>
+    </defs>
+  </svg>

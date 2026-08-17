@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+    <rect width="64" height="64" rx="18" fill="url(#bg_bouquet)"/>
+    <!-- Kraft Wrapper Cone -->
+    <path d="M20 30L32 54L44 30H20Z" fill="#D7CCC8" stroke="#8D6E63" stroke-width="1.5"/>
+    <path d="M30 42L34 42" stroke="#E91E63" stroke-width="3" stroke-linecap="round"/>
+    <!-- Roses -->
+    <circle cx="32" cy="22" r="7" fill="#E91E63"/>
+    <circle cx="24" cy="26" r="6" fill="#F06292"/>
+    <circle cx="40" cy="26" r="6" fill="#F06292"/>
+    <circle cx="32" cy="22" r="3" fill="#C2185B"/>
+    <!-- Greenery -->
+    <path d="M18 22C16 18 20 16 22 20M46 22C48 18 44 16 42 20" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/>
+    <defs>
+      <linearGradient id="bg_bouquet" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#FCE4EC"/>
+        <stop offset="1" stop-color="#F06292"/>
+      </linearGradient>
+    </defs>
+  </svg>

@@ -960,29 +960,6 @@ class _BusinessSelectionPageState extends ConsumerState<BusinessSelectionPage> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            if (business.campaignText != null &&
-                                business.campaignText!.isNotEmpty) ...[
-                              const SizedBox(height: 2),
-                              Row(
-                                children: [
-                                  const Icon(Icons.campaign_rounded,
-                                      color: Color(0xFFFF7E40), size: 11),
-                                  const SizedBox(width: 3),
-                                  Expanded(
-                                    child: Text(
-                                      business.campaignText!,
-                                      style: GoogleFonts.poppins(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 8.5,
-                                        color: const Color(0xFFFF7E40),
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ] else ...[
                               const SizedBox(height: 2),
                               Row(
                                 children: [
@@ -1026,9 +1003,8 @@ class _BusinessSelectionPageState extends ConsumerState<BusinessSelectionPage> {
                                 ],
                               ),
                             ],
-                          ],
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+    <rect width="64" height="64" rx="18" fill="url(#bg_pot)"/>
+    <!-- Ceramic Pot -->
+    <path d="M22 36L25 52H39L42 36H22Z" fill="#FFCCBC" stroke="#D84315" stroke-width="1.5"/>
+    <!-- Plant Leaves -->
+    <path d="M32 36C32 24 20 18 20 18C20 18 26 28 32 36Z" fill="#43A047"/>
+    <path d="M32 36C32 22 44 18 44 18C44 18 38 28 32 36Z" fill="#2E7D32"/>
+    <path d="M32 36C32 20 32 14 32 14C32 14 36 24 32 36Z" fill="#66BB6A"/>
+    <defs>
+      <linearGradient id="bg_pot" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#E8F5E9"/>
+        <stop offset="1" stop-color="#66BB6A"/>
+      </linearGradient>
+    </defs>
+  </svg>

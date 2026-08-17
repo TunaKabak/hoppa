@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+    <rect width="64" height="64" rx="18" fill="url(#bg_pump)"/>
+    <!-- Electric Pump Base -->
+    <rect x="22" y="24" width="20" height="28" rx="8" fill="#37474F" stroke="#263238" stroke-width="1.8"/>
+    <!-- Spout (Musluk) -->
+    <path d="M22 30H12V36H15" stroke="#CFD8DC" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M15 36V40" stroke="#03A9F4" stroke-width="2" stroke-linecap="round"/>
+    <!-- Touch Power Button -->
+    <circle cx="32" cy="32" r="4" fill="#00E676"/>
+    <path d="M32 29V33" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+    <defs>
+      <linearGradient id="bg_pump" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#EDE7F6"/>
+        <stop offset="1" stop-color="#9FA8DA"/>
+      </linearGradient>
+    </defs>
+  </svg>

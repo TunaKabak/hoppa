@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+    <rect width="64" height="64" rx="18" fill="url(#bg_baby)"/>
+    <!-- Baby Bottle -->
+    <rect x="22" y="26" width="16" height="24" rx="5" fill="#E8EAF6" stroke="#3F51B5" stroke-width="1.5"/>
+    <rect x="22" y="22" width="16" height="4" fill="#FFCA28" stroke="#FFA000" stroke-width="1"/>
+    <path d="M27 22V17C27 15 33 15 33 17V22H27Z" fill="#FFE082"/>
+    <path d="M26 32H30M26 36H32M26 40H30" stroke="#3F51B5" stroke-width="1.5" stroke-linecap="round"/>
+    <!-- Star -->
+    <path d="M44 18L45.5 22L50 22.5L46.5 25.5L47.5 30L44 27.5L40.5 30L41.5 25.5L38 22.5L42.5 22L44 18Z" fill="#FFD54F"/>
+    <defs>
+      <linearGradient id="bg_baby" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#E8EAF6"/>
+        <stop offset="1" stop-color="#C5CAE9"/>
+      </linearGradient>
+    </defs>
+  </svg>

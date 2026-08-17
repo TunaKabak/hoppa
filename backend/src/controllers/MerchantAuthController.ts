@@ -1,9 +1,8 @@
 import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcrypt";
+import { prisma } from "../config/db";
 import { JwtUtils } from "../utils/JwtUtils";
-
-const prisma = new PrismaClient();
+import { RefreshTokenService } from "../services/RefreshTokenService";
 
 export class MerchantAuthController {
   /**
@@ -54,8 +53,13 @@ export class MerchantAuthController {
         data: { lastLogin: new Date() },
       });
 
-      // JWT oluştur
-      const token = JwtUtils.generateToken(merchant.id, merchant.role);
+      // Token çifti oluştur (15dk Access Token + 30gün Refresh Token)
+      const deviceInfo = req.headers["user-agent"] as string | undefined;
+      const tokenPair = await RefreshTokenService.createTokenPair({
+        merchantId: merchant.id,
+        role: merchant.role,
+        deviceInfo,
+      });
 
       // Şifre hash'ini response'tan çıkar
       const { passwordHash: _, ...merchantPublic } = merchant;
@@ -64,7 +68,9 @@ export class MerchantAuthController {
         error: false,
         data: {
           message: "Giriş başarılı.",
-          token,
+          token: tokenPair.accessToken,
+          refreshToken: tokenPair.refreshToken,
+          expiresIn: tokenPair.expiresIn,
           merchant: merchantPublic,
         },
       });
@@ -178,4 +184,62 @@ export class MerchantAuthController {
       res.status(500).json({ error: true, message: "Sunucu hatası." });
     }
   }
+
+  /**
+   * POST /api/merchant/auth/refresh
+   * Body: { refreshToken: string }
+   */
+  public async refreshToken(req: Request, res: Response): Promise<void> {
+    try {
+      const { refreshToken } = req.body;
+      if (!refreshToken) {
+        res.status(400).json({ error: true, message: "Refresh token zorunludur." });
+        return;
+      }
+
+      const deviceInfo = req.headers["user-agent"] as string | undefined;
+      const result = await RefreshTokenService.rotateRefreshToken(refreshToken, deviceInfo);
+
+      if (!result.success || !result.data) {
+        res.status(result.status || 401).json({
+          error: true,
+          message: result.message || "Oturum yenilenemedi.",
+        });
+        return;
+      }
+
+      res.status(200).json({
+        error: false,
+        data: {
+          token: result.data.accessToken,
+          refreshToken: result.data.refreshToken,
+          expiresIn: result.data.expiresIn,
+        },
+      });
+    } catch (error) {
+      console.error("[MerchantAuthController.refreshToken] Error:", error);
+      res.status(500).json({ error: true, message: "Sunucu hatası." });
+    }
+  }
+
+  /**
+   * POST /api/merchant/auth/logout
+   * Body: { refreshToken?: string }
+   */
+  public async logout(req: Request, res: Response): Promise<void> {
+    try {
+      const { refreshToken } = req.body;
+      if (refreshToken) {
+        await RefreshTokenService.revokeRefreshToken(refreshToken);
+      }
+      res.status(200).json({
+        error: false,
+        message: "Başarıyla çıkış yapıldı.",
+      });
+    } catch (error) {
+      console.error("[MerchantAuthController.logout] Error:", error);
+      res.status(500).json({ error: true, message: "Sunucu hatası." });
+    }
+  }
 }
+

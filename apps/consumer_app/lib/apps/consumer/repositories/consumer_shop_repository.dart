@@ -213,7 +213,7 @@ class ConsumerShopRepository {
     final productMap = {
       'barcode': json['barcode'] ?? id,
       'name': name,
-      'brand': json['brand'] ?? 'Hoppa',
+      'brand': json['brand'] ?? '',
       'category': categoryName,
       'subCategory': subCategoryName,
       'imageUrl': validImageUrl,

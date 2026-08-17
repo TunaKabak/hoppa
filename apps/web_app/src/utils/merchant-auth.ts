@@ -10,12 +10,18 @@ export interface MerchantProfile {
 }
 
 const TOKEN_KEY = 'hoppa_merchant_token';
+const REFRESH_TOKEN_KEY = 'hoppa_merchant_refresh_token';
 const MERCHANT_KEY = 'hoppa_merchant_profile';
 const SELECTED_SHOP_KEY = 'hoppa_merchant_selected_shop';
 
 export const getMerchantToken = (): string | null => {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem(TOKEN_KEY);
+};
+
+export const getMerchantRefreshToken = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(REFRESH_TOKEN_KEY);
 };
 
 export const getMerchantProfile = (): MerchantProfile | null => {
@@ -43,15 +49,27 @@ export const setSelectedShopId = (shopId: string | null) => {
   }
 };
 
-export const setMerchantAuth = (token: string, merchant: MerchantProfile) => {
+export const setMerchantAuth = (token: string, merchant: MerchantProfile, refreshToken?: string) => {
   if (typeof window === 'undefined') return;
   localStorage.setItem(TOKEN_KEY, token);
+  if (refreshToken) {
+    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+  }
   localStorage.setItem(MERCHANT_KEY, JSON.stringify(merchant));
+};
+
+export const updateMerchantTokens = (token: string, refreshToken?: string) => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(TOKEN_KEY, token);
+  if (refreshToken) {
+    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+  }
 };
 
 export const clearMerchantAuth = () => {
   if (typeof window === 'undefined') return;
   localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
   localStorage.removeItem(MERCHANT_KEY);
   localStorage.removeItem(SELECTED_SHOP_KEY);
 };
@@ -65,34 +83,92 @@ export const getApiBaseUrl = (): string => {
   return rawUrl;
 };
 
-export const merchantApiFetch = async (endpoint: string, options: RequestInit = {}) => {
+// Singleton promise to prevent multiple parallel refresh requests
+let isRefreshing = false;
+let refreshPromise: Promise<string | null> | null = null;
+
+export const refreshMerchantToken = async (): Promise<string | null> => {
+  if (typeof window === 'undefined') return null;
+  const refreshToken = getMerchantRefreshToken();
+  if (!refreshToken) return null;
+
+  if (isRefreshing && refreshPromise) {
+    return refreshPromise;
+  }
+
+  isRefreshing = true;
+  refreshPromise = (async () => {
+    try {
+      const baseUrl = getApiBaseUrl();
+      const res = await fetch(`${baseUrl}/merchant/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
+
+      const json = await res.json();
+      if (res.ok && !json.error && json.data?.token) {
+        updateMerchantTokens(json.data.token, json.data.refreshToken);
+        return json.data.token as string;
+      } else {
+        clearMerchantAuth();
+        return null;
+      }
+    } catch (e) {
+      return null;
+    } finally {
+      isRefreshing = false;
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+};
+
+export const merchantApiFetch = async (endpoint: string, options: RequestInit = {}): Promise<any> => {
   if (typeof window === 'undefined') {
     return { error: true, message: 'Client-side execution required' };
   }
 
-  const token = getMerchantToken();
+  let token = getMerchantToken();
   const selectedShopId = getSelectedShopId();
   const baseUrl = getApiBaseUrl();
   const url = `${baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
 
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(options.headers as Record<string, string> || {}),
+  const buildHeaders = (authToken: string | null) => {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(options.headers as Record<string, string> || {}),
+    };
+
+    if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`;
+    }
+
+    if (selectedShopId) {
+      headers['x-business-id'] = selectedShopId;
+    }
+    return headers;
   };
 
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  if (selectedShopId) {
-    headers['x-business-id'] = selectedShopId;
-  }
-
   try {
-    const response = await fetch(url, {
+    let response = await fetch(url, {
       ...options,
-      headers,
+      headers: buildHeaders(token),
     });
+
+    // 401 Hatası alındığında ve endpoint login/refresh değilse sessizce token yenilemeyi dene (Silent Refresh)
+    const isAuthEndpoint = endpoint.includes('/merchant/auth/login') || endpoint.includes('/merchant/auth/refresh');
+    if (response.status === 401 && !isAuthEndpoint) {
+      const newToken = await refreshMerchantToken();
+      if (newToken) {
+        // Yeni token ile isteği tekrarla
+        response = await fetch(url, {
+          ...options,
+          headers: buildHeaders(newToken),
+        });
+      }
+    }
 
     const contentType = response.headers.get('content-type') || '';
     let data: any = {};

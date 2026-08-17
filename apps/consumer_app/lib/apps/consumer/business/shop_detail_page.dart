@@ -17,6 +17,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:core_shared/shared/models/campaign.dart';
 import 'package:consumer_app/apps/consumer/business/campaign_products_page.dart';
 import 'package:consumer_app/apps/consumer/business/widgets/food_product_customization_sheet.dart';
+import 'package:consumer_app/apps/consumer/business/widgets/hoppa_category_badge.dart';
 import 'package:consumer_app/apps/consumer/main_layout/voice_assistant_dialog.dart';
 
 class ModernShopDetailPage extends ConsumerStatefulWidget {
@@ -164,47 +165,6 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
     );
   }
 
-  IconData _getCategoryIcon(String name) {
-    switch (name.toLowerCase()) {
-      case 'water_drop':
-      case 'su & i̇çecek':
-      case 'su':
-        return Icons.water_drop;
-      case 'apple':
-      case 'meyve & sebze':
-        return Icons.apple;
-      case 'cookie':
-      case 'atıştırmalık':
-        return Icons.cookie;
-      case 'breakfast_dining':
-      case 'fırın':
-        return Icons.breakfast_dining;
-      case 'rice_bowl':
-      case 'temel gıda':
-        return Icons.rice_bowl;
-      case 'egg_alt':
-      case 'egg':
-      case 'süt & kahvaltılık':
-        return Icons.egg_alt;
-      case 'cleaning_services':
-      case 'temizlik':
-        return Icons.cleaning_services;
-      case 'local_florist':
-      case 'flower':
-      case 'çiçek':
-        return Icons.local_florist;
-      case 'grass':
-        return Icons.grass;
-      case 'redeem':
-        return Icons.redeem;
-      case 'circle_outlined':
-        return Icons.circle_outlined;
-      case 'shopping_basket':
-      default:
-        return Icons.shopping_basket;
-    }
-  }
-
   Widget _buildMiniCategoriesList(
     BuildContext context,
     WidgetRef ref,
@@ -255,40 +215,20 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
           controller: _miniCategoryScrollController,
           scrollDirection: Axis.horizontal,
           itemCount: listCategories.length,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           itemBuilder: (context, index) {
             final cat = listCategories[index];
             final isSelected = cat.name == selectedCategory;
 
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 3),
-              child: ChoiceChip(
-                selected: isSelected,
-                visualDensity: VisualDensity.compact,
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                labelPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-                label: Text(
-                  cat.name,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: isSelected ? Colors.white : const Color(0xFFE95D22),
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                  ),
-                ),
-                selectedColor: const Color(0xFFE95D22),
-                backgroundColor: Colors.white,
-                side: BorderSide(
-                  color: isSelected ? const Color(0xFFE95D22) : Colors.grey.shade300,
-                ),
-                onSelected: (selected) {
-                  if (selected) {
-                    ref.read(selectedCatalogCategoryProvider.notifier).state = cat.name;
-                    ref.read(selectedCatalogSubCategoryProvider.notifier).state = 'Tümü';
-                    _scrollToCategory(index);
-                    _scrollToMiniCategory(index);
-                  }
-                },
-              ),
+            return HoppaCategoryMiniPill(
+              name: cat.name,
+              isSelected: isSelected,
+              onTap: () {
+                ref.read(selectedCatalogCategoryProvider.notifier).state = cat.name;
+                ref.read(selectedCatalogSubCategoryProvider.notifier).state = 'Tümü';
+                _scrollToCategory(index);
+                _scrollToMiniCategory(index);
+              },
             );
           },
         );
@@ -744,73 +684,7 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                     ),
                   ),
                 ),
-            ] else if (widget.shop.campaignText != null && widget.shop.campaignText!.isNotEmpty)
-              SliverToBoxAdapter(
-                child: Container(
-                  margin: const EdgeInsets.fromLTRB(12, 12, 12, 2),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [
-                        Color(0xFFFF7E40),
-                        Color(0xFFFF5200),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFFF5200).withValues(alpha: 0.2),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.campaign_rounded,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              "MAĞAZA KAMPANYASI",
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 8,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.1,
-                              ),
-                            ),
-                            const SizedBox(height: 1),
-                            Text(
-                              widget.shop.campaignText!,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+            ],
             // Shop Badges / Tags (placed modernly between header and search bar)
             if (widget.shop.allowedFulfillmentModels.isNotEmpty || widget.shop.tags.isNotEmpty)
               SliverToBoxAdapter(
@@ -885,7 +759,7 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                           margin: const EdgeInsets.only(right: 6),
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFE95D22).withOpacity(0.1),
+                            color: const Color(0xFFE95D22).withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
@@ -914,8 +788,8 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
               pinned: true,
               delegate: _StickyCategoryHeaderDelegate(
                 builder: (context, isPinned) => Container(
-                  height: 104,
-                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  height: 112,
+                  padding: const EdgeInsets.symmetric(vertical: 6),
                   child: categoriesAsync.when(
                     loading: () => const Center(child: CircularProgressIndicator()),
                     error: (err, stack) => const Center(
@@ -947,94 +821,21 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                         controller: _categoryScrollController,
                         scrollDirection: Axis.horizontal,
                         itemCount: listCategories.length,
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
                         itemBuilder: (context, index) {
                           final cat = listCategories[index];
                           final isSelected = cat.name == selectedCategory;
-                          final hasImage = cat.backgroundImage != null && cat.backgroundImage!.isNotEmpty;
 
-                          return GestureDetector(
+                          return HoppaCategoryCard(
+                            name: cat.name,
+                            isSelected: isSelected,
+                            isPinned: isPinned,
                             onTap: () {
                               ref.read(selectedCatalogCategoryProvider.notifier).state = cat.name;
                               ref.read(selectedCatalogSubCategoryProvider.notifier).state = 'Tümü';
                               _scrollToCategory(index);
                               _scrollToMiniCategory(index);
                             },
-                            child: Container(
-                              width: 80,
-                              margin: const EdgeInsets.symmetric(horizontal: 6),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Container(
-                                    width: 54,
-                                    height: 54,
-                                    padding: const EdgeInsets.all(3),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: isSelected
-                                            ? const Color(0xFF00A651)
-                                            : (isPinned ? Colors.white30 : Colors.grey.shade200),
-                                        width: isSelected ? 2.5 : 1.0,
-                                      ),
-                                      color: Colors.white,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black.withValues(alpha: 0.08),
-                                          blurRadius: 4,
-                                          offset: const Offset(0, 2),
-                                        ),
-                                      ],
-                                    ),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(9),
-                                      child: hasImage
-                                          ? Image.network(
-                                              cat.backgroundImage!,
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (context, error, stackTrace) {
-                                                return Icon(
-                                                  cat.name == 'Tümü'
-                                                      ? Icons.grid_view_rounded
-                                                      : _getCategoryIcon(cat.iconName),
-                                                  size: 20,
-                                                  color: isSelected ? const Color(0xFF00A651) : theme.primaryColor,
-                                                );
-                                              },
-                                            )
-                                          : Container(
-                                              color: Colors.grey.shade100,
-                                              child: Icon(
-                                                cat.name == 'Tümü'
-                                                    ? Icons.grid_view_rounded
-                                                    : _getCategoryIcon(cat.iconName),
-                                                size: 20,
-                                                color: isSelected ? const Color(0xFF00A651) : theme.primaryColor,
-                                              ),
-                                            ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                                    child: Text(
-                                      cat.name,
-                                      textAlign: TextAlign.center,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                                        color: isPinned
-                                            ? (isSelected ? Colors.white : Colors.white.withValues(alpha: 0.9))
-                                            : (isSelected ? const Color(0xFF00A651) : theme.colorScheme.onSurface),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
                           );
                         },
                       );
@@ -1044,43 +845,94 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
               ),
             ),
 
-            // Subcategories list
+            // Subcategories list (Sticky Pinned High-Contrast Pill Tabs)
             if (selectedCategory != 'Tümü' && currentSubCategories.isNotEmpty && searchQuery.isEmpty)
-              SliverToBoxAdapter(
-                child: Container(
-                  height: 44,
-                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.15),
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: currentSubCategories.length,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    itemBuilder: (context, index) {
-                      final subCat = currentSubCategories[index];
-                      final isSelected = subCat == selectedSubCategory;
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _StickySubCategoryHeaderDelegate(
+                  child: Container(
+                    height: 48,
+                    color: Colors.white,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: currentSubCategories.length,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      itemBuilder: (context, index) {
+                        final subCat = currentSubCategories[index];
+                        final isSelected = subCat == selectedSubCategory;
 
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: ChoiceChip(
-                          selected: isSelected,
-                          label: Text(
-                            subCat,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: isSelected ? Colors.white : theme.colorScheme.onSurface,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: GestureDetector(
+                            onTap: () {
+                              ref.read(selectedCatalogSubCategoryProvider.notifier).state = subCat;
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              curve: Curves.easeInOut,
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                              decoration: BoxDecoration(
+                                gradient: isSelected
+                                    ? const LinearGradient(
+                                        colors: [
+                                          Color(0xFFFF6B00),
+                                          Color(0xFFFF8500),
+                                        ],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      )
+                                    : null,
+                                color: isSelected ? null : const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? Colors.transparent
+                                      : const Color(0xFFCBD5E1),
+                                  width: 1.2,
+                                ),
+                                boxShadow: isSelected
+                                    ? [
+                                        BoxShadow(
+                                          color: const Color(0xFFFF6B00).withValues(alpha: 0.35),
+                                          blurRadius: 6,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ]
+                                    : [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.03),
+                                          blurRadius: 2,
+                                          offset: const Offset(0, 1),
+                                        ),
+                                      ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (isSelected) ...[
+                                    const Icon(
+                                      Icons.check_circle_rounded,
+                                      size: 13,
+                                      color: Colors.white,
+                                    ),
+                                    const SizedBox(width: 5),
+                                  ],
+                                  Text(
+                                    subCat,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: isSelected ? Colors.white : const Color(0xFF1E293B),
+                                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w700,
+                                      letterSpacing: -0.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                          selectedColor: theme.primaryColor,
-                          backgroundColor: theme.colorScheme.surface,
-                          onSelected: (selected) {
-                            if (selected) {
-                              ref.read(selectedCatalogSubCategoryProvider.notifier).state = subCat;
-                            }
-                          },
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),
@@ -1471,10 +1323,10 @@ class _StickyCategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
   _StickyCategoryHeaderDelegate({required this.builder});
 
   @override
-  double get minExtent => 104.0;
+  double get minExtent => 112.0;
 
   @override
-  double get maxExtent => 104.0;
+  double get maxExtent => 112.0;
 
   @override
   Widget build(
@@ -1488,8 +1340,8 @@ class _StickyCategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
         gradient: isPinned
             ? const LinearGradient(
                 colors: [
-                  Color(0xFFE95D22),
-                  Color(0xFFFF8C00),
+                  Color(0xFFFF6B00),
+                  Color(0xFFFF8A00),
                 ],
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
@@ -1522,6 +1374,48 @@ class _StickyCategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(covariant _StickyCategoryHeaderDelegate oldDelegate) {
+    return true;
+  }
+}
+
+class _StickySubCategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+
+  _StickySubCategoryHeaderDelegate({required this.child});
+
+  @override
+  double get minExtent => 48.0;
+
+  @override
+  double get maxExtent => 48.0;
+
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      height: 48.0,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: const Border(
+          bottom: BorderSide(
+            color: Color(0xFFE2E8F0),
+            width: 1.0,
+          ),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _StickySubCategoryHeaderDelegate oldDelegate) {
     return true;
   }
 }

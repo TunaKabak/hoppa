@@ -12,6 +12,7 @@ abstract class IAuthRepository {
   });
   Future<AuthUser?> checkAuthStatus();
   Future<void> logout();
+  Future<bool> refreshToken();
   Future<void> saveUserLocal(AuthUser user);
 
   /// Merchant için e-posta + şifre ile giriş.
@@ -51,7 +52,6 @@ abstract class IAuthRepository {
 class AuthRepository implements IAuthRepository {
   final ApiClient _apiClient;
 
-  static const String _tokenKey = 'jwt_token';
   static const String _userIdKey = 'user_id';
   static const String _userPhoneKey = 'user_phone';
   static const String _userNameKey = 'user_name';
@@ -66,7 +66,9 @@ class AuthRepository implements IAuthRepository {
   static const String _merchantBusinessIdKey = 'merchant_business_id';
   static const String _savedProfilesKey = 'saved_merchant_profiles';
 
-  AuthRepository(this._apiClient);
+  AuthRepository(this._apiClient) {
+    _apiClient.onTokenRefresh = refreshToken;
+  }
 
   @override
   Future<void> requestOtp(String phoneNumber) async {
@@ -111,6 +113,9 @@ class AuthRepository implements IAuthRepository {
     final data = response['data'];
     if (data != null && data['token'] != null) {
       await _apiClient.saveToken(data['token'].toString());
+      if (data['refreshToken'] != null) {
+        await _apiClient.saveRefreshToken(data['refreshToken'].toString());
+      }
 
       final userMap = data['user'];
       if (userMap is Map<String, dynamic>) {
@@ -137,6 +142,9 @@ class AuthRepository implements IAuthRepository {
     final data = response['data'];
     if (data != null && data['token'] != null) {
       await _apiClient.saveToken(data['token'].toString());
+      if (data['refreshToken'] != null) {
+        await _apiClient.saveRefreshToken(data['refreshToken'].toString());
+      }
 
       final merchantMap = data['merchant'];
       if (merchantMap is Map<String, dynamic>) {
@@ -210,8 +218,56 @@ class AuthRepository implements IAuthRepository {
 
   @override
   Future<void> logout() async {
+    final currentRefreshToken = await _apiClient.getRefreshToken();
+    if (currentRefreshToken != null && currentRefreshToken.isNotEmpty) {
+      try {
+        final email = await _apiClient.getValue(_merchantEmailKey);
+        final endpoint = (email != null && email.isNotEmpty)
+            ? '/api/merchant/auth/logout'
+            : '/api/auth/logout';
+        await _apiClient.post(
+          endpoint,
+          body: {'refreshToken': currentRefreshToken},
+          requiresAuth: false,
+        );
+      } catch (_) {}
+    }
     await _apiClient.deleteToken();
+    await _apiClient.deleteRefreshToken();
     await _clearUser();
+  }
+
+  @override
+  Future<bool> refreshToken() async {
+    final currentRefreshToken = await _apiClient.getRefreshToken();
+    if (currentRefreshToken == null || currentRefreshToken.isEmpty) {
+      return false;
+    }
+
+    try {
+      final email = await _apiClient.getValue(_merchantEmailKey);
+      final endpoint = (email != null && email.isNotEmpty)
+          ? '/api/merchant/auth/refresh'
+          : '/api/auth/refresh';
+
+      final response = await _apiClient.post(
+        endpoint,
+        body: {'refreshToken': currentRefreshToken},
+        requiresAuth: false,
+      );
+
+      final data = response['data'];
+      if (data != null && data['token'] != null) {
+        await _apiClient.saveToken(data['token'].toString());
+        if (data['refreshToken'] != null) {
+          await _apiClient.saveRefreshToken(data['refreshToken'].toString());
+        }
+        return true;
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
   }
 
   @override

@@ -45,6 +45,7 @@ dependencies:
   supabase_flutter: ^2.6.0
   speech_to_text: ^7.4.0
   video_player: ^2.8.6
+  flutter_svg: ^2.0.17
 
   # Monorepo packages
   core_auth:
@@ -64,6 +65,7 @@ flutter:
   uses-material-design: true
   assets:
     - .env
+    - assets/categories/
     - assets/images/hoppa_logo.png
     - assets/images/hoppa_icon.png
     - assets/images/hoppa_button.png

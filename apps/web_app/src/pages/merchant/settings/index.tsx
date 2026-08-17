@@ -39,7 +39,6 @@ export default function MerchantSettingsPage() {
   // Profile Tab State
   const [businessName, setBusinessName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [campaignText, setCampaignText] = useState('');
   const [taxNumber, setTaxNumber] = useState('');
   const [identityNumber, setIdentityNumber] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
@@ -122,7 +121,6 @@ export default function MerchantSettingsPage() {
         const shop = res.data;
         setBusinessName(shop.businessName || shop.name || '');
         setPhoneNumber(shop.businessPhone || shop.phone || shop.merchant?.businessPhone || '');
-        setCampaignText(shop.campaignText || '');
         setTaxNumber(shop.taxNumber || shop.merchant?.taxNumber || '');
         setIdentityNumber(shop.identityNumber || shop.merchant?.identityNumber || '');
         setLogoUrl(shop.imageUrl || shop.logoUrl || '');
@@ -299,7 +297,6 @@ export default function MerchantSettingsPage() {
       businessName,
       phone: phoneNumber,
       businessPhone: phoneNumber,
-      campaignText: campaignText.trim(),
       taxNumber: taxNumber.trim(),
       identityNumber: identityNumber.trim(),
       imageUrl: logoUrl,
@@ -494,23 +491,6 @@ export default function MerchantSettingsPage() {
                       placeholder="+90 533 000 0000"
                       className={`w-full border rounded-xl p-3 text-sm font-bold outline-none ${
                         isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                      }`}
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-slate-400 flex items-center justify-between">
-                      <span>Aktif Kampanya Mesajı (Duyuru Banner Metni)</span>
-                      <span className="text-[10px] text-slate-500 font-mono">{campaignText.length}/60 karakter</span>
-                    </label>
-                    <input
-                      type="text"
-                      maxLength={60}
-                      value={campaignText}
-                      onChange={(e) => setCampaignText(e.target.value)}
-                      placeholder="Örn: Sepette %15 İndirim! Veya 2 Porsiyona 1 İçecek Bedava!"
-                      className={`w-full border rounded-xl p-3 text-sm font-bold outline-none ${
-                        isDark ? 'bg-slate-950 border-slate-800 text-[#FF6B00]' : 'bg-slate-50 border-slate-200 text-[#FF6B00]'
                       }`}
                     />
                   </div>

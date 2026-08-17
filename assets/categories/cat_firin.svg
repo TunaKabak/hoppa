@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+    <rect width="64" height="64" rx="18" fill="url(#bg_bakery)"/>
+    <!-- Baguette -->
+    <rect x="12" y="32" width="40" height="16" rx="8" transform="rotate(-15 12 32)" fill="#D7CCC8" stroke="#6D4C41" stroke-width="2"/>
+    <path d="M22 28L25 36M32 25L35 33M42 22L45 30" stroke="#8D6E63" stroke-width="2" stroke-linecap="round"/>
+    <!-- Croissant -->
+    <path d="M20 46C20 38 32 32 44 42C38 48 28 52 20 46Z" fill="#FFB74D" stroke="#E65100" stroke-width="1.5"/>
+    <path d="M28 39C32 38 36 41 38 44" stroke="#E65100" stroke-width="1.5" stroke-linecap="round"/>
+    <!-- Wheat -->
+    <path d="M46 16L38 30M46 16L48 22M46 16L42 20M43 23L47 27" stroke="#F57F17" stroke-width="1.8" stroke-linecap="round"/>
+    <defs>
+      <linearGradient id="bg_bakery" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#EFEBE9"/>
+        <stop offset="1" stop-color="#D7CCC8"/>
+      </linearGradient>
+    </defs>
+  </svg>

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+    <rect width="64" height="64" rx="18" fill="url(#bg_eternal)"/>
+    <!-- Glass Bell Jar / Cloche -->
+    <path d="M20 48V28C20 20 24 16 32 16C40 16 44 20 44 28V48H20Z" fill="#E1F5FE" fill-opacity="0.6" stroke="#0288D1" stroke-width="1.5"/>
+    <rect x="16" y="48" width="32" height="5" rx="2" fill="#5D4037"/>
+    <!-- Preserved Rose inside -->
+    <path d="M32 48V34" stroke="#2E7D32" stroke-width="2"/>
+    <circle cx="32" cy="30" r="5" fill="#D81B60"/>
+    <circle cx="32" cy="30" r="2" fill="#F8BBD0"/>
+    <defs>
+      <linearGradient id="bg_eternal" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#EFEBE9"/>
+        <stop offset="1" stop-color="#A1887F"/>
+      </linearGradient>
+    </defs>
+  </svg>

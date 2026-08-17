@@ -14,7 +14,6 @@ import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository
 import 'package:core_shared/shared/core/utils/quantity_formatter.dart';
 import 'package:consumer_app/apps/consumer/cart/cart_validation.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:consumer_app/apps/consumer/widgets/hoppa_dialog.dart';
 import 'package:consumer_app/apps/consumer/business/shop_detail_page.dart';
 
 class ProductDetailPage extends ConsumerStatefulWidget {
@@ -295,7 +294,10 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                       ),
                       const SizedBox(height: 24),
                       // Marka (Varsa)
-                      if (product.brand.isNotEmpty)
+                      if (product.brand.trim().isNotEmpty &&
+                          product.brand.toLowerCase() != 'hoppa' &&
+                          product.brand.toLowerCase() != 'genel' &&
+                          product.brand.toLowerCase() != 'yok') ...[
                         Text(
                           product.brand.toUpperCase(),
                           style: GoogleFonts.inter(
@@ -305,7 +307,8 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                             letterSpacing: 1.0,
                           ),
                         ),
-                      const SizedBox(height: 8),
+                        const SizedBox(height: 8),
+                      ],
                       // Ürün Adı
                       Text(
                         product.name,
@@ -711,27 +714,6 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
           color: isDisabled ? Colors.grey : const Color(0xFF00A651),
           size: 28,
         ),
-      ),
-    );
-  }
-
-  void _showErrorDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => HoppaDialog(
-        icon: Icons.shopping_basket_outlined,
-        iconColor: const Color(0xFFFF5200),
-        title: "Farklı Dükkan",
-        content: "Sepetinizde başka bir dükkana ait ürünler var. Sepeti temizleyip bu dükkandan devam etmek ister misiniz?",
-        cancelText: "İptal",
-        confirmText: "Sepeti Temizle ve Ekle",
-        isDestructive: true,
-        onCancel: () => Navigator.pop(ctx),
-        onConfirm: () {
-          Navigator.pop(ctx);
-          ref.read(cartProvider.notifier).clearCart();
-          ref.read(cartProvider.notifier).addToCart(widget.businessProduct);
-        },
       ),
     );
   }

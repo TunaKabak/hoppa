@@ -33,7 +33,7 @@ export default function MerchantLoginPage() {
       });
 
       if (res.data && res.data.token && res.data.merchant) {
-        setMerchantAuth(res.data.token, res.data.merchant);
+        setMerchantAuth(res.data.token, res.data.merchant, res.data.refreshToken);
         router.push('/merchant/products');
       } else {
         setErrorMsg('Giriş başarısız. Lütfen bilgilerinizi kontrol ediniz.');

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+    <rect width="64" height="64" rx="18" fill="url(#bg_meat)"/>
+    <!-- Steak -->
+    <path d="M16 28C14 22 22 16 30 18C38 20 46 16 48 24C50 32 42 42 34 42C26 42 18 34 16 28Z" fill="#C62828" stroke="#B71C1C" stroke-width="2"/>
+    <circle cx="32" cy="28" r="4" fill="#FFFFFF"/>
+    <path d="M24 24C28 26 36 24 40 28" stroke="#EF9A9A" stroke-width="2" stroke-linecap="round"/>
+    <!-- Chicken Drumstick -->
+    <path d="M32 38C32 34 40 30 46 36C52 42 46 50 40 46L34 52L30 48L36 42C34 40 32 39 32 38Z" fill="#FF8F00" stroke="#E65100" stroke-width="1.5"/>
+    <circle cx="28" cy="52" r="3" fill="#FFF8E1" stroke="#D7CCC8" stroke-width="1"/>
+    <circle cx="32" cy="55" r="2.5" fill="#FFF8E1" stroke="#D7CCC8" stroke-width="1"/>
+    <defs>
+      <linearGradient id="bg_meat" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#FFEBEE"/>
+        <stop offset="1" stop-color="#FFCDD2"/>
+      </linearGradient>
+    </defs>
+  </svg>

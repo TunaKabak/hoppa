@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+    <rect width="64" height="64" rx="18" fill="url(#bg_coffee)"/>
+    <!-- Coffee Cup -->
+    <rect x="16" y="24" width="28" height="24" rx="6" fill="#4E342E" stroke="#3E2723" stroke-width="1.8"/>
+    <!-- Cup Handle -->
+    <path d="M44 28H48C51 28 53 30 53 33V35C53 38 51 40 44 40" stroke="#4E342E" stroke-width="3" stroke-linecap="round"/>
+    <!-- Latte Art -->
+    <path d="M22 28C26 34 34 34 38 28C34 31 26 31 22 28Z" fill="#FFF8E1"/>
+    <!-- Steam -->
+    <path d="M24 16C23 18 25 19 24 21M30 14C29 17 31 18 30 21M36 16C35 18 37 19 36 21" stroke="#8D6E63" stroke-width="2" stroke-linecap="round"/>
+    <defs>
+      <linearGradient id="bg_coffee" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#E0F7FA"/>
+        <stop offset="1" stop-color="#80DEEA"/>
+      </linearGradient>
+    </defs>
+  </svg>

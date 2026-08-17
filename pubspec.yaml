@@ -80,6 +80,7 @@ dependencies:
   supabase_flutter: ^2.6.0
   speech_to_text: ^7.4.0
   video_player: ^2.8.6
+  flutter_svg: ^2.0.17
 
 dev_dependencies:
   flutter_test:
@@ -111,6 +112,7 @@ flutter:
   assets:
     - assets/sounds/
     - assets/images/
+    - assets/categories/
     - assets/videos/hoppa_reklam.mp4
     - .env
 

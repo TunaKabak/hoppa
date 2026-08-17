@@ -18,6 +18,25 @@ model OtpCode {
   @@index([phoneNumber])
 }
 
+// Kimlik Doğrulama / Oturum Yenileme (Refresh Token) modeli
+model RefreshToken {
+  id          String    @id @default(uuid())
+  tokenHash   String    @unique
+  userId      String?
+  user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  merchantId  String?
+  merchant    Merchant? @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+  revokedAt   DateTime?
+  replacedBy  String?
+  deviceInfo  String?
+
+  @@index([userId])
+  @@index([merchantId])
+  @@index([tokenHash])
+}
+
 // Tüketici (Consumer) modeli (OTP ile kimlik doğrulama)
 model User {
   id        String    @id @default(uuid())
@@ -52,6 +71,7 @@ model User {
   savedCards       SavedCard[]
   couponUsages     CouponUsage[]
   wallet       Wallet?
+  refreshTokens RefreshToken[]
 }
 
 enum Role {
@@ -113,6 +133,7 @@ model Merchant {
   // Merchant İlişkileri (Bir satıcının onaylandığında 1 dükkanı olur)
   shop             Shop?
   deviceTokens     DeviceToken[]
+  refreshTokens    RefreshToken[]
 
   @@index([email])
   @@index([status])

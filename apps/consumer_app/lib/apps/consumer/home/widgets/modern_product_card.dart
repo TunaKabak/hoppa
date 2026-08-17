@@ -168,15 +168,20 @@ class ModernProductCard extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    product.brand,
-                    style: TextStyle(
-                      color: Colors.grey[500],
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
+                  if (product.brand.trim().isNotEmpty &&
+                      product.brand.toLowerCase() != 'hoppa' &&
+                      product.brand.toLowerCase() != 'genel' &&
+                      product.brand.toLowerCase() != 'yok') ...[
+                    Text(
+                      product.brand,
+                      style: TextStyle(
+                        color: Colors.grey[500],
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
+                    const SizedBox(height: 4),
+                  ],
                   Text(
                     product.name,
                     maxLines: 2,
@@ -402,17 +407,22 @@ class ModernProductCard extends ConsumerWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        product.brand,
-                        style: TextStyle(
-                          color: Colors.grey[500],
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
+                      if (product.brand.trim().isNotEmpty &&
+                          product.brand.toLowerCase() != 'hoppa' &&
+                          product.brand.toLowerCase() != 'genel' &&
+                          product.brand.toLowerCase() != 'yok') ...[
+                        Text(
+                          product.brand,
+                          style: TextStyle(
+                            color: Colors.grey[500],
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
+                        const SizedBox(height: 2),
+                      ],
                       Text(
                         product.name,
                         style: const TextStyle(
