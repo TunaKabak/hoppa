@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+    <rect width="64" height="64" rx="18" fill="url(#bg_veg)"/>
+    <!-- Red Apple -->
+    <path d="M22 26C16 26 13 32 13 39C13 47 18 52 23 52C26 52 28 50 30 50C32 50 34 52 37 52C42 52 47 47 47 39C47 32 44 26 38 26C34 26 31 29 30 29C29 29 26 26 22 26Z" fill="#E53935"/>
+    <path d="M30 29V20C30 18 33 16 35 15" stroke="#5D4037" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M30 20C34 18 39 19 41 23C38 25 33 24 30 20Z" fill="#43A047"/>
+    <!-- Orange Carrot behind -->
+    <path d="M42 22L51 46C51.5 47.5 49.5 48.5 48 47L36 34L42 22Z" fill="#FB8C00"/>
+    <path d="M42 22L45 15M42 22L48 18M42 22L39 14" stroke="#2E7D32" stroke-width="2" stroke-linecap="round"/>
+    <!-- Apple highlight -->
+    <ellipse cx="20" cy="34" rx="3" ry="5" transform="rotate(-20 20 34)" fill="white" fill-opacity="0.4"/>
+    <defs>
+      <linearGradient id="bg_veg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#E8F5E9"/>
+        <stop offset="1" stop-color="#C8E6C9"/>
+      </linearGradient>
+    </defs>
+  </svg>

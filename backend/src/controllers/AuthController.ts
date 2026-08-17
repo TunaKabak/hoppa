@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { OtpService } from "../services/OtpService";
 import { prisma } from "../config/db";
 import { JwtUtils } from "../utils/JwtUtils";
+import { RefreshTokenService } from "../services/RefreshTokenService";
 import { CouponController } from "./CouponController";
 import { ReferralService } from "../services/ReferralService";
 import { WalletService } from "../services/WalletService";
@@ -92,13 +93,20 @@ export class AuthController {
         });
       }
 
-      const token = JwtUtils.generateToken(user.id, user.role);
+      const deviceInfo = req.headers["user-agent"] as string | undefined;
+      const tokenPair = await RefreshTokenService.createTokenPair({
+        userId: user.id,
+        role: user.role,
+        deviceInfo,
+      });
 
       res.status(200).json({
         error: false,
         data: {
           message: "Oturum başarıyla açıldı.",
-          token: token,
+          token: tokenPair.accessToken,
+          refreshToken: tokenPair.refreshToken,
+          expiresIn: tokenPair.expiresIn,
           user: user,
           isNewUser: isNewUser || (user.name === "Misafir" && user.surname === "Kullanıcı")
         }
@@ -147,4 +155,62 @@ export class AuthController {
       res.status(500).json({ error: true, message: "Handshake başlatılamadı." });
     }
   }
+
+  /**
+   * POST /api/auth/refresh
+   * Body: { refreshToken: string }
+   */
+  public async refreshToken(req: Request, res: Response): Promise<void> {
+    try {
+      const { refreshToken } = req.body;
+      if (!refreshToken) {
+        res.status(400).json({ error: true, message: "Refresh token zorunludur." });
+        return;
+      }
+
+      const deviceInfo = req.headers["user-agent"] as string | undefined;
+      const result = await RefreshTokenService.rotateRefreshToken(refreshToken, deviceInfo);
+
+      if (!result.success || !result.data) {
+        res.status(result.status || 401).json({
+          error: true,
+          message: result.message || "Oturum yenilenemedi.",
+        });
+        return;
+      }
+
+      res.status(200).json({
+        error: false,
+        data: {
+          token: result.data.accessToken,
+          refreshToken: result.data.refreshToken,
+          expiresIn: result.data.expiresIn,
+        },
+      });
+    } catch (error) {
+      console.error("[AuthController.refreshToken] Error:", error);
+      res.status(500).json({ error: true, message: "Sunucu hatası." });
+    }
+  }
+
+  /**
+   * POST /api/auth/logout
+   * Body: { refreshToken?: string }
+   */
+  public async logout(req: Request, res: Response): Promise<void> {
+    try {
+      const { refreshToken } = req.body;
+      if (refreshToken) {
+        await RefreshTokenService.revokeRefreshToken(refreshToken);
+      }
+      res.status(200).json({
+        error: false,
+        message: "Başarıyla çıkış yapıldı.",
+      });
+    } catch (error) {
+      console.error("[AuthController.logout] Error:", error);
+      res.status(500).json({ error: true, message: "Sunucu hatası." });
+    }
+  }
 }
+

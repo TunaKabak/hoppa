@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+    <rect width="64" height="64" rx="18" fill="url(#bg_world)"/>
+    <!-- Noodle Box / Taco -->
+    <path d="M18 24H46L42 50H22L18 24Z" fill="#E53935" stroke="#C62828" stroke-width="1.8"/>
+    <path d="M22 24L32 30L42 24" fill="#FFCDD2"/>
+    <!-- Noodles spilling -->
+    <path d="M26 20C28 16 34 16 36 22M30 18C32 14 38 14 40 20" stroke="#FFD54F" stroke-width="2.5" stroke-linecap="round"/>
+    <!-- Chopsticks -->
+    <path d="M16 12L42 34M24 10L46 32" stroke="#8D6E63" stroke-width="2" stroke-linecap="round"/>
+    <defs>
+      <linearGradient id="bg_world" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#EDE7F6"/>
+        <stop offset="1" stop-color="#B39DDB"/>
+      </linearGradient>
+    </defs>
+  </svg>

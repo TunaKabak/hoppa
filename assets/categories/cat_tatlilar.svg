@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+    <rect width="64" height="64" rx="18" fill="url(#bg_dessert)"/>
+    <!-- Cupcake / Cake Slice -->
+    <path d="M18 36L22 50H42L46 36H18Z" fill="#8D6E63" stroke="#5D4037" stroke-width="1.5"/>
+    <path d="M16 36C14 30 20 22 26 24C28 18 36 18 38 24C44 22 50 30 48 36H16Z" fill="#F8BBD0" stroke="#E91E63" stroke-width="1.5"/>
+    <!-- Cherry on Top -->
+    <circle cx="32" cy="18" r="4" fill="#C2185B"/>
+    <path d="M34 16C36 12 40 12 42 14" stroke="#4CAF50" stroke-width="1.5" stroke-linecap="round"/>
+    <!-- Sprinkles -->
+    <rect x="22" y="28" width="2" height="4" rx="1" transform="rotate(30 22 28)" fill="#00E676"/>
+    <rect x="32" y="26" width="2" height="4" rx="1" fill="#FFD600"/>
+    <rect x="40" y="28" width="2" height="4" rx="1" transform="rotate(-30 40 28)" fill="#00B0FF"/>
+    <defs>
+      <linearGradient id="bg_dessert" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#FCE4EC"/>
+        <stop offset="1" stop-color="#F48FB1"/>
+      </linearGradient>
+    </defs>
+  </svg>

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+    <rect width="64" height="64" rx="18" fill="url(#bg_staple)"/>
+    <!-- Olive oil bottle -->
+    <path d="M22 22H28V48C28 50 26 52 24 52H26C24 52 22 50 22 48V22Z" fill="#689F38"/>
+    <rect x="20" y="24" width="10" height="26" rx="3" fill="#7CB342" stroke="#33691E" stroke-width="1.5"/>
+    <rect x="23" y="16" width="4" height="8" fill="#558B2F"/>
+    <circle cx="25" cy="34" r="2" fill="#FDD835"/>
+    <!-- Rice Sack / Pasta -->
+    <path d="M32 26C32 26 38 24 46 26C48 26 50 44 48 50C46 52 34 52 32 50C30 44 32 26 32 26Z" fill="#FFE082" stroke="#FFA000" stroke-width="1.5"/>
+    <path d="M34 32H44M34 36H44M34 40H44" stroke="#FF8F00" stroke-width="1.5" stroke-linecap="round"/>
+    <defs>
+      <linearGradient id="bg_staple" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#FFF3E0"/>
+        <stop offset="1" stop-color="#FFE0B2"/>
+      </linearGradient>
+    </defs>
+  </svg>

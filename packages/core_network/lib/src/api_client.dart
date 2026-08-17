@@ -10,13 +10,17 @@ class ApiClient {
   final FlutterSecureStorage _secureStorage;
   final String baseUrl;
 
-  /// 401 alındığında çağrılacak callback (örn. AuthController.logout())
+  /// 401 alındığında ve token yenilenemediğinde çağrılacak callback (örn. AuthController.logout())
   void Function()? onUnauthorized;
+
+  /// 401 alındığında sessiz token yenilemeyi deneyecek callback
+  Future<bool> Function()? onTokenRefresh;
 
   /// Süper Admin'in işlem yapmak istediği dükkanın ID'si
   String? activeBusinessId;
 
   static const String _tokenKey = 'jwt_token';
+  static const String _refreshTokenKey = 'jwt_refresh_token';
 
   ApiClient({
     http.Client? client,
@@ -36,6 +40,18 @@ class ApiClient {
 
   Future<void> deleteToken() async {
     await _secureStorage.delete(key: _tokenKey);
+  }
+
+  Future<void> saveRefreshToken(String token) async {
+    await _secureStorage.write(key: _refreshTokenKey, value: token);
+  }
+
+  Future<String?> getRefreshToken() async {
+    return await _secureStorage.read(key: _refreshTokenKey);
+  }
+
+  Future<void> deleteRefreshToken() async {
+    await _secureStorage.delete(key: _refreshTokenKey);
   }
 
   // --- Generic Key-Value Storage ---
@@ -99,6 +115,7 @@ class ApiClient {
       throw BadRequestException(message);
     } else if (response.statusCode == 401) {
       await deleteToken();
+      await deleteRefreshToken();
       // UI katmanını bilgilendir (AuthController'ın logout tetiklemesi için)
       onUnauthorized?.call();
       throw UnauthorizedException(message);
@@ -109,19 +126,42 @@ class ApiClient {
     }
   }
 
-  // --- HTTP Methods ---
-  Future<Map<String, dynamic>> get(
-    String endpoint, {
+  // --- Generic Request Executor with Silent Refresh ---
+  Future<Map<String, dynamic>> _executeWithAuthRetry(
+    String endpoint,
+    Future<http.Response> Function(Map<String, String> headers) requestFn, {
     bool requiresAuth = true,
+    Map<String, String>? extraHeaders,
   }) async {
     try {
-      final uri = Uri.parse('$baseUrl$endpoint');
       final headers = await _buildHeaders(requiresAuth);
+      if (extraHeaders != null) {
+        headers.addAll(extraHeaders);
+      }
 
-      final response = await _client.get(uri, headers: headers).timeout(
+      var response = await requestFn(headers).timeout(
         const Duration(seconds: 10),
         onTimeout: () => throw TimeoutException("Bağlantı zaman aşımına uğradı"),
       );
+
+      final isAuthEndpoint = endpoint.contains('/auth/login') ||
+          endpoint.contains('/auth/verify-otp') ||
+          endpoint.contains('/auth/refresh');
+
+      if (response.statusCode == 401 && requiresAuth && !isAuthEndpoint && onTokenRefresh != null) {
+        final refreshed = await onTokenRefresh!();
+        if (refreshed) {
+          final newHeaders = await _buildHeaders(requiresAuth);
+          if (extraHeaders != null) {
+            newHeaders.addAll(extraHeaders);
+          }
+          response = await requestFn(newHeaders).timeout(
+            const Duration(seconds: 10),
+            onTimeout: () => throw TimeoutException("Bağlantı zaman aşımına uğradı"),
+          );
+        }
+      }
+
       return await _processResponse(response);
     } on SocketException catch (_) {
       throw NetworkException("İnternet bağlantınızı kontrol edin.");
@@ -131,6 +171,19 @@ class ApiClient {
       if (e is AppException) rethrow;
       throw NetworkException(e.toString());
     }
+  }
+
+  // --- HTTP Methods ---
+  Future<Map<String, dynamic>> get(
+    String endpoint, {
+    bool requiresAuth = true,
+  }) async {
+    final uri = Uri.parse('$baseUrl$endpoint');
+    return await _executeWithAuthRetry(
+      endpoint,
+      (headers) => _client.get(uri, headers: headers),
+      requiresAuth: requiresAuth,
+    );
   }
 
   Future<Map<String, dynamic>> post(
@@ -139,31 +192,17 @@ class ApiClient {
     bool requiresAuth = true,
     Map<String, String>? headers,
   }) async {
-    try {
-      final uri = Uri.parse('$baseUrl$endpoint');
-      final builtHeaders = await _buildHeaders(requiresAuth);
-      if (headers != null) {
-        builtHeaders.addAll(headers);
-      }
-
-      final response = await _client.post(
+    final uri = Uri.parse('$baseUrl$endpoint');
+    return await _executeWithAuthRetry(
+      endpoint,
+      (reqHeaders) => _client.post(
         uri,
-        headers: builtHeaders,
+        headers: reqHeaders,
         body: body != null ? jsonEncode(body) : null,
-      ).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () => throw TimeoutException("Bağlantı zaman aşımına uğradı"),
-      );
-
-      return await _processResponse(response);
-    } on SocketException catch (_) {
-      throw NetworkException("İnternet bağlantınızı kontrol edin.");
-    } on TimeoutException catch (e) {
-      throw NetworkException(e.message ?? "Zaman aşımı");
-    } catch (e) {
-      if (e is AppException) rethrow;
-      throw NetworkException(e.toString());
-    }
+      ),
+      requiresAuth: requiresAuth,
+      extraHeaders: headers,
+    );
   }
 
   Future<Map<String, dynamic>> put(
@@ -171,54 +210,27 @@ class ApiClient {
     Map<String, dynamic>? body,
     bool requiresAuth = true,
   }) async {
-    try {
-      final uri = Uri.parse('$baseUrl$endpoint');
-      final headers = await _buildHeaders(requiresAuth);
-
-      final response = await _client.put(
+    final uri = Uri.parse('$baseUrl$endpoint');
+    return await _executeWithAuthRetry(
+      endpoint,
+      (headers) => _client.put(
         uri,
         headers: headers,
         body: body != null ? jsonEncode(body) : null,
-      ).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () => throw TimeoutException("Bağlantı zaman aşımına uğradı"),
-      );
-
-      return await _processResponse(response);
-    } on SocketException catch (_) {
-      throw NetworkException("İnternet bağlantınızı kontrol edin.");
-    } on TimeoutException catch (e) {
-      throw NetworkException(e.message ?? "Zaman aşımı");
-    } catch (e) {
-      if (e is AppException) rethrow;
-      throw NetworkException(e.toString());
-    }
+      ),
+      requiresAuth: requiresAuth,
+    );
   }
 
   Future<Map<String, dynamic>> delete(
     String endpoint, {
     bool requiresAuth = true,
   }) async {
-    try {
-      final uri = Uri.parse('$baseUrl$endpoint');
-      final headers = await _buildHeaders(requiresAuth);
-
-      final response = await _client.delete(
-        uri,
-        headers: headers,
-      ).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () => throw TimeoutException("Bağlantı zaman aşımına uğradı"),
-      );
-
-      return await _processResponse(response);
-    } on SocketException catch (_) {
-      throw NetworkException("İnternet bağlantınızı kontrol edin.");
-    } on TimeoutException catch (e) {
-      throw NetworkException(e.message ?? "Zaman aşımı");
-    } catch (e) {
-      if (e is AppException) rethrow;
-      throw NetworkException(e.toString());
-    }
+    final uri = Uri.parse('$baseUrl$endpoint');
+    return await _executeWithAuthRetry(
+      endpoint,
+      (headers) => _client.delete(uri, headers: headers),
+      requiresAuth: requiresAuth,
+    );
   }
 }

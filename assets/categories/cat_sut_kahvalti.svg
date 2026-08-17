@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+    <rect width="64" height="64" rx="18" fill="url(#bg_milk)"/>
+    <!-- Milk Bottle -->
+    <rect x="14" y="24" width="16" height="28" rx="4" fill="#E1F5FE" stroke="#0288D1" stroke-width="1.5"/>
+    <path d="M17 24L19 18H25L27 24H17Z" fill="#B3E5FC" stroke="#0288D1" stroke-width="1.5"/>
+    <rect x="18" y="15" width="8" height="4" rx="1" fill="#0288D1"/>
+    <rect x="14" y="34" width="16" height="10" fill="#0288D1"/>
+    <path d="M18 39H26" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+    <!-- Cheese Wedge -->
+    <path d="M30 42L52 35L48 52H28L30 42Z" fill="#FDD835" stroke="#F57F17" stroke-width="1.5"/>
+    <circle cx="36" cy="46" r="2.5" fill="#F57F17" fill-opacity="0.4"/>
+    <circle cx="44" cy="44" r="3" fill="#F57F17" fill-opacity="0.4"/>
+    <circle cx="42" cy="49" r="1.5" fill="#F57F17" fill-opacity="0.4"/>
+    <!-- Egg -->
+    <path d="M48 24C48 20 44 16 41 16C38 16 34 20 34 24C34 28 37 31 41 31C45 31 48 28 48 24Z" fill="#FFE0B2" stroke="#FB8C00" stroke-width="1.5"/>
+    <defs>
+      <linearGradient id="bg_milk" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#FFF8E1"/>
+        <stop offset="1" stop-color="#FFECB3"/>
+      </linearGradient>
+    </defs>
+  </svg>

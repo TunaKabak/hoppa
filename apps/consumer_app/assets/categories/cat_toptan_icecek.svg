@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+    <rect width="64" height="64" rx="18" fill="url(#bg_wholesale)"/>
+    <!-- Cardboard Box -->
+    <path d="M12 28L32 18L52 28L32 38L12 28Z" fill="#FFA726" stroke="#E65100" stroke-width="1.5"/>
+    <path d="M12 28V46L32 54V38L12 28Z" fill="#FB8C00" stroke="#E65100" stroke-width="1.5"/>
+    <path d="M52 28V46L32 54V38L52 28Z" fill="#F57C00" stroke="#E65100" stroke-width="1.5"/>
+    <!-- Tape / Label -->
+    <path d="M26 21L38 27M26 35L38 41" stroke="#FFE082" stroke-width="2"/>
+    <defs>
+      <linearGradient id="bg_wholesale" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#FFF3E0"/>
+        <stop offset="1" stop-color="#FFB74D"/>
+      </linearGradient>
+    </defs>
+  </svg>

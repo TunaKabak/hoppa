@@ -24,7 +24,7 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction):
   const token = authHeader.split(" ")[1];
   const decodedToken = JwtUtils.verifyToken(token);
 
-  if (!decodedToken) {
+  if (!decodedToken || !decodedToken.id || decodedToken.type === "handshake" || decodedToken.type === "refresh") {
     res.status(401).json({ error: true, message: "Geçersiz veya süresi dolmuş token." });
     return;
   }
@@ -32,7 +32,7 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction):
   // Doğrulanmış veriyi Request nesnesine ata
   req.user = {
     id: decodedToken.id,
-    role: decodedToken.role?.toLowerCase(),
+    role: (decodedToken.role || "").toLowerCase(),
   };
 
   next();
@@ -49,10 +49,10 @@ export const optionalAuthMiddleware = (req: Request, res: Response, next: NextFu
   const token = authHeader.split(" ")[1];
   const decodedToken = JwtUtils.verifyToken(token);
 
-  if (decodedToken) {
+  if (decodedToken && decodedToken.id && decodedToken.type !== "handshake" && decodedToken.type !== "refresh") {
     req.user = {
       id: decodedToken.id,
-      role: decodedToken.role?.toLowerCase(),
+      role: (decodedToken.role || "").toLowerCase(),
     };
   }
 

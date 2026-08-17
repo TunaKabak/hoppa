@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+    <rect width="64" height="64" rx="18" fill="url(#bg_burger)"/>
+    <!-- Top Bun -->
+    <path d="M14 26C14 18 22 14 32 14C42 14 50 18 50 26H14Z" fill="#FFA726" stroke="#E65100" stroke-width="1.8"/>
+    <circle cx="24" cy="20" r="1" fill="#FFF8E1"/>
+    <circle cx="32" cy="18" r="1" fill="#FFF8E1"/>
+    <circle cx="40" cy="20" r="1" fill="#FFF8E1"/>
+    <!-- Lettuce -->
+    <path d="M12 28C14 26 18 28 20 28C22 28 24 26 26 28C28 28 30 26 32 28C34 28 36 26 38 28C40 28 42 26 44 28C46 28 50 26 52 28" stroke="#43A047" stroke-width="3" stroke-linecap="round"/>
+    <!-- Patty -->
+    <rect x="14" y="32" width="36" height="7" rx="3.5" fill="#5D4037"/>
+    <!-- Cheese -->
+    <path d="M14 34L32 41L50 34" stroke="#FDD835" stroke-width="3" stroke-linejoin="round"/>
+    <!-- Bottom Bun -->
+    <rect x="16" y="42" width="32" height="8" rx="4" fill="#FFA726" stroke="#E65100" stroke-width="1.8"/>
+    <defs>
+      <linearGradient id="bg_burger" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#FFF3E0"/>
+        <stop offset="1" stop-color="#FFCC80"/>
+      </linearGradient>
+    </defs>
+  </svg>
