@@ -1326,35 +1326,25 @@ class _StickyCategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
 
     return Container(
       decoration: BoxDecoration(
-        gradient: isPinned
-            ? const LinearGradient(
-                colors: [
-                  Color(0xFFE95D22),
-                  Color(0xFFFF8C00),
-                ],
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-              )
-            : null,
-        color: isPinned ? null : Theme.of(context).scaffoldBackgroundColor,
+        color: Colors.white,
         borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(curveRadius),
-          bottomRight: Radius.circular(curveRadius),
+          topLeft: Radius.circular(curveRadius),
+          topRight: Radius.circular(curveRadius),
         ),
         boxShadow: isPinned
             ? [
                 BoxShadow(
-                  color: const Color(0xFFE95D22).withValues(alpha: 0.28),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 10,
+                  offset: const Offset(0, -4),
                 ),
               ]
             : null,
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(curveRadius),
-          bottomRight: Radius.circular(curveRadius),
+          topLeft: Radius.circular(curveRadius),
+          topRight: Radius.circular(curveRadius),
         ),
         child: builder(context, isPinned),
       ),

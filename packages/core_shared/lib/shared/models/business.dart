@@ -79,7 +79,9 @@ class Business {
       minBasketAmount: double.tryParse(data['minBasketAmount']?.toString() ?? '') ?? 0.0,
       averageDeliveryTime: data['averageDeliveryTime'] ?? "30-45 dk",
       deliveryRadius: double.tryParse(data['deliveryRadius']?.toString() ?? '') ?? 5.0,
-      workingHours: Map<String, dynamic>.from(data['workingHours'] ?? {}),
+      workingHours: data['workingHours'] is Map
+          ? Map<String, dynamic>.from(data['workingHours'])
+          : {},
       deliveryTiers:
           (data['deliveryTiers'] as List<dynamic>?)
               ?.map((t) => DeliveryTier.fromMap(Map<String, dynamic>.from(t)))

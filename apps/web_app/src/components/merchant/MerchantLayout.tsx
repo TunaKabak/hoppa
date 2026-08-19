@@ -170,23 +170,25 @@ export default function MerchantLayout({
         {/* Sidebar Navigation */}
         <aside className={`
           fixed md:sticky md:top-0 md:h-screen inset-y-0 left-0 z-50 w-72 shrink-0 border-r flex flex-col justify-between p-6 overflow-y-auto transform transition-all duration-300
-          ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'}
+          ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200/80 shadow-sm'}
           ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}>
           <div>
             {/* Hoppa Branded Logo */}
-            <div className="hidden md:flex items-center justify-between mb-8">
+            <div className="hidden md:flex items-center justify-between pb-5 mb-6 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-3">
-                <img 
-                  src="/logo-square-orange.png" 
-                  alt="Hoppa Logo" 
-                  className="w-11 h-11 rounded-2xl object-cover ring-2 ring-[#FF6B00]/20" 
-                />
+                <div className="p-0.5 rounded-2xl bg-gradient-to-tr from-[#E95D22] to-[#FF8C00] shadow-sm">
+                  <img 
+                    src="/logo-square-orange.png" 
+                    alt="Hoppa Logo" 
+                    className="w-10 h-10 rounded-[14px] object-cover bg-white" 
+                  />
+                </div>
                 <div>
-                  <h1 className="font-black text-xl tracking-tight">
-                    Hoppa <span className="text-[#FF6B00]">Satıcı</span>
+                  <h1 className="font-black text-xl tracking-tight text-slate-900 dark:text-white">
+                    Hoppa <span className="bg-gradient-to-r from-[#E95D22] to-[#FF8C00] bg-clip-text text-transparent">Satıcı</span>
                   </h1>
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Masaüstü Portal</span>
+                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Masaüstü Portal</span>
                 </div>
               </div>
 
@@ -194,7 +196,7 @@ export default function MerchantLayout({
               <button
                 onClick={toggleTheme}
                 className={`p-2 rounded-xl border transition-colors ${
-                  isDark ? 'bg-slate-800 border-slate-700 text-amber-400' : 'bg-slate-100 border-slate-200 text-slate-600'
+                  isDark ? 'bg-slate-800 border-slate-700 text-amber-400 hover:bg-slate-700' : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
                 }`}
                 title={isDark ? 'Beyaz Temaya Geç' : 'Karanlık Temaya Geç'}
               >
@@ -204,10 +206,10 @@ export default function MerchantLayout({
 
             {/* Super Admin Shop Context Selector */}
             {isAdmin && (
-              <div className="mb-4">
+              <div className="mb-4 p-3 rounded-2xl bg-orange-500/5 border border-[#FF6B00]/20">
                 <label className="block text-[11px] font-black text-[#FF6B00] uppercase tracking-wider mb-1.5 flex items-center justify-between">
                   <span>Yönetici Mağaza Seçimi</span>
-                  <span className="px-1.5 py-0.5 rounded text-[9px] bg-[#FF6B00]/15 text-[#FF6B00] font-bold">ADMIN</span>
+                  <span className="px-1.5 py-0.5 rounded text-[9px] bg-[#FF6B00] text-white font-black">ADMIN</span>
                 </label>
                 <select
                   value={selectedShopIdState}
@@ -229,19 +231,21 @@ export default function MerchantLayout({
             )}
 
             {/* Business Info & Live Status Toggle */}
-            <div className={`border rounded-2xl p-4 mb-6 transition-colors ${
-              isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'
+            <div className={`border rounded-2xl p-4 mb-6 transition-all ${
+              isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-50/70 border-slate-200/80 shadow-xs'
             }`}>
               <p className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">Mağaza Adı</p>
-              <h3 className="font-bold text-sm truncate mt-0.5">{profile?.businessName || 'Mağaza Yükleniyor...'}</h3>
-              <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
+              <h3 className="font-extrabold text-sm truncate mt-0.5 text-slate-900 dark:text-white">
+                {profile?.businessName || 'Mağaza Yükleniyor...'}
+              </h3>
+              <div className="mt-3 pt-3 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-500">Sipariş Alımı:</span>
                 <button
                   onClick={handleToggleShopStatus}
                   disabled={isTogglingShop}
-                  className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all ${
+                  className={`px-3 py-1 rounded-full text-xs font-black flex items-center gap-1.5 transition-all ${
                     isShopActive 
-                      ? 'bg-[#00A651]/15 text-[#00A651] border border-[#00A651]/30' 
+                      ? 'bg-[#00A651]/15 text-[#00A651] border border-[#00A651]/30 shadow-xs' 
                       : 'bg-rose-500/15 text-rose-500 border border-rose-500/30'
                   }`}
                 >
@@ -260,16 +264,16 @@ export default function MerchantLayout({
                   <button
                     key={item.id}
                     onClick={() => router.push(item.href)}
-                    className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl text-sm font-bold transition-all ${
+                    className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl text-sm font-extrabold transition-all duration-200 active:scale-[0.98] ${
                       isActive 
-                        ? 'bg-[#FF6B00] text-white' 
+                        ? 'bg-gradient-to-r from-[#E95D22] to-[#FF8C00] text-white shadow-md shadow-[#E95D22]/20' 
                         : isDark 
-                          ? 'text-slate-400 hover:text-slate-100 hover:bg-slate-800' 
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                          ? 'text-slate-400 hover:text-white hover:bg-slate-800/80' 
+                          : 'text-slate-600 hover:text-[#E95D22] hover:bg-orange-50/60'
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                      <Icon className={`w-5 h-5 transition-colors ${isActive ? 'text-white' : 'text-slate-400'}`} />
                       <span>{item.label}</span>
                     </div>
 
@@ -288,10 +292,10 @@ export default function MerchantLayout({
           </div>
 
           {/* Footer Info & Logout */}
-          <div className="pt-6 border-t border-slate-200 dark:border-slate-800">
+          <div className="pt-5 border-t border-slate-200 dark:border-slate-800">
             <button
               onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-rose-500 hover:bg-rose-500/10 transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-black text-rose-500 hover:bg-rose-500/10 transition-colors"
             >
               <LogOut className="w-4 h-4" />
               <span>Güvenli Çıkış Yap</span>
