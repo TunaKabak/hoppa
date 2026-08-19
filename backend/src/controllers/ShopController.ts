@@ -491,4 +491,123 @@ export class ShopController {
       return res.status(500).json({ error: true, message: error.message });
     }
   }
+
+  async getShopReadiness(req: Request, res: Response) {
+    try {
+      const merchantId = req.user?.id;
+      if (!merchantId) return res.status(401).json({ error: true, message: "Kullanıcı bilgisi eksik." });
+
+      const shop = await prisma.shop.findUnique({
+        where: { merchantId },
+        include: { merchant: true }
+      });
+
+      if (!shop) return res.status(404).json({ error: true, message: "Dükkan bulunamadı." });
+
+      const activeProductCount = await prisma.product.count({
+        where: { shopId: shop.id, isActive: true }
+      });
+
+      // 6 Prosedür Adımı Kontrolü
+      const step1_Identity = Boolean(shop.name && shop.imageUrl && shop.description);
+      const step2_Location = Boolean(shop.latitude && shop.longitude && (shop.deliveryRadiusKm || shop.deliveryPolygon));
+      const step3_Hours = Boolean(shop.workingHours);
+      const step4_Payment = Boolean(
+        shop.allowedPaymentMethods &&
+        Array.isArray(shop.allowedPaymentMethods) &&
+        shop.allowedPaymentMethods.length > 0 &&
+        shop.allowedFulfillmentModels &&
+        Array.isArray(shop.allowedFulfillmentModels) &&
+        shop.allowedFulfillmentModels.length > 0
+      );
+      const step5_Products = activeProductCount >= 1;
+      const step6_Legal = Boolean((shop.merchant?.taxNumber || shop.taxNumber || shop.merchant?.identityNumber) && (shop.merchant?.businessPhone));
+
+      const steps = [
+        {
+          id: 'identity',
+          title: 'Marka Kimliği & Görseller',
+          description: 'Dükkan adı, logosu ve açıklaması tanımlanmış olmalıdır.',
+          category: 'IDENTITY',
+          isCompleted: step1_Identity,
+          weight: 15,
+          actionText: 'Profili Düzenle',
+          actionUrl: '/merchant/settings?tab=general'
+        },
+        {
+          id: 'location',
+          title: 'Konum & Teslimat Bölgesi',
+          description: 'İşletmenizin harita konumu ve teslimat yarıçapı belirlenmelidir.',
+          category: 'LOCATION',
+          isCompleted: step2_Location,
+          weight: 20,
+          actionText: 'Konumu Seç',
+          actionUrl: '/merchant/settings?tab=location'
+        },
+        {
+          id: 'hours',
+          title: 'Çalışma Saatleri',
+          description: 'Otomatik sipariş alımı için haftalık açık olunan saatler ayarlanmalıdır.',
+          category: 'HOURS',
+          isCompleted: step3_Hours,
+          weight: 15,
+          actionText: 'Saatleri Ayarla',
+          actionUrl: '/merchant/settings?tab=working_hours'
+        },
+        {
+          id: 'payment',
+          title: 'Ödeme ve Teslimat Yöntemleri',
+          description: 'Kabul edilen ödeme ve teslimat yöntemleri ile minimum sipariş tutarı seçilmelidir.',
+          category: 'PAYMENT',
+          isCompleted: step4_Payment,
+          weight: 20,
+          actionText: 'Yöntemleri Seç',
+          actionUrl: '/merchant/settings?tab=payment_delivery'
+        },
+        {
+          id: 'products',
+          title: 'Menü & Ürün Kataloğu',
+          description: 'Müşterilerin sipariş verebilmesi için en az 1 aktif ürün eklenmelidir.',
+          category: 'PRODUCTS',
+          isCompleted: step5_Products,
+          weight: 20,
+          actionText: 'Ürün Ekle',
+          actionUrl: '/merchant/products'
+        },
+        {
+          id: 'legal',
+          title: 'Resmi İşletme & Finansal Bilgiler',
+          description: 'Fatura ve finans işlemleri için vergi/kimlik no ve resmi telefon girilmelidir.',
+          category: 'LEGAL',
+          isCompleted: step6_Legal,
+          weight: 10,
+          actionText: 'Bilgileri Tamamla',
+          actionUrl: '/merchant/settings?tab=official'
+        }
+      ];
+
+      let score = 0;
+      steps.forEach(s => {
+        if (s.isCompleted) score += s.weight;
+      });
+
+      const missingSteps = steps.filter(s => !s.isCompleted);
+      const isReadyToOpen = score === 100 && step5_Products;
+
+      return res.status(200).json({
+        error: false,
+        data: {
+          score,
+          isReadyToOpen,
+          totalSteps: steps.length,
+          completedStepsCount: steps.length - missingSteps.length,
+          steps,
+          missingSteps,
+          activeProductCount
+        }
+      });
+    } catch (error: any) {
+      return res.status(500).json({ error: true, message: error.message });
+    }
+  }
 }

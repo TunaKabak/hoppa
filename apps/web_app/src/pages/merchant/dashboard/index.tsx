@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import MerchantLayout from '../../../components/merchant/MerchantLayout';
-import GuidedOnboardingWidget from '../../../components/merchant/GuidedOnboardingWidget';
+import StoreReadinessWidget from '../../../components/merchant/StoreReadinessWidget';
 import { 
   BarChart3, TrendingUp, ShoppingBag, Clock, DollarSign, 
   Award, ShieldCheck, ArrowUpRight, ArrowDownRight, Calendar 
@@ -91,8 +91,8 @@ export default function MerchantDashboardPage() {
       activeTab="dashboard"
     >
       <div className="space-y-6">
-        {/* Guided Onboarding Bar */}
-        <GuidedOnboardingWidget />
+        {/* Store Readiness & Onboarding Hub */}
+        <StoreReadinessWidget />
 
         {/* Core Metric Cards Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

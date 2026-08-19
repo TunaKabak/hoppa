@@ -29,7 +29,9 @@ async function enrichCategoryWithMetrics(cat: any, req?: Request) {
     return {
       ...cat,
       imageUrl,
-      shopCount: 0
+      shopCount: 0,
+      badge: "yakında",
+      isComingSoon: true
     };
   }
 
@@ -83,7 +85,9 @@ async function enrichCategoryWithMetrics(cat: any, req?: Request) {
   const hasNewShop = shops.some(s => s.createdAt >= oneWeekAgo);
 
   let badge = cat.badge || null;
-  if (hasNewShop) {
+  if (shopCount === 0) {
+    badge = "yakında";
+  } else if (hasNewShop) {
     badge = "yeni";
   } else {
     const oneMonthAgo = new Date();
@@ -105,7 +109,8 @@ async function enrichCategoryWithMetrics(cat: any, req?: Request) {
     avgDeliveryTime,
     badge,
     imageUrl,
-    shopCount
+    shopCount,
+    isComingSoon: shopCount === 0
   };
 }
 
