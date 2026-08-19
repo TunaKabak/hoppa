@@ -112,7 +112,7 @@ export default function GuidedOnboardingWidget({
 
             <button
               onClick={() => router.push(action.href)}
-              className="px-4 py-2.5 rounded-xl bg-[#FF6B00] hover:bg-[#E56000] text-white font-extrabold text-xs shadow-md shadow-[#FF6B00]/20 flex items-center justify-center gap-2 transition-all shrink-0"
+              className="px-4 py-2.5 rounded-xl bg-[#FF6B00] hover:bg-[#E56000] text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-all shrink-0 transform active:scale-95"
             >
               <span>{action.buttonText}</span>
               <ArrowRight className="w-4 h-4" />

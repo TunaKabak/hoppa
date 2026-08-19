@@ -495,6 +495,19 @@ export class ProductController {
         });
       });
 
+      // Eğer ürün pasife alındıysa dükkanda başka aktif ürün kalıp kalmadığını kontrol et
+      if (isActive === false || isActive === "false") {
+        const remainingActiveProducts = await prisma.product.count({
+          where: { shopId: shop.id, isActive: true }
+        });
+        if (remainingActiveProducts === 0 && shop.isActive) {
+          await prisma.shop.update({
+            where: { id: shop.id },
+            data: { isActive: false }
+          });
+        }
+      }
+
       return res.status(200).json({ error: false, data: formatProduct(updated) });
     } catch (error: any) {
       return res.status(500).json({ error: true, message: error.message });
@@ -527,6 +540,17 @@ export class ProductController {
           globalProduct: true
         }
       });
+
+      // Dükkanda başka aktif ürün kalıp kalmadığını kontrol et; yoksa dükkanı da otomatik kapat
+      const remainingActiveProducts = await prisma.product.count({
+        where: { shopId: shop.id, isActive: true }
+      });
+      if (remainingActiveProducts === 0 && shop.isActive) {
+        await prisma.shop.update({
+          where: { id: shop.id },
+          data: { isActive: false }
+        });
+      }
 
       return res.status(200).json({ error: false, message: "Ürün başarıyla pasife alındı (Soft delete)", data: formatProduct(deleted) });
     } catch (error: any) {

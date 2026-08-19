@@ -90,44 +90,35 @@ export default function MerchantCampaignsPage() {
     }
   };
 
+  const campaignHeaderActions = (
+    <div className="flex flex-wrap items-center gap-2.5">
+      <button
+        onClick={() => setShowSponsorshipModal(true)}
+        className="px-4 py-2.5 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-white border border-amber-300/40 font-bold text-xs flex items-center gap-2 transition-all backdrop-blur-md"
+      >
+        <Zap className="w-4 h-4 text-amber-300" />
+        <span>Mağazayı Öne Çıkar</span>
+      </button>
+
+      <button
+        onClick={() => setShowCouponModal(true)}
+        className="px-5 py-2.5 rounded-xl bg-white text-[#E95D22] hover:bg-white/90 font-black text-xs flex items-center gap-2 transition-all transform active:scale-95 shadow-sm"
+      >
+        <Plus className="w-4 h-4 text-[#E95D22]" />
+        <span>Yeni Kupon Oluştur</span>
+      </button>
+    </div>
+  );
+
   return (
-    <MerchantLayout title="Kampanya & Sponsorluk Portalı" activeTab="campaigns">
+    <MerchantLayout 
+      title="Kampanya & Reklam Portalı" 
+      subtitle="İndirim kuponları tanımlayın ve mağazanızı öne çıkarın"
+      headerIcon={Tag}
+      headerActions={campaignHeaderActions}
+      activeTab="campaigns"
+    >
       <div className="space-y-6">
-        {/* Top Header */}
-        <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 border rounded-3xl p-6 transition-colors ${
-          isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
-        }`}>
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-[#00A651] text-white flex items-center justify-center font-bold shadow-lg shadow-[#00A651]/25">
-              <Tag className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black tracking-tight">Kampanya & Reklam Portalı</h1>
-              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-                İndirim kuponları tanımlayın ve mağazanızı öne çıkarın
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              onClick={() => setShowSponsorshipModal(true)}
-              className="px-4 py-3 rounded-2xl bg-amber-500/15 text-amber-500 border border-amber-500/40 font-bold text-xs flex items-center gap-2 transition-all"
-            >
-              <Zap className="w-4 h-4 text-amber-500" />
-              <span>Mağazayı Öne Çıkar (Sponsorlu)</span>
-            </button>
-
-            <button
-              onClick={() => setShowCouponModal(true)}
-              className="px-5 py-3 rounded-2xl bg-[#FF6B00] hover:bg-[#E56000] text-white font-black text-xs shadow-lg shadow-[#FF6B00]/25 flex items-center gap-2 transition-all"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Yeni Kupon Oluştur</span>
-            </button>
-          </div>
-        </div>
-
         {/* Guided Onboarding Bar */}
         <GuidedOnboardingWidget hasCampaigns={campaigns.length > 0} />
 

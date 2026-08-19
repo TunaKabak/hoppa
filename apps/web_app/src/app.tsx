@@ -664,7 +664,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
 
                         {/* Adım 1 */}
                         <div className="text-center space-y-4 bg-white p-8 rounded-3xl shadow-sm border border-slate-100 relative">
-                            <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 w-12 h-12 bg-orange-500 text-white font-black rounded-2xl flex items-center justify-center text-lg shadow-lg shadow-orange-500/20">
+                            <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 w-12 h-12 bg-orange-500 text-white font-black rounded-2xl flex items-center justify-center text-lg">
                                 1
                             </div>
                             <div className="text-4xl pt-2">📱</div>
@@ -1059,7 +1059,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                     </div>
                                                     <button
                                                         onClick={() => setSimScreen('delivery_info')}
-                                                        className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-6 py-2 rounded-xl text-xs flex items-center space-x-1.5 shadow-md shadow-orange-500/10 transition-all active:scale-95"
+                                                        className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-6 py-2 rounded-xl text-xs flex items-center space-x-1.5 transition-all active:scale-95"
                                                     >
                                                         <span>{t('sim_cart_btn_checkout')}</span>
                                                         <span>➔</span>
@@ -1424,7 +1424,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                         <span>{t('sim_status_track_btn')}</span>
                                                     </div>
                                                 ) : (
-                                                    <div className="bg-orange-500 text-white p-3.5 rounded-xl text-center font-bold text-xs flex items-center justify-center space-x-2 relative overflow-hidden shadow-md shadow-orange-500/10">
+                                                    <div className="bg-orange-500 text-white p-3.5 rounded-xl text-center font-bold text-xs flex items-center justify-center space-x-2 relative overflow-hidden">
                                                         <span>📍</span>
                                                         <span>{t('sim_status_directions_btn')}</span>
                                                     </div>
@@ -1970,7 +1970,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                     className={`w-full font-extrabold py-4 rounded-2xl text-base flex items-center justify-center space-x-2 transition-all duration-300 ${
                                                         courierLoading || (courierForm.vehicle !== 'BICYCLE' && courierForm.license === 'NO')
                                                             ? 'bg-[#cbd5e1] text-slate-400 cursor-not-allowed shadow-none'
-                                                            : 'bg-[#f97316] hover:bg-[#ea580c] text-white shadow-xl shadow-orange-500/20 hover:scale-[1.01] active:scale-95'
+                                                            : 'bg-[#f97316] hover:bg-[#ea580c] text-white hover:scale-[1.01] active:scale-95'
                                                     }`}
                                                 >
                                                     {courierLoading ? (

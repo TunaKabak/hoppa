@@ -10,6 +10,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:consumer_app/apps/consumer/repositories/address_repository.dart';
 import 'package:core_shared/shared/models/address.dart';
 import 'package:core_shared/shared/core/data/kktc_districts.dart';
+import 'package:core_shared/shared/core/data/kktc_boundary.dart';
 import 'package:consumer_app/apps/consumer/providers/consumer_location_controller.dart';
 import 'package:core_auth/core_auth.dart';
 import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
@@ -138,28 +139,41 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
     try {
       final result = await ref.read(consumerLocationProvider.notifier).determineLocation();
       
-      if (result != null) {
-        setState(() {
-          _latitude = result.latitude;
-          _longitude = result.longitude;
-          
-          if (_cities.contains(result.city)) {
-            _selectedCity = result.city;
-            if (kKktcDistricts[result.city]!.contains(result.district)) {
-              _selectedDistrict = result.district;
-            } else {
-              _selectedDistrict = null;
-            }
+      if (!isLocationInKktc(result.latitude, result.longitude)) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("⚠️ Cihaz konumunuz KKTC sınırları dışındadır. Hoppa yalnızca Kuzey Kıbrıs Türk Cumhuriyeti'nde hizmet vermektedir."),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+        return;
+      }
+
+      setState(() {
+        _latitude = result.latitude;
+        _longitude = result.longitude;
+        
+        if (_cities.contains(result.city)) {
+          _selectedCity = result.city;
+          if (kKktcDistricts[result.city]!.contains(result.district)) {
+            _selectedDistrict = result.district;
           } else {
-            _selectedCity = null;
             _selectedDistrict = null;
           }
-          
-          _detailsController.text = result.streetAddress;
-        });
+        } else {
+          _selectedCity = null;
+          _selectedDistrict = null;
+        }
+        
+        _detailsController.text = result.streetAddress;
+      });
 
-        _mapController.move(LatLng(result.latitude, result.longitude), 15.0);
+      _mapController.move(LatLng(result.latitude, result.longitude), 15.0);
 
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Konum başarıyla alındı.")),
         );
@@ -185,6 +199,10 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
       _latitude = lat;
       _longitude = lng;
     });
+
+    if (!isLocationInKktc(lat, lng)) {
+      return;
+    }
 
     try {
       List<Placemark> placemarks = await placemarkFromCoordinates(lat, lng);
@@ -246,6 +264,15 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text("Lütfen şehir ve bölge seçiniz"),
         backgroundColor: Colors.red,
+      ));
+      return;
+    }
+
+    if (!isLocationInKktc(_latitude, _longitude)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text("⚠️ Seçilen adres KKTC sınırları dışındadır. Lütfen KKTC içinde bir konum belirleyin."),
+        backgroundColor: Colors.red,
+        duration: Duration(seconds: 4),
       ));
       return;
     }
@@ -384,6 +411,9 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
                   options: MapOptions(
                     initialCenter: LatLng(_latitude, _longitude),
                     initialZoom: 15.0,
+                    minZoom: 8.5,
+                    maxZoom: 18.0,
+                    cameraConstraint: CameraConstraint.contain(bounds: kKktcMapBounds),
                     interactionOptions: InteractionOptions(
                       flags: _isLocationVerified
                           ? InteractiveFlag.none
@@ -391,8 +421,10 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
                     ),
                     onPositionChanged: (position, hasGesture) {
                       if (hasGesture) {
-                        _latitude = position.center.latitude;
-                        _longitude = position.center.longitude;
+                        setState(() {
+                          _latitude = position.center.latitude;
+                          _longitude = position.center.longitude;
+                        });
                       }
                     },
                     onMapEvent: (event) {
@@ -420,6 +452,17 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
                           : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                       userAgentPackageName: 'com.kktc.market',
                     ),
+                    PolygonLayer(
+                      polygons: [
+                        Polygon(
+                          points: kWorldOuterBounds,
+                          holePointsList: [kKktcPolygon],
+                          color: Colors.black.withValues(alpha: 0.45),
+                          borderColor: const Color(0xFFFF6B00),
+                          borderStrokeWidth: 2.0,
+                        ),
+                      ],
+                    ),
                   ],
                 ),
                 // ANIMATED CENTER PIN & TARGET DOT
@@ -427,8 +470,82 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
                   child: MapPinWidget(
                     isDragging: _isDragging,
                     primaryColor: theme.primaryColor,
+                    isOutsideKktc: !isLocationInKktc(_latitude, _longitude),
                   ),
                 ),
+                // FLOATING KKTC ACTIVE ZONE BADGE
+                if (!_isLocationVerified)
+                  Positioned(
+                    top: 76,
+                    left: 16,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F172A).withValues(alpha: 0.90),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFFF6B00), width: 1),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.25),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.verified_user_outlined, color: Color(0xFF00A651), size: 14),
+                          SizedBox(width: 5),
+                          Text(
+                            "Hizmet Bölgesi: KKTC",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                // OUTSIDE KKTC WARNING BANNER
+                if (!_isLocationVerified && !isLocationInKktc(_latitude, _longitude))
+                  Positioned(
+                    bottom: 16,
+                    left: 16,
+                    right: 80,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFDC2626),
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.red.withValues(alpha: 0.35),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              "Seçilen konum KKTC dışındadır. Lütfen KKTC sınırlarına kaydırın.",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 // SEARCH BAR & LAYER TOGGLE CARD
                 if (!_isLocationVerified)
                   Positioned(
@@ -459,7 +576,7 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
                                 child: TextField(
                                   controller: _searchController,
                                   decoration: const InputDecoration(
-                                    hintText: 'Adres Ara...',
+                                    hintText: 'KKTC içi Adres Ara...',
                                     border: InputBorder.none,
                                     enabledBorder: InputBorder.none,
                                     focusedBorder: InputBorder.none,
@@ -526,6 +643,15 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
                                   onTap: () {
                                     final lat = item['lat'] as double;
                                     final lon = item['lon'] as double;
+                                    if (!isLocationInKktc(lat, lon)) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text("⚠️ Seçilen arama sonucu KKTC sınırları dışındadır."),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                      return;
+                                    }
                                     _mapController.move(LatLng(lat, lon), 16.0);
                                     setState(() {
                                       _latitude = lat;
@@ -793,9 +919,15 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text(
-                            "İşaretçi pinini tam adresinizin üzerine getirin.",
-                            style: TextStyle(color: Colors.black54, fontSize: 14, fontWeight: FontWeight.w500),
+                          Text(
+                            isLocationInKktc(_latitude, _longitude)
+                                ? "İşaretçi pinini tam adresinizin üzerine getirin."
+                                : "⚠️ Seçilen konum KKTC dışındadır. Lütfen haritayı KKTC sınırlarına kaydırın.",
+                            style: TextStyle(
+                              color: isLocationInKktc(_latitude, _longitude) ? Colors.black54 : Colors.red.shade700,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 20),
@@ -803,23 +935,47 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
                             width: double.infinity,
                             height: 56,
                             child: ElevatedButton(
-                              onPressed: () {
-                                setState(() {
-                                  _isLocationVerified = true;
-                                });
-                              },
+                              onPressed: isLocationInKktc(_latitude, _longitude)
+                                  ? () {
+                                      setState(() {
+                                        _isLocationVerified = true;
+                                      });
+                                    }
+                                  : () {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text("⚠️ Yalnızca KKTC sınırları içerisinde konum seçebilirsiniz."),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    },
                               style: ElevatedButton.styleFrom(
-                                  backgroundColor: theme.primaryColor,
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  elevation: 4,
-                                  shadowColor: theme.primaryColor.withValues(alpha: 0.3),
+                                backgroundColor: isLocationInKktc(_latitude, _longitude)
+                                    ? theme.primaryColor
+                                    : Colors.grey.shade400,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                elevation: isLocationInKktc(_latitude, _longitude) ? 4 : 0,
+                                shadowColor: isLocationInKktc(_latitude, _longitude)
+                                    ? theme.primaryColor.withValues(alpha: 0.3)
+                                    : Colors.transparent,
                               ),
-                              child: const Text(
-                                "Konumu Doğrula",
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  if (!isLocationInKktc(_latitude, _longitude)) ...[
+                                    const Icon(Icons.block, size: 20, color: Colors.white),
+                                    const SizedBox(width: 8),
+                                  ],
+                                  Text(
+                                    isLocationInKktc(_latitude, _longitude)
+                                        ? "Konumu Doğrula"
+                                        : "KKTC Dışı Konum Seçilemez",
+                                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -843,15 +999,18 @@ class _AddAddressPageState extends ConsumerState<AddAddressPage> {
 class MapPinWidget extends StatelessWidget {
   final bool isDragging;
   final Color primaryColor;
+  final bool isOutsideKktc;
 
   const MapPinWidget({
     super.key,
     required this.isDragging,
     required this.primaryColor,
+    this.isOutsideKktc = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final Color effectiveColor = isOutsideKktc ? const Color(0xFFDC2626) : primaryColor;
     return SizedBox(
       width: 100,
       height: 150,
@@ -866,7 +1025,9 @@ class MapPinWidget extends StatelessWidget {
               width: isDragging ? 16 : 8,
               height: isDragging ? 6 : 8,
               decoration: BoxDecoration(
-                color: isDragging ? Colors.black.withValues(alpha: 0.15) : Colors.black.withValues(alpha: 0.4),
+                color: isDragging
+                    ? (isOutsideKktc ? Colors.red.withValues(alpha: 0.25) : Colors.black.withValues(alpha: 0.15))
+                    : (isOutsideKktc ? Colors.red.withValues(alpha: 0.5) : Colors.black.withValues(alpha: 0.4)),
                 borderRadius: BorderRadius.all(Radius.elliptical(isDragging ? 8 : 4, isDragging ? 3 : 4)),
               ),
             ),
@@ -877,7 +1038,7 @@ class MapPinWidget extends StatelessWidget {
               bottom: 50,
               child: CustomPaint(
                 size: const Size(2, 35),
-                painter: DashedLinePainter(color: primaryColor),
+                painter: DashedLinePainter(color: effectiveColor),
               ),
             ),
           // 3. Floating Pin
@@ -885,14 +1046,14 @@ class MapPinWidget extends StatelessWidget {
             duration: const Duration(milliseconds: 150),
             curve: Curves.easeOut,
             bottom: isDragging ? 85 : 50,
-            child: _buildPinBody(),
+            child: _buildPinBody(effectiveColor),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildPinBody() {
+  Widget _buildPinBody(Color color) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -903,15 +1064,15 @@ class MapPinWidget extends StatelessWidget {
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.15),
+                color: isOutsideKktc ? Colors.red.withValues(alpha: 0.35) : Colors.black.withValues(alpha: 0.15),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),
             ],
           ),
           child: Icon(
-            Icons.location_on,
-            color: primaryColor,
+            isOutsideKktc ? Icons.location_off : Icons.location_on,
+            color: color,
             size: 32,
           ),
         ),

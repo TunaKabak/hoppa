@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { MapPin, Navigation, Compass, Search, Loader2, X, Trash2, Shapes, Circle } from 'lucide-react';
+import { MapPin, Navigation, Compass, Search, Loader2, X, Trash2, Shapes, Circle, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { useMerchantTheme } from '../../context/MerchantThemeContext';
+import { isLocationInKktc, KKTC_DEFAULT_CENTER, KKTC_INVERTED_WORLD_MASK } from '../../utils/kktcBoundary';
 
 export interface LocationPolygonPoint {
   lat: number;
@@ -38,6 +39,7 @@ export default function LocationRadiusPickerMap({
   const markerInstanceRef = useRef<any>(null);
   const circleInstanceRef = useRef<any>(null);
   const polygonInstanceRef = useRef<any>(null);
+  const maskLayerRef = useRef<any>(null);
   const vertexMarkersRef = useRef<any[]>([]);
 
   // Address Search & Dropdown State
@@ -45,12 +47,22 @@ export default function LocationRadiusPickerMap({
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [kktcWarning, setKktcWarning] = useState<string | null>(null);
 
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const warningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Default Cyprus Coordinates (Lefkoşa)
-  const defaultLat = latitude || 35.1856;
-  const defaultLng = longitude || 33.3823;
+  const showKktcWarning = (msg: string) => {
+    setKktcWarning(msg);
+    if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current);
+    warningTimeoutRef.current = setTimeout(() => {
+      setKktcWarning(null);
+    }, 5000);
+  };
+
+  // Validated Default Cyprus Coordinates (Lefkoşa)
+  const initialLat = isLocationInKktc(latitude, longitude) ? latitude : KKTC_DEFAULT_CENTER.lat;
+  const initialLng = isLocationInKktc(latitude, longitude) ? longitude : KKTC_DEFAULT_CENTER.lng;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -75,6 +87,7 @@ export default function LocationRadiusPickerMap({
     }
 
     return () => {
+      if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current);
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
@@ -87,8 +100,15 @@ export default function LocationRadiusPickerMap({
     if (!L || !mapContainerRef.current || mapInstanceRef.current) return;
 
     const map = L.map(mapContainerRef.current, {
-      center: [defaultLat, defaultLng],
+      center: [initialLat, initialLng],
       zoom: 13,
+      minZoom: 9,
+      maxZoom: 18,
+      maxBounds: [
+        [34.80, 32.10],
+        [35.90, 34.80],
+      ],
+      maxBoundsViscosity: 0.8,
       scrollWheelZoom: true,
     });
 
@@ -100,6 +120,17 @@ export default function LocationRadiusPickerMap({
       attribution: '&copy; OpenStreetMap contributors',
       maxZoom: 19,
     }).addTo(map);
+
+    // Inverted World Mask for KKTC (dimming non-KKTC areas)
+    const mask = L.polygon(KKTC_INVERTED_WORLD_MASK, {
+      color: '#FF6B00',
+      weight: 2,
+      dashArray: '6, 6',
+      fillColor: isDark ? '#020617' : '#0f172a',
+      fillOpacity: isDark ? 0.65 : 0.45,
+      interactive: false,
+    }).addTo(map);
+    maskLayerRef.current = mask;
 
     // Official Hoppa Logo Custom Map Pin Marker
     const customHoppaIcon = L.divIcon({
@@ -131,12 +162,12 @@ export default function LocationRadiusPickerMap({
       iconAnchor: [22, 44],
     });
 
-    const marker = L.marker([defaultLat, defaultLng], {
+    const marker = L.marker([initialLat, initialLng], {
       draggable: true,
       icon: customHoppaIcon,
     }).addTo(map);
 
-    const circle = L.circle([defaultLat, defaultLng], {
+    const circle = L.circle([initialLat, initialLng], {
       color: '#FF6B00',
       fillColor: '#FF6B00',
       fillOpacity: 0.15,
@@ -145,12 +176,26 @@ export default function LocationRadiusPickerMap({
 
     marker.on('dragend', () => {
       const pos = marker.getLatLng();
+      if (!isLocationInKktc(pos.lat, pos.lng)) {
+        showKktcWarning('⚠️ Yalnızca KKTC (Kuzey Kıbrıs Türk Cumhuriyeti) sınırları içerisinde konum seçebilirsiniz.');
+        // Revert marker to previous valid location
+        marker.setLatLng([latitude || initialLat, longitude || initialLng]);
+        circle.setLatLng([latitude || initialLat, longitude || initialLng]);
+        return;
+      }
+      setKktcWarning(null);
       onLocationChange(pos.lat, pos.lng);
       circle.setLatLng(pos);
     });
 
     map.on('click', (e: any) => {
       const { lat, lng } = e.latlng;
+      if (!isLocationInKktc(lat, lng)) {
+        showKktcWarning('⚠️ Seçilen konum KKTC sınırları dışındadır. Lütfen KKTC sınırları içerisine tıklayınız.');
+        return;
+      }
+      setKktcWarning(null);
+
       // Ref value or latest state checked via callback
       if ((window as any)._isPolygonModeActive) {
         if (onPolygonChange) {
@@ -278,6 +323,13 @@ export default function LocationRadiusPickerMap({
     const lat = parseFloat(item.lat);
     const lng = parseFloat(item.lon);
 
+    if (!isLocationInKktc(lat, lng)) {
+      showKktcWarning('⚠️ Bu arama sonucu KKTC sınırları dışındadır. Lütfen KKTC içi bir adres seçiniz.');
+      setShowDropdown(false);
+      return;
+    }
+    setKktcWarning(null);
+
     if (mapInstanceRef.current) {
       mapInstanceRef.current.flyTo([lat, lng], 16);
     }
@@ -299,18 +351,29 @@ export default function LocationRadiusPickerMap({
         (pos) => {
           const lat = pos.coords.latitude;
           const lng = pos.coords.longitude;
+          if (!isLocationInKktc(lat, lng)) {
+            showKktcWarning('⚠️ Mevcut cihaz konumunuz KKTC sınırları dışındadır. İşletme konumu yalnızca KKTC sınırları içerisinde seçilebilir.');
+            return;
+          }
+          setKktcWarning(null);
           onLocationChange(lat, lng);
 
           if (mapInstanceRef.current) {
             mapInstanceRef.current.flyTo([lat, lng], 15);
           }
+          if (markerInstanceRef.current) {
+            markerInstanceRef.current.setLatLng([lat, lng]);
+          }
+          if (circleInstanceRef.current) {
+            circleInstanceRef.current.setLatLng([lat, lng]);
+          }
         },
         (err) => {
-          alert('Mevcut konumunuz alınamadı: ' + err.message);
+          showKktcWarning('Mevcut konumunuz alınamadı: ' + err.message);
         }
       );
     } else {
-      alert('Tarayıcınız konum servislerini desteklemiyor.');
+      showKktcWarning('Tarayıcınız konum servislerini desteklemiyor.');
     }
   };
 
@@ -371,7 +434,7 @@ export default function LocationRadiusPickerMap({
               onFocus={() => {
                 if (searchResults.length > 0) setShowDropdown(true);
               }}
-              placeholder="Haritada adres/şehir ara... (Yazdıkça canlı öneriler çıkar)"
+              placeholder="KKTC içinde adres/şehir ara... (Örn: Girne, Dereboyu)"
               className={`w-full border rounded-xl py-2.5 pl-10 pr-9 text-xs font-semibold outline-none focus:border-[#FF6B00] transition-colors ${
                 isDark ? 'bg-slate-950 border-slate-800 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
               }`}
@@ -436,6 +499,27 @@ export default function LocationRadiusPickerMap({
       {/* Map Container Canvas */}
       <div className="relative rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-md">
         <div ref={mapContainerRef} className="w-full h-96 z-10 cursor-crosshair" />
+
+        {/* Floating KKTC Active Zone Badge */}
+        <div className="absolute top-3 left-3 z-20 bg-slate-900/90 text-white backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-700 text-[11px] font-black shadow-lg flex items-center gap-2">
+          <ShieldCheck className="w-3.5 h-3.5 text-[#00A651]" />
+          <span>Aktif Hizmet Bölgesi: <span className="text-[#FF6B00]">KKTC</span></span>
+        </div>
+
+        {/* Floating Warning Message (if outside KKTC clicked) */}
+        {kktcWarning && (
+          <div className="absolute top-14 left-3 right-3 z-30 bg-rose-600 text-white text-xs font-extrabold p-3 rounded-xl shadow-2xl flex items-center gap-2 animate-bounce">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            <span className="flex-1">{kktcWarning}</span>
+            <button
+              type="button"
+              onClick={() => setKktcWarning(null)}
+              className="p-1 rounded-lg hover:bg-white/20"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
 
         {/* Floating Mode Indicator Badge */}
         {!isPolygonMode ? (

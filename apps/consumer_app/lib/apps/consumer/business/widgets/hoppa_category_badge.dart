@@ -426,17 +426,35 @@ class HoppaCategoryMiniPill extends StatelessWidget {
   final String name;
   final bool isSelected;
   final VoidCallback onTap;
+  final bool onOrange;
 
   const HoppaCategoryMiniPill({
     super.key,
     required this.name,
     required this.isSelected,
     required this.onTap,
+    this.onOrange = true,
   });
 
   @override
   Widget build(BuildContext context) {
     final profile = HoppaCategoryDesignSystem.getProfile(name);
+
+    final Color backgroundColor = onOrange
+        ? (isSelected ? Colors.white : Colors.white.withValues(alpha: 0.22))
+        : (isSelected ? const Color(0xFFFF6B00) : const Color(0xFFF1F5F9));
+
+    final Color textColor = onOrange
+        ? (isSelected ? const Color(0xFFFF6B00) : Colors.white)
+        : (isSelected ? Colors.white : const Color(0xFF1E293B));
+
+    final Border border = onOrange
+        ? (isSelected
+            ? Border.all(color: Colors.white, width: 1.5)
+            : Border.all(color: Colors.white.withValues(alpha: 0.35), width: 1.0))
+        : (isSelected
+            ? Border.all(color: Colors.transparent)
+            : Border.all(color: const Color(0xFFCBD5E1), width: 1.0));
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 3),
@@ -444,14 +462,15 @@ class HoppaCategoryMiniPill extends StatelessWidget {
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
-            color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.22),
+            color: backgroundColor,
             borderRadius: BorderRadius.circular(20),
+            border: border,
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.15),
+                      color: Colors.black.withValues(alpha: 0.18),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),
@@ -470,13 +489,14 @@ class HoppaCategoryMiniPill extends StatelessWidget {
                   fit: BoxFit.contain,
                 ),
               ),
-              const SizedBox(width: 5),
+              const SizedBox(width: 6),
               Text(
                 name,
                 style: TextStyle(
-                  fontSize: 11,
-                  color: isSelected ? const Color(0xFFFF6B00) : Colors.white,
-                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                  fontSize: 11.5,
+                  color: textColor,
+                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w700,
+                  letterSpacing: -0.2,
                 ),
               ),
             ],

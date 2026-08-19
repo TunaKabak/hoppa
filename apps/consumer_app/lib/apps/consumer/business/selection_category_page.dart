@@ -19,6 +19,7 @@ import 'package:consumer_app/apps/consumer/cart/widgets/floating_cart_card.dart'
 import 'package:consumer_app/apps/consumer/cart/cart_provider.dart';
 import 'package:core_shared/shared/models/business.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:core_shared/shared/core/utils/location_utils.dart';
 
 class SelectionCategoryPage extends rp.ConsumerWidget {
   const SelectionCategoryPage({super.key});
@@ -264,7 +265,7 @@ class SelectionCategoryPage extends rp.ConsumerWidget {
                                       LatLng(address.latitude, address.longitude),
                                       LatLng(business.latitude, business.longitude),
                                     ) / 1000.0;
-                                    distanceText = "${km.toStringAsFixed(1)} km";
+                                    distanceText = LocationUtils.formatDistance(km);
                                   }
                                 }
                                 return _buildHomeFeaturedCard(context, ref, business, distanceText);

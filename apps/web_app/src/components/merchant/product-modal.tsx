@@ -403,7 +403,7 @@ export default function ProductModal({ product, onClose, onSuccess, onOpenOption
             <button
               type="submit"
               disabled={isSaving}
-              className="px-6 py-3 rounded-xl bg-[#FF6B00] hover:bg-[#E56000] text-white font-black text-xs shadow-lg shadow-[#FF6B00]/25 flex items-center gap-2 transition-all disabled:opacity-50"
+              className="px-6 py-3 rounded-xl bg-[#FF6B00] hover:bg-[#E56000] text-white font-black text-xs flex items-center gap-2 transition-all disabled:opacity-50 transform active:scale-95"
             >
               {isSaving ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

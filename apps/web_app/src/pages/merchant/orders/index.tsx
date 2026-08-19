@@ -118,8 +118,38 @@ export default function MerchantOrdersPage() {
   const onTheWayOrders = orders.filter((o) => o.status === 'ON_THE_WAY' || o.status === 'READY_FOR_PICKUP');
   const completedOrders = orders.filter((o) => o.status === 'DELIVERED');
 
+  const ordersHeaderActions = (
+    <div className="flex items-center gap-2.5">
+      <button
+        onClick={() => setAudioEnabled(!audioEnabled)}
+        className={`px-3.5 py-2 rounded-xl backdrop-blur-md border text-xs font-bold flex items-center gap-2 transition-all ${
+          audioEnabled 
+            ? 'bg-emerald-500/30 text-white border-emerald-300/40' 
+            : 'bg-white/15 text-white/70 border-white/20 hover:text-white'
+        }`}
+      >
+        {audioEnabled ? <Volume2 className="w-4 h-4 text-emerald-300" /> : <VolumeX className="w-4 h-4" />}
+        <span>{audioEnabled ? 'Sesli Alarm Açık' : 'Sesli Alarm Kapalı'}</span>
+      </button>
+
+      <button
+        onClick={fetchOrders}
+        className="p-2 rounded-xl bg-white/15 hover:bg-white/25 border border-white/20 text-white transition-colors"
+        title="Yenile"
+      >
+        <RefreshCw className="w-4 h-4" />
+      </button>
+    </div>
+  );
+
   return (
-    <MerchantLayout title="Canlı Sipariş Portalı" activeTab="orders">
+    <MerchantLayout 
+      title="Canlı Sipariş Portalı" 
+      subtitle="Mutfak, paketleme ve kurye süreçlerinizi anlık takip edin (Detay için karta tıklayın)"
+      headerIcon={ShoppingBag}
+      headerActions={ordersHeaderActions}
+      activeTab="orders"
+    >
       <Head>
         <title>Canlı Sipariş Portalı | Hoppa Merchant</title>
       </Head>
@@ -140,13 +170,7 @@ export default function MerchantOrdersPage() {
             left: 0 !important;
             top: 0 !important;
             width: 80mm !important;
-            margin: 0 !important;
-            padding: 4mm !important;
-            background: #ffffff !important;
-            color: #000000 !important;
-            font-family: 'Courier New', Courier, monospace !important;
-            font-size: 11px !important;
-            line-height: 1.25 !important;
+            padding: 2mm !important;
             box-shadow: none !important;
             border: none !important;
           }
@@ -158,45 +182,6 @@ export default function MerchantOrdersPage() {
       `}</style>
 
       <div className="space-y-6">
-        {/* Top Header & Alarm Switch */}
-        <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 border rounded-3xl p-6 transition-colors ${
-          isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
-        }`}>
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-[#FF6B00] text-white flex items-center justify-center font-bold shadow-lg shadow-[#FF6B00]/25">
-              <ShoppingBag className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black tracking-tight">Canlı Sipariş Portalı</h1>
-              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-                Mutfak, paketleme ve kurye süreçlerinizi anlık takip edin (Detay için karta tıklayın)
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setAudioEnabled(!audioEnabled)}
-              className={`px-4 py-2.5 rounded-xl border text-xs font-bold flex items-center gap-2 transition-all ${
-                audioEnabled 
-                  ? 'bg-[#00A651]/15 text-[#00A651] border-[#00A651]/30' 
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'
-              }`}
-            >
-              {audioEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-              <span>{audioEnabled ? 'Sesli Alarm Açık' : 'Sesli Alarm Kapalı'}</span>
-            </button>
-
-            <button
-              onClick={fetchOrders}
-              className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              title="Yenile"
-            >
-              <RefreshCw className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
         {/* Guided Onboarding Bar */}
         <GuidedOnboardingWidget pendingOrdersCount={pendingOrders.length} />
 
