@@ -34,7 +34,18 @@ async function enrichCategoryWithMetrics(cat: any, req?: Request) {
   }
 
   const shops = await prisma.shop.findMany({
-    where: { type: shopType as any },
+    where: { 
+      type: shopType as any,
+      isActive: true,
+      products: {
+        some: {
+          isActive: true
+        }
+      },
+      merchant: {
+        status: "ACTIVE"
+      }
+    },
     select: { id: true, createdAt: true }
   });
   const shopIds = shops.map(s => s.id);

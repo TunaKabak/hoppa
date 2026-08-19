@@ -10,6 +10,7 @@ import 'package:core_auth/core_auth.dart';
 import 'package:core_shared/shared/models/order.dart' as model;
 import 'package:core_shared/shared/models/courier_location.dart';
 import 'package:consumer_app/apps/consumer/widgets/selected_options_breakdown.dart';
+import 'package:core_shared/shared/core/utils/location_utils.dart';
 
 // Tüketici tarafında kurye konumunu dinleyen Supabase Realtime StreamProvider
 final courierLocationStreamProvider = StreamProvider.family<CourierLocation?, String>((ref, courierId) {
@@ -455,7 +456,7 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> with Tick
                                 ),
                               ),
                               Text(
-                                "${_distanceKm.toStringAsFixed(1)} km uzakta • Canlı GPS",
+                                "${LocationUtils.formatDistance(_distanceKm)} uzakta • Canlı GPS",
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,

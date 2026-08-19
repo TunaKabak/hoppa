@@ -11,6 +11,7 @@ import { merchantApiFetch, getMerchantToken } from '../../../utils/merchant-auth
 import { uploadMerchantMedia } from '../../../utils/media-upload';
 import { useMerchantTheme } from '../../../context/MerchantThemeContext';
 import { KKTC_CITIES, KKTC_DISTRICTS } from '../../../data/kktcDistricts';
+import { isLocationInKktc } from '../../../utils/kktcBoundary';
 
 const DAYS_KEY_MAP: Record<string, string> = {
   monday: 'Pazartesi',
@@ -332,6 +333,25 @@ export default function MerchantSettingsPage() {
       deliveryPolygon: isPolygonMode ? deliveryPolygon : null,
     };
 
+    if (!isLocationInKktc(Number(latitude), Number(longitude))) {
+      setErrorMsg('⚠️ Mağaza konumu KKTC (Kuzey Kıbrıs Türk Cumhuriyeti) sınırları içerisinde olmalıdır. Lütfen haritadan KKTC sınırları içerisinde bir konum seçiniz.');
+      setActiveTab('location');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setIsSaving(false);
+      return;
+    }
+
+    if (isPolygonMode && deliveryPolygon && deliveryPolygon.length > 0) {
+      const outsidePoint = deliveryPolygon.find((pt) => !isLocationInKktc(pt.lat, pt.lng));
+      if (outsidePoint) {
+        setErrorMsg('⚠️ Teslimat poligonunun tüm köşe noktaları KKTC sınırları içerisinde olmalıdır.');
+        setActiveTab('location');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        setIsSaving(false);
+        return;
+      }
+    }
+
     try {
       const res = await merchantApiFetch('/merchant/shop', {
         method: 'PUT',
@@ -349,45 +369,36 @@ export default function MerchantSettingsPage() {
     }
   };
 
+  const settingsHeaderActions = (
+    <button
+      onClick={handleSaveSettings}
+      disabled={isSaving}
+      className="px-6 py-2.5 rounded-xl bg-white text-[#E95D22] hover:bg-white/90 font-black text-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50 shrink-0 shadow-sm transform active:scale-95"
+    >
+      {isSaving ? (
+        <div className="w-4 h-4 border-2 border-[#E95D22] border-t-transparent rounded-full animate-spin" />
+      ) : (
+        <>
+          <Save className="w-4 h-4 text-[#E95D22]" />
+          <span>Tüm Değişiklikleri Kaydet</span>
+        </>
+      )}
+    </button>
+  );
+
   return (
-    <MerchantLayout title="Mağaza Ayarları & Konum" activeTab="settings">
+    <MerchantLayout 
+      title="Mağaza Ayarları & Konum" 
+      subtitle="Profil bilgileri, çalışma saatleri, ödeme & teslimat kuralları ve harita alanı"
+      headerIcon={Settings}
+      headerActions={settingsHeaderActions}
+      activeTab="settings"
+    >
       <Head>
         <title>Mağaza Ayarları | Hoppa Merchant</title>
       </Head>
 
       <div className="space-y-6">
-        {/* Sticky Header Bar with Actions */}
-        <div className={`sticky top-0 z-30 backdrop-blur-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 border rounded-3xl p-6 transition-all ${
-          isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white/90 border-slate-200 shadow-md'
-        }`}>
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-[#FF6B00] text-white flex items-center justify-center font-bold shadow-lg shadow-[#FF6B00]/25">
-              <Settings className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black tracking-tight">Mağaza Ayarları</h1>
-              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-                Profil bilgileri, çalışma saatleri, ödeme & teslimat kuralları ve harita alanı
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={handleSaveSettings}
-            disabled={isSaving}
-            className="px-6 py-3 rounded-2xl bg-[#FF6B00] hover:bg-[#E56000] text-white font-black text-xs shadow-lg shadow-[#FF6B00]/25 flex items-center justify-center gap-2 transition-all disabled:opacity-50 shrink-0"
-          >
-            {isSaving ? (
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                <span>Tüm Değişiklikleri Kaydet</span>
-              </>
-            )}
-          </button>
-        </div>
-
         {/* Guided Onboarding Bar */}
         <GuidedOnboardingWidget hasWorkingHours={Object.values(workingHours).some((w) => w.isOpen)} />
 
@@ -413,7 +424,7 @@ export default function MerchantSettingsPage() {
             onClick={() => setActiveTab('profile')}
             className={`px-5 py-3 rounded-2xl font-black text-xs flex items-center gap-2 transition-all whitespace-nowrap ${
               activeTab === 'profile'
-                ? 'bg-[#FF6B00] text-white shadow-lg shadow-[#FF6B00]/20'
+                ? 'bg-[#FF6B00] text-white'
                 : 'text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
@@ -426,7 +437,7 @@ export default function MerchantSettingsPage() {
             onClick={() => setActiveTab('operation')}
             className={`px-5 py-3 rounded-2xl font-black text-xs flex items-center gap-2 transition-all whitespace-nowrap ${
               activeTab === 'operation'
-                ? 'bg-[#FF6B00] text-white shadow-lg shadow-[#FF6B00]/20'
+                ? 'bg-[#FF6B00] text-white'
                 : 'text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
@@ -439,7 +450,7 @@ export default function MerchantSettingsPage() {
             onClick={() => setActiveTab('location')}
             className={`px-5 py-3 rounded-2xl font-black text-xs flex items-center gap-2 transition-all whitespace-nowrap ${
               activeTab === 'location'
-                ? 'bg-[#FF6B00] text-white shadow-lg shadow-[#FF6B00]/20'
+                ? 'bg-[#FF6B00] text-white'
                 : 'text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
@@ -571,7 +582,7 @@ export default function MerchantSettingsPage() {
                       </div>
 
                       <div className="space-y-2 flex-1">
-                        <label className="px-4 py-2.5 rounded-xl bg-[#FF6B00] hover:bg-[#E56000] text-white font-bold text-xs shadow-md shadow-[#FF6B00]/20 flex items-center justify-center gap-2 cursor-pointer transition-all">
+                        <label className="px-4 py-2.5 rounded-xl bg-[#FF6B00] hover:bg-[#E56000] text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all">
                           <Upload className="w-4 h-4" />
                           <span>Logo Yükle</span>
                           <input
@@ -1042,7 +1053,7 @@ export default function MerchantSettingsPage() {
             <button
               type="submit"
               disabled={isSaving}
-              className="px-8 py-3.5 rounded-2xl bg-[#FF6B00] hover:bg-[#E56000] text-white font-black text-sm shadow-xl shadow-[#FF6B00]/25 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+              className="px-8 py-3.5 rounded-2xl bg-[#FF6B00] hover:bg-[#E56000] text-white font-black text-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50 transform active:scale-95"
             >
               {isSaving ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />

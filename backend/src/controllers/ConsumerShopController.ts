@@ -184,9 +184,15 @@ export class ConsumerShopController {
     try {
       const { latitude, longitude, radius } = req.query;
 
-      // Sadece onaylanmış (ACTIVE) satıcıların aktif (isActive: true) dükkanlarını getir
+      // Sadece onaylanmış (ACTIVE) satıcıların aktif (isActive: true) ve en az 1 aktif ürünü olan dükkanlarını getir
       const shops = await prisma.shop.findMany({
         where: {
+          isActive: true,
+          products: {
+            some: {
+              isActive: true
+            }
+          },
           merchant: {
             status: "ACTIVE" // represents isApproved: true
           }
@@ -269,6 +275,7 @@ export class ConsumerShopController {
       const shop = await prisma.shop.findFirst({
         where: {
           id: shopId,
+          isActive: true,
           merchant: {
             status: "ACTIVE"
           }
@@ -429,9 +436,15 @@ export class ConsumerShopController {
         orderBy: { order: "asc" }
       });
 
-      // 2. Dükkanları Ara
+      // 2. Dükkanları Ara (Sadece aktif ve en az 1 ürünü olan dükkanlar)
       const shops = await prisma.shop.findMany({
         where: {
+          isActive: true,
+          products: {
+            some: {
+              isActive: true
+            }
+          },
           merchant: { status: "ACTIVE" },
           OR: [
             { name: { contains: q, mode: "insensitive" } },
@@ -444,11 +457,14 @@ export class ConsumerShopController {
       });
       const enrichedShops = shops.map(enrichShopWithTags);
 
-      // 3. Ürünleri Ara
+      // 3. Ürünleri Ara (Sadece aktif dükkanların aktif ürünleri)
       const products = await prisma.product.findMany({
         where: {
           isActive: true,
-          shop: { merchant: { status: "ACTIVE" } },
+          shop: { 
+            isActive: true,
+            merchant: { status: "ACTIVE" } 
+          },
           OR: [
             { name: { contains: q, mode: "insensitive" } },
             { description: { contains: q, mode: "insensitive" } },

@@ -53,55 +53,44 @@ export default function MerchantDashboardPage() {
   const commissionFee = totalRevenue * hoppaCommissionRate;
   const netPayout = totalRevenue - commissionFee;
 
+  const headerFilterActions = (
+    <div className="flex items-center bg-white/20 backdrop-blur-md border border-white/25 rounded-xl p-1 text-white">
+      <button
+        onClick={() => setTimeRange('today')}
+        className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all ${
+          timeRange === 'today' ? 'bg-white text-[#E95D22] shadow-sm' : 'text-white/85 hover:text-white hover:bg-white/10'
+        }`}
+      >
+        Bugün
+      </button>
+      <button
+        onClick={() => setTimeRange('week')}
+        className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all ${
+          timeRange === 'week' ? 'bg-white text-[#E95D22] shadow-sm' : 'text-white/85 hover:text-white hover:bg-white/10'
+        }`}
+      >
+        Bu Hafta
+      </button>
+      <button
+        onClick={() => setTimeRange('month')}
+        className={`px-3.5 py-1.5 rounded-lg text-xs font-black transition-all ${
+          timeRange === 'month' ? 'bg-white text-[#E95D22] shadow-sm' : 'text-white/85 hover:text-white hover:bg-white/10'
+        }`}
+      >
+        Bu Ay
+      </button>
+    </div>
+  );
+
   return (
-    <MerchantLayout title="Performans & Analiz Portalı" activeTab="dashboard">
+    <MerchantLayout 
+      title="Performans & Analiz Portalı" 
+      subtitle="Ciro, sipariş istatistikleri ve haftalık hakediş hesap özeti"
+      headerIcon={BarChart3}
+      headerActions={headerFilterActions}
+      activeTab="dashboard"
+    >
       <div className="space-y-6">
-        {/* Top Header & Range Filter */}
-        <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 border rounded-3xl p-6 transition-colors ${
-          isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
-        }`}>
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-[#FF6B00] text-white flex items-center justify-center font-bold shadow-lg shadow-[#FF6B00]/25">
-              <BarChart3 className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black tracking-tight">Performans & Analiz Portalı</h1>
-              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-                Ciro, sipariş istatistikleri ve haftalık hakediş hesap özeti
-              </p>
-            </div>
-          </div>
-
-          <div className={`flex items-center border rounded-xl p-1 ${
-            isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-200'
-          }`}>
-            <button
-              onClick={() => setTimeRange('today')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                timeRange === 'today' ? 'bg-[#FF6B00] text-white shadow-md' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              Bugün
-            </button>
-            <button
-              onClick={() => setTimeRange('week')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                timeRange === 'week' ? 'bg-[#FF6B00] text-white shadow-md' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              Bu Hafta
-            </button>
-            <button
-              onClick={() => setTimeRange('month')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                timeRange === 'month' ? 'bg-[#FF6B00] text-white shadow-md' : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              Bu Ay
-            </button>
-          </div>
-        </div>
-
         {/* Guided Onboarding Bar */}
         <GuidedOnboardingWidget />
 

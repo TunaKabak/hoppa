@@ -62,7 +62,7 @@ export default function MerchantLoginPage() {
           isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white/90 border-slate-200 shadow-sm'
         }`}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#FF6B00] text-white flex items-center justify-center font-black shadow-md shadow-[#FF6B00]/20">
+            <div className="w-10 h-10 rounded-2xl bg-[#FF6B00] text-white flex items-center justify-center font-black">
               <Store className="w-6 h-6" />
             </div>
             <div>
@@ -256,7 +256,7 @@ export default function MerchantLoginPage() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full py-4 px-6 rounded-2xl bg-[#FF6B00] hover:bg-[#E56000] text-white font-black text-sm shadow-xl shadow-[#FF6B00]/25 flex items-center justify-center gap-2 transform active:scale-95 transition-all disabled:opacity-50"
+                  className="w-full py-4 px-6 rounded-2xl bg-[#FF6B00] hover:bg-[#E56000] text-white font-black text-sm flex items-center justify-center gap-2 transform active:scale-95 transition-all disabled:opacity-50"
                 >
                   {isLoading ? (
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />

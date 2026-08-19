@@ -14,10 +14,20 @@ import { useMerchantTheme } from '../../context/MerchantThemeContext';
 interface MerchantLayoutProps {
   children: React.ReactNode;
   title?: string;
+  subtitle?: string;
+  headerIcon?: React.ElementType;
+  headerActions?: React.ReactNode;
   activeTab?: 'products' | 'orders' | 'dashboard' | 'campaigns' | 'settings';
 }
 
-export default function MerchantLayout({ children, title = 'Ürün Yönetimi', activeTab = 'products' }: MerchantLayoutProps) {
+export default function MerchantLayout({ 
+  children, 
+  title = 'Ürün Yönetimi', 
+  subtitle,
+  headerIcon: HeaderIcon,
+  headerActions,
+  activeTab = 'products' 
+}: MerchantLayoutProps) {
   const router = useRouter();
   const { theme, toggleTheme } = useMerchantTheme();
   const [profile, setProfile] = useState<any>(null);
@@ -133,7 +143,7 @@ export default function MerchantLayout({ children, title = 'Ürün Yönetimi', a
           isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
         }`}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#FF6B00] text-white font-bold flex items-center justify-center shadow-md shadow-[#FF6B00]/20">
+            <div className="w-10 h-10 rounded-2xl bg-[#FF6B00] text-white font-bold flex items-center justify-center">
               <Store className="w-6 h-6" />
             </div>
             <div>
@@ -170,7 +180,7 @@ export default function MerchantLayout({ children, title = 'Ürün Yönetimi', a
                 <img 
                   src="/logo-square-orange.png" 
                   alt="Hoppa Logo" 
-                  className="w-11 h-11 rounded-2xl object-cover shadow-lg shadow-[#FF6B00]/30 ring-2 ring-[#FF6B00]/20" 
+                  className="w-11 h-11 rounded-2xl object-cover ring-2 ring-[#FF6B00]/20" 
                 />
                 <div>
                   <h1 className="font-black text-xl tracking-tight">
@@ -252,7 +262,7 @@ export default function MerchantLayout({ children, title = 'Ürün Yönetimi', a
                     onClick={() => router.push(item.href)}
                     className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl text-sm font-bold transition-all ${
                       isActive 
-                        ? 'bg-[#FF6B00] text-white shadow-lg shadow-[#FF6B00]/25' 
+                        ? 'bg-[#FF6B00] text-white' 
                         : isDark 
                           ? 'text-slate-400 hover:text-slate-100 hover:bg-slate-800' 
                           : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -289,12 +299,61 @@ export default function MerchantLayout({ children, title = 'Ürün Yönetimi', a
           </div>
         </aside>
 
-        {/* Main Content Area */}
-        <main className={`flex-1 min-w-0 overflow-y-auto p-4 md:p-8 transition-colors ${
-          isDark ? 'bg-slate-950' : 'bg-slate-50'
-        }`}>
-          {children}
-        </main>
+        {/* Main Content Area with Hoppa Curved Header */}
+        <div className="flex-1 min-w-0 flex flex-col h-screen overflow-y-auto">
+          {/* Curved Hoppa Degrade Header */}
+          <header className="relative bg-gradient-to-r from-[#E95D22] via-[#FF6B00] to-[#FF8C00] text-white pt-8 pb-14 px-6 md:px-10 shrink-0 overflow-hidden">
+            {/* Ambient Background Glow Details */}
+            <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-white/10 blur-2xl pointer-events-none" />
+            <div className="absolute bottom-0 left-1/4 -mb-12 w-48 h-48 rounded-full bg-black/5 blur-xl pointer-events-none" />
+
+            <div className="relative z-10 max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                {HeaderIcon && (
+                  <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 text-white flex items-center justify-center font-bold shrink-0">
+                    <HeaderIcon className="w-6 h-6" />
+                  </div>
+                )}
+                <div>
+                  <div className="flex items-center gap-2.5">
+                    <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white">{title}</h1>
+                    {isShopActive ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-100 border border-emerald-400/30 backdrop-blur-sm">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        Canlı Mağaza
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/20 text-rose-100 border border-rose-400/30 backdrop-blur-sm">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                        Kapalı
+                      </span>
+                    )}
+                  </div>
+                  {subtitle && (
+                    <p className="text-xs md:text-sm font-medium text-white/85 mt-1 max-w-2xl">
+                      {subtitle}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {headerActions && (
+                <div className="flex items-center gap-2.5 shrink-0">
+                  {headerActions}
+                </div>
+              )}
+            </div>
+          </header>
+
+          {/* Curved Body Sheet */}
+          <main className={`flex-1 -mt-8 relative z-20 rounded-t-[32px] md:rounded-t-[36px] transition-colors p-5 md:p-8 ${
+            isDark ? 'bg-slate-950 border-t border-slate-800/80 shadow-2xl' : 'bg-slate-50 border-t border-white/60 shadow-2xl shadow-black/5'
+          }`}>
+            <div className="max-w-7xl mx-auto">
+              {children}
+            </div>
+          </main>
+        </div>
       </div>
     </>
   );

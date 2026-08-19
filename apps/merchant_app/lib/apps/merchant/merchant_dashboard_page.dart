@@ -6,6 +6,7 @@ import 'package:core_shared/shared/models/order.dart' as model;
 import 'package:core_shared/shared/core/services/business_service.dart';
 import 'package:core_shared/shared/core/services/product_service.dart';
 import 'package:merchant_app/apps/merchant/merchant_order_list_page.dart';
+import 'package:merchant_app/apps/merchant/merchant_product_list_page.dart';
 import 'package:merchant_app/apps/merchant/merchant_main_layout.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:merchant_app/apps/merchant/providers/merchant_api_providers.dart';
@@ -147,7 +148,39 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
       
       final errorMsg = e.toString();
       final lowerError = errorMsg.toLowerCase();
-      if (lowerError.contains("lütfen dükkan ve resmi işletme") || 
+      if (lowerError.contains("en az 1") || 
+          lowerError.contains("ürün eklemiş") ||
+          lowerError.contains("aktif ürün")) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text("Ürün Bulunamadı"),
+            content: const Text(
+              "İşletmenizi sipariş alımına (Aktif) açabilmek için en az 1 aktif ürün eklemiş olmanız gerekmektedir.",
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Kapat"),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => MerchantProductListPage(
+                        businessId: widget.businessId,
+                      ),
+                    ),
+                  );
+                },
+                child: const Text("Ürünlere Git"),
+              ),
+            ],
+          ),
+        );
+      } else if (lowerError.contains("lütfen dükkan ve resmi işletme") || 
           lowerError.contains("ayarlarınızı tamamlayın") ||
           lowerError.contains("resmi isletme")) {
         showDialog(

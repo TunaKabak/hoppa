@@ -1160,34 +1160,29 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
                       ),
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(16),
+                        bottomRight: Radius.circular(16),
+                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFFE95D22).withValues(alpha: 0.15),
+                          color: const Color(0xFFE95D22).withValues(alpha: 0.25),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),
                       ],
                     ),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).scaffoldBackgroundColor,
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(24),
-                          topRight: Radius.circular(24),
-                        ),
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(16),
+                        bottomRight: Radius.circular(16),
                       ),
-                      child: ClipRRect(
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(24),
-                          topRight: Radius.circular(24),
-                        ),
-                        child: _buildMiniCategoriesList(
-                          context,
-                          ref,
-                          categoriesAsync,
-                          allProductsAsync,
-                          selectedCategory,
-                        ),
+                      child: _buildMiniCategoriesList(
+                        context,
+                        ref,
+                        categoriesAsync,
+                        allProductsAsync,
+                        selectedCategory,
                       ),
                     ),
                   ),

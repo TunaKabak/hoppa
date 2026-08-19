@@ -15,6 +15,7 @@ import 'package:core_auth/core_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:merchant_app/apps/merchant/providers/merchant_location_controller.dart';
 import 'package:core_shared/shared/core/data/kktc_districts.dart';
+import 'package:core_shared/shared/core/data/kktc_boundary.dart';
 
 class MerchantSettingsPage extends ConsumerStatefulWidget {
   final String businessId;
@@ -343,6 +344,29 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
         ),
       );
       return;
+    }
+
+    if (_latitude != null && _longitude != null && !isLocationInKktc(_latitude!, _longitude!)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("⚠️ İşletme konumu KKTC (Kuzey Kıbrıs) sınırları içerisinde olmalıdır."),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (_isPolygonMode && _deliveryPolygon.isNotEmpty) {
+      final bool hasOutside = _deliveryPolygon.any((p) => !isLocationInKktc(p.latitude, p.longitude));
+      if (hasOutside) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("⚠️ Teslimat bölgesinin tüm köşe noktaları KKTC sınırları içerisinde olmalıdır."),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
     }
 
     final combinedAddress = [
@@ -1429,15 +1453,31 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
                 mapController: _mapController,
                 options: MapOptions(
                   initialCenter: LatLng(
-                    (_latitude ?? 0) != 0 ? _latitude! : 41.0082,
-                    (_longitude ?? 0) != 0 ? _longitude! : 28.9784,
+                    ((_latitude ?? 0) != 0 && isLocationInKktc(_latitude!, _longitude ?? 0))
+                        ? _latitude!
+                        : kKktcDefaultCenter.latitude,
+                    ((_longitude ?? 0) != 0 && isLocationInKktc(_latitude ?? 0, _longitude!))
+                        ? _longitude!
+                        : kKktcDefaultCenter.longitude,
                   ),
                   initialZoom: 13.0,
+                  minZoom: 8.5,
+                  maxZoom: 18.0,
+                  cameraConstraint: CameraConstraint.contain(bounds: kKktcMapBounds),
                   interactionOptions: const InteractionOptions(
                     flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
                   ),
                   onTap: _isPolygonMode
                       ? (tapPosition, point) {
+                          if (!isLocationInKktc(point.latitude, point.longitude)) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("⚠️ Yalnızca KKTC sınırları içerisinde teslimat noktası ekleyebilirsiniz."),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
                           setState(() {
                             _deliveryPolygon.add(point);
                           });
@@ -1450,17 +1490,35 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
                         'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                     userAgentPackageName: 'com.example.hoppa',
                   ),
+                  PolygonLayer(
+                    polygons: [
+                      Polygon(
+                        points: kWorldOuterBounds,
+                        holePointsList: [kKktcPolygon],
+                        color: Colors.black.withValues(alpha: 0.45),
+                        borderColor: const Color(0xFFFF6B00),
+                        borderStrokeWidth: 2.0,
+                      ),
+                      if (_isPolygonMode && _deliveryPolygon.length >= 3)
+                        Polygon(
+                          points: _deliveryPolygon,
+                          color: Colors.blue.withValues(alpha: 0.2),
+                          borderColor: Colors.blue,
+                          borderStrokeWidth: 2,
+                        ),
+                    ],
+                  ),
                   if (!_isPolygonMode)
                     CircleLayer(
                       circles: [
                         CircleMarker(
                           point: LatLng(
-                            (_latitude ?? 0) != 0
+                            ((_latitude ?? 0) != 0 && isLocationInKktc(_latitude!, _longitude ?? 0))
                                 ? _latitude!
-                                : 41.0082,
-                            (_longitude ?? 0) != 0
+                                : kKktcDefaultCenter.latitude,
+                            ((_longitude ?? 0) != 0 && isLocationInKktc(_latitude ?? 0, _longitude!))
                                 ? _longitude!
-                                : 28.9784,
+                                : kKktcDefaultCenter.longitude,
                           ),
                           radius: _deliveryRadius * 1000, // Convert km to meters
                           useRadiusInMeter: true,
@@ -1469,19 +1527,8 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
                           borderStrokeWidth: 2,
                         ),
                       ],
-                    )
-                  else ...[
-                    PolygonLayer(
-                      polygons: [
-                        if (_deliveryPolygon.length >= 3)
-                          Polygon(
-                            points: _deliveryPolygon,
-                            color: Colors.blue.withValues(alpha: 0.2),
-                            borderColor: Colors.blue,
-                            borderStrokeWidth: 2,
-                          ),
-                      ],
                     ),
+                  if (_isPolygonMode) ...[
                     PolylineLayer(
                       polylines: [
                         if (_deliveryPolygon.isNotEmpty)
@@ -1587,7 +1634,7 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 6,
             offset: const Offset(0, 3),
           ),

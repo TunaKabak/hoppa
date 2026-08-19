@@ -217,50 +217,40 @@ export default function MerchantProductsPage() {
 
   const activeCount = products.filter((p) => p.isActive).length;
 
+  const productHeaderActions = (
+    <div className="flex flex-wrap items-center gap-2.5">
+      {/* Catalog Import Button */}
+      <button
+        onClick={() => setShowCatalogImport(true)}
+        className="px-4 py-2.5 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 text-white font-bold text-xs flex items-center gap-2 transition-all"
+      >
+        <Database className="w-4 h-4 text-white" />
+        <span>Global Katalogdan Aktar</span>
+      </button>
+
+      {/* Add Product Button */}
+      <button
+        onClick={() => {
+          setActiveProductForEdit(null);
+          setShowProductModal(true);
+        }}
+        className="px-5 py-2.5 rounded-xl bg-white text-[#E95D22] hover:bg-white/90 font-black text-xs flex items-center gap-2 transition-all transform active:scale-95 shadow-sm"
+      >
+        <Plus className="w-4 h-4 text-[#E95D22]" />
+        <span>Yeni Ürün Ekle</span>
+      </button>
+    </div>
+  );
+
   return (
-    <MerchantLayout title="Ürün & Menü Portalı" activeTab="products">
+    <MerchantLayout 
+      title="Ürün & Menü Portalı" 
+      subtitle={`Toplam ${products.length} ürün listeleniyor (${activeCount} tanesi aktif satışta)`}
+      headerIcon={Package}
+      headerActions={productHeaderActions}
+      activeTab="products"
+    >
       <div className="space-y-6">
-        {/* Header Toolbar - Hoppa Branded Header */}
-        <div className={`sticky top-0 z-30 backdrop-blur-md flex flex-col lg:flex-row lg:items-center justify-between gap-4 border rounded-3xl p-6 transition-all ${
-          isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-white/90 border-slate-200 shadow-md'
-        }`}>
-          <div>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-[#FF6B00] text-white flex items-center justify-center font-bold shadow-lg shadow-[#FF6B00]/25">
-                <Package className="w-6 h-6" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-black tracking-tight">Ürün & Menü Portalı</h1>
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-                  Toplam <span className="text-[#FF6B00] font-bold">{products.length}</span> ürün ({activeCount} aktif satışta)
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Catalog Import Button - Hoppa Green Accent */}
-            <button
-              onClick={() => setShowCatalogImport(true)}
-              className="px-4 py-3 rounded-2xl bg-[#00A651]/15 hover:bg-[#00A651]/25 border border-[#00A651]/40 text-[#00A651] font-bold text-xs flex items-center gap-2 transition-all"
-            >
-              <Database className="w-4 h-4 text-[#00A651]" />
-              <span>Global Katalogdan Aktar</span>
-            </button>
-
-            {/* Add Product Button - Hoppa Primary Orange */}
-            <button
-              onClick={() => {
-                setActiveProductForEdit(null);
-                setShowProductModal(true);
-              }}
-              className="px-5 py-3 rounded-2xl bg-[#FF6B00] hover:bg-[#E56000] text-white font-black text-xs shadow-lg shadow-[#FF6B00]/25 flex items-center gap-2 transition-all transform active:scale-95"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Yeni Ürün Ekle</span>
-            </button>
-          </div>
-        </div>
 
         {/* Filters & Search Toolbar */}
         <div className={`border rounded-3xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 transition-colors ${

@@ -95,7 +95,7 @@ export class ShopController {
         imageUrl, logoUrl, headerImageUrl,
         taxNumber, phone, phoneNumber, businessPhone, identityNumber,
         deliveryPricingType, baseDeliveryFee, deliveryFeePerKm, freeDeliveryThreshold, deliveryTime,
-        allowedPaymentMethods, allowedFulfillmentModels, campaignText
+        allowedPaymentMethods, allowedFulfillmentModels, campaignText, isActive
       } = req.body;
 
       if (allowedPaymentMethods !== undefined) {
@@ -158,6 +158,20 @@ export class ShopController {
       if (allowedPaymentMethods !== undefined) shopData.allowedPaymentMethods = allowedPaymentMethods;
       if (allowedFulfillmentModels !== undefined) shopData.allowedFulfillmentModels = allowedFulfillmentModels;
       if (campaignText !== undefined) shopData.campaignText = campaignText;
+      if (isActive !== undefined) {
+        if (isActive === true) {
+          const activeProductCount = await prisma.product.count({
+            where: { shopId: targetShop.id, isActive: true }
+          });
+          if (activeProductCount === 0) {
+            return res.status(400).json({
+              error: true,
+              message: "İşletmenizi aktif hale getirebilmek için en az 1 aktif ürün eklemiş olmanız gerekmektedir."
+            });
+          }
+        }
+        shopData.isActive = isActive;
+      }
 
       if (Object.keys(merchantUpdate).length > 0) {
         shopData.merchant = {
@@ -193,6 +207,18 @@ export class ShopController {
       let newActiveState = typeof req.body?.isActive === 'boolean' 
         ? req.body.isActive 
         : !shop.isActive;
+
+      if (newActiveState === true) {
+        const activeProductCount = await prisma.product.count({
+          where: { shopId: shop.id, isActive: true }
+        });
+        if (activeProductCount === 0) {
+          return res.status(400).json({
+            error: true,
+            message: "İşletmenizi aktif hale getirebilmek için en az 1 aktif ürün eklemiş olmanız gerekmektedir."
+          });
+        }
+      }
 
       const updated = await prisma.shop.update({
         where: { merchantId },

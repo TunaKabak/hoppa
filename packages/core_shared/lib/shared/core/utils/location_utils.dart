@@ -28,4 +28,16 @@ class LocationUtils {
   static double _degreesToRadians(double degrees) {
     return degrees * pi / 180;
   }
+
+  /// Formats distance in km or meters:
+  /// - If distance is less than 1.0 km, formats in meters (e.g., "350 m")
+  /// - If distance is 1.0 km or more, formats in kilometers (e.g., "1.2 km")
+  static String formatDistance(double km) {
+    if (km <= 0) return '0 m';
+    if (km < 1.0) {
+      final meters = (km * 1000).round();
+      return '$meters m';
+    }
+    return '${km.toStringAsFixed(1)} km';
+  }
 }

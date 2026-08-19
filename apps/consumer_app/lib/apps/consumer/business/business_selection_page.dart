@@ -16,6 +16,7 @@ import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
 import 'package:consumer_app/apps/consumer/providers/consumer_location_controller.dart';
 import 'package:consumer_app/apps/consumer/cart/widgets/floating_cart_card.dart';
 import 'package:consumer_app/apps/consumer/cart/cart_provider.dart';
+import 'package:core_shared/shared/core/utils/location_utils.dart';
 
 final selectedBusinessFiltersProvider =
     StateProvider<List<String>>((ref) => []);
@@ -635,7 +636,7 @@ class _BusinessSelectionPageState extends ConsumerState<BusinessSelectionPage> {
                                                                       ) /
                                                                       1000.0;
                                                               distanceText =
-                                                                  "${km.toStringAsFixed(1)} km";
+                                                                  LocationUtils.formatDistance(km);
                                                             }
                                                           }
                                                           return _buildPremiumFeaturedCard(
@@ -756,7 +757,7 @@ class _BusinessSelectionPageState extends ConsumerState<BusinessSelectionPage> {
                                                                   ) /
                                                                   1000.0;
                                                           distanceText =
-                                                              "${km.toStringAsFixed(1)} km";
+                                                              LocationUtils.formatDistance(km);
                                                         }
                                                       }
                                                       return Padding(
