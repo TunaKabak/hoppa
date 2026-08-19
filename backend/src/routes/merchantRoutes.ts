@@ -59,6 +59,7 @@ router.use(async (req, res, next) => {
 // Shop / Dükkan İşlemleri
 router.get("/shop", (req, res) => shopController.getMyShop(req, res));
 router.put("/shop", (req, res) => shopController.updateMyShop(req, res));
+router.get("/shop/readiness", (req, res) => shopController.getShopReadiness(req, res));
 router.post("/shop/toggle-status", (req, res) => shopController.openCloseShop(req, res));
 
 // Category / Kategori İşlemleri

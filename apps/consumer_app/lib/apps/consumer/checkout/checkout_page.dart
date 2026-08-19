@@ -116,6 +116,13 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     super.dispose();
   }
 
+  bool get _isFormValid {
+    if (!_isPickUp && _selectedAddress == null) return false;
+    if (_phoneController.text.trim().isEmpty) return false;
+    if (_isScheduled && _selectedTimeSlot == null) return false;
+    return true;
+  }
+
   // YÖNTEME GÖRE SAATLERİ FİLTRELE
   List<String> _getAvailableSlots() {
     // 1. Hangi listeyi kullanacağız?
@@ -867,18 +874,22 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: _proceedToPayment,
+                onPressed: _isFormValid ? _proceedToPayment : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: kPrimaryColor,
-                  foregroundColor: Colors.white,
-                  elevation: 5,
+                  backgroundColor: _isFormValid ? kPrimaryColor : Colors.grey.shade300,
+                  foregroundColor: _isFormValid ? Colors.white : Colors.grey.shade500,
+                  elevation: _isFormValid ? 4 : 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-                child: const Text(
-                  "Ödemeye Geç",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                child: Text(
+                  _isFormValid ? "Ödemeye Geç" : "Eksik Bilgileri Tamamlayın",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: _isFormValid ? Colors.white : Colors.grey.shade600,
+                  ),
                 ),
               ),
             ),

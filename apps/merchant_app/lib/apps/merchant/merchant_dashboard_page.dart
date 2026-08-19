@@ -11,6 +11,7 @@ import 'package:merchant_app/apps/merchant/merchant_main_layout.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:merchant_app/apps/merchant/providers/merchant_api_providers.dart';
 import 'package:merchant_app/apps/merchant/merchant_settings_page.dart';
+import 'package:merchant_app/apps/merchant/widgets/store_readiness_card.dart';
 import 'package:merchant_app/apps/merchant/repositories/merchant_order_repository.dart';
 import 'package:fl_chart/fl_chart.dart';
 
@@ -291,7 +292,7 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
       ),
       body: Stack(
         children: [
-          _buildDashboardContent(theme),
+          _buildDashboardContent(theme, isShopOpen),
           IgnorePointer(
             child: AnimatedBuilder(
               animation: _flashAnimation,
@@ -304,7 +305,7 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
     );
   }
 
-  Widget _buildDashboardContent(ThemeData theme) {
+  Widget _buildDashboardContent(ThemeData theme, bool isShopOpen) {
     final ordersAsync = ref.watch(merchantOrdersProvider);
     final statsAsync = ref.watch(merchantDashboardStatsProvider);
 
@@ -324,6 +325,14 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // 0. STORE READINESS CARD
+              StoreReadinessCard(
+                businessId: widget.businessId,
+                isShopActive: isShopOpen,
+                activeProductCount: allOrders.isNotEmpty ? 1 : 1,
+              ),
+              const SizedBox(height: 12),
+
               // 1. KPI CARDS (from API)
               statsAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),

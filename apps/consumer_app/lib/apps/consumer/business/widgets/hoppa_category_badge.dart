@@ -357,22 +357,22 @@ class HoppaCategoryCard extends StatelessWidget {
                         ? Colors.white
                         : (isPinned
                             ? Colors.white.withValues(alpha: 0.5)
-                            : Colors.grey.shade300),
-                    width: isSelected ? 2.5 : 1.0,
+                            : Colors.grey.shade200),
+                    width: isSelected ? 1.5 : 0.8,
                   ),
                   boxShadow: isSelected
                       ? [
                           BoxShadow(
-                            color: const Color(0xFFFF6B00).withValues(alpha: 0.45),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
+                            color: const Color(0xFFFF6B00).withValues(alpha: 0.16),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
                           ),
                         ]
                       : [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.04),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
+                            color: Colors.black.withValues(alpha: 0.03),
+                            blurRadius: 3,
+                            offset: const Offset(0, 1),
                           ),
                         ],
                 ),
@@ -407,8 +407,8 @@ class HoppaCategoryCard extends StatelessWidget {
             // Active Indicator
             AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              width: isSelected ? 20 : 0,
-              height: 2.5,
+              width: isSelected ? 16 : 0,
+              height: 2.0,
               decoration: BoxDecoration(
                 color: isPinned ? Colors.white : const Color(0xFFFF6B00),
                 borderRadius: BorderRadius.circular(2),
@@ -441,8 +441,8 @@ class HoppaCategoryMiniPill extends StatelessWidget {
     final profile = HoppaCategoryDesignSystem.getProfile(name);
 
     final Color backgroundColor = onOrange
-        ? (isSelected ? Colors.white : Colors.white.withValues(alpha: 0.22))
-        : (isSelected ? const Color(0xFFFF6B00) : const Color(0xFFF1F5F9));
+        ? (isSelected ? Colors.white : Colors.white.withValues(alpha: 0.20))
+        : (isSelected ? const Color(0xFFFF6B00) : const Color(0xFFF8FAFC));
 
     final Color textColor = onOrange
         ? (isSelected ? const Color(0xFFFF6B00) : Colors.white)
@@ -450,11 +450,11 @@ class HoppaCategoryMiniPill extends StatelessWidget {
 
     final Border border = onOrange
         ? (isSelected
-            ? Border.all(color: Colors.white, width: 1.5)
-            : Border.all(color: Colors.white.withValues(alpha: 0.35), width: 1.0))
+            ? Border.all(color: Colors.white, width: 1.0)
+            : Border.all(color: Colors.white.withValues(alpha: 0.25), width: 0.8))
         : (isSelected
             ? Border.all(color: Colors.transparent)
-            : Border.all(color: const Color(0xFFCBD5E1), width: 1.0));
+            : Border.all(color: const Color(0xFFE2E8F0), width: 0.8));
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 3),
@@ -470,9 +470,9 @@ class HoppaCategoryMiniPill extends StatelessWidget {
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.18),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 3,
+                      offset: const Offset(0, 1),
                     ),
                   ]
                 : null,

@@ -125,8 +125,29 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     if (widget.isPickUp) {
       _paymentMethod = 'online_payment';
     }
+    _cardNumberController.addListener(() => setState(() {}));
+    _cardExpiryController.addListener(() => setState(() {}));
+    _cardCVCController.addListener(() => setState(() {}));
+    _cardHolderController.addListener(() => setState(() {}));
+    _savedCardCVCController.addListener(() => setState(() {}));
     _loadSavedCards();
     _fetchWalletBalance();
+  }
+
+  bool get _isPaymentValid {
+    if (_isLoading) return false;
+    if (_paymentMethod == 'online_payment' && !_useWalletBalance) {
+      if (_selectedCardId == null) return false;
+      if (_selectedCardId != 'new') {
+        if (_savedCardCVCController.text.trim().length < 3) return false;
+      } else {
+        if (_cardNumberController.text.replaceAll(' ', '').length < 16) return false;
+        if (_cardExpiryController.text.trim().length < 5) return false;
+        if (_cardCVCController.text.trim().length < 3) return false;
+        if (_cardHolderController.text.trim().isEmpty) return false;
+      }
+    }
+    return true;
   }
 
   @override
@@ -1323,12 +1344,12 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: _isLoading ? null : _submitOrder,
+                onPressed: _isPaymentValid ? _submitOrder : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: kPrimaryColor,
-                  foregroundColor: Colors.white,
-                  elevation: 5,
-                  shadowColor: kPrimaryColor.withValues(alpha: 0.4),
+                  backgroundColor: _isPaymentValid ? kPrimaryColor : Colors.grey.shade300,
+                  foregroundColor: _isPaymentValid ? Colors.white : Colors.grey.shade500,
+                  elevation: _isPaymentValid ? 4 : 0,
+                  shadowColor: kPrimaryColor.withValues(alpha: 0.3),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -1336,14 +1357,17 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                 child: _isLoading
                     ? const CircularProgressIndicator(color: Colors.white)
                     : Text(
-                        isFullyWallet
-                            ? "Siparişi Cüzdanla Onayla (₺${total.toStringAsFixed(2)})"
-                            : (walletDeduction > 0
-                                ? "Siparişi Onayla (Kalan ₺${payableAmount.toStringAsFixed(2)})"
-                                : "Siparişi Onayla (₺${total.toStringAsFixed(2)})"),
-                        style: const TextStyle(
-                          fontSize: 17,
+                        !_isPaymentValid
+                            ? "Lütfen Kart Bilgilerini Tamamlayın"
+                            : (isFullyWallet
+                                ? "Siparişi Cüzdanla Onayla (₺${total.toStringAsFixed(2)})"
+                                : (walletDeduction > 0
+                                    ? "Siparişi Onayla (Kalan ₺${payableAmount.toStringAsFixed(2)})"
+                                    : "Siparişi Onayla (₺${total.toStringAsFixed(2)})")),
+                        style: TextStyle(
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
+                          color: _isPaymentValid ? Colors.white : Colors.grey.shade600,
                         ),
                         textAlign: TextAlign.center,
                       ),

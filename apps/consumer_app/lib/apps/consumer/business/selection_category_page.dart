@@ -360,6 +360,30 @@ class SelectionCategoryPage extends rp.ConsumerWidget {
                               subtitle: cat.subtitle,
                               index: index,
                               onTap: () {
+                                if (cat.badge == 'yakında' || cat.badge == 'coming_soon') {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Row(
+                                        children: [
+                                          const Icon(Icons.schedule_rounded, color: Colors.white),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: Text(
+                                              "$catName kategorisindeki özenle seçilmiş işletmeler çok yakında Hoppa'da!",
+                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      backgroundColor: const Color(0xFFFF6B00),
+                                      behavior: SnackBarBehavior.floating,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                      duration: const Duration(seconds: 3),
+                                    ),
+                                  );
+                                  return;
+                                }
+
                                 Provider.of<BusinessProvider>(
                                   context,
                                   listen: false,

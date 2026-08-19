@@ -76,6 +76,13 @@ class CategoryBadge extends StatelessWidget {
           backgroundColor: Colors.grey,
           icon: Icons.do_not_disturb,
         );
+      case 'yakında':
+      case 'coming_soon':
+        return _BadgeData(
+          label: 'YAKINDA',
+          backgroundColor: const Color(0xFF64748B),
+          icon: Icons.schedule_rounded,
+        );
       default:
         return _BadgeData(
           label: badgeType.toUpperCase(),

@@ -882,29 +882,23 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                                         end: Alignment.bottomRight,
                                       )
                                     : null,
-                                color: isSelected ? null : const Color(0xFFF1F5F9),
+                                color: isSelected ? null : const Color(0xFFF8FAFC),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
                                   color: isSelected
                                       ? Colors.transparent
-                                      : const Color(0xFFCBD5E1),
-                                  width: 1.2,
+                                      : const Color(0xFFE2E8F0),
+                                  width: 0.8,
                                 ),
                                 boxShadow: isSelected
                                     ? [
                                         BoxShadow(
-                                          color: const Color(0xFFFF6B00).withValues(alpha: 0.35),
-                                          blurRadius: 6,
+                                          color: const Color(0xFFFF6B00).withValues(alpha: 0.16),
+                                          blurRadius: 5,
                                           offset: const Offset(0, 2),
                                         ),
                                       ]
-                                    : [
-                                        BoxShadow(
-                                          color: Colors.black.withValues(alpha: 0.03),
-                                          blurRadius: 2,
-                                          offset: const Offset(0, 1),
-                                        ),
-                                      ],
+                                    : null,
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -1328,15 +1322,15 @@ class _StickyCategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
       BuildContext context, double shrinkOffset, bool overlapsContent) {
     final double progress = (shrinkOffset / maxExtent).clamp(0.0, 1.0);
     final isPinned = overlapsContent || shrinkOffset > 5;
-    final double curveRadius = isPinned ? 24.0 : (24.0 * progress);
+    final double curveRadius = isPinned ? 28.0 : (28.0 * progress);
 
     return Container(
       decoration: BoxDecoration(
         gradient: isPinned
             ? const LinearGradient(
                 colors: [
-                  Color(0xFFFF6B00),
-                  Color(0xFFFF8A00),
+                  Color(0xFFE95D22),
+                  Color(0xFFFF8C00),
                 ],
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
@@ -1350,8 +1344,8 @@ class _StickyCategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
         boxShadow: isPinned
             ? [
                 BoxShadow(
-                  color: const Color(0xFFE95D22).withValues(alpha: 0.25),
-                  blurRadius: 10,
+                  color: const Color(0xFFE95D22).withValues(alpha: 0.28),
+                  blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
               ]
