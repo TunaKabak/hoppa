@@ -223,6 +223,7 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
             return HoppaCategoryMiniPill(
               name: cat.name,
               isSelected: isSelected,
+              onOrange: false,
               onTap: () {
                 ref.read(selectedCatalogCategoryProvider.notifier).state = cat.name;
                 ref.read(selectedCatalogSubCategoryProvider.notifier).state = 'Tümü';
@@ -1146,21 +1147,14 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                   child: Container(
                     height: 48,
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [
-                          Color(0xFFE95D22),
-                          Color(0xFFFF8C00),
-                        ],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                      ),
+                      color: Colors.white,
                       borderRadius: const BorderRadius.only(
                         bottomLeft: Radius.circular(16),
                         bottomRight: Radius.circular(16),
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFFE95D22).withValues(alpha: 0.25),
+                          color: Colors.black.withValues(alpha: 0.08),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),
@@ -1328,23 +1322,23 @@ class _StickyCategoryHeaderDelegate extends SliverPersistentHeaderDelegate {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(curveRadius),
-          topRight: Radius.circular(curveRadius),
+          bottomLeft: Radius.circular(curveRadius),
+          bottomRight: Radius.circular(curveRadius),
         ),
         boxShadow: isPinned
             ? [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.08),
                   blurRadius: 10,
-                  offset: const Offset(0, -4),
+                  offset: const Offset(0, 4),
                 ),
               ]
             : null,
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(curveRadius),
-          topRight: Radius.circular(curveRadius),
+          bottomLeft: Radius.circular(curveRadius),
+          bottomRight: Radius.circular(curveRadius),
         ),
         child: builder(context, isPinned),
       ),

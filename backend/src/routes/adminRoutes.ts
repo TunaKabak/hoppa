@@ -50,4 +50,8 @@ router.put("/campaigns/:campaignId/approve", (req, res) => shopCampaignControlle
 // Admin -> Fleet AI Management
 router.post("/fleet/optimize", (req, res) => fleetAIController.optimizeRoutes(req, res));
 
+// Admin -> KKTC Service Zones & Geofencing Management
+router.get("/service-zones", (req, res) => superAdminController.getServiceZones(req, res));
+router.put("/service-zones", (req, res) => superAdminController.updateServiceZones(req, res));
+
 export default router;

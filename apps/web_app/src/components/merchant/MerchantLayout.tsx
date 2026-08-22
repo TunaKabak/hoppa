@@ -3,7 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { 
   Store, Package, ShoppingBag, BarChart3, Settings, LogOut, 
-  ChevronRight, Power, Menu, X, Sun, Moon, Tag 
+  ChevronRight, Power, Menu, X, Sun, Moon, Tag, MapPin 
 } from 'lucide-react';
 import { 
   getMerchantProfile, getMerchantToken, clearMerchantAuth, merchantApiFetch, 
@@ -17,7 +17,7 @@ interface MerchantLayoutProps {
   subtitle?: string;
   headerIcon?: React.ElementType;
   headerActions?: React.ReactNode;
-  activeTab?: 'products' | 'orders' | 'dashboard' | 'campaigns' | 'settings';
+  activeTab?: 'products' | 'orders' | 'dashboard' | 'campaigns' | 'settings' | 'service-zones';
 }
 
 export default function MerchantLayout({ 
@@ -125,6 +125,13 @@ export default function MerchantLayout({
     { id: 'dashboard', label: 'Performans & Analiz', icon: BarChart3, href: '/merchant/dashboard' },
     { id: 'campaigns', label: 'Kampanya & Reklam', icon: Tag, href: '/merchant/campaigns' },
     { id: 'settings', label: 'Mağaza Ayarları', icon: Settings, href: '/merchant/settings' },
+    ...(isAdmin ? [{
+      id: 'service-zones',
+      label: 'KKTC Hizmet Alanları',
+      icon: MapPin,
+      href: '/merchant/service-zones',
+      adminOnly: true
+    }] : []),
   ];
 
   const isDark = theme === 'dark';
@@ -216,8 +223,8 @@ export default function MerchantLayout({
                   onChange={(e) => handleShopChange(e.target.value)}
                   className={`w-full border rounded-xl p-2.5 text-xs font-bold outline-none transition-colors ${
                     isDark 
-                      ? 'bg-slate-950 border-slate-700 text-slate-100' 
-                      : 'bg-white border-slate-300 text-slate-900 shadow-sm'
+                    ? 'bg-slate-950 border-slate-700 text-slate-100' 
+                    : 'bg-white border-slate-300 text-slate-900 shadow-sm'
                   }`}
                 >
                   <option value="">-- Kendi Mağazam / Varsayılan --</option>
@@ -257,7 +264,7 @@ export default function MerchantLayout({
 
             {/* Navigation Links */}
             <nav className="space-y-1.5">
-              {navItems.map((item) => {
+              {navItems.map((item: any) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
                 return (
@@ -278,6 +285,11 @@ export default function MerchantLayout({
                     </div>
 
                     <div className="flex items-center gap-2">
+                      {item.adminOnly && (
+                        <span className="px-1.5 py-0.5 rounded text-[8px] bg-[#FF6B00] text-white font-black">
+                          ADMIN
+                        </span>
+                      )}
                       {item.badge && item.badge > 0 ? (
                         <span className="px-2 py-0.5 rounded-full text-xs font-black bg-amber-500 text-white animate-pulse">
                           {item.badge}
