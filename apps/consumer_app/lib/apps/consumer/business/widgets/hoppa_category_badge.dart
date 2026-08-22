@@ -355,9 +355,7 @@ class HoppaCategoryCard extends StatelessWidget {
                   border: Border.all(
                     color: isSelected
                         ? Colors.white
-                        : (isPinned
-                            ? Colors.white.withValues(alpha: 0.5)
-                            : Colors.grey.shade200),
+                        : Colors.grey.shade200,
                     width: isSelected ? 1.5 : 0.8,
                   ),
                   boxShadow: isSelected
@@ -397,9 +395,7 @@ class HoppaCategoryCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                color: isPinned
-                    ? Colors.white
-                    : (isSelected ? const Color(0xFFFF6B00) : const Color(0xFF2B3445)),
+                color: isSelected ? const Color(0xFFFF6B00) : const Color(0xFF2B3445),
                 letterSpacing: -0.2,
               ),
             ),
@@ -410,7 +406,7 @@ class HoppaCategoryCard extends StatelessWidget {
               width: isSelected ? 16 : 0,
               height: 2.0,
               decoration: BoxDecoration(
-                color: isPinned ? Colors.white : const Color(0xFFFF6B00),
+                color: const Color(0xFFFF6B00),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),

@@ -243,4 +243,65 @@ export class SuperAdminController {
       return res.status(500).json({ error: true, message: "Sunucu hatası oluştu." });
     }
   }
+
+  /**
+   * GET /api/admin/service-zones
+   * KKTC Genel Platform Hizmet Alanları ve Poligon Sınırlarını döner.
+   */
+  async getServiceZones(req: Request, res: Response) {
+    try {
+      const config = await prisma.systemConfig.findUnique({
+        where: { key: "KKTC_SERVICE_ZONES" }
+      });
+
+      if (!config || !config.value) {
+        return res.status(200).json({ error: false, data: [] });
+      }
+
+      try {
+        const zones = JSON.parse(config.value);
+        return res.status(200).json({ error: false, data: Array.isArray(zones) ? zones : [] });
+      } catch (parseErr) {
+        return res.status(200).json({ error: false, data: [] });
+      }
+    } catch (error: any) {
+      console.error("[SuperAdminController.getServiceZones] Error:", error);
+      return res.status(500).json({ error: true, message: "Hizmet bölgeleri getirilemedi." });
+    }
+  }
+
+  /**
+   * PUT /api/admin/service-zones
+   * Body: { zones: Array<ServiceZone> }
+   * KKTC Genel Platform Hizmet Alanlarını ve Poligon Sınırlarını kaydeder.
+   */
+  async updateServiceZones(req: Request, res: Response) {
+    try {
+      const { zones } = req.body;
+
+      if (!Array.isArray(zones)) {
+        return res.status(400).json({ error: true, message: "Geçersiz veri formatı. 'zones' dizisi beklenmektedir." });
+      }
+
+      const updated = await prisma.systemConfig.upsert({
+        where: { key: "KKTC_SERVICE_ZONES" },
+        create: {
+          key: "KKTC_SERVICE_ZONES",
+          value: JSON.stringify(zones)
+        },
+        update: {
+          value: JSON.stringify(zones)
+        }
+      });
+
+      return res.status(200).json({
+        error: false,
+        message: "KKTC hizmet alanları başarıyla güncellendi.",
+        data: zones
+      });
+    } catch (error: any) {
+      console.error("[SuperAdminController.updateServiceZones] Error:", error);
+      return res.status(500).json({ error: true, message: "Hizmet bölgeleri kaydedilemedi." });
+    }
+  }
 }
