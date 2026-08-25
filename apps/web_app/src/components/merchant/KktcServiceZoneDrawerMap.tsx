@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { 
   MapPin, Search, Loader2, Trash2, Shapes, CheckCircle2, 
   X, Layers, Compass, Plus, Undo2, MousePointerClick, 
-  HelpCircle, Eye, EyeOff, Sparkles, Navigation 
+  HelpCircle, Eye, EyeOff, Sparkles, Navigation, Maximize2, 
+  Minimize2, ZoomIn, ZoomOut, Target, Crosshair
 } from 'lucide-react';
 import { useMerchantTheme } from '../../context/MerchantThemeContext';
 import { isLocationInKktc, KKTC_DEFAULT_CENTER, KKTC_INVERTED_WORLD_MASK } from '../../utils/kktcBoundary';
@@ -35,6 +36,7 @@ interface KktcServiceZoneDrawerMapProps {
   onUpdateNewZoneDraftPolygon: (polygon: ServiceZonePoint[]) => void;
   onFinishDrawingNew: () => void;
   onCancelDrawingNew: () => void;
+  heightClass?: string;
 }
 
 const DISTRICT_CENTERS: Record<string, { lat: number; lng: number; zoom: number }> = {
@@ -73,6 +75,7 @@ export default function KktcServiceZoneDrawerMap({
   onUpdateNewZoneDraftPolygon,
   onFinishDrawingNew,
   onCancelDrawingNew,
+  heightClass = 'h-[720px]',
 }: KktcServiceZoneDrawerMapProps) {
   const { theme } = useMerchantTheme();
   const isDark = theme === 'dark';
@@ -93,6 +96,9 @@ export default function KktcServiceZoneDrawerMap({
   const [testResult, setTestResult] = useState<{ insideZones: string[]; isInsideKktc: boolean } | null>(null);
   const [isTestMode, setIsTestMode] = useState<boolean>(false);
   const [selectedDistrict, setSelectedDistrict] = useState<string>('KKTC Genel');
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [cursorCoords, setCursorCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [zoomLevel, setZoomLevel] = useState<number>(10);
 
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -141,6 +147,7 @@ export default function KktcServiceZoneDrawerMap({
       ],
       maxBoundsViscosity: 0.8,
       scrollWheelZoom: true,
+      zoomControl: false, // Custom styled zoom controls
     });
 
     const tileUrl = isDark 
@@ -162,7 +169,19 @@ export default function KktcServiceZoneDrawerMap({
       interactive: false,
     }).addTo(map);
 
-    // Map Click Listener
+    // Track Cursor & Zoom Level
+    map.on('mousemove', (e: any) => {
+      setCursorCoords({
+        lat: Number(e.latlng.lat.toFixed(5)),
+        lng: Number(e.latlng.lng.toFixed(5)),
+      });
+    });
+
+    map.on('zoomend', () => {
+      setZoomLevel(map.getZoom());
+    });
+
+    // Map Click Listener for Drawing
     map.on('click', (e: any) => {
       const { lat, lng } = e.latlng;
       const point = { lat: Number(lat.toFixed(5)), lng: Number(lng.toFixed(5)) };
@@ -195,6 +214,15 @@ export default function KktcServiceZoneDrawerMap({
     renderAllPolygons();
   };
 
+  // Resize listener when fullscreen or container size changes
+  useEffect(() => {
+    if (mapInstanceRef.current) {
+      setTimeout(() => {
+        mapInstanceRef.current?.invalidateSize();
+      }, 150);
+    }
+  }, [isFullscreen, heightClass]);
+
   // Keep window global refs synced for Leaflet callbacks
   useEffect(() => {
     (window as any)._isTestModeActive = isTestMode;
@@ -204,7 +232,7 @@ export default function KktcServiceZoneDrawerMap({
     (window as any)._allZones = zones;
   }, [isTestMode, isDrawingNew, newZoneDraftPolygon, activeZoneId, zones]);
 
-  // Render Polygons & Vertices whenever zones or activeZoneId changes
+  // Render Polygons & Vertices
   const renderAllPolygons = useCallback(() => {
     const map = mapInstanceRef.current;
     const L = (window as any).L;
@@ -233,17 +261,17 @@ export default function KktcServiceZoneDrawerMap({
 
       const polygonLayer = L.polygon(latLngs, {
         color: zone.colorHex || '#FF6B00',
-        weight: isSelected ? 3 : 1.8,
+        weight: isSelected ? 3.5 : 2,
         fillColor: zone.colorHex || '#FF6B00',
-        fillOpacity: isSelected ? 0.35 : (zone.isActive ? 0.18 : 0.06),
+        fillOpacity: isSelected ? 0.38 : (zone.isActive ? 0.20 : 0.07),
         dashArray: zone.isActive ? undefined : '6, 6',
       }).addTo(map);
 
       // Tooltip label
       polygonLayer.bindTooltip(`
-        <div style="font-family: inherit; font-weight: bold; font-size: 11px;">
+        <div style="font-family: inherit; font-weight: 800; font-size: 12px; padding: 2px 4px;">
           <span>${zone.name}</span>
-          <span style="display: block; font-size: 9px; opacity: 0.8;">${zone.district} • ${zone.isActive ? 'Aktif' : 'Pasif'}</span>
+          <span style="display: block; font-size: 10px; font-weight: 600; opacity: 0.85;">${zone.district} • ${zone.isActive ? 'Aktif' : 'Pasif'} • Min: ₺${zone.minOrderAmount}</span>
         </div>
       `, {
         permanent: false,
@@ -264,12 +292,11 @@ export default function KktcServiceZoneDrawerMap({
       if (isSelected && !isDrawingNew) {
         zone.polygon.forEach((pt, idx) => {
           const vertexMarker = L.circleMarker([pt.lat, pt.lng], {
-            radius: 6.5,
+            radius: 7.5,
             color: '#FFFFFF',
             fillColor: zone.colorHex || '#FF6B00',
             fillOpacity: 1,
-            weight: 2.5,
-            draggable: true,
+            weight: 3,
           }).addTo(map);
 
           // Click vertex to delete
@@ -289,21 +316,21 @@ export default function KktcServiceZoneDrawerMap({
       const draftLatLngs = newZoneDraftPolygon.map((p) => [p.lat, p.lng]);
       const draftLayer = L.polygon(draftLatLngs, {
         color: '#2563EB',
-        weight: 2.5,
+        weight: 3,
         fillColor: '#3B82F6',
-        fillOpacity: 0.3,
-        dashArray: '4, 4',
+        fillOpacity: 0.35,
+        dashArray: '5, 5',
       }).addTo(map);
       draftPolygonLayerRef.current = draftLayer;
 
-      // Add vertex dots for draft
+      // Add vertex dots for draft with index indicator
       newZoneDraftPolygon.forEach((pt, idx) => {
         const dot = L.circleMarker([pt.lat, pt.lng], {
-          radius: 7,
+          radius: 8,
           color: '#FFFFFF',
           fillColor: '#2563EB',
           fillOpacity: 1,
-          weight: 2.5,
+          weight: 3,
         }).addTo(map);
 
         dot.on('click', (e: any) => {
@@ -320,6 +347,30 @@ export default function KktcServiceZoneDrawerMap({
   useEffect(() => {
     renderAllPolygons();
   }, [renderAllPolygons]);
+
+  // Fit camera bounds to a polygon
+  const handleFitZoneBounds = (polygon: ServiceZonePoint[]) => {
+    if (!mapInstanceRef.current || !polygon || polygon.length === 0) return;
+    const L = (window as any).L;
+    if (!L) return;
+
+    const bounds = L.latLngBounds(polygon.map((p) => [p.lat, p.lng]));
+    mapInstanceRef.current.fitBounds(bounds, { padding: [60, 60], maxZoom: 15 });
+  };
+
+  // Undo Last Vertex
+  const handleUndoLastVertex = () => {
+    if (isDrawingNew) {
+      if (newZoneDraftPolygon.length > 0) {
+        onUpdateNewZoneDraftPolygon(newZoneDraftPolygon.slice(0, -1));
+      }
+    } else if (activeZoneId) {
+      const currentZone = zones.find((z) => z.id === activeZoneId);
+      if (currentZone && currentZone.polygon && currentZone.polygon.length > 0) {
+        onUpdateZonePolygon(activeZoneId, currentZone.polygon.slice(0, -1));
+      }
+    }
+  };
 
   // Test Location Checker
   const handleTestLocation = (point: ServiceZonePoint) => {
@@ -354,22 +405,22 @@ export default function KktcServiceZoneDrawerMap({
         className: 'test-location-pin',
         html: `
           <div style="
-            width: 36px;
-            height: 36px;
+            width: 40px;
+            height: 40px;
             background: #2563EB;
             border-radius: 50% 50% 50% 0;
             transform: rotate(-45deg);
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.5);
-            border: 2.5px solid #ffffff;
+            box-shadow: 0 10px 24px rgba(37, 99, 235, 0.55);
+            border: 3px solid #ffffff;
           ">
-            <span style="transform: rotate(45deg); color: white; font-size: 16px; font-weight: bold;">📍</span>
+            <span style="transform: rotate(45deg); color: white; font-size: 18px; font-weight: bold;">📍</span>
           </div>
         `,
-        iconSize: [36, 36],
-        iconAnchor: [18, 36],
+        iconSize: [40, 40],
+        iconAnchor: [20, 40],
       });
 
       const marker = L.marker([point.lat, point.lng], {
@@ -452,14 +503,14 @@ export default function KktcServiceZoneDrawerMap({
   const activeZone = zones.find((z) => z.id === activeZoneId);
 
   return (
-    <div className="space-y-4 font-sans">
-      {/* Top Toolbar: District Presets, Mode Selector & Address Search */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-4 rounded-2xl border bg-slate-50 dark:bg-slate-950 dark:border-slate-800">
+    <div className={`space-y-4 font-sans ${isFullscreen ? 'fixed inset-0 z-[100] p-4 sm:p-6 bg-slate-950/90 backdrop-blur-xl flex flex-col justify-between overflow-hidden' : ''}`}>
+      {/* Top Toolbar: District Presets, Fullscreen, Mode Selector & Address Search */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-3.5 rounded-2xl border bg-slate-50 dark:bg-slate-950 dark:border-slate-800 shadow-xs shrink-0">
         {/* District Quick Focus Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 scrollbar-none">
           <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 mr-1 shrink-0 flex items-center gap-1">
             <Compass className="w-3.5 h-3.5 text-[#FF6B00]" />
-            Odaklan:
+            İlçe Odak:
           </span>
           {Object.keys(DISTRICT_CENTERS).map((d) => (
             <button
@@ -477,8 +528,20 @@ export default function KktcServiceZoneDrawerMap({
           ))}
         </div>
 
-        {/* Action Modes (Test Mode vs Regular Draw) */}
-        <div className="flex items-center gap-2">
+        {/* Action Modes (Test Mode, Undo, Fullscreen) */}
+        <div className="flex items-center gap-2 shrink-0">
+          {(isDrawingNew || activeZone) && (
+            <button
+              type="button"
+              onClick={handleUndoLastVertex}
+              className="px-3 py-2 rounded-xl text-xs font-black bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1.5 shadow-xs transition-all"
+              title="Eklenen son köşe noktasını geri al"
+            >
+              <Undo2 className="w-3.5 h-3.5 text-amber-500" />
+              <span>Son Noktayı Geri Al</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => {
@@ -488,17 +551,26 @@ export default function KktcServiceZoneDrawerMap({
             className={`px-3.5 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 transition-all ${
               isTestMode
                 ? 'bg-blue-600 text-white shadow-sm ring-2 ring-blue-400/40'
-                : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:border-blue-500'
+                : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:border-blue-500 shadow-xs'
             }`}
           >
             <Navigation className="w-3.5 h-3.5" />
-            <span>{isTestMode ? 'Test Modunu Kapat' : 'Konum Doğrulama Testi'}</span>
+            <span>{isTestMode ? 'Test Kapat' : 'Konum Testi'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:text-[#FF6B00] shadow-xs transition-all"
+            title={isFullscreen ? 'Tam Ekrandan Çık' : 'Tam Ekran Çizim Modu'}
+          >
+            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>
         </div>
       </div>
 
       {/* Address Search Bar */}
-      <div className="relative">
+      <div className="relative shrink-0">
         <div className="relative">
           <Search className="absolute left-3.5 top-3 w-4 h-4 text-slate-400" />
           <input
@@ -508,8 +580,8 @@ export default function KktcServiceZoneDrawerMap({
             onFocus={() => {
               if (searchResults.length > 0) setShowDropdown(true);
             }}
-            placeholder="KKTC içinde sokak, mahalle veya mekan ara (Örn: Dereboyu Caddesi, Girne Kordon)..."
-            className={`w-full border rounded-xl py-2.5 pl-10 pr-9 text-xs font-semibold outline-none focus:border-[#FF6B00] transition-colors ${
+            placeholder="KKTC içinde sokak, mahalle veya mekan ara (Örn: Dereboyu Caddesi, Girne Liman)..."
+            className={`w-full border rounded-xl py-2.5 pl-10 pr-9 text-xs font-semibold outline-none focus:border-[#FF6B00] transition-colors shadow-xs ${
               isDark 
                 ? 'bg-slate-950 border-slate-800 text-white placeholder-slate-500' 
                 : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
@@ -534,7 +606,7 @@ export default function KktcServiceZoneDrawerMap({
 
         {/* Dropdown Results */}
         {showDropdown && searchResults.length > 0 && (
-          <div className={`absolute z-30 top-full left-0 right-0 mt-1 border rounded-xl shadow-xl overflow-hidden max-h-60 overflow-y-auto ${
+          <div className={`absolute z-30 top-full left-0 right-0 mt-1 border rounded-xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto ${
             isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
           }`}>
             {searchResults.map((item, idx) => (
@@ -554,9 +626,9 @@ export default function KktcServiceZoneDrawerMap({
         )}
       </div>
 
-      {/* Active State / Mode Banner */}
+      {/* Active Mode Banner */}
       {isDrawingNew ? (
-        <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="p-3.5 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold shrink-0 animate-pulse">
               <Plus className="w-5 h-5" />
@@ -572,6 +644,14 @@ export default function KktcServiceZoneDrawerMap({
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleUndoLastVertex}
+              disabled={newZoneDraftPolygon.length === 0}
+              className="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold disabled:opacity-40"
+            >
+              Geri Al
+            </button>
             <button
               type="button"
               onClick={onCancelDrawingNew}
@@ -595,7 +675,7 @@ export default function KktcServiceZoneDrawerMap({
           </div>
         </div>
       ) : isTestMode ? (
-        <div className="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-between gap-3">
+        <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold shrink-0">
               <Navigation className="w-5 h-5 animate-pulse" />
@@ -605,7 +685,7 @@ export default function KktcServiceZoneDrawerMap({
                 Canlı Konum Doğrulama Modu
               </h4>
               <p className="text-xs font-bold text-slate-600 dark:text-slate-300 mt-0.5">
-                Haritada herhangi bir yere tıklayın veya adres arayın. Hizmet kapsamı anında test edilecektir.
+                Haritada herhangi bir yere tıklayın veya adres arayın. Hizmet kapsamı anında test edilir.
               </p>
             </div>
           </div>
@@ -627,7 +707,7 @@ export default function KktcServiceZoneDrawerMap({
           )}
         </div>
       ) : activeZone ? (
-        <div className="p-3.5 rounded-2xl bg-orange-500/10 border border-[#FF6B00]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="p-3 rounded-2xl bg-orange-500/10 border border-[#FF6B00]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3">
             <div 
               className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-white shrink-0 shadow-sm"
@@ -651,28 +731,94 @@ export default function KktcServiceZoneDrawerMap({
           </div>
 
           <div className="flex items-center gap-2">
+            {activeZone.polygon && activeZone.polygon.length > 0 && (
+              <button
+                type="button"
+                onClick={() => handleFitZoneBounds(activeZone.polygon)}
+                className="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1 transition-colors"
+                title="Haritayı bu bölgenin sınırlarına otomatik odakla"
+              >
+                <Target className="w-3.5 h-3.5 text-[#FF6B00]" />
+                <span>Bölgeye Odaklan</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={() => onUpdateZonePolygon(activeZone.id, [])}
               className="px-3 py-1.5 rounded-xl border border-rose-200 dark:border-rose-900/50 text-rose-500 text-xs font-black hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors flex items-center gap-1"
             >
               <Trash2 className="w-3.5 h-3.5" />
-              <span>Poligonu Temizle</span>
+              <span>Temizle</span>
             </button>
           </div>
         </div>
       ) : null}
 
-      {/* Map Container */}
-      <div className="relative rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-md">
+      {/* Map Main Canvas Container */}
+      <div className={`relative rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-xl flex-1 ${isFullscreen ? 'h-full min-h-[500px]' : ''}`}>
         <div 
           ref={mapContainerRef} 
-          className="w-full h-[540px] z-10" 
+          className={`w-full ${isFullscreen ? 'h-full min-h-[500px]' : heightClass} z-10`} 
           style={{ cursor: isDrawingNew || activeZoneId ? 'crosshair' : isTestMode ? 'pointer' : 'grab' }}
         />
 
-        {/* Floating Quick Legend */}
-        <div className={`absolute bottom-4 right-4 z-20 p-3 rounded-2xl border backdrop-blur-md shadow-lg flex flex-col gap-1.5 max-w-xs ${
+        {/* Floating Custom Zoom Controls (Top Right) */}
+        <div className="absolute top-4 right-4 z-20 flex flex-col gap-1.5">
+          <button
+            type="button"
+            onClick={() => mapInstanceRef.current?.zoomIn()}
+            className={`p-2.5 rounded-xl border backdrop-blur-md shadow-lg transition-all active:scale-95 ${
+              isDark ? 'bg-slate-900/90 border-slate-800 text-white hover:bg-slate-800' : 'bg-white/90 border-slate-200 text-slate-800 hover:bg-white'
+            }`}
+            title="Yakınlaştır"
+          >
+            <ZoomIn className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => mapInstanceRef.current?.zoomOut()}
+            className={`p-2.5 rounded-xl border backdrop-blur-md shadow-lg transition-all active:scale-95 ${
+              isDark ? 'bg-slate-900/90 border-slate-800 text-white hover:bg-slate-800' : 'bg-white/90 border-slate-200 text-slate-800 hover:bg-white'
+            }`}
+            title="Uzaklaştır"
+          >
+            <ZoomOut className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => handleDistrictChange('KKTC Genel')}
+            className={`p-2.5 rounded-xl border backdrop-blur-md shadow-lg transition-all active:scale-95 ${
+              isDark ? 'bg-slate-900/90 border-slate-800 text-[#FF6B00] hover:bg-slate-800' : 'bg-white/90 border-slate-200 text-[#FF6B00] hover:bg-white'
+            }`}
+            title="Varsayılan KKTC Görünümüne Sıfırla"
+          >
+            <Compass className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Live Coordinate & Status HUD (Bottom Left) */}
+        <div className={`absolute bottom-4 left-4 z-20 px-3 py-1.5 rounded-xl border backdrop-blur-md shadow-md text-[11px] font-mono flex items-center gap-2.5 pointer-events-none ${
+          isDark ? 'bg-slate-900/85 border-slate-800 text-slate-300' : 'bg-white/85 border-slate-200 text-slate-700'
+        }`}>
+          <div className="flex items-center gap-1">
+            <Crosshair className="w-3.5 h-3.5 text-[#FF6B00]" />
+            <span>
+              {cursorCoords ? `${cursorCoords.lat.toFixed(4)}°N, ${cursorCoords.lng.toFixed(4)}°E` : '35.1856°N, 33.3823°E'}
+            </span>
+          </div>
+          <span className="text-slate-400">|</span>
+          <span>Zoom: {zoomLevel}x</span>
+          {activeZone && (
+            <>
+              <span className="text-slate-400">|</span>
+              <span className="font-bold text-[#FF6B00]">{activeZone.name} ({activeZone.polygon?.length || 0} nokta)</span>
+            </>
+          )}
+        </div>
+
+        {/* Floating Quick Legend & Zone Selector (Bottom Right) */}
+        <div className={`absolute bottom-4 right-4 z-20 p-3 rounded-2xl border backdrop-blur-md shadow-2xl flex flex-col gap-1.5 max-w-xs ${
           isDark ? 'bg-slate-900/90 border-slate-800 text-slate-200' : 'bg-white/90 border-slate-200 text-slate-800'
         }`}>
           <div className="flex items-center justify-between pb-1 border-b border-slate-200 dark:border-slate-800">
@@ -682,26 +828,31 @@ export default function KktcServiceZoneDrawerMap({
             </span>
           </div>
 
-          <div className="max-h-28 overflow-y-auto space-y-1 scrollbar-none">
+          <div className="max-h-36 overflow-y-auto space-y-1 scrollbar-none">
             {zones.map((z) => (
               <button
                 key={z.id}
                 type="button"
-                onClick={() => onSelectZone(z.id)}
+                onClick={() => {
+                  onSelectZone(z.id);
+                  if (z.polygon && z.polygon.length > 0) {
+                    handleFitZoneBounds(z.polygon);
+                  }
+                }}
                 className={`w-full text-left flex items-center justify-between p-1.5 rounded-lg text-[11px] font-bold transition-colors ${
                   z.id === activeZoneId 
-                    ? 'bg-orange-500/10 text-[#FF6B00]' 
+                    ? 'bg-orange-500/15 text-[#FF6B00] ring-1 ring-[#FF6B00]/40' 
                     : 'hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
                 <div className="flex items-center gap-2 truncate">
                   <span 
-                    className="w-2.5 h-2.5 rounded-full shrink-0" 
+                    className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs" 
                     style={{ backgroundColor: z.colorHex || '#FF6B00' }} 
                   />
                   <span className="truncate">{z.name}</span>
                 </div>
-                <span className="text-[9px] text-slate-400 shrink-0">
+                <span className="text-[9px] text-slate-400 shrink-0 ml-2">
                   {z.polygon?.length || 0} nokta
                 </span>
               </button>
