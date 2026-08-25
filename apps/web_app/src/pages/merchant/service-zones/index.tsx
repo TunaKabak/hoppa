@@ -298,15 +298,18 @@ export default function KktcServiceZonesPage() {
       subtitle="Kuzey Kıbrıs genelinde platform teslimat kapsamını ve ilçe hizmet sınırlarını serbest poligon çizerek geniş ekranda yönetin."
       headerIcon={MapPin}
       activeTab="service-zones"
+      fullWidth={true}
       headerActions={
         <div className="flex items-center gap-2">
           {/* Layout Mode Toggle */}
-          <div className="flex items-center gap-1 p-1 rounded-xl bg-white/20 backdrop-blur-md border border-white/20 mr-1">
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700">
             <button
               type="button"
               onClick={() => setLayoutMode('split')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                layoutMode === 'split' ? 'bg-white text-[#FF6B00] shadow-sm' : 'text-white/90 hover:text-white'
+                layoutMode === 'split' 
+                  ? 'bg-white dark:bg-slate-700 text-[#FF6B00] shadow-xs' 
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
               title="Bölünmüş Panel Görünümü"
             >
@@ -316,35 +319,37 @@ export default function KktcServiceZonesPage() {
               type="button"
               onClick={() => setLayoutMode('canvas')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                layoutMode === 'canvas' ? 'bg-white text-[#FF6B00] shadow-sm' : 'text-white/90 hover:text-white'
+                layoutMode === 'canvas' 
+                  ? 'bg-white dark:bg-slate-700 text-[#FF6B00] shadow-xs' 
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
               title="Genişletilmiş Harita Odak Modu"
             >
-              Geniş Harita Modu
+              Geniş Harita
             </button>
           </div>
 
           <button
             type="button"
             onClick={handleStartDrawingNew}
-            className="px-4 py-2.5 rounded-xl bg-white text-[#FF6B00] font-black text-xs shadow-sm hover:bg-orange-50 active:scale-[0.98] transition-all flex items-center gap-1.5"
+            className="px-3.5 py-2 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 text-[#FF6B00] font-black text-xs border border-orange-500/30 active:scale-[0.98] transition-all flex items-center gap-1.5"
           >
             <Plus className="w-4 h-4" />
-            <span>+ Yeni Bölge Çiz</span>
+            <span>+ Yeni Bölge</span>
           </button>
 
           <button
             type="button"
             onClick={handleSaveAll}
             disabled={isSaving}
-            className="px-5 py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black text-xs shadow-md hover:opacity-90 active:scale-[0.98] transition-all flex items-center gap-2"
+            className="px-4 py-2 rounded-xl bg-[#FF6B00] hover:bg-[#E56000] text-white font-black text-xs shadow-sm active:scale-[0.98] transition-all flex items-center gap-1.5"
           >
             {isSaving ? (
-              <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : (
-              <Save className="w-4 h-4" />
+              <Save className="w-3.5 h-3.5" />
             )}
-            <span>{isSaving ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}</span>
+            <span>{isSaving ? 'Kaydediliyor...' : 'Kaydet'}</span>
           </button>
         </div>
       }
