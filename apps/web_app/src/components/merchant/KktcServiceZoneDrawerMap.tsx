@@ -80,6 +80,7 @@ export default function KktcServiceZoneDrawerMap({
   const { theme } = useMerchantTheme();
   const isDark = theme === 'dark';
 
+  const rootWrapperRef = useRef<HTMLDivElement>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const zoneLayersRef = useRef<Map<string, any>>(new Map());
@@ -96,11 +97,40 @@ export default function KktcServiceZoneDrawerMap({
   const [testResult, setTestResult] = useState<{ insideZones: string[]; isInsideKktc: boolean } | null>(null);
   const [isTestMode, setIsTestMode] = useState<boolean>(false);
   const [selectedDistrict, setSelectedDistrict] = useState<string>('KKTC Genel');
-  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [isNativeFullscreen, setIsNativeFullscreen] = useState<boolean>(false);
   const [cursorCoords, setCursorCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [zoomLevel, setZoomLevel] = useState<number>(10);
 
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Fullscreen event listener
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isFs = !!document.fullscreenElement;
+      setIsNativeFullscreen(isFs);
+      setTimeout(() => {
+        mapInstanceRef.current?.invalidateSize();
+      }, 150);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  // ResizeObserver on Map Container for fluid responsiveness (e.g. sidebar collapse)
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+    const observer = new ResizeObserver(() => {
+      mapInstanceRef.current?.invalidateSize();
+    });
+    observer.observe(mapContainerRef.current);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
   // Initialize Leaflet Map
   useEffect(() => {
@@ -147,7 +177,7 @@ export default function KktcServiceZoneDrawerMap({
       ],
       maxBoundsViscosity: 0.8,
       scrollWheelZoom: true,
-      zoomControl: false, // Custom styled zoom controls
+      zoomControl: false,
     });
 
     const tileUrl = isDark 
@@ -213,15 +243,6 @@ export default function KktcServiceZoneDrawerMap({
     mapInstanceRef.current = map;
     renderAllPolygons();
   };
-
-  // Resize listener when fullscreen or container size changes
-  useEffect(() => {
-    if (mapInstanceRef.current) {
-      setTimeout(() => {
-        mapInstanceRef.current?.invalidateSize();
-      }, 150);
-    }
-  }, [isFullscreen, heightClass]);
 
   // Keep window global refs synced for Leaflet callbacks
   useEffect(() => {
@@ -323,7 +344,7 @@ export default function KktcServiceZoneDrawerMap({
       }).addTo(map);
       draftPolygonLayerRef.current = draftLayer;
 
-      // Add vertex dots for draft with index indicator
+      // Add vertex dots for draft
       newZoneDraftPolygon.forEach((pt, idx) => {
         const dot = L.circleMarker([pt.lat, pt.lng], {
           radius: 8,
@@ -369,6 +390,21 @@ export default function KktcServiceZoneDrawerMap({
       if (currentZone && currentZone.polygon && currentZone.polygon.length > 0) {
         onUpdateZonePolygon(activeZoneId, currentZone.polygon.slice(0, -1));
       }
+    }
+  };
+
+  // Toggle Native Fullscreen API
+  const handleToggleFullscreen = () => {
+    if (!rootWrapperRef.current) return;
+
+    if (!document.fullscreenElement) {
+      rootWrapperRef.current.requestFullscreen().catch((err) => {
+        console.warn('Native Fullscreen request failed, using standard view:', err);
+      });
+    } else {
+      document.exitFullscreen().catch((err) => {
+        console.warn('Exit fullscreen failed:', err);
+      });
     }
   };
 
@@ -503,9 +539,12 @@ export default function KktcServiceZoneDrawerMap({
   const activeZone = zones.find((z) => z.id === activeZoneId);
 
   return (
-    <div className={`space-y-4 font-sans ${isFullscreen ? 'fixed inset-0 z-[100] p-4 sm:p-6 bg-slate-950/90 backdrop-blur-xl flex flex-col justify-between overflow-hidden' : ''}`}>
+    <div 
+      ref={rootWrapperRef} 
+      className={`space-y-4 font-sans ${isNativeFullscreen ? 'p-6 bg-slate-950 text-white h-screen flex flex-col justify-between overflow-hidden' : ''}`}
+    >
       {/* Top Toolbar: District Presets, Fullscreen, Mode Selector & Address Search */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-3.5 rounded-2xl border bg-slate-50 dark:bg-slate-950 dark:border-slate-800 shadow-xs shrink-0">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-3 rounded-2xl border bg-slate-50 dark:bg-slate-950 dark:border-slate-800 shadow-xs shrink-0">
         {/* District Quick Focus Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 scrollbar-none">
           <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 mr-1 shrink-0 flex items-center gap-1">
@@ -560,11 +599,11 @@ export default function KktcServiceZoneDrawerMap({
 
           <button
             type="button"
-            onClick={() => setIsFullscreen(!isFullscreen)}
+            onClick={handleToggleFullscreen}
             className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:text-[#FF6B00] shadow-xs transition-all"
-            title={isFullscreen ? 'Tam Ekrandan Çık' : 'Tam Ekran Çizim Modu'}
+            title={isNativeFullscreen ? 'Tam Ekrandan Çık (Esc)' : 'Tam Ekran Çizim Modu'}
           >
-            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            {isNativeFullscreen ? <Minimize2 className="w-4 h-4 text-[#FF6B00]" /> : <Maximize2 className="w-4 h-4" />}
           </button>
         </div>
       </div>
@@ -756,10 +795,10 @@ export default function KktcServiceZoneDrawerMap({
       ) : null}
 
       {/* Map Main Canvas Container */}
-      <div className={`relative rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-xl flex-1 ${isFullscreen ? 'h-full min-h-[500px]' : ''}`}>
+      <div className={`relative rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-xl flex-1 ${isNativeFullscreen ? 'h-full min-h-[500px]' : ''}`}>
         <div 
           ref={mapContainerRef} 
-          className={`w-full ${isFullscreen ? 'h-full min-h-[500px]' : heightClass} z-10`} 
+          className={`w-full ${isNativeFullscreen ? 'h-full min-h-[500px]' : heightClass} z-10`} 
           style={{ cursor: isDrawingNew || activeZoneId ? 'crosshair' : isTestMode ? 'pointer' : 'grab' }}
         />
 

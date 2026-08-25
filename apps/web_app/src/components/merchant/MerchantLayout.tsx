@@ -3,7 +3,8 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { 
   Store, Package, ShoppingBag, BarChart3, Settings, LogOut, 
-  ChevronRight, Power, Menu, X, Sun, Moon, Tag, MapPin 
+  ChevronRight, ChevronLeft, Power, Menu, X, Sun, Moon, Tag, MapPin,
+  Bell, Shield, PanelLeftClose, PanelLeftOpen, User, ChevronDown
 } from 'lucide-react';
 import { 
   getMerchantProfile, getMerchantToken, clearMerchantAuth, merchantApiFetch, 
@@ -18,22 +19,27 @@ interface MerchantLayoutProps {
   headerIcon?: React.ElementType;
   headerActions?: React.ReactNode;
   activeTab?: 'products' | 'orders' | 'dashboard' | 'campaigns' | 'settings' | 'service-zones';
+  fullWidth?: boolean;
 }
 
 export default function MerchantLayout({ 
   children, 
-  title = 'Ürün Yönetimi', 
+  title = 'Yönetim Portalı', 
   subtitle,
   headerIcon: HeaderIcon,
   headerActions,
-  activeTab = 'products' 
+  activeTab = 'products',
+  fullWidth = false,
 }: MerchantLayoutProps) {
   const router = useRouter();
   const { theme, toggleTheme } = useMerchantTheme();
+  const isDark = theme === 'dark';
+
   const [profile, setProfile] = useState<any>(null);
   const [isShopActive, setIsShopActive] = useState<boolean>(true);
   const [isTogglingShop, setIsTogglingShop] = useState<boolean>(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
   const [pendingOrdersCount, setPendingOrdersCount] = useState<number>(0);
   const [allShops, setAllShops] = useState<any[]>([]);
   const [selectedShopIdState, setSelectedShopIdState] = useState<string>('');
@@ -52,6 +58,14 @@ export default function MerchantLayout({
     setProfile(currentProfile);
     setSelectedShopIdState(getSelectedShopId() || '');
 
+    // Restore saved sidebar collapsed state
+    try {
+      const savedCollapsed = localStorage.getItem('hoppa_merchant_sidebar_collapsed');
+      if (savedCollapsed !== null) {
+        setIsSidebarCollapsed(savedCollapsed === 'true');
+      }
+    } catch (_) {}
+
     if (currentProfile.role === 'super_admin' || currentProfile.role === 'admin') {
       fetchAdminShops();
     }
@@ -59,6 +73,14 @@ export default function MerchantLayout({
     fetchShopDetails();
     fetchPendingOrders();
   }, []);
+
+  const toggleSidebarCollapse = () => {
+    const next = !isSidebarCollapsed;
+    setIsSidebarCollapsed(next);
+    try {
+      localStorage.setItem('hoppa_merchant_sidebar_collapsed', String(next));
+    } catch (_) {}
+  };
 
   const fetchAdminShops = async () => {
     try {
@@ -123,7 +145,7 @@ export default function MerchantLayout({
     { id: 'products', label: 'Ürün & Menü Portalı', icon: Package, href: '/merchant/products' },
     { id: 'orders', label: 'Canlı Siparişler', icon: ShoppingBag, href: '/merchant/orders', badge: pendingOrdersCount },
     { id: 'dashboard', label: 'Performans & Analiz', icon: BarChart3, href: '/merchant/dashboard' },
-    { id: 'campaigns', label: 'Kampanya & Reklam', icon: Tag, href: '/merchant/campaigns' },
+    { id: 'campaigns', label: 'Kampanya & Kupon', icon: Tag, href: '/merchant/campaigns' },
     { id: 'settings', label: 'Mağaza Ayarları', icon: Settings, href: '/merchant/settings' },
     ...(isAdmin ? [{
       id: 'service-zones',
@@ -134,238 +156,334 @@ export default function MerchantLayout({
     }] : []),
   ];
 
-  const isDark = theme === 'dark';
-
   return (
     <>
       <Head>
         <title>{title} | Hoppa Satıcı Portalı</title>
       </Head>
 
-      <div className={`min-h-screen flex flex-col md:flex-row font-sans transition-colors duration-300 ${
-        isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
+      <div className={`min-h-screen flex flex-col md:flex-row font-sans transition-colors duration-200 ${
+        isDark ? 'bg-[#0B1120] text-slate-100' : 'bg-[#F8FAFC] text-slate-900'
       }`}>
-        {/* Mobile Header */}
+        {/* Mobile Header Bar */}
         <div className={`md:hidden p-4 border-b flex items-center justify-between sticky top-0 z-40 transition-colors ${
           isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
         }`}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#FF6B00] text-white font-bold flex items-center justify-center">
-              <Store className="w-6 h-6" />
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#E95D22] to-[#FF8C00] text-white font-bold flex items-center justify-center shadow-sm">
+              <Store className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="font-bold text-sm">{profile?.businessName || 'Hoppa Mağazası'}</h2>
-              <span className="text-xs text-slate-400">Satıcı Yönetim Paneli</span>
+              <h2 className="font-extrabold text-sm truncate max-w-[180px]">
+                {profile?.businessName || 'Hoppa Mağazası'}
+              </h2>
+              <span className="text-[10px] text-slate-400 block font-medium">Satıcı Portalı</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button 
               onClick={toggleTheme}
-              className="p-2 rounded-xl border text-xs font-bold"
+              className="p-2 rounded-xl border text-xs font-bold bg-slate-100 dark:bg-slate-800 dark:border-slate-700"
             >
-              {isDark ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-slate-700" />}
+              {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
             </button>
             <button 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800"
+              className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white"
             >
-              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
 
-        {/* Sidebar Navigation */}
+        {/* Mobile Sidebar Backdrop Overlay */}
+        {isMobileMenuOpen && (
+          <div 
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-40 md:hidden"
+          />
+        )}
+
+        {/* Desktop & Mobile Sidebar Navigation */}
         <aside className={`
-          fixed md:sticky md:top-0 md:h-screen inset-y-0 left-0 z-50 w-72 shrink-0 border-r flex flex-col justify-between p-6 overflow-y-auto transform transition-all duration-300
-          ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200/80 shadow-sm'}
+          fixed md:sticky md:top-0 md:h-screen inset-y-0 left-0 z-40 shrink-0 border-r flex flex-col justify-between transition-all duration-300 ease-in-out select-none
+          ${isSidebarCollapsed ? 'md:w-20 w-72 p-3.5' : 'w-72 p-5'}
+          ${isDark ? 'bg-slate-900/95 border-slate-800' : 'bg-white border-slate-200/90 shadow-sm'}
           ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}>
-          <div>
-            {/* Hoppa Branded Logo */}
-            <div className="hidden md:flex items-center justify-between pb-5 mb-6 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-3">
-                <div className="p-0.5 rounded-2xl bg-gradient-to-tr from-[#E95D22] to-[#FF8C00] shadow-sm">
+          <div className="space-y-4">
+            {/* Logo & Collapse Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="p-0.5 rounded-xl bg-gradient-to-tr from-[#E95D22] to-[#FF8C00] shadow-sm shrink-0">
                   <img 
                     src="/logo-square-orange.png" 
-                    alt="Hoppa Logo" 
-                    className="w-10 h-10 rounded-[14px] object-cover bg-white" 
+                    alt="Hoppa" 
+                    className="w-9 h-9 rounded-[10px] object-cover bg-white" 
                   />
                 </div>
-                <div>
-                  <h1 className="font-black text-xl tracking-tight text-slate-900 dark:text-white">
-                    Hoppa <span className="bg-gradient-to-r from-[#E95D22] to-[#FF8C00] bg-clip-text text-transparent">Satıcı</span>
-                  </h1>
-                  <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Masaüstü Portal</span>
-                </div>
+                {!isSidebarCollapsed && (
+                  <div className="min-w-0 transition-opacity duration-200">
+                    <h1 className="font-black text-lg tracking-tight text-slate-900 dark:text-white leading-tight">
+                      Hoppa <span className="text-[#FF6B00]">Satıcı</span>
+                    </h1>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block truncate">
+                      İşletme Portalı
+                    </span>
+                  </div>
+                )}
               </div>
 
-              {/* Header Theme Switch */}
+              {/* Collapse / Expand Button (Desktop Only) */}
               <button
-                onClick={toggleTheme}
-                className={`p-2 rounded-xl border transition-colors ${
-                  isDark ? 'bg-slate-800 border-slate-700 text-amber-400 hover:bg-slate-700' : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
-                }`}
-                title={isDark ? 'Beyaz Temaya Geç' : 'Karanlık Temaya Geç'}
+                onClick={toggleSidebarCollapse}
+                className="hidden md:flex p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                title={isSidebarCollapsed ? 'Menüyü Genişlet' : 'Menüyü Daralt'}
               >
-                {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                {isSidebarCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
               </button>
             </div>
 
-            {/* Super Admin Shop Context Selector */}
+            {/* Admin Shop Context Selector */}
             {isAdmin && (
-              <div className="mb-4 p-3 rounded-2xl bg-orange-500/5 border border-[#FF6B00]/20">
-                <label className="block text-[11px] font-black text-[#FF6B00] uppercase tracking-wider mb-1.5 flex items-center justify-between">
-                  <span>Yönetici Mağaza Seçimi</span>
-                  <span className="px-1.5 py-0.5 rounded text-[9px] bg-[#FF6B00] text-white font-black">ADMIN</span>
-                </label>
-                <select
-                  value={selectedShopIdState}
-                  onChange={(e) => handleShopChange(e.target.value)}
-                  className={`w-full border rounded-xl p-2.5 text-xs font-bold outline-none transition-colors ${
-                    isDark 
-                    ? 'bg-slate-950 border-slate-700 text-slate-100' 
-                    : 'bg-white border-slate-300 text-slate-900 shadow-sm'
-                  }`}
-                >
-                  <option value="">-- Kendi Mağazam / Varsayılan --</option>
-                  {allShops.map((shop) => (
-                    <option key={shop.id} value={shop.id}>
-                      {shop.name} ({shop.type?.toUpperCase() || 'MAĞAZA'})
-                    </option>
-                  ))}
-                </select>
-              </div>
+              !isSidebarCollapsed ? (
+                <div className="p-3 rounded-2xl bg-orange-500/5 border border-[#FF6B00]/20">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[10px] font-black text-[#FF6B00] uppercase tracking-wider">
+                      Yönetici Mağazası
+                    </span>
+                    <span className="px-1.5 py-0.2 rounded text-[8px] bg-[#FF6B00] text-white font-black">
+                      ADMIN
+                    </span>
+                  </div>
+                  <select
+                    value={selectedShopIdState}
+                    onChange={(e) => handleShopChange(e.target.value)}
+                    className={`w-full border rounded-xl p-2 text-xs font-bold outline-none transition-colors ${
+                      isDark 
+                      ? 'bg-slate-950 border-slate-700 text-slate-100' 
+                      : 'bg-white border-slate-200 text-slate-900 shadow-xs'
+                    }`}
+                  >
+                    <option value="">-- Kendi Mağazam --</option>
+                    {allShops.map((shop) => (
+                      <option key={shop.id} value={shop.id}>
+                        {shop.name} ({shop.type?.toUpperCase() || 'MAĞAZA'})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="flex justify-center group relative">
+                  <div className="p-2 rounded-xl bg-orange-500/10 text-[#FF6B00] cursor-pointer" title="Admin Mağaza Seçimi">
+                    <Shield className="w-4 h-4" />
+                  </div>
+                  <div className="absolute left-full ml-2 px-2.5 py-1 bg-slate-900 text-white text-[11px] font-bold rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50">
+                    Yönetici Modu
+                  </div>
+                </div>
+              )
             )}
 
-            {/* Business Info & Live Status Toggle */}
-            <div className={`border rounded-2xl p-4 mb-6 transition-all ${
-              isDark ? 'bg-slate-950/80 border-slate-800' : 'bg-slate-50/70 border-slate-200/80 shadow-xs'
-            }`}>
-              <p className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">Mağaza Adı</p>
-              <h3 className="font-extrabold text-sm truncate mt-0.5 text-slate-900 dark:text-white">
-                {profile?.businessName || 'Mağaza Yükleniyor...'}
-              </h3>
-              <div className="mt-3 pt-3 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-500">Sipariş Alımı:</span>
+            {/* Live Store Status Card */}
+            {!isSidebarCollapsed ? (
+              <div className={`border rounded-2xl p-3.5 transition-all ${
+                isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50/80 border-slate-200/80 shadow-xs'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                    Sipariş Alımı
+                  </span>
+                  <button
+                    onClick={handleToggleShopStatus}
+                    disabled={isTogglingShop}
+                    className={`px-2.5 py-0.5 rounded-full text-[11px] font-black flex items-center gap-1.5 transition-all ${
+                      isShopActive 
+                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' 
+                        : 'bg-rose-500/15 text-rose-500 border border-rose-500/30'
+                    }`}
+                  >
+                    <span className={`w-2 h-2 rounded-full ${isShopActive ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+                    <span>{isShopActive ? 'AÇIK' : 'KAPALI'}</span>
+                  </button>
+                </div>
+                <h4 className="font-extrabold text-xs truncate mt-1.5 text-slate-800 dark:text-slate-200">
+                  {profile?.businessName || 'Mağaza Yükleniyor...'}
+                </h4>
+              </div>
+            ) : (
+              <div className="flex justify-center group relative">
                 <button
                   onClick={handleToggleShopStatus}
                   disabled={isTogglingShop}
-                  className={`px-3 py-1 rounded-full text-xs font-black flex items-center gap-1.5 transition-all ${
-                    isShopActive 
-                      ? 'bg-[#00A651]/15 text-[#00A651] border border-[#00A651]/30 shadow-xs' 
-                      : 'bg-rose-500/15 text-rose-500 border border-rose-500/30'
+                  className={`p-2.5 rounded-xl border transition-all ${
+                    isShopActive
+                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500'
+                      : 'bg-rose-500/10 border-rose-500/30 text-rose-500'
                   }`}
+                  title={isShopActive ? 'Mağaza Canlı (Sipariş Alıyor)' : 'Mağaza Kapalı'}
                 >
-                  <Power className={`w-3.5 h-3.5 ${isShopActive ? 'text-[#00A651]' : 'text-rose-500'}`} />
-                  <span>{isShopActive ? 'AÇIK (Aktif)' : 'KAPALI'}</span>
+                  <Power className="w-4 h-4" />
                 </button>
+                <div className="absolute left-full ml-2 px-2.5 py-1 bg-slate-900 text-white text-[11px] font-bold rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50">
+                  {isShopActive ? 'Mağaza: Açık' : 'Mağaza: Kapalı'}
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Navigation Links */}
-            <nav className="space-y-1.5">
+            {/* Navigation Menu */}
+            <nav className="space-y-1 pt-1">
               {navItems.map((item: any) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
                 return (
                   <button
                     key={item.id}
-                    onClick={() => router.push(item.href)}
-                    className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl text-sm font-extrabold transition-all duration-200 active:scale-[0.98] ${
+                    onClick={() => {
+                      router.push(item.href);
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center rounded-xl text-xs font-black transition-all duration-150 group relative ${
+                      isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-3.5 py-2.5'
+                    } ${
                       isActive 
-                        ? 'bg-gradient-to-r from-[#E95D22] to-[#FF8C00] text-white shadow-md shadow-[#E95D22]/20' 
+                        ? 'bg-[#FF6B00]/10 text-[#FF6B00] dark:bg-[#FF6B00]/15 dark:text-[#FF8C00] shadow-xs' 
                         : isDark 
-                          ? 'text-slate-400 hover:text-white hover:bg-slate-800/80' 
-                          : 'text-slate-600 hover:text-[#E95D22] hover:bg-orange-50/60'
+                          ? 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/70' 
+                          : 'text-slate-600 hover:text-[#FF6B00] hover:bg-orange-50/70'
                     }`}
                   >
-                    <div className="flex items-center gap-3">
-                      <Icon className={`w-5 h-5 transition-colors ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                      <span>{item.label}</span>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Icon className={`w-4 h-4 shrink-0 transition-colors ${
+                        isActive ? 'text-[#FF6B00]' : 'text-slate-400 group-hover:text-current'
+                      }`} />
+                      {!isSidebarCollapsed && (
+                        <span className="truncate">{item.label}</span>
+                      )}
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      {item.adminOnly && (
-                        <span className="px-1.5 py-0.5 rounded text-[8px] bg-[#FF6B00] text-white font-black">
-                          ADMIN
-                        </span>
-                      )}
-                      {item.badge && item.badge > 0 ? (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-black bg-amber-500 text-white animate-pulse">
-                          {item.badge}
-                        </span>
-                      ) : null}
-                      {isActive && <ChevronRight className="w-4 h-4 text-white" />}
-                    </div>
+                    {!isSidebarCollapsed && (
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {item.adminOnly && (
+                          <span className="px-1.5 py-0.2 rounded text-[8px] bg-[#FF6B00] text-white font-black">
+                            ADMIN
+                          </span>
+                        )}
+                        {item.badge && item.badge > 0 ? (
+                          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-white animate-pulse">
+                            {item.badge}
+                          </span>
+                        ) : null}
+                        {isActive && <ChevronRight className="w-3.5 h-3.5 text-[#FF6B00]" />}
+                      </div>
+                    )}
+
+                    {/* Collapsed Tooltip Hover Popover */}
+                    {isSidebarCollapsed && (
+                      <div className="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 dark:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 flex items-center gap-2 pointer-events-none">
+                        <span>{item.label}</span>
+                        {item.adminOnly && (
+                          <span className="px-1.5 py-0.2 rounded text-[8px] bg-[#FF6B00] text-white font-black">
+                            ADMIN
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </button>
                 );
               })}
             </nav>
           </div>
 
-          {/* Footer Info & Logout */}
-          <div className="pt-5 border-t border-slate-200 dark:border-slate-800">
+          {/* Sidebar Footer */}
+          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2">
             <button
               onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-black text-rose-500 hover:bg-rose-500/10 transition-colors"
+              className={`w-full flex items-center rounded-xl text-xs font-black text-rose-500 hover:bg-rose-500/10 transition-colors group relative ${
+                isSidebarCollapsed ? 'justify-center p-2.5' : 'gap-2.5 px-3 py-2.5'
+              }`}
+              title="Güvenli Çıkış Yap"
             >
-              <LogOut className="w-4 h-4" />
-              <span>Güvenli Çıkış Yap</span>
+              <LogOut className="w-4 h-4 shrink-0" />
+              {!isSidebarCollapsed && <span>Güvenli Çıkış</span>}
+              {isSidebarCollapsed && (
+                <div className="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 pointer-events-none">
+                  Güvenli Çıkış
+                </div>
+              )}
             </button>
           </div>
         </aside>
 
-        {/* Main Content Area with Hoppa Curved Header */}
+        {/* Main Content Viewport */}
         <div className="flex-1 min-w-0 flex flex-col h-screen overflow-y-auto">
-          {/* Curved Hoppa Degrade Header */}
-          <header className="relative bg-gradient-to-r from-[#E95D22] via-[#FF6B00] to-[#FF8C00] text-white pt-8 pb-14 px-6 md:px-10 shrink-0 overflow-hidden">
-            {/* Ambient Background Glow Details */}
-            <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-white/10 blur-2xl pointer-events-none" />
-            <div className="absolute bottom-0 left-1/4 -mb-12 w-48 h-48 rounded-full bg-black/5 blur-xl pointer-events-none" />
-
-            <div className="relative z-10 max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                {HeaderIcon && (
-                  <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 text-white flex items-center justify-center font-bold shrink-0">
-                    <HeaderIcon className="w-6 h-6" />
-                  </div>
-                )}
-                <div>
-                  <div className="flex items-center gap-2.5">
-                    <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white">{title}</h1>
-                    {isShopActive ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-100 border border-emerald-400/30 backdrop-blur-sm">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                        Canlı Mağaza
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/20 text-rose-100 border border-rose-400/30 backdrop-blur-sm">
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
-                        Kapalı
-                      </span>
-                    )}
-                  </div>
-                  {subtitle && (
-                    <p className="text-xs md:text-sm font-medium text-white/85 mt-1 max-w-2xl">
-                      {subtitle}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {headerActions && (
-                <div className="flex items-center gap-2.5 shrink-0">
-                  {headerActions}
+          {/* Top Corporate Navbar */}
+          <header className={`sticky top-0 z-30 px-6 py-3 border-b flex items-center justify-between transition-colors backdrop-blur-md ${
+            isDark 
+              ? 'bg-slate-900/80 border-slate-800 text-white' 
+              : 'bg-white/80 border-slate-200/80 text-slate-800 shadow-2xs'
+          }`}>
+            {/* Breadcrumb / Title Info */}
+            <div className="flex items-center gap-3">
+              {HeaderIcon && (
+                <div className="w-9 h-9 rounded-xl bg-orange-500/10 text-[#FF6B00] flex items-center justify-center font-bold shrink-0 border border-orange-500/20">
+                  <HeaderIcon className="w-4 h-4" />
                 </div>
               )}
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider hidden sm:inline">
+                    Hoppa Portal /
+                  </span>
+                  <h1 className="text-base sm:text-lg font-black tracking-tight text-slate-900 dark:text-white">
+                    {title}
+                  </h1>
+                </div>
+                {subtitle && (
+                  <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate max-w-xl hidden md:block">
+                    {subtitle}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Top Right Quick Actions */}
+            <div className="flex items-center gap-2.5">
+              {headerActions}
+
+              {/* Theme Toggle */}
+              <button
+                onClick={toggleTheme}
+                className={`p-2 rounded-xl border transition-colors ${
+                  isDark ? 'bg-slate-800 border-slate-700 text-amber-400 hover:bg-slate-700' : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
+                }`}
+                title={isDark ? 'Aydınlık Temaya Geç' : 'Karanlık Temaya Geç'}
+              >
+                {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </button>
+
+              {/* Merchant Profile Pill */}
+              <div className={`hidden sm:flex items-center gap-2 pl-2 border-l ${
+                isDark ? 'border-slate-800' : 'border-slate-200'
+              }`}>
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-[#E95D22] to-[#FF8C00] text-white font-bold flex items-center justify-center text-xs">
+                  {profile?.businessName ? profile.businessName.charAt(0).toUpperCase() : 'M'}
+                </div>
+                <div className="text-left hidden lg:block">
+                  <span className="text-xs font-black text-slate-900 dark:text-white block truncate max-w-[120px]">
+                    {profile?.businessName || 'Satıcı'}
+                  </span>
+                  <span className="text-[9px] font-bold text-slate-400 block uppercase">
+                    {profile?.role === 'super_admin' ? 'Süper Admin' : profile?.role === 'admin' ? 'Yönetici' : 'Satıcı'}
+                  </span>
+                </div>
+              </div>
             </div>
           </header>
 
-          {/* Curved Body Sheet */}
-          <main className={`flex-1 -mt-8 relative z-20 rounded-t-[32px] md:rounded-t-[36px] transition-colors p-5 md:p-8 ${
-            isDark ? 'bg-slate-950 border-t border-slate-800/80 shadow-2xl' : 'bg-slate-50 border-t border-white/60 shadow-2xl shadow-black/5'
-          }`}>
-            <div className="max-w-7xl mx-auto">
+          {/* Main Content Area (Full width or standard container) */}
+          <main className="flex-1 p-4 sm:p-6 lg:p-8">
+            <div className={fullWidth ? 'w-full' : 'max-w-7xl mx-auto'}>
               {children}
             </div>
           </main>
