@@ -213,8 +213,8 @@ export default function MerchantLayout({
         `}>
           <div className="space-y-4">
             {/* Logo & Collapse Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-3 min-w-0">
+            {isSidebarCollapsed ? (
+              <div className="flex flex-col items-center gap-2 pb-3.5 border-b border-slate-100 dark:border-slate-800">
                 <div className="p-0.5 rounded-xl bg-gradient-to-tr from-[#E95D22] to-[#FF8C00] shadow-sm shrink-0">
                   <img 
                     src="/logo-square-orange.png" 
@@ -222,7 +222,24 @@ export default function MerchantLayout({
                     className="w-9 h-9 rounded-[10px] object-cover bg-white" 
                   />
                 </div>
-                {!isSidebarCollapsed && (
+                <button
+                  onClick={toggleSidebarCollapse}
+                  className="hidden md:flex p-1.5 rounded-lg text-slate-400 hover:text-[#FF6B00] hover:bg-orange-500/10 dark:hover:bg-slate-800 transition-colors"
+                  title="Menüyü Genişlet"
+                >
+                  <PanelLeftOpen className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="p-0.5 rounded-xl bg-gradient-to-tr from-[#E95D22] to-[#FF8C00] shadow-sm shrink-0">
+                    <img 
+                      src="/logo-square-orange.png" 
+                      alt="Hoppa" 
+                      className="w-9 h-9 rounded-[10px] object-cover bg-white" 
+                    />
+                  </div>
                   <div className="min-w-0 transition-opacity duration-200">
                     <h1 className="font-black text-lg tracking-tight text-slate-900 dark:text-white leading-tight">
                       Hoppa <span className="text-[#FF6B00]">Satıcı</span>
@@ -231,18 +248,17 @@ export default function MerchantLayout({
                       İşletme Portalı
                     </span>
                   </div>
-                )}
-              </div>
+                </div>
 
-              {/* Collapse / Expand Button (Desktop Only) */}
-              <button
-                onClick={toggleSidebarCollapse}
-                className="hidden md:flex p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                title={isSidebarCollapsed ? 'Menüyü Genişlet' : 'Menüyü Daralt'}
-              >
-                {isSidebarCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
-              </button>
-            </div>
+                <button
+                  onClick={toggleSidebarCollapse}
+                  className="hidden md:flex p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  title="Menüyü Daralt"
+                >
+                  <PanelLeftClose className="w-4 h-4" />
+                </button>
+              </div>
+            )}
 
             {/* Admin Shop Context Selector */}
             {isAdmin && (
@@ -425,6 +441,13 @@ export default function MerchantLayout({
           }`}>
             {/* Breadcrumb / Title Info */}
             <div className="flex items-center gap-3">
+              <button
+                onClick={toggleSidebarCollapse}
+                className="hidden md:flex p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
+                title={isSidebarCollapsed ? "Sol Menüyü Genişlet" : "Sol Menüyü Daralt"}
+              >
+                {isSidebarCollapsed ? <PanelLeftOpen className="w-4 h-4 text-[#FF6B00]" /> : <PanelLeftClose className="w-4 h-4" />}
+              </button>
               {HeaderIcon && (
                 <div className="w-9 h-9 rounded-xl bg-orange-500/10 text-[#FF6B00] flex items-center justify-center font-bold shrink-0 border border-orange-500/20">
                   <HeaderIcon className="w-4 h-4" />
