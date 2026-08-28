@@ -420,7 +420,7 @@ export default function MerchantOrdersPage() {
               <select
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
-                className={`w-full border rounded-xl p-3 text-xs font-semibold outline-none ${
+                className={`w-full border rounded-xl p-3 text-xs font-semibold hoppa-select ${
                   isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'
                 }`}
               >

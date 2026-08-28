@@ -278,7 +278,7 @@ export default function MerchantProductsPage() {
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className={`border rounded-xl px-3 py-2 text-xs font-semibold outline-none ${
+              className={`border rounded-xl px-3 py-2 text-xs font-semibold hoppa-select ${
                 isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-700'
               }`}
             >
@@ -294,7 +294,7 @@ export default function MerchantProductsPage() {
             <select
               value={stockFilter}
               onChange={(e) => setStockFilter(e.target.value)}
-              className={`border rounded-xl px-3 py-2 text-xs font-semibold outline-none ${
+              className={`border rounded-xl px-3 py-2 text-xs font-semibold hoppa-select ${
                 isDark ? 'bg-slate-950 border-slate-800 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-700'
               }`}
             >
@@ -706,7 +706,7 @@ export default function MerchantProductsPage() {
                 <select
                   value={bulkPriceType}
                   onChange={(e: any) => setBulkPriceType(e.target.value)}
-                  className={`w-full border rounded-xl p-3 text-xs font-bold outline-none ${
+                  className={`w-full border rounded-xl p-3 text-xs font-bold hoppa-select ${
                     isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'
                   }`}
                 >

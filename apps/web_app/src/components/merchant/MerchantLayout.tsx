@@ -275,7 +275,7 @@ export default function MerchantLayout({
                   <select
                     value={selectedShopIdState}
                     onChange={(e) => handleShopChange(e.target.value)}
-                    className={`w-full border rounded-xl p-2 text-xs font-bold outline-none transition-colors ${
+                    className={`w-full border rounded-xl p-2 text-xs font-bold hoppa-select ${
                       isDark 
                       ? 'bg-slate-950 border-slate-700 text-slate-100' 
                       : 'bg-white border-slate-200 text-slate-900 shadow-xs'

@@ -209,7 +209,7 @@ export default function MerchantCampaignsPage() {
                     <select
                       value={discountType}
                       onChange={(e: any) => setDiscountType(e.target.value)}
-                      className={`w-full border rounded-xl p-3 text-xs font-bold outline-none ${
+                      className={`w-full border rounded-xl p-3 text-xs font-bold hoppa-select ${
                         isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                       }`}
                     >

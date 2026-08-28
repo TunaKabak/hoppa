@@ -689,7 +689,7 @@ export default function MerchantSettingsPage() {
                     <select
                       value={deliveryTime}
                       onChange={(e) => setDeliveryTime(e.target.value)}
-                      className={`w-full border rounded-xl p-3 text-sm font-bold outline-none ${
+                      className={`w-full border rounded-xl p-3 text-sm font-bold hoppa-select ${
                         isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                       }`}
                     >
@@ -707,7 +707,7 @@ export default function MerchantSettingsPage() {
                     <select
                       value={deliveryPricingType}
                       onChange={(e) => setDeliveryPricingType(e.target.value)}
-                      className={`w-full border rounded-xl p-3 text-sm font-bold outline-none ${
+                      className={`w-full border rounded-xl p-3 text-sm font-bold hoppa-select ${
                         isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                       }`}
                     >
@@ -973,7 +973,7 @@ export default function MerchantSettingsPage() {
                         const districts = KKTC_DISTRICTS[newCity] || [];
                         setSelectedDistrict(districts[0] || '');
                       }}
-                      className={`w-full border rounded-xl p-3 text-sm font-bold outline-none ${
+                      className={`w-full border rounded-xl p-3 text-sm font-bold hoppa-select ${
                         isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                       }`}
                     >
@@ -992,7 +992,7 @@ export default function MerchantSettingsPage() {
                     <select
                       value={selectedDistrict}
                       onChange={(e) => setSelectedDistrict(e.target.value)}
-                      className={`w-full border rounded-xl p-3 text-sm font-bold outline-none ${
+                      className={`w-full border rounded-xl p-3 text-sm font-bold hoppa-select ${
                         isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                       }`}
                     >

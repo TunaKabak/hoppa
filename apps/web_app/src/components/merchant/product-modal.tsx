@@ -239,7 +239,7 @@ export default function ProductModal({ product, onClose, onSuccess, onOpenOption
               <select
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
-                className={`w-full border rounded-xl p-3 text-sm font-semibold outline-none focus:border-[#FF6B00] ${
+                className={`w-full border rounded-xl p-3 text-sm font-semibold hoppa-select ${
                   isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                 }`}
               >
@@ -259,7 +259,7 @@ export default function ProductModal({ product, onClose, onSuccess, onOpenOption
               <select
                 value={unit}
                 onChange={(e) => setUnit(e.target.value)}
-                className={`w-full border rounded-xl p-3 text-sm font-semibold outline-none focus:border-[#FF6B00] ${
+                className={`w-full border rounded-xl p-3 text-sm font-semibold hoppa-select ${
                   isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                 }`}
               >
