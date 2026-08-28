@@ -502,7 +502,7 @@ export default function KktcServiceZonesPage() {
                         <select
                           value={newZoneDistrict}
                           onChange={(e) => setNewZoneDistrict(e.target.value)}
-                          className={`w-full border rounded-xl p-2.5 text-xs font-bold outline-none focus:border-blue-500 ${
+                          className={`w-full border rounded-xl p-2.5 text-xs font-bold hoppa-select ${
                             isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-white border-slate-200'
                           }`}
                         >
@@ -706,7 +706,7 @@ export default function KktcServiceZonesPage() {
                                 <select
                                   value={zone.district}
                                   onChange={(e) => handleUpdateZoneField(zone.id, { district: e.target.value })}
-                                  className={`w-full border rounded-xl p-2 text-xs font-bold outline-none ${
+                                  className={`w-full border rounded-xl p-2 text-xs font-bold hoppa-select ${
                                     isDark ? 'bg-slate-900 border-slate-700 text-white' : 'bg-white border-slate-200'
                                   }`}
                                 >

@@ -58,3 +58,26 @@ body {
   background: rgba(148, 163, 184, 0.5);
 }
 
+/* Modern Hoppa Select Dropdowns */
+.hoppa-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23FF6B00' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1rem;
+  padding-right: 2.25rem !important;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hoppa-select:hover {
+  border-color: rgba(255, 107, 0, 0.4) !important;
+}
+
+.hoppa-select:focus {
+  border-color: #FF6B00 !important;
+  box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.18) !important;
+  outline: none !important;
+}
+

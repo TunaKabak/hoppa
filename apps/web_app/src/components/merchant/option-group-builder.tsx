@@ -222,7 +222,7 @@ export default function OptionGroupBuilder({ product, onClose, onSuccess }: Opti
                       <select
                         value={group.selectionType}
                         onChange={(e) => handleGroupChange(gIdx, 'selectionType', e.target.value)}
-                        className={`w-full border rounded-lg p-2 text-xs font-semibold outline-none ${
+                        className={`w-full border rounded-lg p-2 text-xs font-semibold hoppa-select ${
                           isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'
                         }`}
                       >
