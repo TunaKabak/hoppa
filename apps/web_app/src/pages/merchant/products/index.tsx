@@ -6,7 +6,7 @@ import OptionGroupBuilder from '../../../components/merchant/option-group-builde
 import CatalogImportModal from '../../../components/merchant/catalog-import-modal';
 import { 
   Package, Plus, Search, Layers, Database, Edit, Trash2, 
-  Check, Power, DollarSign, LayoutGrid, List 
+  Check, Power, DollarSign, LayoutGrid, List, Download, FileSpreadsheet
 } from 'lucide-react';
 import { merchantApiFetch } from '../../../utils/merchant-auth';
 import { useMerchantTheme } from '../../../context/MerchantThemeContext';
@@ -217,8 +217,41 @@ export default function MerchantProductsPage() {
 
   const activeCount = products.filter((p) => p.isActive).length;
 
+  const handleExportCSV = () => {
+    if (products.length === 0) return;
+    const headers = ['Ürün Adı', 'Kategori', 'Fiyat (TL)', 'Birim', 'Barkod', 'Stok', 'Durum'];
+    const rows = filteredProducts.map(p => [
+      `"${(p.name || '').replace(/"/g, '""')}"`,
+      `"${(p.category?.name || p.categoryId || '').replace(/"/g, '""')}"`,
+      p.price,
+      p.unit || 'ADET',
+      p.barcode || '',
+      p.trackStock ? (p.stockQuantity ?? 0) : 'Sınırsız',
+      p.isActive ? 'Aktif' : 'Pasif'
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `hoppa_urun_katalogu_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const productHeaderActions = (
     <div className="flex flex-wrap items-center gap-2.5">
+      {/* CSV Export Button */}
+      <button
+        onClick={handleExportCSV}
+        disabled={products.length === 0}
+        className="px-3.5 py-2.5 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 text-white font-bold text-xs flex items-center gap-2 transition-all disabled:opacity-50"
+        title="Ürün Kataloğunu Excel/CSV Olarak İndir"
+      >
+        <Download className="w-4 h-4 text-white" />
+        <span className="hidden sm:inline">Dışa Aktar (CSV)</span>
+      </button>
+
       {/* Catalog Import Button */}
       <button
         onClick={() => setShowCatalogImport(true)}
