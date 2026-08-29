@@ -95,6 +95,24 @@ export default function LocationRadiusPickerMap({
     };
   }, []);
 
+  // ResizeObserver for fluid map sizing
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+    const observer = new ResizeObserver(() => {
+      mapInstanceRef.current?.invalidateSize();
+    });
+    observer.observe(mapContainerRef.current);
+
+    const t1 = setTimeout(() => mapInstanceRef.current?.invalidateSize(), 100);
+    const t2 = setTimeout(() => mapInstanceRef.current?.invalidateSize(), 400);
+
+    return () => {
+      observer.disconnect();
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
+  }, []);
+
   const initMap = () => {
     const L = (window as any).L;
     if (!L || !mapContainerRef.current || mapInstanceRef.current) return;
@@ -110,24 +128,25 @@ export default function LocationRadiusPickerMap({
       ],
       maxBoundsViscosity: 0.8,
       scrollWheelZoom: true,
+      zoomControl: false,
     });
 
-    const tileUrl = isDark 
-      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' 
-      : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    // Modern, bright, high-contrast CartoDB Voyager
+    const tileUrl = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
 
     L.tileLayer(tileUrl, {
-      attribution: '&copy; OpenStreetMap contributors',
+      attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap',
+      subdomains: 'abcd',
       maxZoom: 19,
     }).addTo(map);
 
-    // Inverted World Mask for KKTC (dimming non-KKTC areas)
+    // Soft Inverted World Mask for KKTC
     const mask = L.polygon(KKTC_INVERTED_WORLD_MASK, {
       color: '#FF6B00',
       weight: 2,
       dashArray: '6, 6',
-      fillColor: isDark ? '#020617' : '#0f172a',
-      fillOpacity: isDark ? 0.65 : 0.45,
+      fillColor: isDark ? '#0f172a' : '#1e293b',
+      fillOpacity: isDark ? 0.25 : 0.18,
       interactive: false,
     }).addTo(map);
     maskLayerRef.current = mask;

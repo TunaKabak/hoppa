@@ -12,6 +12,7 @@ import { uploadMerchantMedia } from '../../../utils/media-upload';
 import { useMerchantTheme } from '../../../context/MerchantThemeContext';
 import { KKTC_CITIES, KKTC_DISTRICTS } from '../../../data/kktcDistricts';
 import { isLocationInKktc } from '../../../utils/kktcBoundary';
+import HoppaSelect from '../../../components/merchant/HoppaSelect';
 
 const DAYS_KEY_MAP: Record<string, string> = {
   monday: 'Pazartesi',
@@ -683,37 +684,33 @@ export default function MerchantSettingsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-slate-400">
-                      Ort. Teslimat Süresi
-                    </label>
-                    <select
+                    <HoppaSelect
+                      label="Ort. Teslimat Süresi"
                       value={deliveryTime}
-                      onChange={(e) => setDeliveryTime(e.target.value)}
-                      className={`w-full border rounded-xl p-3 text-sm font-bold hoppa-select ${
-                        isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                      }`}
-                    >
-                      <option value="15-30 dk">15-30 dk</option>
-                      <option value="30-45 dk">30-45 dk</option>
-                      <option value="45-60 dk">45-60 dk</option>
-                      <option value="60+ dk">60+ dk</option>
-                    </select>
+                      onChange={(val) => setDeliveryTime(val)}
+                      options={[
+                        { value: '15-30 dk', label: '15-30 dk', badge: 'Hızlı' },
+                        { value: '30-45 dk', label: '30-45 dk', badge: 'Standart' },
+                        { value: '45-60 dk', label: '45-60 dk' },
+                        { value: '60+ dk', label: '60+ dk' },
+                      ]}
+                      size="lg"
+                      variant="contrast"
+                    />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-slate-400">
-                      Ücretlendirme Tipi
-                    </label>
-                    <select
+                    <HoppaSelect
+                      label="Ücretlendirme Tipi"
                       value={deliveryPricingType}
-                      onChange={(e) => setDeliveryPricingType(e.target.value)}
-                      className={`w-full border rounded-xl p-3 text-sm font-bold hoppa-select ${
-                        isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                      }`}
-                    >
-                      <option value="FIXED">Sabit Ücret</option>
-                      <option value="DISTANCE_BASED">Mesafeye Göre</option>
-                    </select>
+                      onChange={(val) => setDeliveryPricingType(val)}
+                      options={[
+                        { value: 'FIXED', label: 'Sabit Ücret', description: 'Tüm siparişlere sabit ücret uygulanır' },
+                        { value: 'DISTANCE_BASED', label: 'Mesafeye Göre', description: 'Kilometre başına hesaplanır' },
+                      ]}
+                      size="lg"
+                      variant="contrast"
+                    />
                   </div>
 
                   <div>
@@ -962,46 +959,29 @@ export default function MerchantSettingsPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-slate-400">
-                      Şehir (İl) *
-                    </label>
-                    <select
+                    <HoppaSelect
+                      label="Şehir (İl) *"
                       value={selectedCity}
-                      onChange={(e) => {
-                        const newCity = e.target.value;
+                      onChange={(newCity) => {
                         setSelectedCity(newCity);
                         const districts = KKTC_DISTRICTS[newCity] || [];
                         setSelectedDistrict(districts[0] || '');
                       }}
-                      className={`w-full border rounded-xl p-3 text-sm font-bold hoppa-select ${
-                        isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                      }`}
-                    >
-                      {KKTC_CITIES.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
+                      options={KKTC_CITIES.map((c) => ({ value: c, label: c }))}
+                      size="lg"
+                      variant="contrast"
+                    />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-slate-400">
-                      Semt (İlçe / Bölge) *
-                    </label>
-                    <select
+                    <HoppaSelect
+                      label="Semt (İlçe / Bölge) *"
                       value={selectedDistrict}
-                      onChange={(e) => setSelectedDistrict(e.target.value)}
-                      className={`w-full border rounded-xl p-3 text-sm font-bold hoppa-select ${
-                        isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                      }`}
-                    >
-                      {(KKTC_DISTRICTS[selectedCity] || []).map((d) => (
-                        <option key={d} value={d}>
-                          {d}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(val) => setSelectedDistrict(val)}
+                      options={(KKTC_DISTRICTS[selectedCity] || []).map((d) => ({ value: d, label: d }))}
+                      size="lg"
+                      variant="contrast"
+                    />
                   </div>
 
                   <div className="md:col-span-2">

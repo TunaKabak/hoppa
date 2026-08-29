@@ -11,6 +11,7 @@ import {
   getSelectedShopId, setSelectedShopId 
 } from '../../utils/merchant-auth';
 import { useMerchantTheme } from '../../context/MerchantThemeContext';
+import HoppaSelect from './HoppaSelect';
 
 interface MerchantLayoutProps {
   children: React.ReactNode;
@@ -272,22 +273,23 @@ export default function MerchantLayout({
                       ADMIN
                     </span>
                   </div>
-                  <select
+                  <HoppaSelect
                     value={selectedShopIdState}
-                    onChange={(e) => handleShopChange(e.target.value)}
-                    className={`w-full border rounded-xl p-2 text-xs font-bold hoppa-select ${
-                      isDark 
-                      ? 'bg-slate-950 border-slate-700 text-slate-100' 
-                      : 'bg-white border-slate-200 text-slate-900 shadow-xs'
-                    }`}
-                  >
-                    <option value="">-- Kendi Mağazam --</option>
-                    {allShops.map((shop) => (
-                      <option key={shop.id} value={shop.id}>
-                        {shop.name} ({shop.type?.toUpperCase() || 'MAĞAZA'})
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => handleShopChange(val)}
+                    placeholder="-- Kendi Mağazam --"
+                    options={[
+                      { value: '', label: 'Kendi Mağazam', badge: 'VARSAYILAN' },
+                      ...allShops.map((shop) => ({
+                        value: shop.id,
+                        label: shop.name,
+                        badge: shop.type?.toUpperCase() || 'MAĞAZA',
+                      })),
+                    ]}
+                    size="sm"
+                    variant="contrast"
+                    searchable={allShops.length > 5}
+                    searchPlaceholder="Mağaza ara..."
+                  />
                 </div>
               ) : (
                 <div className="flex justify-center group relative">

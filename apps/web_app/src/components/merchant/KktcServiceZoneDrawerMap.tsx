@@ -110,7 +110,10 @@ export default function KktcServiceZoneDrawerMap({
       setIsNativeFullscreen(isFs);
       setTimeout(() => {
         mapInstanceRef.current?.invalidateSize();
-      }, 150);
+      }, 100);
+      setTimeout(() => {
+        mapInstanceRef.current?.invalidateSize();
+      }, 350);
     };
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
@@ -119,7 +122,7 @@ export default function KktcServiceZoneDrawerMap({
     };
   }, []);
 
-  // ResizeObserver on Map Container for fluid responsiveness (e.g. sidebar collapse)
+  // ResizeObserver & automatic layout transition invalidateSize watcher
   useEffect(() => {
     if (!mapContainerRef.current) return;
     const observer = new ResizeObserver(() => {
@@ -127,10 +130,18 @@ export default function KktcServiceZoneDrawerMap({
     });
     observer.observe(mapContainerRef.current);
 
+    // Multiple layout stabilization ticks to prevent black screen
+    const t1 = setTimeout(() => mapInstanceRef.current?.invalidateSize(), 50);
+    const t2 = setTimeout(() => mapInstanceRef.current?.invalidateSize(), 200);
+    const t3 = setTimeout(() => mapInstanceRef.current?.invalidateSize(), 600);
+
     return () => {
       observer.disconnect();
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
     };
-  }, []);
+  }, [heightClass, isNativeFullscreen]);
 
   // Initialize Leaflet Map
   useEffect(() => {
@@ -180,22 +191,22 @@ export default function KktcServiceZoneDrawerMap({
       zoomControl: false,
     });
 
-    const tileUrl = isDark 
-      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' 
-      : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    // Modern, bright, high-contrast, crisp map layer (CartoDB Voyager)
+    const tileUrl = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
 
     L.tileLayer(tileUrl, {
-      attribution: '&copy; OpenStreetMap contributors',
+      attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap',
+      subdomains: 'abcd',
       maxZoom: 19,
     }).addTo(map);
 
-    // Inverted World Mask for KKTC
+    // Soft Inverted World Mask for KKTC (Highlights KKTC borders elegantly)
     L.polygon(KKTC_INVERTED_WORLD_MASK, {
       color: '#FF6B00',
-      weight: 1.5,
+      weight: 2,
       dashArray: '5, 5',
-      fillColor: isDark ? '#020617' : '#0f172a',
-      fillOpacity: isDark ? 0.60 : 0.40,
+      fillColor: isDark ? '#0f172a' : '#1e293b',
+      fillOpacity: isDark ? 0.25 : 0.18,
       interactive: false,
     }).addTo(map);
 
@@ -242,6 +253,14 @@ export default function KktcServiceZoneDrawerMap({
 
     mapInstanceRef.current = map;
     renderAllPolygons();
+
+    // Trigger immediate & delayed size invalidation to avoid black canvas
+    requestAnimationFrame(() => {
+      map.invalidateSize();
+    });
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 150);
   };
 
   // Keep window global refs synced for Leaflet callbacks
@@ -643,22 +662,30 @@ export default function KktcServiceZoneDrawerMap({
           ) : null}
         </div>
 
-        {/* Dropdown Results */}
+        {/* Modern Glassmorphic Dropdown Results */}
         {showDropdown && searchResults.length > 0 && (
-          <div className={`absolute z-30 top-full left-0 right-0 mt-1 border rounded-xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto ${
-            isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+          <div className={`absolute z-40 top-full left-0 right-0 mt-2 border rounded-2xl shadow-2xl backdrop-blur-2xl overflow-hidden max-h-64 overflow-y-auto p-1.5 space-y-1 ${
+            isDark ? 'bg-slate-900/95 border-slate-800' : 'bg-white/95 border-slate-200 shadow-orange-500/5'
           }`}>
+            <div className="px-3 py-1.5 flex items-center justify-between text-[10px] font-black text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-800 mb-1">
+              <span>Arama Sonuçları</span>
+              <span>{searchResults.length} konum</span>
+            </div>
             {searchResults.map((item, idx) => (
               <button
                 key={idx}
                 type="button"
                 onClick={() => selectSearchResult(item)}
-                className={`w-full text-left px-4 py-3 text-xs font-semibold flex items-center gap-2.5 border-b last:border-0 transition-colors ${
-                  isDark ? 'border-slate-800 hover:bg-slate-800 text-slate-200' : 'border-slate-100 hover:bg-orange-50/60 text-slate-800'
+                className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-3 transition-all ${
+                  isDark 
+                    ? 'hover:bg-slate-800 text-slate-200 hover:text-white' 
+                    : 'hover:bg-[#FF6B00]/10 text-slate-800 hover:text-[#FF6B00]'
                 }`}
               >
-                <MapPin className="w-4 h-4 text-[#FF6B00] shrink-0" />
-                <span className="truncate">{item.display_name}</span>
+                <div className="w-6 h-6 rounded-lg bg-[#FF6B00]/15 text-[#FF6B00] flex items-center justify-center shrink-0">
+                  <MapPin className="w-3.5 h-3.5" />
+                </div>
+                <span className="truncate font-bold">{item.display_name}</span>
               </button>
             ))}
           </div>
