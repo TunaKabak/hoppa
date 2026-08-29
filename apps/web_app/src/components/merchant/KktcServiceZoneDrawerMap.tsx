@@ -6,7 +6,7 @@ import {
   Minimize2, ZoomIn, ZoomOut, Target, Crosshair
 } from 'lucide-react';
 import { useMerchantTheme } from '../../context/MerchantThemeContext';
-import { isLocationInKktc, KKTC_DEFAULT_CENTER, KKTC_INVERTED_WORLD_MASK } from '../../utils/kktcBoundary';
+import { isLocationInKktc, KKTC_DEFAULT_CENTER, KKTC_POLYGON } from '../../utils/kktcBoundary';
 
 export interface ServiceZonePoint {
   lat: number;
@@ -97,30 +97,22 @@ export default function KktcServiceZoneDrawerMap({
   const [testResult, setTestResult] = useState<{ insideZones: string[]; isInsideKktc: boolean } | null>(null);
   const [isTestMode, setIsTestMode] = useState<boolean>(false);
   const [selectedDistrict, setSelectedDistrict] = useState<string>('KKTC Genel');
-  const [isNativeFullscreen, setIsNativeFullscreen] = useState<boolean>(false);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [cursorCoords, setCursorCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [zoomLevel, setZoomLevel] = useState<number>(10);
 
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fullscreen event listener
+  // ESC key listener for Fullscreen mode
   useEffect(() => {
-    const handleFullscreenChange = () => {
-      const isFs = !!document.fullscreenElement;
-      setIsNativeFullscreen(isFs);
-      setTimeout(() => {
-        mapInstanceRef.current?.invalidateSize();
-      }, 100);
-      setTimeout(() => {
-        mapInstanceRef.current?.invalidateSize();
-      }, 350);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false);
+      }
     };
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-    };
-  }, []);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFullscreen]);
 
   // ResizeObserver & automatic layout transition invalidateSize watcher
   useEffect(() => {
@@ -131,17 +123,19 @@ export default function KktcServiceZoneDrawerMap({
     observer.observe(mapContainerRef.current);
 
     // Multiple layout stabilization ticks to prevent black screen
-    const t1 = setTimeout(() => mapInstanceRef.current?.invalidateSize(), 50);
-    const t2 = setTimeout(() => mapInstanceRef.current?.invalidateSize(), 200);
-    const t3 = setTimeout(() => mapInstanceRef.current?.invalidateSize(), 600);
+    const t1 = setTimeout(() => mapInstanceRef.current?.invalidateSize(), 30);
+    const t2 = setTimeout(() => mapInstanceRef.current?.invalidateSize(), 150);
+    const t3 = setTimeout(() => mapInstanceRef.current?.invalidateSize(), 350);
+    const t4 = setTimeout(() => mapInstanceRef.current?.invalidateSize(), 700);
 
     return () => {
       observer.disconnect();
       clearTimeout(t1);
       clearTimeout(t2);
       clearTimeout(t3);
+      clearTimeout(t4);
     };
-  }, [heightClass, isNativeFullscreen]);
+  }, [heightClass, isFullscreen]);
 
   // Initialize Leaflet Map
   useEffect(() => {
@@ -183,8 +177,8 @@ export default function KktcServiceZoneDrawerMap({
       minZoom: 8,
       maxZoom: 18,
       maxBounds: [
-        [34.50, 31.80],
-        [36.20, 35.10],
+        [34.30, 31.50],
+        [36.40, 35.30],
       ],
       maxBoundsViscosity: 0.8,
       scrollWheelZoom: true,
@@ -200,13 +194,13 @@ export default function KktcServiceZoneDrawerMap({
       maxZoom: 19,
     }).addTo(map);
 
-    // Soft Inverted World Mask for KKTC (Highlights KKTC borders elegantly)
-    L.polygon(KKTC_INVERTED_WORLD_MASK, {
+    // Official KKTC Boundary Line (Bright orange dashed border, NO black mask)
+    L.polygon(KKTC_POLYGON.map((p) => [p.lat, p.lng]), {
       color: '#FF6B00',
-      weight: 2,
-      dashArray: '5, 5',
-      fillColor: isDark ? '#0f172a' : '#1e293b',
-      fillOpacity: isDark ? 0.25 : 0.18,
+      weight: 2.5,
+      dashArray: '6, 6',
+      fillColor: '#FF6B00',
+      fillOpacity: 0.04,
       interactive: false,
     }).addTo(map);
 
@@ -412,19 +406,9 @@ export default function KktcServiceZoneDrawerMap({
     }
   };
 
-  // Toggle Native Fullscreen API
+  // Toggle Fullscreen Studio Mode
   const handleToggleFullscreen = () => {
-    if (!rootWrapperRef.current) return;
-
-    if (!document.fullscreenElement) {
-      rootWrapperRef.current.requestFullscreen().catch((err) => {
-        console.warn('Native Fullscreen request failed, using standard view:', err);
-      });
-    } else {
-      document.exitFullscreen().catch((err) => {
-        console.warn('Exit fullscreen failed:', err);
-      });
-    }
+    setIsFullscreen(!isFullscreen);
   };
 
   // Test Location Checker
@@ -560,8 +544,42 @@ export default function KktcServiceZoneDrawerMap({
   return (
     <div 
       ref={rootWrapperRef} 
-      className={`space-y-4 font-sans ${isNativeFullscreen ? 'p-6 bg-slate-950 text-white h-screen flex flex-col justify-between overflow-hidden' : ''}`}
+      className={
+        isFullscreen
+          ? `fixed inset-0 z-[99999] p-4 md:p-6 flex flex-col justify-between overflow-hidden font-sans transition-all ${
+              isDark ? 'bg-slate-950 text-white' : 'bg-slate-100 text-slate-900'
+            }`
+          : 'space-y-4 font-sans'
+      }
     >
+      {/* Studio Header (Only Visible in Fullscreen Mode) */}
+      {isFullscreen && (
+        <div className="flex items-center justify-between px-2 pb-1 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#E95D22] to-[#FF8C00] text-white flex items-center justify-center font-black shadow-md">
+              <Shapes className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="font-black text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                <span>KKTC Harita Çizim Stüdyosu</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] bg-[#FF6B00] text-white font-black">TAM EKRAN</span>
+              </h2>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                Çıkmak için butona tıklayın veya <kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-[10px]">ESC</kbd> tuşuna basın.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsFullscreen(false)}
+            className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs flex items-center gap-1.5 shadow-lg active:scale-95 transition-all"
+          >
+            <Minimize2 className="w-4 h-4" />
+            <span>Stüdyodan Çık (ESC)</span>
+          </button>
+        </div>
+      )}
+
       {/* Top Toolbar: District Presets, Fullscreen, Mode Selector & Address Search */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-3 rounded-2xl border bg-slate-50 dark:bg-slate-950 dark:border-slate-800 shadow-xs shrink-0">
         {/* District Quick Focus Pills */}
@@ -620,9 +638,9 @@ export default function KktcServiceZoneDrawerMap({
             type="button"
             onClick={handleToggleFullscreen}
             className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:text-[#FF6B00] shadow-xs transition-all"
-            title={isNativeFullscreen ? 'Tam Ekrandan Çık (Esc)' : 'Tam Ekran Çizim Modu'}
+            title={isFullscreen ? 'Tam Ekrandan Çık (Esc)' : 'Tam Ekran Çizim Modu'}
           >
-            {isNativeFullscreen ? <Minimize2 className="w-4 h-4 text-[#FF6B00]" /> : <Maximize2 className="w-4 h-4" />}
+            {isFullscreen ? <Minimize2 className="w-4 h-4 text-[#FF6B00]" /> : <Maximize2 className="w-4 h-4" />}
           </button>
         </div>
       </div>
@@ -822,10 +840,12 @@ export default function KktcServiceZoneDrawerMap({
       ) : null}
 
       {/* Map Main Canvas Container */}
-      <div className={`relative rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-xl flex-1 ${isNativeFullscreen ? 'h-full min-h-[500px]' : ''}`}>
+      <div className={`relative rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-2xl ${
+        isFullscreen ? 'flex-1 w-full h-full min-h-0' : heightClass
+      }`}>
         <div 
           ref={mapContainerRef} 
-          className={`w-full ${isNativeFullscreen ? 'h-full min-h-[500px]' : heightClass} z-10`} 
+          className="w-full h-full min-h-[300px] z-10" 
           style={{ cursor: isDrawingNew || activeZoneId ? 'crosshair' : isTestMode ? 'pointer' : 'grab' }}
         />
 
