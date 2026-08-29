@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { MapPin, Navigation, Compass, Search, Loader2, X, Trash2, Shapes, Circle, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { useMerchantTheme } from '../../context/MerchantThemeContext';
-import { isLocationInKktc, KKTC_DEFAULT_CENTER, KKTC_INVERTED_WORLD_MASK } from '../../utils/kktcBoundary';
+import { isLocationInKktc, KKTC_DEFAULT_CENTER, KKTC_POLYGON } from '../../utils/kktcBoundary';
 
 export interface LocationPolygonPoint {
   lat: number;
@@ -140,13 +140,13 @@ export default function LocationRadiusPickerMap({
       maxZoom: 19,
     }).addTo(map);
 
-    // Soft Inverted World Mask for KKTC
-    const mask = L.polygon(KKTC_INVERTED_WORLD_MASK, {
+    // Official KKTC Boundary Line
+    const mask = L.polygon(KKTC_POLYGON.map((p) => [p.lat, p.lng]), {
       color: '#FF6B00',
-      weight: 2,
+      weight: 2.5,
       dashArray: '6, 6',
-      fillColor: isDark ? '#0f172a' : '#1e293b',
-      fillOpacity: isDark ? 0.25 : 0.18,
+      fillColor: '#FF6B00',
+      fillOpacity: 0.04,
       interactive: false,
     }).addTo(map);
     maskLayerRef.current = mask;
