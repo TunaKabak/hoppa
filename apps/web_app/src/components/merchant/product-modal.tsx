@@ -3,6 +3,7 @@ import { X, Upload, Plus, Check, AlertCircle, Layers } from 'lucide-react';
 import { merchantApiFetch, getMerchantToken } from '../../utils/merchant-auth';
 import { uploadMerchantMedia } from '../../utils/media-upload';
 import { useMerchantTheme } from '../../context/MerchantThemeContext';
+import HoppaSelect from './HoppaSelect';
 
 interface ProductModalProps {
   product?: any | null;
@@ -233,43 +234,38 @@ export default function ProductModal({ product, onClose, onSuccess, onOpenOption
           {/* Category, Unit & Barcode */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-slate-400">
-                Kategori
-              </label>
-              <select
+              <HoppaSelect
+                label="Kategori"
                 value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-                className={`w-full border rounded-xl p-3 text-sm font-semibold hoppa-select ${
-                  isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                }`}
-              >
-                <option value="">Kategori Seçiniz</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setCategoryId(val)}
+                placeholder="Kategori Seçiniz"
+                options={categories.map((cat) => ({
+                  value: cat.id,
+                  label: cat.name,
+                }))}
+                size="lg"
+                variant="contrast"
+                searchable={categories.length > 5}
+                searchPlaceholder="Kategori ara..."
+              />
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-slate-400">
-                Birim
-              </label>
-              <select
+              <HoppaSelect
+                label="Birim"
                 value={unit}
-                onChange={(e) => setUnit(e.target.value)}
-                className={`w-full border rounded-xl p-3 text-sm font-semibold hoppa-select ${
-                  isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                }`}
-              >
-                <option value="ADET">ADET</option>
-                <option value="KG">KG</option>
-                <option value="GRAM">GRAM</option>
-                <option value="LITRE">LİTRE</option>
-                <option value="PAKET">PAKET</option>
-                <option value="PORSIYON">PORSİYON</option>
-              </select>
+                onChange={(val) => setUnit(val)}
+                options={[
+                  { value: 'ADET', label: 'ADET' },
+                  { value: 'KG', label: 'KG' },
+                  { value: 'GRAM', label: 'GRAM' },
+                  { value: 'LITRE', label: 'LİTRE' },
+                  { value: 'PAKET', label: 'PAKET' },
+                  { value: 'PORSIYON', label: 'PORSİYON' },
+                ]}
+                size="lg"
+                variant="contrast"
+              />
             </div>
 
             <div>
