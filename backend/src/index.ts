@@ -4,9 +4,6 @@ dotenv.config({ path: path.join(__dirname, "../.env") });
 
 import express, { Request, Response } from "express";
 import cors from "cors";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
 
 // Clean up environment variables (strip quotes) before importing controllers/services
 if (process.env.DATABASE_URL) {
@@ -46,6 +43,8 @@ import mediaRoutes from "./routes/media.routes";
 import notificationRoutes from "./routes/notificationRoutes";
 import courierRoutes from "./routes/courierRoutes";
 import publicRoutes from "./routes/publicRoutes";
+import paymentRoutes from "./routes/paymentRoutes";
+import eventRoutes from "./routes/eventRoutes";
 import helmet from "helmet";
 import { otpRateLimiter, globalRateLimiter, handshakeRateLimiter } from "./middlewares/RateLimiter";
 import { validateBody } from "./middlewares/ValidateMiddleware";
@@ -54,6 +53,7 @@ import { requestOtpSchema, verifyOtpSchema } from "./types/schemas";
 import { initCronJobs } from "./utils/cronJobs";
 
 const app = express();
+app.set("trust proxy", 1);
 const port = process.env.PORT || 3000;
 
 app.use(helmet({
@@ -126,58 +126,18 @@ app.use("/api/media", mediaRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/couriers", courierRoutes);
 app.use("/api/public", publicRoutes);
+app.use("/api/payments", paymentRoutes);
+app.use("/api/events", eventRoutes);
 
 app.get('/health', (req: Request, res: Response) => {
     res.status(200).json({ status: "OK", timestamp: new Date() });
 });
 
-// --- Mock 3D Secure Routes ---
+// --- Legacy Mock 3D Secure Redirect ---
 app.get('/mock-3d-secure', (req: Request, res: Response) => {
-    const txId = req.query.txId || 'unknown';
-    res.send(`
-        <html>
-            <head>
-                <meta name="viewport" content="width=device-width, initial-scale=1">
-                <meta charset="utf-8">
-                <style>
-                    body { font-family: sans-serif; padding: 20px; text-align: center; }
-                    .card { border: 1px solid #ccc; padding: 20px; border-radius: 8px; max-width: 400px; margin: 0 auto; }
-                    button { background: #00A651; color: white; border: none; padding: 12px 20px; border-radius: 4px; font-size: 16px; cursor: pointer; width: 100%; }
-                </style>
-            </head>
-            <body>
-                <div class="card">
-                    <h2>3D Secure Doğrulama</h2>
-                    <p>İşlem No: <b>${txId}</b></p>
-                    <p>Lütfen bankanızdan gelen şifreyi giriniz.</p>
-                    <input type="text" placeholder="SMS Şifresi" value="123456" style="padding: 10px; width: 90%; margin-bottom: 20px; text-align: center; letter-spacing: 5px;" />
-                    <button onclick="window.location.href='/mock-3d-secure/callback?success=true&txId=${txId}'">Şifreyi Onayla</button>
-                </div>
-            </body>
-        </html>
-    `);
-});
-
-app.get('/mock-3d-secure/callback', async (req: Request, res: Response) => {
-    const txId = req.query.txId as string;
-    if (txId) {
-        try {
-            const tx = await prisma.paymentTransaction.findFirst({ where: { providerTxId: txId } });
-            if (tx) {
-                await prisma.paymentTransaction.update({
-                    where: { id: tx.id },
-                    data: { status: 'SUCCESS' }
-                });
-                await prisma.order.update({
-                    where: { id: tx.orderId },
-                    data: { paymentStatus: 'SUCCESS' }
-                });
-            }
-        } catch (error) {
-            console.error("Mock 3D Callback Error:", error);
-        }
-    }
-    res.send("<h1>Ödeme Başarılı</h1><p>Uygulamaya dönülüyor...</p>");
+    const queryIndex = req.originalUrl.indexOf('?');
+    const querySuffix = queryIndex !== -1 ? req.originalUrl.slice(queryIndex) : '';
+    res.redirect(302, `/api/payments/sandbox-3ds${querySuffix}`);
 });
 
 // Sunucuyu Başlat

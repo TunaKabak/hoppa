@@ -1,108 +1,140 @@
-import { Currency, PaymentStatus } from '@prisma/client';
+import { Currency, PaymentStatus } from "@prisma/client";
+import {
+  IPaymentProvider,
+  PaymentCardDetails,
+  PaymentMode,
+  PaymentProviderName,
+} from "../providers/payment/IPaymentProvider";
+import { Sandbox3DSPaymentProvider } from "../providers/payment/Sandbox3DSPaymentProvider";
+import { CardPlusPaymentProvider } from "../providers/payment/CardPlusPaymentProvider";
+import { PayTRPaymentProvider } from "../providers/payment/PayTRPaymentProvider";
+import { StripePaymentProvider } from "../providers/payment/StripePaymentProvider";
 
-export interface CardDetails {
-    cardNumber: string;
-    expiryMonth: string;
-    expiryYear: string;
-    cvc: string;
-    cardHolderName: string;
-}
+export type CardDetails = PaymentCardDetails;
 
 export interface PaymentRequest {
-    orderId: string;
-    amount: number;
-    cardDetails: CardDetails;
-    currency?: Currency;
+  orderId: string;
+  amount: number;
+  cardDetails: CardDetails;
+  currency?: Currency;
+  baseUrl?: string;
+  customerEmail?: string;
+  customerIp?: string;
 }
 
 export interface PaymentResponse {
-    status: PaymentStatus;
-    providerTxId: string;
-    provider: string;
-    routingType: string;
-    amount: number;
-    currency: Currency;
-    exchangeRate: number;
-    paymentUrl?: string; // For 3D secure simulation
+  status: PaymentStatus;
+  providerTxId: string;
+  provider: PaymentProviderName;
+  routingType: string;
+  amount: number;
+  currency: Currency;
+  exchangeRate: number;
+  paymentUrl: string;
+  mode: PaymentMode;
 }
 
 export class PaymentRoutingService {
-    // Mock BIN list for KKTC
-    private static readonly kktcBins = ['454360', '543771', '402235'];
-    // Mock BIN list for TR
-    private static readonly trBins = ['432042', '516888', '540061'];
+  // KKTC Yerel Banka BIN Listesi
+  private static readonly kktcBins = ["454360", "543771", "402235"];
+  // Türkiye Banka BIN Listesi
+  private static readonly trBins = ["432042", "516888", "540061"];
 
-    static async routePayment(request: PaymentRequest): Promise<PaymentResponse> {
-        // Strip spaces from card number
-        const cardNumber = request.cardDetails.cardNumber.replace(/\s+/g, '');
-        const bin = cardNumber.substring(0, 6);
-        
-        let provider = 'STRIPE'; // Default for foreign cards
-        let routingType = 'INTERNATIONAL';
-        let currency = request.currency || Currency.TRY;
-        let amount = request.amount;
-        let exchangeRate = 1.0;
+  public static getPaymentMode(): PaymentMode {
+    const raw = (process.env.PAYMENT_PROVIDER_MODE || "SANDBOX")
+      .replace(/^["']|["']$/g, "")
+      .trim()
+      .toUpperCase();
 
-        if (this.kktcBins.includes(bin)) {
-            provider = 'CARDPLUS';
-            routingType = 'DOMESTIC_KKTC';
-            currency = Currency.TRY;
-        } else if (this.trBins.includes(bin)) {
-            provider = 'PAYTR';
-            routingType = 'DOMESTIC_TR';
-            currency = Currency.TRY;
-        } else {
-            // Foreign card - Apply DCC (Dynamic Currency Conversion)
-            // Simulating DCC: Converting TRY to GBP
-            if (currency === Currency.TRY) {
-                exchangeRate = 0.025; // Example rate: 1 TRY = 0.025 GBP
-                currency = Currency.GBP;
-                amount = request.amount * exchangeRate;
-            }
-        }
-
-        console.log(`[PaymentRoutingService] Routing to ${provider} (${routingType}). Original Amount: ${request.amount} TRY, Converted Amount: ${amount} ${currency}`);
-
-        // Forward to Mock Payment Service
-        return MockPaymentService.processPayment({
-            ...request,
-            amount,
-            currency,
-            provider,
-            routingType,
-            exchangeRate
-        });
+    if (raw === "LIVE") {
+      return "LIVE";
     }
-}
-
-export class MockPaymentService {
-    static async processPayment(data: {
-        orderId: string;
-        amount: number;
-        currency: Currency;
-        provider: string;
-        routingType: string;
-        exchangeRate: number;
-        cardDetails: CardDetails;
-    }): Promise<PaymentResponse> {
-        
-        console.log(`[MockPaymentService] Processing payment via ${data.provider}. Amount: ${data.amount} ${data.currency}`);
-        
-        // Simulating processing delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        const txId = `txn_mock_${Math.random().toString(36).substring(2, 11)}`;
-
-        // Durumu doğrudan SUCCESS yapacak şekilde simüle et (ama 3D secure için url de dönüyoruz)
-        return {
-            status: PaymentStatus.SUCCESS,
-            providerTxId: txId,
-            provider: data.provider,
-            routingType: data.routingType,
-            amount: data.amount,
-            currency: data.currency,
-            exchangeRate: data.exchangeRate,
-            paymentUrl: `https://hoppa-backend.onrender.com/mock-3d-secure?txId=${txId}`
-        };
+    if (raw === "SANDBOX" || raw === "") {
+      return "SANDBOX";
     }
+
+    throw new Error(`Geçersiz PAYMENT_PROVIDER_MODE yapılandırması: ${raw}`);
+  }
+
+  public static resolveProvider(providerName: PaymentProviderName): IPaymentProvider {
+    const mode = this.getPaymentMode();
+
+    if (mode === "SANDBOX") {
+      return new Sandbox3DSPaymentProvider(providerName);
+    }
+
+    switch (providerName) {
+      case "CARDPLUS":
+        return new CardPlusPaymentProvider();
+      case "PAYTR":
+        return new PayTRPaymentProvider();
+      case "STRIPE":
+        return new StripePaymentProvider();
+      default: {
+        const exhaustiveCheck: never = providerName;
+        throw new Error(`Desteklenmeyen ödeme sağlayıcısı: ${String(exhaustiveCheck)}`);
+      }
+    }
+  }
+
+  public static async routePayment(request: PaymentRequest): Promise<PaymentResponse> {
+    const cardNumber = request.cardDetails.cardNumber.replace(/\s+/g, "");
+    const bin = cardNumber.substring(0, 6);
+
+    let provider: PaymentProviderName = "STRIPE";
+    let routingType = "INTERNATIONAL";
+    let currency = request.currency || Currency.TRY;
+    let amount = request.amount;
+    let exchangeRate = 1.0;
+
+    if (this.kktcBins.includes(bin)) {
+      provider = "CARDPLUS";
+      routingType = "DOMESTIC_KKTC";
+      currency = Currency.TRY;
+    } else if (this.trBins.includes(bin)) {
+      provider = "PAYTR";
+      routingType = "DOMESTIC_TR";
+      currency = Currency.TRY;
+    } else {
+      // Yabancı kart - DCC (Dynamic Currency Conversion: TRY -> GBP)
+      if (currency === Currency.TRY) {
+        exchangeRate = 0.025;
+        currency = Currency.GBP;
+        amount = request.amount * exchangeRate;
+      }
+    }
+
+    const normalizedAmount = Number(amount.toFixed(2));
+    const resolvedBaseUrl = (
+      request.baseUrl ||
+      process.env.PUBLIC_BASE_URL ||
+      `http://localhost:${process.env.PORT || 3000}`
+    )
+      .replace(/^["']|["']$/g, "")
+      .replace(/\/+$/, "");
+
+    const mode = this.getPaymentMode();
+    console.log(
+      `[PaymentRoutingService] Routing to ${provider} (${routingType}, mode=${mode}). Original: ${request.amount} TRY, Converted: ${normalizedAmount.toFixed(2)} ${currency}`
+    );
+
+    const strategy = this.resolveProvider(provider);
+    const result = await strategy.initiatePayment({
+      orderId: request.orderId,
+      amount: normalizedAmount,
+      currency,
+      routingType,
+      exchangeRate,
+      cardDetails: request.cardDetails,
+      baseUrl: resolvedBaseUrl,
+      customerEmail: request.customerEmail,
+      customerIp: request.customerIp,
+    });
+
+    // 3D Secure doğrulanmadan asla SUCCESS dönülmez; başlangıç durumu daima PENDING'dir.
+    return {
+      ...result,
+      status: PaymentStatus.PENDING,
+    };
+  }
 }

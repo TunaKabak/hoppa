@@ -121,7 +121,6 @@ class _FoodProductCustomizationSheetState extends State<FoodProductCustomization
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final validationErr = _validationError;
 
     return Container(

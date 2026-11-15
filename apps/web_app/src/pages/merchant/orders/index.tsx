@@ -9,6 +9,10 @@ import {
   Check, Info, Sparkles, Navigation, ArrowRight
 } from 'lucide-react';
 import { merchantApiFetch } from '../../../utils/merchant-auth';
+import {
+  isRealtimeEventEnvelope,
+  REALTIME_WINDOW_EVENT,
+} from '../../../utils/realtime-client';
 import { useMerchantTheme } from '../../../context/MerchantThemeContext';
 
 export default function MerchantOrdersPage() {
@@ -24,12 +28,7 @@ export default function MerchantOrdersPage() {
   const [cancelReason, setCancelReason] = useState('Stok yetersizliği');
 
   const prevPendingCount = useRef(0);
-
-  useEffect(() => {
-    fetchOrders();
-    const interval = setInterval(fetchOrders, 10000); // 10s auto-refresh
-    return () => clearInterval(interval);
-  }, []);
+  const fetchOrdersRef = useRef<() => Promise<void>>(async () => {});
 
   const fetchOrders = async () => {
     try {
@@ -56,6 +55,43 @@ export default function MerchantOrdersPage() {
       setIsLoading(false);
     }
   };
+
+  fetchOrdersRef.current = fetchOrders;
+
+  useEffect(() => {
+    void fetchOrdersRef.current();
+    const interval = setInterval(() => {
+      void fetchOrdersRef.current();
+    }, 10000); // 10s auto-refresh fallback
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const handleRealtimeEvent = (event: Event) => {
+      if (!(event instanceof CustomEvent)) {
+        return;
+      }
+      if (!isRealtimeEventEnvelope(event.detail)) {
+        return;
+      }
+      if (
+        event.detail.type === 'NEW_ORDER' ||
+        event.detail.type === 'ORDER_CANCELLED' ||
+        event.detail.type === 'ORDER_STATUS_UPDATED'
+      ) {
+        void fetchOrdersRef.current();
+      }
+    };
+
+    window.addEventListener(REALTIME_WINDOW_EVENT, handleRealtimeEvent);
+    return () => {
+      window.removeEventListener(REALTIME_WINDOW_EVENT, handleRealtimeEvent);
+    };
+  }, []);
 
   const playChime = () => {
     try {

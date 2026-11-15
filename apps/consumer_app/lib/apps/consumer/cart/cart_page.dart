@@ -44,21 +44,6 @@ class _CartPageState extends ConsumerState<CartPage> {
     }
   }
 
-  void _scrollToTab(int index) {
-    if (!_tabsScrollController.hasClients) return;
-    const double estimatedTabWidth = 175.0;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final targetOffset = (index * estimatedTabWidth) - (screenWidth / 2) + (estimatedTabWidth / 2);
-    final maxScroll = _tabsScrollController.position.maxScrollExtent;
-    final minScroll = _tabsScrollController.position.minScrollExtent;
-
-    _tabsScrollController.animateTo(
-      targetOffset.clamp(minScroll, maxScroll),
-      duration: const Duration(milliseconds: 350),
-      curve: Curves.easeOutCubic,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final cartState = ref.watch(cartProvider);

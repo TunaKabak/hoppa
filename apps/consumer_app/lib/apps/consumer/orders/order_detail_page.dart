@@ -31,7 +31,6 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
   Business? _business;
   bool _isLoadingBusiness = true;
   model.Order? _order;
-  bool _isLoadingOrder = false;
   bool _hasPromptedRating = false;
 
   @override
@@ -53,9 +52,6 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
     final orderId = widget.orderId ?? _order?.id;
     if (orderId == null) return;
 
-    if (_order == null) {
-      setState(() => _isLoadingOrder = true);
-    }
     try {
       ref.invalidate(consumerOrdersProvider);
       final repository = ref.read(consumerOrderRepositoryProvider);
@@ -64,16 +60,12 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
       if (mounted) {
         setState(() {
           _order = order;
-          _isLoadingOrder = false;
         });
         _fetchBusinessInfo();
         _checkAndShowRatingDialog(order);
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _isLoadingOrder = false;
-        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Sipariş yüklenemedi: $e")),
         );

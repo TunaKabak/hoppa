@@ -13,6 +13,41 @@ class ThreeDSecurePage extends StatefulWidget {
 class _ThreeDSecurePageState extends State<ThreeDSecurePage> {
   late final WebViewController _controller;
   bool _isLoading = true;
+  bool _hasCompleted = false;
+
+  void _completeWithResult(bool isSuccess) {
+    if (_hasCompleted || !mounted) {
+      return;
+    }
+    _hasCompleted = true;
+    Navigator.pop(context, isSuccess);
+  }
+
+  bool? _resolveCompletionFromUrl(String rawUrl) {
+    final uri = Uri.tryParse(rawUrl);
+    if (uri == null) {
+      return null;
+    }
+
+    // Backend callback rotası kesilmeden sunucuya ulaşmalıdır
+    if (uri.path.contains('/3d-callback')) {
+      return null;
+    }
+
+    final result = uri.queryParameters['result']?.toLowerCase();
+    final success = uri.queryParameters['success']?.toLowerCase();
+    final cancel = uri.queryParameters['cancel']?.toLowerCase();
+
+    if (result == 'success' || success == 'true') {
+      return true;
+    }
+
+    if (result == 'failed' || cancel == 'true' || success == 'false') {
+      return false;
+    }
+
+    return null;
+  }
 
   @override
   void initState() {
@@ -27,11 +62,15 @@ class _ThreeDSecurePageState extends State<ThreeDSecurePage> {
                 _isLoading = false;
               });
             }
+            final completionResult = _resolveCompletionFromUrl(url);
+            if (completionResult != null) {
+              _completeWithResult(completionResult);
+            }
           },
           onNavigationRequest: (NavigationRequest request) {
-            // "Şifreyi Onayla" dediklerinde backend callback dönecek 
-            if (request.url.contains('success') || request.url.contains('callback')) {
-              Navigator.pop(context, true);
+            final completionResult = _resolveCompletionFromUrl(request.url);
+            if (completionResult != null) {
+              _completeWithResult(completionResult);
               return NavigationDecision.prevent;
             }
             return NavigationDecision.navigate;
@@ -49,7 +88,7 @@ class _ThreeDSecurePageState extends State<ThreeDSecurePage> {
         leading: IconButton(
           icon: const Icon(Icons.close),
           onPressed: () {
-            Navigator.pop(context, false);
+            _completeWithResult(false);
           },
         ),
       ),

@@ -1,19 +1,52 @@
 import { Request, Response } from "express";
-import { PrismaClient, MerchantStatus, CourierStatus, VehicleType } from "@prisma/client";
+import { Prisma, PrismaClient, MerchantStatus, CourierStatus, VehicleType } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
 export class SuperAdminController {
   /**
    * GET /api/admin/merchants/pending
-   * Sadece PENDING veya REVISION statüsünde olan ve onay bekleyen satıcı başvurularını listeler.
+   * Varsayılan olarak PENDING/REVISION/ON_HOLD başvurularını listeler.
+   * ?status=ALL | ACTIVE | PENDING | REVISION | REJECTED | ON_HOLD | PENDING_GROUP ve ?search= filtrelerini destekler.
    */
   async getPendingMerchants(req: Request, res: Response) {
     try {
-      const pendingMerchants = await prisma.merchant.findMany({
-        where: {
-          status: {
-            in: ["PENDING", "REVISION", "ON_HOLD"],
+      const rawStatus = typeof req.query.status === "string" ? req.query.status.trim().toUpperCase() : "";
+      const rawSearch = typeof req.query.search === "string" ? req.query.search.trim() : "";
+
+      const where: Prisma.MerchantWhereInput = {};
+
+      if (!rawStatus || rawStatus === "PENDING_GROUP") {
+        where.status = {
+          in: [MerchantStatus.PENDING, MerchantStatus.REVISION, MerchantStatus.ON_HOLD],
+        };
+      } else if (rawStatus !== "ALL") {
+        const validStatuses = Object.values(MerchantStatus) as string[];
+        if (!validStatuses.includes(rawStatus)) {
+          return res.status(400).json({ error: true, message: "Geçersiz işletme durum filtresi." });
+        }
+        where.status = rawStatus as MerchantStatus;
+      }
+
+      if (rawSearch) {
+        where.OR = [
+          { businessName: { contains: rawSearch, mode: "insensitive" } },
+          { email: { contains: rawSearch, mode: "insensitive" } },
+          { ownerFirstName: { contains: rawSearch, mode: "insensitive" } },
+          { ownerLastName: { contains: rawSearch, mode: "insensitive" } },
+        ];
+      }
+
+      const merchants = await prisma.merchant.findMany({
+        where,
+        include: {
+          shop: {
+            select: {
+              id: true,
+              name: true,
+              isActive: true,
+              type: true,
+            },
           },
         },
         orderBy: {
@@ -21,8 +54,9 @@ export class SuperAdminController {
         },
       });
 
-      return res.status(200).json({ error: false, data: pendingMerchants });
-    } catch (error: any) {
+      const sanitized = merchants.map(({ passwordHash: _, ...merchantPublic }) => merchantPublic);
+      return res.status(200).json({ error: false, data: sanitized });
+    } catch (error: unknown) {
       console.error("[SuperAdminController.getPendingMerchants] Error:", error);
       return res.status(500).json({ error: true, message: "Sunucu hatası oluştu." });
     }

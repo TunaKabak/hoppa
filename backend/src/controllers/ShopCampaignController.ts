@@ -1,9 +1,49 @@
 import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
+import { realtimeEventService } from "../services/RealtimeEventService";
 
 const prisma = new PrismaClient();
 
 export class ShopCampaignController {
+  /**
+   * GET /api/admin/campaigns
+   * Süper Admin için kampanya/slider onay kuyruğunu ve mevcut kampanyaları listeler.
+   */
+  async getAdminCampaigns(req: Request, res: Response) {
+    try {
+      const rawStatus = typeof req.query.status === "string" ? req.query.status.trim().toUpperCase() : "";
+      const where: Prisma.CampaignWhereInput = {};
+
+      if (rawStatus && rawStatus !== "ALL") {
+        const mappedStatus = rawStatus === "PENDING" ? "PENDING_APPROVAL" : rawStatus;
+        if (!["PENDING_APPROVAL", "APPROVED", "REJECTED"].includes(mappedStatus)) {
+          return res.status(400).json({ error: true, message: "Geçersiz kampanya durum filtresi." });
+        }
+        where.status = mappedStatus;
+      }
+
+      const campaigns = await prisma.campaign.findMany({
+        where,
+        include: {
+          shop: {
+            select: {
+              id: true,
+              name: true,
+              type: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      return res.status(200).json({ error: false, data: campaigns });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Kampanyalar getirilemedi.";
+      console.error("[ShopCampaignController.getAdminCampaigns] Error:", error);
+      return res.status(500).json({ error: true, message });
+    }
+  }
+
   async createCampaign(req: Request, res: Response) {
     try {
       const merchantId = req.user?.id;
@@ -40,6 +80,20 @@ export class ShopCampaignController {
           targetProducts: Array.isArray(targetProducts) ? targetProducts : []
         }
       });
+
+      try {
+        realtimeEventService.publishToAdmin("ADMIN_ALERT", {
+          alertType: "CAMPAIGN_SUBMITTED",
+          campaignId: campaign.id,
+          shopId: shop.id,
+          shopName: shop.name,
+          title: campaign.title,
+          targetArea: campaign.targetArea,
+          status: campaign.status,
+        });
+      } catch (sseError) {
+        console.error("[ShopCampaignController.createCampaign] SSE ADMIN_ALERT yayın hatası:", sseError);
+      }
 
       return res.status(201).json({ error: false, data: campaign });
     } catch (error: any) {

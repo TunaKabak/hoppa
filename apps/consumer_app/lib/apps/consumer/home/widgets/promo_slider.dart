@@ -104,11 +104,6 @@ class _PromoSliderState extends State<PromoSlider> {
     );
   }
 
-  Color _getFallbackColor(int index) {
-    if (widget.campaigns.isEmpty) return Colors.green;
-    return _fallbackColors[index % _fallbackColors.length];
-  }
-
   Widget _buildPromoCard(Campaign campaign, int index) {
     final fallbackColor = _fallbackColors[index % _fallbackColors.length];
 

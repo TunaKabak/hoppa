@@ -3,6 +3,7 @@ import { PrismaClient, OrderStatus, PaymentMethod, PaymentStatus } from "@prisma
 import { PaymentRoutingService } from "../services/PaymentRoutingService";
 import { CampaignService } from "../services/CampaignService";
 import { WalletService } from "../services/WalletService";
+import { realtimeEventService } from "../services/RealtimeEventService";
 
 const prisma = new PrismaClient();
 const campaignService = new CampaignService();
@@ -263,6 +264,17 @@ export class OrderController {
         }
       }
 
+      const forwardedProto = (req.headers["x-forwarded-proto"] as string | undefined)
+        ?.split(",")[0]
+        ?.trim();
+      const resolvedProtocol = forwardedProto || req.protocol;
+      const requestBaseUrl = (
+        process.env.PUBLIC_BASE_URL ||
+        `${resolvedProtocol}://${req.get("host") || `localhost:${process.env.PORT || 3000}`}`
+      )
+        .replace(/^["']|["']$/g, "")
+        .replace(/\/+$/, "");
+
       // 6. Prisma `$transaction` ile sipariş ve kalemleri kaydet
       const transactionResult = await prisma.$transaction(async (tx) => {
         const method = paymentMethod || "CASH_ON_DELIVERY";
@@ -395,7 +407,9 @@ export class OrderController {
           const routeResponse = await PaymentRoutingService.routePayment({
             orderId: createdOrder.id,
             amount: remainingAmount,
-            cardDetails
+            cardDetails,
+            baseUrl: requestBaseUrl,
+            customerIp: req.ip
           });
 
           await tx.paymentTransaction.create({
@@ -406,7 +420,7 @@ export class OrderController {
               exchangeRate: routeResponse.exchangeRate,
               provider: routeResponse.provider,
               routingType: routeResponse.routingType,
-              status: "PENDING",
+              status: routeResponse.status,
               providerTxId: routeResponse.providerTxId
             }
           });
@@ -449,6 +463,26 @@ export class OrderController {
             console.error("Error triggering notification on new order:", err);
           }
         });
+      }
+
+      try {
+        const orderId = fullOrder?.id || transactionResult.createdOrder.id;
+        const newOrderPayload = {
+          orderId,
+          shopId: shop.id,
+          shopName: shop.name,
+          consumerId,
+          status: fullOrder?.status || transactionResult.createdOrder.status,
+          paymentMethod: fullOrder?.paymentMethod || transactionResult.createdOrder.paymentMethod,
+          paymentStatus: fullOrder?.paymentStatus || transactionResult.createdOrder.paymentStatus,
+          totalAmount: Number(fullOrder?.totalAmount ?? transactionResult.createdOrder.totalAmount),
+          deliveryFee: Number(fullOrder?.deliveryFee ?? transactionResult.createdOrder.deliveryFee),
+          createdAt: (fullOrder?.createdAt || transactionResult.createdOrder.createdAt).toISOString()
+        };
+        realtimeEventService.publishToShop(shop.id, "NEW_ORDER", newOrderPayload);
+        realtimeEventService.publishToUser(consumerId, "NEW_ORDER", newOrderPayload);
+      } catch (sseError) {
+        console.error("[OrderController.createOrder] SSE NEW_ORDER yayın hatası:", sseError);
       }
 
       return res.status(201).json({
@@ -655,7 +689,7 @@ export class OrderController {
         orders: {
           where: {
             status: {
-              in: ["PREPARING", "ON_THE_WAY"]
+              in: ["PREPARING", "READY_FOR_PICKUP", "ON_THE_WAY"]
             }
           }
         }
@@ -867,6 +901,21 @@ export class OrderController {
         }
       });
 
+      try {
+        const statusPayload = {
+          orderId: updatedOrder.id,
+          shopId: updatedOrder.shopId,
+          consumerId: updatedOrder.consumerId,
+          status: updatedOrder.status,
+          paymentStatus: updatedOrder.paymentStatus,
+          courierId: updatedOrder.courierId ?? null
+        };
+        realtimeEventService.publishToShop(updatedOrder.shopId, "ORDER_STATUS_UPDATED", statusPayload);
+        realtimeEventService.publishToUser(updatedOrder.consumerId, "ORDER_STATUS_UPDATED", statusPayload);
+      } catch (sseError) {
+        console.error("[OrderController.updateOrderStatus] SSE ORDER_STATUS_UPDATED yayın hatası:", sseError);
+      }
+
       return res.status(200).json({ error: false, data: updatedOrder });
     } catch (error: any) {
       return res.status(500).json({ error: true, message: error.message });
@@ -977,6 +1026,22 @@ export class OrderController {
           console.error("Error triggering notification on cancel:", err);
         }
       });
+
+      try {
+        const cancelPayload = {
+          orderId: updatedOrder.id,
+          shopId: updatedOrder.shopId,
+          consumerId: updatedOrder.consumerId,
+          status: updatedOrder.status,
+          paymentStatus: updatedOrder.paymentStatus,
+          cancelReason: updatedOrder.cancelReason,
+          cancelledBy: updatedOrder.cancelledBy
+        };
+        realtimeEventService.publishToShop(updatedOrder.shopId, "ORDER_CANCELLED", cancelPayload);
+        realtimeEventService.publishToUser(updatedOrder.consumerId, "ORDER_CANCELLED", cancelPayload);
+      } catch (sseError) {
+        console.error("[OrderController.cancelOrder] SSE ORDER_CANCELLED yayın hatası:", sseError);
+      }
 
       return res.status(200).json({ error: false, data: updatedOrder });
     } catch (error: any) {

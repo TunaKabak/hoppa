@@ -16,8 +16,19 @@ router.patch("/location", authMiddleware, (req, res) => courierController.update
 router.patch("/toggle-duty", authMiddleware, (req, res) => courierController.toggleDuty(req, res));
 router.put("/toggle-duty", authMiddleware, (req, res) => courierController.toggleDuty(req, res));
 
+// Kurye profili ve girişli başvuru API'si
+router.get("/me", authMiddleware, (req, res) => courierController.getMyProfile(req, res));
+router.post("/me/apply", authMiddleware, (req, res) => courierController.applyAuthenticated(req, res));
+
+// Kurye tamamlanan sipariş geçmişi (dinamik :id rotalarından önce)
+router.get("/orders/history", authMiddleware, (req, res) => courierController.getOrderHistory(req, res));
+
 // Kuryeye atanmış aktif siparişleri getiren API
 router.get("/orders", authMiddleware, (req, res) => courierController.getAssignedOrders(req, res));
+
+// Kurye mağazadan teslim alma API'si (hem PATCH hem de PUT desteklenir)
+router.patch("/orders/:id/pickup", authMiddleware, (req, res) => courierController.pickupOrder(req, res));
+router.put("/orders/:id/pickup", authMiddleware, (req, res) => courierController.pickupOrder(req, res));
 
 // Kurye sipariş teslim onay API'si (hem PATCH hem de PUT desteklenir)
 router.patch("/orders/:id/deliver", authMiddleware, (req, res) => courierController.deliverOrder(req, res));

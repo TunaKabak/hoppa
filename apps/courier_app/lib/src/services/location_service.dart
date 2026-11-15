@@ -3,10 +3,22 @@ import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:core_network/core_network.dart';
 
+class LocationPermissionException implements Exception {
+  final String message;
+
+  const LocationPermissionException(this.message);
+
+  @override
+  String toString() => message;
+}
+
 class CourierLocationEngine {
   final ApiClient _apiClient;
   StreamSubscription<Position>? _positionStreamSubscription;
   bool _isTracking = false;
+  final ValueNotifier<Position?> latestPosition = ValueNotifier<Position?>(
+    null,
+  );
 
   CourierLocationEngine(this._apiClient);
 
@@ -16,44 +28,82 @@ class CourierLocationEngine {
   Future<void> startTracking() async {
     if (_isTracking) return;
 
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      throw const LocationPermissionException(
+        'Konum servisi (GPS) kapalı. Lütfen cihaz konumunu açın.',
+      );
+    }
+
     // 1. GPS İzinlerini Kontrol Et
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        debugPrint("Location permission denied");
-        return;
+        debugPrint('Location permission denied');
+        throw const LocationPermissionException(
+          'Konum izni reddedildi. Canlı takip için izin vermeniz gerekir.',
+        );
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
-      debugPrint("Location permission denied forever");
-      return;
+      debugPrint('Location permission denied forever');
+      throw const LocationPermissionException(
+        'Konum izni kalıcı olarak engellendi. Ayarlardan konum izni verin.',
+      );
     }
 
+    await _positionStreamSubscription?.cancel();
     _isTracking = true;
 
-    // 2. Saniyede bir veya 10 metrede bir konum dinleyicisini kur
-    _positionStreamSubscription = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.bestForNavigation,
-        distanceFilter: 10, // En az 10 metre hareket edince tetiklenir
-      ),
-    ).listen(
-      (Position position) {
-        _streamLocationToBackend(position);
-      },
-      onError: (error) {
-        debugPrint("🚨 GPS Stream Error: $error");
-      },
-    );
+    try {
+      final current = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 6),
+      );
+      if (!_isTracking) return;
+      latestPosition.value = current;
+      unawaited(_streamLocationToBackend(current));
+    } catch (e) {
+      debugPrint('⚠️ Anlık ilk konum alınamadı (akış bekleniyor): $e');
+    }
+
+    if (!_isTracking) return;
+
+    // 2. En az 10 metre hareket edildiğinde konum dinleyicisini tetikle
+    _positionStreamSubscription =
+        Geolocator.getPositionStream(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.bestForNavigation,
+            distanceFilter: 10,
+          ),
+        ).listen(
+          (Position position) {
+            latestPosition.value = position;
+            unawaited(_streamLocationToBackend(position));
+          },
+          onError: (Object error) {
+            debugPrint('🚨 GPS Stream Error: $error');
+          },
+        );
   }
 
   /// Konum Takip Motorunu Durdurur (Nöbet Kapanınca)
   Future<void> stopTracking() async {
-    await _positionStreamSubscription?.cancel();
-    _positionStreamSubscription = null;
     _isTracking = false;
+    try {
+      await _positionStreamSubscription?.cancel();
+    } catch (e) {
+      debugPrint('🚨 Konum dinleyicisi kapatılırken hata: $e');
+    } finally {
+      _positionStreamSubscription = null;
+    }
+  }
+
+  void dispose() {
+    unawaited(stopTracking());
+    latestPosition.dispose();
   }
 
   /// API Üzerinden Konumu Backend'e Gönderir
@@ -64,12 +114,12 @@ class CourierLocationEngine {
         body: {
           'latitude': pos.latitude,
           'longitude': pos.longitude,
-          'bearing': pos.heading, // Hareket yönü açısı θ
+          'bearing': pos.heading,
         },
         requiresAuth: true,
       );
     } catch (e) {
-      debugPrint("🚨 Konum akıtma hatası: $e");
+      debugPrint('🚨 Konum akıtma hatası: $e');
     }
   }
 }

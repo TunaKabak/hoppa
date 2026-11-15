@@ -15,13 +15,19 @@ pending_tasks: Dict[str, Dict[str, Any]] = {}
 def detect_agent_role(text: str) -> str:
     """Determine responsible agent role based on prompt keywords."""
     lowered = text.lower()
-    if any(k in lowered for k in ["flutter", "dart", "consumer", "mobil", "ekran", "widget", "sayfa", "ui"]):
+    if any(k in lowered for k in ["telegram", "bridge", "bot", "ci/cd", "workflow", "auto-merge", "deploy", "render", "vercel", "r2"]):
+        return "🤖 DevOps & Bridge Agent (CI/CD & Remote Bridge)"
+    elif any(k in lowered for k in ["kurye", "courier", "rota", "fleet", "batching", "matching", "poligon", "service-zone", "hizmet alanı", "konum takibi"]):
+        return "🛵 Logistics & Fleet Agent (Kurye & Geofencing)"
+    elif any(k in lowered for k in ["web", "nextjs", "next.js", "react", "tsx", "tailwind", "leaflet", "portal", "hoppaselect"]):
+        return "🌐 Web Agent (Next.js / React Portal)"
+    elif any(k in lowered for k in ["flutter", "dart", "consumer", "mobil", "riverpod", "ekran", "widget", "sayfa", "ui"]):
         return "🎨 Frontend Agent (Flutter / Dart)"
     elif any(k in lowered for k in ["backend", "api", "controller", "route", "servis", "express", "ts", "node"]):
         return "⚙️ Backend Agent (Node.js / TypeScript)"
     elif any(k in lowered for k in ["prisma", "veritabanı", "database", "tablo", "şema", "sql", "migration"]):
         return "🗄️ Database & Infra Agent (Prisma / DB)"
-    elif any(k in lowered for k in ["test", "analyze", "hata", "ci/cd", "log", "güvenlik", "lint"]):
+    elif any(k in lowered for k in ["test", "analyze", "hata", "log", "güvenlik", "lint"]):
         return "🛡️ QA & Security Agent (Test & Kalite)"
     elif any(k in lowered for k in ["tasarım", "renk", "gradient", "logo", "ikon", "header", "spacing"]):
         return "🎨 Designer Agent (UI/UX Tasarım)"
@@ -36,12 +42,13 @@ def find_relevant_files(text: str) -> List[str]:
 
     # Domain mappings aligned with actual Hoppa structure
     mappings = {
-        "sepet": ["apps/consumer_app/lib/apps/consumer/pages/checkout_page.dart", "backend/src/controllers/CartController.ts"],
-        "sipariş": ["apps/consumer_app/lib/apps/consumer/pages/order_tracking_page.dart", "backend/src/controllers/OrderController.ts", "apps/web_app/src/components/merchant/orders/"],
+        "sepet": ["apps/consumer_app/lib/apps/consumer/cart/cart_page.dart", "apps/consumer_app/lib/apps/consumer/checkout/checkout_page.dart"],
+        "sipariş": ["apps/consumer_app/lib/apps/consumer/orders/order_tracking_page.dart", "backend/src/controllers/OrderController.ts", "apps/web_app/src/pages/merchant/orders/index.tsx"],
         "satıcı": ["apps/merchant_app/lib/apps/merchant/", "apps/web_app/src/components/merchant/", "backend/src/controllers/ShopController.ts"],
-        "kategori": ["backend/src/controllers/BusinessCategoryController.ts", "apps/consumer_app/lib/apps/consumer/pages/selection_category_page.dart"],
-        "ödeme": ["apps/consumer_app/lib/apps/consumer/pages/payment_page.dart", "backend/src/controllers/PaymentController.ts"],
-        "kurye": ["apps/courier_app/lib/apps/courier/", "backend/src/controllers/CourierController.ts"],
+        "kategori": ["backend/src/controllers/BusinessCategoryController.ts", "apps/consumer_app/lib/apps/consumer/business/selection_category_page.dart"],
+        "ödeme": ["apps/consumer_app/lib/apps/consumer/checkout/payment_page.dart", "backend/src/services/PaymentRoutingService.ts", "backend/src/controllers/WalletController.ts"],
+        "kurye": ["apps/courier_app/lib/src/screens/dashboard/courier_dashboard.dart", "backend/src/controllers/CourierController.ts", "backend/src/controllers/FleetAIController.ts"],
+        "telegram": ["agent-remote-bridge/main.py", "agent-remote-bridge/task_analyzer.py", "agent-remote-bridge/agent_runner.py"],
         "flutter": ["apps/consumer_app/", "packages/core_shared/", "pubspec.yaml"],
         "backend": ["backend/src/routes/", "backend/src/controllers/"],
         "prisma": ["backend/prisma/schema.prisma"],

@@ -22,6 +22,8 @@ Backend değişiklikleri için terminalde: cd backend && npx tsc --noEmit
 
 Frontend değişiklikleri için terminalde: cd apps/merchant_app && flutter analyze (veya ilgili uygulama dizini)
 
+Web Portal (Next.js) değişiklikleri için terminalde: cd apps/web_app && npx tsc --noEmit && npm run build
+
 Prisma şema değişiklikleri için: cd backend && npx prisma db push && npx prisma generate
 
 3. Kod Silme ve Sessiz Hatalar (No Silent Failures)

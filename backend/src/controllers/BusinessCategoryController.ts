@@ -4,13 +4,44 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 function getShopTypeForCategory(catName: string): string | null {
-  const norm = catName.toLowerCase();
-  if (norm.includes("restoran") || norm.includes("restaurant")) return "RESTAURANT";
-  if (norm.includes("market")) return "MARKET";
-  if (norm.includes("su")) return "WATER";
-  if (norm.includes("çiçek") || norm.includes("flower")) return "FLOWER";
-  if (norm.includes("manav") || norm.includes("greengrocer")) return "GREENGROCER";
-  if (norm.includes("kasap") || norm.includes("butcher")) return "BUTCHER";
+  const norm = catName.toLowerCase().trim();
+  if (
+    norm.includes("restoran") || 
+    norm.includes("restaurant") || 
+    norm.includes("yemek") || 
+    norm.includes("food") ||
+    norm.includes("cafe") ||
+    norm.includes("kafe") ||
+    norm.includes("burger") ||
+    norm.includes("pizza") ||
+    norm.includes("döner") ||
+    norm.includes("doner") ||
+    norm.includes("tatlı") ||
+    norm.includes("tatli")
+  ) {
+    return "RESTAURANT";
+  }
+  if (
+    norm.includes("market") || 
+    norm.includes("bakkal") || 
+    norm.includes("süpermarket") || 
+    norm.includes("supermarket") ||
+    norm.includes("tekel")
+  ) {
+    return "MARKET";
+  }
+  if (norm.includes("su") || norm.includes("water") || norm.includes("damacana")) {
+    return "WATER";
+  }
+  if (norm.includes("çiçek") || norm.includes("cicek") || norm.includes("flower") || norm.includes("florist")) {
+    return "FLOWER";
+  }
+  if (norm.includes("manav") || norm.includes("greengrocer") || norm.includes("meyve") || norm.includes("sebze")) {
+    return "GREENGROCER";
+  }
+  if (norm.includes("kasap") || norm.includes("butcher") || norm.includes("et") || norm.includes("şarküteri") || norm.includes("sarkuteri")) {
+    return "BUTCHER";
+  }
   return null;
 }
 
@@ -26,17 +57,38 @@ async function enrichCategoryWithMetrics(cat: any, req?: Request) {
   }
 
   if (!shopType) {
+    // If no exact system type is mapped, count shops matching this custom category name via valid schema fields
+    const shops = await prisma.shop.findMany({
+      where: {
+        isActive: true,
+        products: {
+          some: {
+            isActive: true
+          }
+        },
+        merchant: {
+          status: "ACTIVE"
+        },
+        OR: [
+          { name: { contains: cat.name, mode: "insensitive" } },
+          { description: { contains: cat.name, mode: "insensitive" } },
+          { merchant: { subType: { contains: cat.name, mode: "insensitive" } } }
+        ]
+      },
+      select: { id: true, createdAt: true }
+    });
+    const shopCount = shops.length;
     return {
       ...cat,
       imageUrl,
-      shopCount: 0,
-      badge: "yakında",
-      isComingSoon: true
+      shopCount,
+      badge: cat.badge || (shopCount === 0 ? "yakında" : null),
+      isComingSoon: shopCount === 0
     };
   }
 
   const shops = await prisma.shop.findMany({
-    where: { 
+    where: {
       type: shopType as any,
       isActive: true,
       products: {

@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
-import { PrismaClient, ReviewStatus } from '@prisma/client';
+import { Prisma, PrismaClient, ReviewStatus } from '@prisma/client';
 import { WalletService } from '../services/WalletService';
 import { SystemConfigService } from '../services/SystemConfigService';
+import { realtimeEventService } from '../services/RealtimeEventService';
 
 const prisma = new PrismaClient();
 
@@ -96,6 +97,20 @@ export class ReviewController {
 
         return [review];
       });
+
+      try {
+        realtimeEventService.publishToAdmin("ADMIN_ALERT", {
+          alertType: "REVIEW_SUBMITTED",
+          reviewId: newReview.id,
+          orderId: newReview.orderId,
+          shopId: newReview.shopId,
+          userId: newReview.userId,
+          rating: newReview.rating,
+          status: newReview.status,
+        });
+      } catch (sseError) {
+        console.error("[ReviewController.createReview] SSE ADMIN_ALERT yayın hatası:", sseError);
+      }
 
       res.status(201).json({ error: false, data: newReview, message: "Değerlendirmeniz başarıyla kaydedildi!" });
     } catch (error) {
@@ -236,6 +251,119 @@ export class ReviewController {
     } catch (error: any) {
       console.error("Yorum reddetme hatası:", error);
       res.status(500).json({ error: true, message: error.message || "İşlem sırasında bir hata oluştu." });
+    }
+  }
+
+  // 6. Tüm Değerlendirmeleri Listele (Süper Admin Moderasyon)
+  public static async getAdminReviews(req: Request, res: Response): Promise<void> {
+    try {
+      const rawStatus = typeof req.query.status === 'string' ? req.query.status.trim().toUpperCase() : 'ALL';
+      const where: Prisma.ReviewWhereInput = {};
+
+      if (rawStatus && rawStatus !== 'ALL') {
+        const validStatuses = Object.values(ReviewStatus) as string[];
+        if (!validStatuses.includes(rawStatus)) {
+          res.status(400).json({ error: true, message: "Geçersiz yorum durum filtresi." });
+          return;
+        }
+        where.status = rawStatus as ReviewStatus;
+      }
+
+      const reviews = await prisma.review.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              surname: true,
+              phone: true,
+            },
+          },
+          shop: {
+            select: {
+              id: true,
+              name: true,
+              type: true,
+            },
+          },
+          order: {
+            select: {
+              id: true,
+              totalAmount: true,
+              createdAt: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      res.status(200).json({ error: false, data: reviews });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Yorumlar getirilirken hata oluştu.";
+      console.error("[ReviewController.getAdminReviews] Hata:", error);
+      res.status(500).json({ error: true, message });
+    }
+  }
+
+  // 7. Satıcı Portalı: Kendi Dükkanının Yorumlarını ve Puan Özetini Getir (x-business-id uyumlu)
+  public static async getMerchantShopReviews(req: Request, res: Response): Promise<void> {
+    try {
+      const merchantId = req.user?.id;
+      if (!merchantId) {
+        res.status(401).json({ error: true, message: "Kullanıcı yetkilendirmesi başarısız." });
+        return;
+      }
+
+      const shop = await prisma.shop.findUnique({
+        where: { merchantId },
+        select: {
+          id: true,
+          name: true,
+          averageRating: true,
+          reviewCount: true,
+          avgServiceRating: true,
+          avgSpeedRating: true,
+          avgTasteRating: true,
+        },
+      });
+
+      if (!shop) {
+        res.status(404).json({ error: true, message: "Mağaza bulunamadı." });
+        return;
+      }
+
+      const reviews = await prisma.review.findMany({
+        where: { shopId: shop.id },
+        include: {
+          user: {
+            select: {
+              name: true,
+              surname: true,
+            },
+          },
+          order: {
+            select: {
+              id: true,
+              totalAmount: true,
+              createdAt: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      res.status(200).json({
+        error: false,
+        data: {
+          shop,
+          reviews,
+        },
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Mağaza yorumları getirilemedi.";
+      console.error("[ReviewController.getMerchantShopReviews] Hata:", error);
+      res.status(500).json({ error: true, message });
     }
   }
 }
