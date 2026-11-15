@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart' as legacy_provider;
 import 'package:core_auth/core_auth.dart';
-import 'package:core_network/core_network.dart';
 import 'package:consumer_app/apps/consumer/address/delivery_provider.dart';
 import 'package:consumer_app/apps/consumer/repositories/address_repository.dart';
 import 'package:consumer_app/apps/consumer/checkout/checkout_page.dart';

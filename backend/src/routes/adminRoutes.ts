@@ -41,10 +41,12 @@ router.put("/business-categories/:id", (req, res) => businessCategoryController.
 router.delete("/business-categories/:id", (req, res) => businessCategoryController.adminDeleteBusinessCategory(req, res));
 
 // Admin -> Review Management
+router.get("/reviews", (req, res) => ReviewController.getAdminReviews(req, res));
 router.put("/reviews/:reviewId/approve", (req, res) => ReviewController.approveReview(req, res));
 router.put("/reviews/:reviewId/reject", (req, res) => ReviewController.rejectReview(req, res));
 
 // Admin -> Campaign Management
+router.get("/campaigns", (req, res) => shopCampaignController.getAdminCampaigns(req, res));
 router.put("/campaigns/:campaignId/approve", (req, res) => shopCampaignController.approveCampaign(req, res));
 
 // Admin -> Fleet AI Management

@@ -212,7 +212,7 @@ class AddressListPage extends ConsumerWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
             side: BorderSide(
-              color: isSelected ? highlightColor : (theme.dividerColor ?? Colors.grey.shade200),
+              color: isSelected ? highlightColor : theme.dividerColor,
               width: isSelected ? 2.0 : 1.0,
             ),
           ),

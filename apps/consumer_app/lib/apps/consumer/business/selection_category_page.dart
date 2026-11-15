@@ -619,11 +619,6 @@ class SelectionCategoryPage extends rp.ConsumerWidget {
     );
   }
 
-  bool _isValidImageUrl(String? url) {
-    if (url == null || url.trim().isEmpty) return false;
-    return url.startsWith('http://') || url.startsWith('https://');
-  }
-
   Widget _buildHomeFeaturedCard(
     BuildContext context,
     rp.WidgetRef ref,

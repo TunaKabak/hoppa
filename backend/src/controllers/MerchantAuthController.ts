@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import { prisma } from "../config/db";
 import { JwtUtils } from "../utils/JwtUtils";
 import { RefreshTokenService } from "../services/RefreshTokenService";
+import { realtimeEventService } from "../services/RealtimeEventService";
 
 export class MerchantAuthController {
   /**
@@ -133,6 +134,19 @@ export class MerchantAuthController {
       });
 
       const { passwordHash: _, ...merchantPublic } = merchant;
+
+      try {
+        realtimeEventService.publishToAdmin("ADMIN_ALERT", {
+          alertType: "MERCHANT_REGISTERED",
+          merchantId: merchant.id,
+          businessName: merchant.businessName,
+          email: merchant.email,
+          merchantType: merchant.merchantType,
+          status: merchant.status,
+        });
+      } catch (sseError) {
+        console.error("[MerchantAuthController.register] SSE ADMIN_ALERT yayın hatası:", sseError);
+      }
 
       res.status(201).json({
         error: false,

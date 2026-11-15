@@ -6,6 +6,7 @@ import { OrderController } from "../controllers/OrderController";
 import { ShopCampaignController } from "../controllers/ShopCampaignController";
 import { MerchantAIController } from "../controllers/MerchantAIController";
 import { MediaController } from "../controllers/media.controller";
+import { ReviewController } from "../controllers/ReviewController";
 
 import { prisma } from "../config/db";
 
@@ -90,6 +91,9 @@ router.get("/dashboard/stats", (req, res) => shopController.getDashboardStats(re
 router.get("/promotions", (req, res) => shopController.getPromotions(req, res));
 router.post("/promotions", (req, res) => shopController.createPromotion(req, res));
 router.post("/promotions/cancel", (req, res) => shopController.cancelPromotion(req, res));
+
+// Müşteri Değerlendirmeleri & Yorumlar
+router.get("/reviews", (req, res) => ReviewController.getMerchantShopReviews(req, res));
 
 // Kampanya Yönetimi
 router.post("/campaigns", (req, res) => shopCampaignController.createCampaign(req, res));

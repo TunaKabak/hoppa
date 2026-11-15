@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
 import { prisma } from "../config/db";
+import { notificationService } from "../services/NotificationService";
+import { realtimeEventService } from "../services/RealtimeEventService";
 
 export class CourierController {
   
@@ -41,6 +43,39 @@ export class CourierController {
         }
       });
 
+      try {
+        const activeOrders = await prisma.order.findMany({
+          where: {
+            courierId: courier.id,
+            status: { in: ["PREPARING", "READY_FOR_PICKUP", "ON_THE_WAY"] },
+          },
+          select: { id: true, shopId: true, consumerId: true },
+        });
+
+        const locationPayload = {
+          courierId: courier.id,
+          courierName: courier.name,
+          latitude: location.latitude,
+          longitude: location.longitude,
+          bearing: location.bearing,
+          orderIds: activeOrders.map((o) => o.id),
+          updatedAt: location.updatedAt.toISOString(),
+        };
+
+        const uniqueShopIds = Array.from(new Set(activeOrders.map((o) => o.shopId)));
+        const uniqueConsumerIds = Array.from(new Set(activeOrders.map((o) => o.consumerId)));
+
+        for (const shopId of uniqueShopIds) {
+          realtimeEventService.publishToShop(shopId, "COURIER_LOCATION_UPDATED", locationPayload);
+        }
+        for (const consumerId of uniqueConsumerIds) {
+          realtimeEventService.publishToUser(consumerId, "COURIER_LOCATION_UPDATED", locationPayload);
+        }
+        realtimeEventService.publishToAdmin("COURIER_LOCATION_UPDATED", locationPayload);
+      } catch (sseError) {
+        console.error("[CourierController.updateLocation] SSE COURIER_LOCATION_UPDATED yayın hatası:", sseError);
+      }
+
       res.status(200).json({ error: false, data: location });
     } catch (error: any) {
       console.error("Kurye konum güncelleme hatası:", error);
@@ -75,6 +110,220 @@ export class CourierController {
    * Kuryeye Atanmış Aktif Siparişleri Getir
    * GET /api/couriers/orders
    */
+  /**
+   * Kurye profilini, onay durumunu (status), nöbet durumunu (isActive) ve günlük istatistiğini döndürür.
+   */
+  public async getMyProfile(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ error: true, message: "Yetkisiz erişim." });
+        return;
+      }
+
+      const [user, courier] = await Promise.all([
+        prisma.user.findUnique({
+          where: { id: userId },
+          select: { id: true, name: true, surname: true, phone: true },
+        }),
+        prisma.courier.findUnique({
+          where: { userId },
+          include: {
+            shops: {
+              include: {
+                shop: {
+                  select: {
+                    id: true,
+                    name: true,
+                    type: true,
+                    address: true,
+                    phone: true,
+                  },
+                },
+              },
+            },
+          },
+        }),
+      ]);
+
+      if (!courier) {
+        res.status(200).json({
+          error: false,
+          data: {
+            hasProfile: false,
+            status: "NOT_APPLIED",
+            isActive: false,
+            todayDeliveriesCount: 0,
+            totalDeliveriesCount: 0,
+            shops: [],
+            user,
+          },
+        });
+        return;
+      }
+
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+
+      const [todayDeliveriesCount, totalDeliveriesCount] = await Promise.all([
+        prisma.order.count({
+          where: {
+            courierId: courier.id,
+            status: "DELIVERED",
+            updatedAt: { gte: todayStart },
+          },
+        }),
+        prisma.order.count({
+          where: {
+            courierId: courier.id,
+            status: "DELIVERED",
+          },
+        }),
+      ]);
+
+      res.status(200).json({
+        error: false,
+        data: {
+          hasProfile: true,
+          id: courier.id,
+          userId: courier.userId,
+          name: courier.name,
+          phoneNumber: courier.phoneNumber,
+          vehicleType: courier.vehicleType,
+          vehiclePlate: courier.vehiclePlate,
+          status: courier.status,
+          isActive: courier.isActive,
+          maxServiceDistanceKm: courier.maxServiceDistanceKm,
+          shops: courier.shops,
+          todayDeliveriesCount,
+          totalDeliveriesCount,
+          user,
+        },
+      });
+    } catch (error) {
+      console.error("[CourierController.getMyProfile] Hata:", error);
+      res.status(500).json({ error: true, message: "Kurye profili alınırken hata oluştu." });
+    }
+  }
+
+  /**
+   * Giriş yapmış kullanıcının kurye başvurusu yapmasını (veya reddedildiyse yeniden başvurmasını) sağlar.
+   */
+  public async applyAuthenticated(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ error: true, message: "Yetkisiz erişim." });
+        return;
+      }
+
+      const { name, vehicleType, vehiclePlate, maxServiceDistanceKm } = req.body as {
+        name?: string;
+        vehicleType?: string;
+        vehiclePlate?: string;
+        maxServiceDistanceKm?: number;
+      };
+
+      const validVehicles = ["MOTORCYCLE", "CAR", "BICYCLE", "FOOT"] as const;
+      if (!vehicleType || !validVehicles.includes(vehicleType as (typeof validVehicles)[number])) {
+        res.status(400).json({ error: true, message: "Geçerli bir araç tipi seçmelisiniz (MOTORCYCLE, CAR, BICYCLE, FOOT)." });
+        return;
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, name: true, surname: true, phone: true },
+      });
+
+      if (!user) {
+        res.status(404).json({ error: true, message: "Kullanıcı bulunamadı." });
+        return;
+      }
+
+      const resolvedName =
+        (name && name.trim()) ||
+        `${user.name || ""} ${user.surname || ""}`.trim() ||
+        user.phone;
+      const resolvedPlate = vehiclePlate ? vehiclePlate.trim().toUpperCase() : null;
+      const resolvedDistance =
+        typeof maxServiceDistanceKm === "number" && maxServiceDistanceKm > 0
+          ? maxServiceDistanceKm
+          : 15;
+
+      const existing = await prisma.courier.findUnique({ where: { userId } });
+      if (existing) {
+        if (existing.status !== "REJECTED") {
+          res.status(409).json({
+            error: true,
+            message: "Zaten aktif veya incelemede olan bir kurye başvurunuz bulunmaktadır.",
+            data: existing,
+          });
+          return;
+        }
+
+        const updated = await prisma.courier.update({
+          where: { id: existing.id },
+          data: {
+            name: resolvedName,
+            phoneNumber: user.phone,
+            vehicleType: vehicleType as (typeof validVehicles)[number],
+            vehiclePlate: resolvedPlate,
+            maxServiceDistanceKm: resolvedDistance,
+            status: "APPLIED",
+            isActive: false,
+          },
+        });
+
+        try {
+          realtimeEventService.publishToAdmin("ADMIN_ALERT", {
+            alertType: "COURIER_APPLIED",
+            courierId: updated.id,
+            name: updated.name,
+            phoneNumber: updated.phoneNumber,
+            vehicleType: updated.vehicleType,
+            status: updated.status,
+          });
+        } catch (sseError) {
+          console.error("[CourierController.applyAuthenticated] SSE ADMIN_ALERT yayın hatası:", sseError);
+        }
+
+        res.status(200).json({ error: false, message: "Kurye başvurunuz yeniden gönderildi.", data: updated });
+        return;
+      }
+
+      const created = await prisma.courier.create({
+        data: {
+          userId,
+          name: resolvedName,
+          phoneNumber: user.phone,
+          vehicleType: vehicleType as (typeof validVehicles)[number],
+          vehiclePlate: resolvedPlate,
+          maxServiceDistanceKm: resolvedDistance,
+          status: "APPLIED",
+          isActive: false,
+        },
+      });
+
+      try {
+        realtimeEventService.publishToAdmin("ADMIN_ALERT", {
+          alertType: "COURIER_APPLIED",
+          courierId: created.id,
+          name: created.name,
+          phoneNumber: created.phoneNumber,
+          vehicleType: created.vehicleType,
+          status: created.status,
+        });
+      } catch (sseError) {
+        console.error("[CourierController.applyAuthenticated] SSE ADMIN_ALERT yayın hatası:", sseError);
+      }
+
+      res.status(201).json({ error: false, message: "Kurye başvurunuz alındı.", data: created });
+    } catch (error) {
+      console.error("[CourierController.applyAuthenticated] Hata:", error);
+      res.status(500).json({ error: true, message: "Kurye başvurusu kaydedilemedi." });
+    }
+  }
+
   public async getAssignedOrders(req: Request, res: Response): Promise<void> {
     try {
       const courierUserId = req.user!.id;
@@ -87,17 +336,27 @@ export class CourierController {
       const activeOrders = await prisma.order.findMany({
         where: {
           courierId: courier.id,
-          status: { in: ["PREPARING", "ON_THE_WAY"] } // Sadece teslimat aşamasındakiler
+          status: { in: ["PREPARING", "READY_FOR_PICKUP", "ON_THE_WAY"] }
         },
         include: {
           shop: true,
+          consumer: {
+            select: {
+              id: true,
+              name: true,
+              surname: true,
+              phone: true,
+            },
+          },
           address: true,
           items: {
             include: {
-              product: true
+              product: true,
+              options: true,
             }
           }
-        }
+        },
+        orderBy: { createdAt: "desc" },
       });
 
       res.status(200).json({ error: false, data: activeOrders });
@@ -145,9 +404,204 @@ export class CourierController {
         }
       });
 
+      try {
+        await notificationService.sendToUser(
+          updatedOrder.consumerId,
+          "Siparişiniz Teslim Edildi! 🎉",
+          "Siparişiniz başarıyla teslim edildi. Afiyet olsun!",
+          { orderId: updatedOrder.id, status: "DELIVERED" }
+        );
+      } catch (notifyError) {
+        console.error("[CourierController.deliverOrder] Push bildirimi gönderilemedi:", notifyError);
+      }
+
+      try {
+        const deliverPayload = {
+          orderId: updatedOrder.id,
+          shopId: updatedOrder.shopId,
+          consumerId: updatedOrder.consumerId,
+          status: updatedOrder.status,
+          paymentStatus: updatedOrder.paymentStatus,
+          courierId: courier.id,
+        };
+        realtimeEventService.publishToShop(updatedOrder.shopId, "ORDER_STATUS_UPDATED", deliverPayload);
+        realtimeEventService.publishToUser(updatedOrder.consumerId, "ORDER_STATUS_UPDATED", deliverPayload);
+      } catch (sseError) {
+        console.error("[CourierController.deliverOrder] SSE ORDER_STATUS_UPDATED yayın hatası:", sseError);
+      }
+
       res.status(200).json({ error: false, message: "Sipariş başarıyla teslim edildi.", data: updatedOrder });
     } catch (error: any) {
       res.status(500).json({ error: true, message: error.message || "Sipariş güncellenemedi." });
+    }
+  }
+
+  /**
+   * Kuryenin siparişi mağazadan teslim alıp yola çıktığını işaretler (ON_THE_WAY).
+   */
+  public async pickupOrder(req: Request, res: Response): Promise<void> {
+    try {
+      const courierUserId = req.user!.id;
+      const orderId = String(req.params.id);
+
+      const courier = await prisma.courier.findUnique({ where: { userId: courierUserId } });
+      if (!courier) {
+        res.status(404).json({ error: true, message: "Kurye profili bulunamadı." });
+        return;
+      }
+
+      if (courier.status !== "APPROVED") {
+        res.status(403).json({ error: true, message: "Kurye hesabınız henüz onaylanmamış." });
+        return;
+      }
+
+      const order = await prisma.order.findUnique({
+        where: { id: orderId },
+        include: { shop: { select: { id: true, name: true } } },
+      });
+
+      if (!order || order.courierId !== courier.id) {
+        res.status(404).json({ error: true, message: "Size atanmış böyle bir sipariş bulunamadı." });
+        return;
+      }
+
+      if (order.status !== "PREPARING" && order.status !== "READY_FOR_PICKUP") {
+        res.status(400).json({
+          error: true,
+          message: `Bu sipariş (${order.status}) teslim alınmaya uygun aşamada değil.`,
+        });
+        return;
+      }
+
+      const updatedOrder = await prisma.order.update({
+        where: { id: orderId },
+        data: { status: "ON_THE_WAY" },
+      });
+
+      try {
+        await notificationService.sendToUser(
+          order.consumerId,
+          "Kurye Yola Çıktı! 🛵",
+          `${order.shop?.name || "Mağaza"} siparişiniz kuryemiz tarafından teslim alındı ve size doğru yola çıktı.`,
+          { orderId: updatedOrder.id, status: "ON_THE_WAY" }
+        );
+      } catch (notifyError) {
+        console.error("[CourierController.pickupOrder] Push bildirimi gönderilemedi:", notifyError);
+      }
+
+      try {
+        const pickupPayload = {
+          orderId: updatedOrder.id,
+          shopId: updatedOrder.shopId,
+          consumerId: updatedOrder.consumerId,
+          status: updatedOrder.status,
+          paymentStatus: updatedOrder.paymentStatus,
+          courierId: courier.id,
+        };
+        realtimeEventService.publishToShop(updatedOrder.shopId, "ORDER_STATUS_UPDATED", pickupPayload);
+        realtimeEventService.publishToUser(updatedOrder.consumerId, "ORDER_STATUS_UPDATED", pickupPayload);
+      } catch (sseError) {
+        console.error("[CourierController.pickupOrder] SSE ORDER_STATUS_UPDATED yayın hatası:", sseError);
+      }
+
+      res.status(200).json({
+        error: false,
+        message: "Sipariş mağazadan teslim alındı ve yola çıkıldı.",
+        data: updatedOrder,
+      });
+    } catch (error) {
+      console.error("[CourierController.pickupOrder] Hata:", error);
+      res.status(500).json({ error: true, message: "Sipariş teslim alma işlemi tamamlanamadı." });
+    }
+  }
+
+  /**
+   * Kuryenin tamamladığı (DELIVERED) sipariş geçmişini ve özet metrikleri döndürür.
+   */
+  public async getOrderHistory(req: Request, res: Response): Promise<void> {
+    try {
+      const courierUserId = req.user!.id;
+      const courier = await prisma.courier.findUnique({ where: { userId: courierUserId } });
+      if (!courier) {
+        res.status(404).json({ error: true, message: "Kurye profili bulunamadı." });
+        return;
+      }
+
+      const page = Math.max(1, Number(req.query.page) || 1);
+      const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
+      const skip = (page - 1) * limit;
+
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+
+      const weekStart = new Date(todayStart);
+      weekStart.setDate(weekStart.getDate() - 7);
+
+      const [orders, totalSummary, todaySummary, weekSummary] = await Promise.all([
+        prisma.order.findMany({
+          where: { courierId: courier.id, status: "DELIVERED" },
+          include: {
+            shop: { select: { id: true, name: true, address: true } },
+            address: true,
+            items: {
+              include: {
+                product: { select: { id: true, name: true } },
+              },
+            },
+          },
+          orderBy: { updatedAt: "desc" },
+          skip,
+          take: limit,
+        }),
+        prisma.order.aggregate({
+          where: { courierId: courier.id, status: "DELIVERED" },
+          _count: { id: true },
+          _sum: { deliveryFee: true, totalAmount: true },
+        }),
+        prisma.order.aggregate({
+          where: {
+            courierId: courier.id,
+            status: "DELIVERED",
+            updatedAt: { gte: todayStart },
+          },
+          _count: { id: true },
+          _sum: { deliveryFee: true },
+        }),
+        prisma.order.aggregate({
+          where: {
+            courierId: courier.id,
+            status: "DELIVERED",
+            updatedAt: { gte: weekStart },
+          },
+          _count: { id: true },
+          _sum: { deliveryFee: true },
+        }),
+      ]);
+
+      const totalCount = totalSummary._count.id;
+      res.status(200).json({
+        error: false,
+        data: {
+          orders,
+          summary: {
+            todayCount: todaySummary._count.id,
+            todayDeliveryFeeTotal: Number(todaySummary._sum.deliveryFee || 0),
+            weekCount: weekSummary._count.id,
+            weekDeliveryFeeTotal: Number(weekSummary._sum.deliveryFee || 0),
+            totalCount,
+            totalDeliveryFeeTotal: Number(totalSummary._sum.deliveryFee || 0),
+          },
+          pagination: {
+            page,
+            limit,
+            totalCount,
+            totalPages: Math.max(1, Math.ceil(totalCount / limit)),
+          },
+        },
+      });
+    } catch (error) {
+      console.error("[CourierController.getOrderHistory] Hata:", error);
+      res.status(500).json({ error: true, message: "Teslimat geçmişi alınırken hata oluştu." });
     }
   }
 
@@ -196,6 +650,19 @@ export class CourierController {
           status: "APPLIED"
         }
       });
+
+      try {
+        realtimeEventService.publishToAdmin("ADMIN_ALERT", {
+          alertType: "COURIER_APPLIED",
+          courierId: courier.id,
+          name: courier.name,
+          phoneNumber: courier.phoneNumber,
+          vehicleType: courier.vehicleType,
+          status: courier.status,
+        });
+      } catch (sseError) {
+        console.error("[CourierController.apply] SSE ADMIN_ALERT yayın hatası:", sseError);
+      }
 
       res.status(201).json({ error: false, message: "Kurye başvurusu başarıyla alındı.", data: courier });
     } catch (error: any) {

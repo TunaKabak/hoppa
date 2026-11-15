@@ -1,17 +1,47 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { 
   Store, Package, ShoppingBag, BarChart3, Settings, LogOut, 
   ChevronRight, ChevronLeft, Power, Menu, X, Sun, Moon, Tag, MapPin,
-  Bell, Shield, PanelLeftClose, PanelLeftOpen, User, ChevronDown
+  Bell, Shield, PanelLeftClose, PanelLeftOpen, User, ChevronDown,
+  Building2, Truck, ShieldCheck, LayoutGrid, Star, Sparkles, AlertTriangle
 } from 'lucide-react';
 import { 
   getMerchantProfile, getMerchantToken, clearMerchantAuth, merchantApiFetch, 
-  getSelectedShopId, setSelectedShopId 
+  getSelectedShopId, setSelectedShopId, MerchantProfile 
 } from '../../utils/merchant-auth';
+import {
+  createMerchantRealtimeClient,
+  MerchantRealtimeClient,
+  RealtimeConnectionState,
+  RealtimeEventEnvelope,
+} from '../../utils/realtime-client';
 import { useMerchantTheme } from '../../context/MerchantThemeContext';
 import HoppaSelect from './HoppaSelect';
+
+export type MerchantNavTab =
+  | 'products'
+  | 'orders'
+  | 'dashboard'
+  | 'campaigns'
+  | 'settings'
+  | 'promotions'
+  | 'reviews'
+  | 'service-zones'
+  | 'admin-merchants'
+  | 'admin-couriers'
+  | 'admin-moderation'
+  | 'admin-categories';
+
+interface NavItemConfig {
+  id: MerchantNavTab;
+  label: string;
+  icon: React.ElementType;
+  href: string;
+  badge?: number;
+  adminOnly?: boolean;
+}
 
 interface MerchantLayoutProps {
   children: React.ReactNode;
@@ -19,8 +49,183 @@ interface MerchantLayoutProps {
   subtitle?: string;
   headerIcon?: React.ElementType;
   headerActions?: React.ReactNode;
-  activeTab?: 'products' | 'orders' | 'dashboard' | 'campaigns' | 'settings' | 'service-zones';
+  activeTab?: MerchantNavTab;
   fullWidth?: boolean;
+}
+
+type RealtimeToastTone = 'emerald' | 'rose' | 'amber' | 'orange';
+
+interface RealtimeToast {
+  id: string;
+  type: RealtimeEventEnvelope['type'];
+  title: string;
+  message: string;
+  tone: RealtimeToastTone;
+  timeLabel: string;
+}
+
+const ORDER_STATUS_LABELS: Record<string, string> = {
+  PENDING: 'Onay Bekliyor',
+  PREPARING: 'Hazırlanıyor',
+  READY_FOR_PICKUP: 'Teslimata Hazır',
+  ON_THE_WAY: 'Kurye Yolda',
+  DELIVERED: 'Teslim Edildi',
+  CANCELLED: 'İptal Edildi',
+};
+
+const TOAST_TONE_STYLES: Record<
+  RealtimeToastTone,
+  {
+    borderLight: string;
+    borderDark: string;
+    iconBgLight: string;
+    iconBgDark: string;
+    Icon: React.ElementType;
+  }
+> = {
+  emerald: {
+    borderLight: 'border-emerald-200',
+    borderDark: 'border-emerald-500/40',
+    iconBgLight: 'bg-emerald-50 text-emerald-600 border-emerald-200',
+    iconBgDark: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+    Icon: ShoppingBag,
+  },
+  rose: {
+    borderLight: 'border-rose-200',
+    borderDark: 'border-rose-500/40',
+    iconBgLight: 'bg-rose-50 text-rose-600 border-rose-200',
+    iconBgDark: 'bg-rose-500/15 text-rose-400 border-rose-500/30',
+    Icon: AlertTriangle,
+  },
+  amber: {
+    borderLight: 'border-amber-200',
+    borderDark: 'border-amber-500/40',
+    iconBgLight: 'bg-amber-50 text-amber-600 border-amber-200',
+    iconBgDark: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+    Icon: Bell,
+  },
+  orange: {
+    borderLight: 'border-orange-200',
+    borderDark: 'border-[#FF6B00]/40',
+    iconBgLight: 'bg-orange-50 text-[#FF6B00] border-orange-200',
+    iconBgDark: 'bg-[#FF6B00]/15 text-[#FF8C00] border-[#FF6B00]/30',
+    Icon: Shield,
+  },
+};
+
+function readPayloadText(payload: Record<string, unknown>, keys: string[]): string | null {
+  for (const key of keys) {
+    const value = payload[key];
+    if (typeof value === 'string' && value.trim().length > 0) {
+      return value.trim();
+    }
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return String(value);
+    }
+  }
+  return null;
+}
+
+function formatOrderRef(payload: Record<string, unknown>): string | null {
+  const rawRef = readPayloadText(payload, ['orderNumber', 'orderCode', 'shortId', 'orderId', 'id']);
+  if (!rawRef) {
+    return null;
+  }
+  const cleanRef = rawRef.startsWith('#') ? rawRef.slice(1) : rawRef;
+  return cleanRef.length > 12 ? `#${cleanRef.slice(0, 8).toUpperCase()}` : `#${cleanRef}`;
+}
+
+function formatToastTime(timestamp: string): string {
+  const parsed = new Date(timestamp);
+  if (Number.isNaN(parsed.getTime())) {
+    return 'Şimdi';
+  }
+  return parsed.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function buildRealtimeToast(event: RealtimeEventEnvelope, isAdmin: boolean): RealtimeToast | null {
+  const { type, payload, timestamp } = event;
+  const orderRef = formatOrderRef(payload);
+  const timeLabel = formatToastTime(timestamp);
+  const toastId = `${event.id}-${Date.now()}`;
+
+  switch (type) {
+    case 'NEW_ORDER': {
+      const customMessage = readPayloadText(payload, ['message']);
+      const customerName = readPayloadText(payload, ['customerName', 'customer']);
+      const amount = readPayloadText(payload, ['totalAmount', 'total']);
+      const fallbackMessage = [
+        orderRef ? `${orderRef} numaralı sipariş` : 'Yeni bir sipariş',
+        customerName ? `(${customerName})` : null,
+        amount ? `• ₺${amount}` : null,
+        'onayınızı bekliyor.',
+      ]
+        .filter((part): part is string => Boolean(part))
+        .join(' ');
+
+      return {
+        id: toastId,
+        type,
+        title: 'Yeni Sipariş Geldi',
+        message: customMessage || fallbackMessage,
+        tone: 'emerald',
+        timeLabel,
+      };
+    }
+
+    case 'ORDER_CANCELLED': {
+      const reason = readPayloadText(payload, ['reason', 'cancelReason', 'message']);
+      const baseText = orderRef
+        ? `${orderRef} numaralı sipariş iptal edildi.`
+        : 'Bir sipariş iptal edildi.';
+
+      return {
+        id: toastId,
+        type,
+        title: 'Sipariş İptal Edildi',
+        message: reason ? `${baseText} (${reason})` : baseText,
+        tone: 'rose',
+        timeLabel,
+      };
+    }
+
+    case 'ORDER_STATUS_UPDATED': {
+      const customMessage = readPayloadText(payload, ['message']);
+      const rawStatus = readPayloadText(payload, ['statusLabel', 'status']);
+      const statusLabel = rawStatus ? ORDER_STATUS_LABELS[rawStatus] || rawStatus : null;
+      const defaultMessage = orderRef
+        ? `${orderRef} durumu güncellendi${statusLabel ? `: ${statusLabel}` : '.'}`
+        : `Sipariş durumu güncellendi${statusLabel ? `: ${statusLabel}` : '.'}`;
+
+      return {
+        id: toastId,
+        type,
+        title: 'Sipariş Durumu Güncellendi',
+        message: customMessage || defaultMessage,
+        tone: 'amber',
+        timeLabel,
+      };
+    }
+
+    case 'ADMIN_ALERT': {
+      if (!isAdmin) {
+        return null;
+      }
+      return {
+        id: toastId,
+        type,
+        title: readPayloadText(payload, ['title']) || 'Yönetici Bildirimi',
+        message:
+          readPayloadText(payload, ['message', 'description', 'summary']) ||
+          'Yeni bir sistem bildirimi alındı.',
+        tone: 'orange',
+        timeLabel,
+      };
+    }
+
+    default:
+      return null;
+  }
 }
 
 export default function MerchantLayout({ 
@@ -36,7 +241,8 @@ export default function MerchantLayout({
   const { theme, toggleTheme } = useMerchantTheme();
   const isDark = theme === 'dark';
 
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<MerchantProfile | null>(null);
+  const [isAuthReady, setIsAuthReady] = useState<boolean>(false);
   const [isShopActive, setIsShopActive] = useState<boolean>(true);
   const [isTogglingShop, setIsTogglingShop] = useState<boolean>(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
@@ -44,8 +250,28 @@ export default function MerchantLayout({
   const [pendingOrdersCount, setPendingOrdersCount] = useState<number>(0);
   const [allShops, setAllShops] = useState<any[]>([]);
   const [selectedShopIdState, setSelectedShopIdState] = useState<string>('');
+  const [realtimeState, setRealtimeState] = useState<RealtimeConnectionState>('disconnected');
+  const [realtimeToast, setRealtimeToast] = useState<RealtimeToast | null>(null);
+  const realtimeClientRef = useRef<MerchantRealtimeClient | null>(null);
 
   const isAdmin = profile?.role === 'super_admin' || profile?.role === 'admin';
+
+  const fetchPendingOrders = useCallback(async () => {
+    try {
+      const res = await merchantApiFetch('/merchant/orders');
+      if (res.data && Array.isArray(res.data)) {
+        const pending = (res.data as unknown[]).filter(
+          (item) =>
+            typeof item === 'object' &&
+            item !== null &&
+            (item as Record<string, unknown>).status === 'PENDING'
+        ).length;
+        setPendingOrdersCount(pending);
+      }
+    } catch (err) {
+      console.error('Sipariş rozeti alınamadı:', err);
+    }
+  }, []);
 
   useEffect(() => {
     const token = getMerchantToken();
@@ -58,6 +284,7 @@ export default function MerchantLayout({
 
     setProfile(currentProfile);
     setSelectedShopIdState(getSelectedShopId() || '');
+    setIsAuthReady(true);
 
     // Restore saved sidebar collapsed state
     try {
@@ -72,8 +299,57 @@ export default function MerchantLayout({
     }
 
     fetchShopDetails();
-    fetchPendingOrders();
+    void fetchPendingOrders();
   }, []);
+
+  useEffect(() => {
+    if (!isAuthReady) {
+      return;
+    }
+
+    let isMounted = true;
+    const client = createMerchantRealtimeClient({
+      shopId: selectedShopIdState || null,
+      onStateChange: (nextState) => {
+        if (isMounted) {
+          setRealtimeState(nextState);
+        }
+      },
+      onEvent: (event) => {
+        if (!isMounted) {
+          return;
+        }
+        const toast = buildRealtimeToast(event, isAdmin);
+        if (toast) {
+          setRealtimeToast(toast);
+          void fetchPendingOrders();
+        }
+      },
+    });
+
+    realtimeClientRef.current = client;
+    client.connect();
+
+    return () => {
+      isMounted = false;
+      client.disconnect();
+      if (realtimeClientRef.current === client) {
+        realtimeClientRef.current = null;
+      }
+    };
+  }, [isAuthReady, selectedShopIdState, isAdmin, fetchPendingOrders]);
+
+  useEffect(() => {
+    if (!realtimeToast || typeof window === 'undefined') {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setRealtimeToast(null);
+    }, 6000);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [realtimeToast]);
 
   const toggleSidebarCollapse = () => {
     const next = !isSidebarCollapsed;
@@ -111,18 +387,6 @@ export default function MerchantLayout({
     }
   };
 
-  const fetchPendingOrders = async () => {
-    try {
-      const res = await merchantApiFetch('/merchant/orders');
-      if (res.data && Array.isArray(res.data)) {
-        const pending = res.data.filter((o: any) => o.status === 'PENDING').length;
-        setPendingOrdersCount(pending);
-      }
-    } catch (err) {
-      console.error('Sipariş rozeti alınamadı:', err);
-    }
-  };
-
   const handleToggleShopStatus = async () => {
     setIsTogglingShop(true);
     try {
@@ -138,24 +402,30 @@ export default function MerchantLayout({
   };
 
   const handleLogout = () => {
+    realtimeClientRef.current?.disconnect();
     clearMerchantAuth();
     router.push('/merchant/login');
   };
 
-  const navItems = [
+  const merchantNavItems: NavItemConfig[] = [
     { id: 'products', label: 'Ürün & Menü Portalı', icon: Package, href: '/merchant/products' },
     { id: 'orders', label: 'Canlı Siparişler', icon: ShoppingBag, href: '/merchant/orders', badge: pendingOrdersCount },
     { id: 'dashboard', label: 'Performans & Analiz', icon: BarChart3, href: '/merchant/dashboard' },
     { id: 'campaigns', label: 'Kampanya & Kupon', icon: Tag, href: '/merchant/campaigns' },
+    { id: 'promotions', label: 'Sponsorlu Vitrin', icon: Sparkles, href: '/merchant/promotions' },
+    { id: 'reviews', label: 'Müşteri Yorumları', icon: Star, href: '/merchant/reviews' },
     { id: 'settings', label: 'Mağaza Ayarları', icon: Settings, href: '/merchant/settings' },
-    ...(isAdmin ? [{
-      id: 'service-zones',
-      label: 'KKTC Hizmet Alanları',
-      icon: MapPin,
-      href: '/merchant/service-zones',
-      adminOnly: true
-    }] : []),
   ];
+
+  const adminNavItems: NavItemConfig[] = isAdmin
+    ? [
+        { id: 'admin-merchants', label: 'İşletme Başvuruları', icon: Building2, href: '/merchant/admin/merchants', adminOnly: true },
+        { id: 'admin-couriers', label: 'Kurye & Filo AI', icon: Truck, href: '/merchant/admin/couriers', adminOnly: true },
+        { id: 'admin-moderation', label: 'Moderasyon Merkezi', icon: ShieldCheck, href: '/merchant/admin/moderation', adminOnly: true },
+        { id: 'admin-categories', label: 'İşletme Kategorileri', icon: LayoutGrid, href: '/merchant/admin/categories', adminOnly: true },
+        { id: 'service-zones', label: 'KKTC Hizmet Alanları', icon: MapPin, href: '/merchant/service-zones', adminOnly: true },
+      ]
+    : [];
 
   return (
     <>
@@ -351,7 +621,7 @@ export default function MerchantLayout({
 
             {/* Navigation Menu */}
             <nav className="space-y-1 pt-1">
-              {navItems.map((item: any) => {
+              {merchantNavItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
                 return (
@@ -382,13 +652,8 @@ export default function MerchantLayout({
 
                     {!isSidebarCollapsed && (
                       <div className="flex items-center gap-1.5 shrink-0">
-                        {item.adminOnly && (
-                          <span className="px-1.5 py-0.2 rounded text-[8px] bg-[#FF6B00] text-white font-black">
-                            ADMIN
-                          </span>
-                        )}
                         {item.badge && item.badge > 0 ? (
-                          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-white animate-pulse">
+                          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-white animate-pulse tabular-nums">
                             {item.badge}
                           </span>
                         ) : null}
@@ -400,21 +665,102 @@ export default function MerchantLayout({
                     {isSidebarCollapsed && (
                       <div className="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 dark:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 flex items-center gap-2 pointer-events-none">
                         <span>{item.label}</span>
-                        {item.adminOnly && (
-                          <span className="px-1.5 py-0.2 rounded text-[8px] bg-[#FF6B00] text-white font-black">
-                            ADMIN
-                          </span>
-                        )}
                       </div>
                     )}
                   </button>
                 );
               })}
+
+              {adminNavItems.length > 0 && (
+                <div className="pt-3 mt-3 border-t border-slate-100 dark:border-slate-800 space-y-1">
+                  {!isSidebarCollapsed && (
+                    <div className="px-3.5 pb-1 flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-[#FF6B00]">
+                        Süper Admin Merkezi
+                      </span>
+                      <Shield className="w-3 h-3 text-[#FF6B00]" />
+                    </div>
+                  )}
+                  {adminNavItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = activeTab === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          router.push(item.href);
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className={`w-full flex items-center rounded-xl text-xs font-black transition-all duration-150 group relative ${
+                          isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-3.5 py-2.5'
+                        } ${
+                          isActive
+                            ? 'bg-[#FF6B00]/10 text-[#FF6B00] dark:bg-[#FF6B00]/15 dark:text-[#FF8C00] shadow-xs'
+                            : isDark
+                              ? 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/70'
+                              : 'text-slate-600 hover:text-[#FF6B00] hover:bg-orange-50/70'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <Icon className={`w-4 h-4 shrink-0 transition-colors ${
+                            isActive ? 'text-[#FF6B00]' : 'text-slate-400 group-hover:text-current'
+                          }`} />
+                          {!isSidebarCollapsed && (
+                            <span className="truncate">{item.label}</span>
+                          )}
+                        </div>
+
+                        {!isSidebarCollapsed && (
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className="px-1.5 py-0.2 rounded text-[8px] bg-[#FF6B00] text-white font-black">
+                              ADMIN
+                            </span>
+                            {isActive && <ChevronRight className="w-3.5 h-3.5 text-[#FF6B00]" />}
+                          </div>
+                        )}
+
+                        {isSidebarCollapsed && (
+                          <div className="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 dark:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 flex items-center gap-2 pointer-events-none">
+                            <span>{item.label}</span>
+                            <span className="px-1.5 py-0.2 rounded text-[8px] bg-[#FF6B00] text-white font-black">
+                              ADMIN
+                            </span>
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </nav>
           </div>
 
           {/* Sidebar Footer */}
-          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2">
+          <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                router.push('/merchant/login?switch=1');
+                setIsMobileMenuOpen(false);
+              }}
+              className={`w-full flex items-center rounded-xl text-xs font-black transition-colors group relative ${
+                isSidebarCollapsed ? 'justify-center p-2.5' : 'gap-2.5 px-3 py-2.5'
+              } ${
+                isDark
+                  ? 'text-slate-300 hover:bg-slate-800'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+              title="Hesap Değiştir"
+            >
+              <User className="w-4 h-4 shrink-0" />
+              {!isSidebarCollapsed && <span>Hesap Değiştir</span>}
+              {isSidebarCollapsed && (
+                <div className="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 pointer-events-none">
+                  Hesap Değiştir
+                </div>
+              )}
+            </button>
+
             <button
               onClick={handleLogout}
               className={`w-full flex items-center rounded-xl text-xs font-black text-rose-500 hover:bg-rose-500/10 transition-colors group relative ${
@@ -474,6 +820,37 @@ export default function MerchantLayout({
 
             {/* Top Right Quick Actions */}
             <div className="flex items-center gap-2.5">
+              {isAuthReady && realtimeState !== 'disconnected' && (
+                <div
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-bold transition-colors shrink-0 ${
+                    realtimeState === 'connected'
+                      ? isDark
+                        ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
+                        : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                      : isDark
+                        ? 'bg-amber-500/15 border-amber-500/30 text-amber-400'
+                        : 'bg-amber-50 border-amber-200 text-amber-700'
+                  }`}
+                  title={
+                    realtimeState === 'connected'
+                      ? 'Gerçek zamanlı bağlantı aktif'
+                      : 'Gerçek zamanlı bağlantı kuruluyor'
+                  }
+                  aria-live="polite"
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full shrink-0 ${
+                      realtimeState === 'connected'
+                        ? 'bg-emerald-500 animate-pulse'
+                        : 'bg-amber-500 animate-pulse'
+                    }`}
+                  />
+                  <span>
+                    {realtimeState === 'connected' ? 'Canlı' : 'Bağlanıyor...'}
+                  </span>
+                </div>
+              )}
+
               {headerActions}
 
               {/* Theme Toggle */}
@@ -513,6 +890,65 @@ export default function MerchantLayout({
             </div>
           </main>
         </div>
+
+        {/* Floating Realtime Notification Toast */}
+        {realtimeToast && (() => {
+          const toneStyle = TOAST_TONE_STYLES[realtimeToast.tone];
+          const ToastIcon = toneStyle.Icon;
+          return (
+            <div
+              role="status"
+              aria-live="polite"
+              className={`fixed bottom-5 right-5 z-50 w-[calc(100vw-2.5rem)] max-w-sm rounded-2xl border p-4 backdrop-blur-md transition-all print:hidden ${
+                isDark
+                  ? `bg-slate-900/95 text-slate-100 shadow-2xl ${toneStyle.borderDark}`
+                  : `bg-white/95 text-slate-900 shadow-lg ${toneStyle.borderLight}`
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <div
+                  className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 ${
+                    isDark ? toneStyle.iconBgDark : toneStyle.iconBgLight
+                  }`}
+                >
+                  <ToastIcon className="w-4 h-4" />
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-black tracking-tight truncate">
+                      {realtimeToast.title}
+                    </p>
+                    <span className="text-[10px] font-bold text-slate-400 tabular-nums shrink-0">
+                      {realtimeToast.timeLabel}
+                    </span>
+                  </div>
+                  <p
+                    className={`mt-1 text-xs font-medium leading-relaxed break-words ${
+                      isDark ? 'text-slate-300' : 'text-slate-600'
+                    }`}
+                  >
+                    {realtimeToast.message}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setRealtimeToast(null)}
+                  className={`p-1 rounded-lg transition-colors shrink-0 ${
+                    isDark
+                      ? 'text-slate-400 hover:text-white hover:bg-slate-800'
+                      : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
+                  }`}
+                  aria-label="Bildirimi kapat"
+                  title="Kapat"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </>
   );

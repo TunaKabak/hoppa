@@ -25,8 +25,8 @@ Bu dosya, Hoppa projesinde geliştirme yapan tüm yapay zeka agent'larının uym
 
 Hoppa projesinde görevler, etki alanına göre aşağıdaki agent rollerine atanır. Her komutunuzda veya kod değişikliğinizde ilgili agent kuralları devreye girer:
 
-### 2.1. 🎨 Frontend Agent (Frontend Geliştirici)
-* **Sorumluluk Alanı:** `apps/consumer_app`, `apps/merchant_app`, `apps/courier_app`, `apps/web_app` ve `packages/` dizinleri.
+### 2.1. 🎨 Frontend Agent (Mobil Frontend Geliştirici)
+* **Sorumluluk Alanı:** `apps/consumer_app`, `apps/merchant_app`, `apps/courier_app` ve `packages/` dizinleri (Flutter/Dart).
 * **Standartlar:**
   * Riverpod state management prensiplerine sadık kalmak.
   * Flutter clean architecture kurallarına uymak.
@@ -82,6 +82,45 @@ Hoppa projesinde görevler, etki alanına göre aşağıdaki agent rollerine ata
 * **Doğrulama Protokolü:**
   * Hikaye (`story_<StoryNo>_...md`) dosyasının ve uygulama planının kullanıcı tarafından onaylanması.
   * Plan onaylandıktan sonra bir yapılacaklar listesi (`task.md`) oluşturulması.
+
+### 2.7. 🌐 Web Agent (Web Portal & Admin Geliştirici)
+* **Sorumluluk Alanı:** `apps/web_app/` dizini (Next.js 14 Pages Router, React 18, TypeScript, TailwindCSS ve Leaflet harita bileşenleri).
+* **Standartlar:**
+  * `window`, `localStorage` ve Leaflet harita bileşenlerinde SSR güvenliği (`dynamic(..., { ssr: false })`) sağlamak.
+  * Story 86 & Story 90 kurumsal tasarım sistemine (`MerchantLayout`, `MerchantThemeContext`, `HoppaSelect`, `tabular-nums`) uymak.
+  * `merchantApiFetch` ile Refresh Token ve SuperAdmin çoklu dükkan (`x-business-id` / `shopId`) bağlamını korumak; `any` tipinden kaçınmak.
+* **Doğrulama Protokolü:**
+  * `cd apps/web_app && npx tsc --noEmit` ile TypeScript tip doğrulaması.
+  * `cd apps/web_app && npm run build` ile Next.js production derleme doğrulaması.
+
+### 2.8. 🛵 Logistics & Fleet Agent (Kurye, Filo AI & Geofencing Temsilcisi)
+* **Sorumluluk Alanı:** `apps/courier_app/`, `CourierController.ts`, `FleetAIController.ts`, `MatchingEngine.ts`, `BatchingService.ts`, `DistanceUtils.ts` ve KKTC poligon geofencing (`service-zones`, `kktcBoundary.ts`) modülleri.
+* **Standartlar:**
+  * Hibrit canlı konum takibi (`CourierLocationEngine`), nöbet durumu (`isActive`) ve güvenli dinleyici durdurma (`stopTracking`) kurallarını korumak.
+  * Haversine, `point-in-polygon` ve rota optimizasyonu hesaplamalarında koordinat tutarlılığını (`LocationUtils.formatDistance`) sağlamak.
+* **Doğrulama Protokolü:**
+  * `cd apps/courier_app && flutter analyze` (ve gerekirse `apps/consumer_app` canlı takip doğrulaması).
+  * Backend lojistik değişiklikleri için `cd backend && npx tsc --noEmit`.
+
+### 2.9. 🤖 DevOps & Bridge Agent (Otomasyon, CI/CD & Remote Bridge Temsilcisi)
+* **Sorumluluk Alanı:** `agent-remote-bridge/` (Python Telegram Bot), `.github/workflows/` (`auto-merge.yml`), Cloudflare R2 medya yapılandırması ve dağıtım ayarları (Supabase, Render, Vercel).
+* **Standartlar:**
+  * Telegram Bridge içinde `ALLOWED_USER_ID` beyaz liste güvenliğini ve `html.escape` korumasını korumak; sırları (`.env`) Git'e eklememek.
+  * `#merge-to-main` commit etiketini yalnızca tüm derleme ve statik analiz kontrolleri sıfır hata verdikten ve onay alındıktan sonra kullanmak.
+* **Doğrulama Protokolü:**
+  * `agent-remote-bridge\venv\Scripts\python.exe -m py_compile agent-remote-bridge\main.py agent-remote-bridge\task_analyzer.py agent-remote-bridge\agent_runner.py` ile Python derleme doğrulaması.
+  * GitHub Actions workflow YAML sözdizimi ve yetki (`permissions`) kontrolü.
+
+### 2.10. 💳 Payment & FinTech Agent (Ödeme, Cüzdan & Gerçek Zamanlı Olay Temsilcisi)
+* **Sorumluluk Alanı:** `backend/src/providers/payment/`, `PaymentRoutingService.ts`, `PaymentController.ts`, `paymentRoutes.ts`, `RealtimeEventService.ts`, `eventRoutes.ts`, `WalletController.ts`, `apps/consumer_app/lib/apps/consumer/checkout/three_d_secure_page.dart` ve `apps/web_app/src/utils/realtime-client.ts` modülleri.
+* **Standartlar:**
+  * `IPaymentProvider` Strategy Pattern (`SANDBOX` vs `LIVE`: CardPlus, PayTR, Stripe) ve dinamik `PUBLIC_BASE_URL` 3D Secure akışına uymak; doğrulama öncesinde `PaymentStatus.SUCCESS` döndürmemek.
+  * Callback uç noktalarında sabit zamanlı HMAC (`crypto.timingSafeEqual`) doğrulaması ve idempotent Prisma `$transaction` kullanmak; eksik `LIVE` anahtarlarında kontrollü hata fırlatmak.
+  * SSE (`RealtimeEventService`) bağlantılarında `access` JWT doğrulaması (`handshake`/`refresh` reddi), 25s heartbeat ve `close` olayında abonelik/timer temizliği sağlamak.
+* **Doğrulama Protokolü:**
+  * `cd backend && npx tsc --noEmit`.
+  * Web SSE değişiklikleri için `cd apps/web_app && npx tsc --noEmit && npm run build`.
+  * Mobil 3DS WebView değişiklikleri için `cd apps/consumer_app && flutter analyze`.
 
 ---
 

@@ -48,11 +48,6 @@ class _BusinessSelectionPageState extends ConsumerState<BusinessSelectionPage> {
     super.dispose();
   }
 
-  bool _isValidImageUrl(String? url) {
-    if (url == null || url.trim().isEmpty) return false;
-    return url.startsWith('http://') || url.startsWith('https://');
-  }
-
   @override
   Widget build(BuildContext context) {
     // İzlenecek lifecycle provider'ı çağır
@@ -311,8 +306,8 @@ class _BusinessSelectionPageState extends ConsumerState<BusinessSelectionPage> {
                                         if (typeNameLower == catLower || typeLabelLower == catLower) return true;
 
                                         // B. Takma ad (Alias) ve Grup Eşleştirmeleri
-                                        if (catLower.contains('restoran') || catLower.contains('yemek') || catLower == 'restaurant') {
-                                          return typeNameLower == 'restaurant' || typeNameLower == 'cafe' || typeLabelLower == 'yemek' || typeLabelLower == 'cafe';
+                                        if (catLower.contains('restoran') || catLower.contains('yemek') || catLower.contains('food') || catLower == 'restaurant') {
+                                          return typeNameLower == 'restaurant' || typeNameLower == 'cafe' || typeNameLower == 'food' || typeLabelLower == 'yemek' || typeLabelLower == 'restoran' || typeLabelLower == 'restaurant' || typeLabelLower == 'cafe';
                                         }
                                         if (catLower.contains('market')) {
                                           return typeNameLower == 'market' || typeLabelLower == 'market';
@@ -1023,8 +1018,6 @@ class _BusinessSelectionPageState extends ConsumerState<BusinessSelectionPage> {
     Business business,
     String? distanceText,
   ) {
-    const kPrimaryColor = Color(0xFF00A651);
-
     return GestureDetector(
       onTap: () {
         final businessProvider = p.Provider.of<BusinessProvider>(

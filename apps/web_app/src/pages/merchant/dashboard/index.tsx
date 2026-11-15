@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Head from 'next/head';
 import MerchantLayout from '../../../components/merchant/MerchantLayout';
 import StoreReadinessWidget from '../../../components/merchant/StoreReadinessWidget';
@@ -8,6 +8,10 @@ import {
   Building2, CheckCircle2, AlertCircle, ArrowRight, Zap, RefreshCw
 } from 'lucide-react';
 import { merchantApiFetch } from '../../../utils/merchant-auth';
+import {
+  isRealtimeEventEnvelope,
+  REALTIME_WINDOW_EVENT,
+} from '../../../utils/realtime-client';
 import { useMerchantTheme } from '../../../context/MerchantThemeContext';
 
 export default function MerchantDashboardPage() {
@@ -18,11 +22,7 @@ export default function MerchantDashboardPage() {
   const [stats, setStats] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    fetchStats();
-  }, [timeRange]);
-
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     setIsLoading(true);
     try {
       const res = await merchantApiFetch(`/merchant/dashboard/stats?range=${timeRange}`);
@@ -34,7 +34,41 @@ export default function MerchantDashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [timeRange]);
+
+  const fetchStatsRef = useRef(fetchStats);
+  fetchStatsRef.current = fetchStats;
+
+  useEffect(() => {
+    void fetchStats();
+  }, [fetchStats]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const handleRealtimeEvent = (event: Event) => {
+      if (!(event instanceof CustomEvent)) {
+        return;
+      }
+      if (!isRealtimeEventEnvelope(event.detail)) {
+        return;
+      }
+      if (
+        event.detail.type === 'NEW_ORDER' ||
+        event.detail.type === 'ORDER_CANCELLED' ||
+        event.detail.type === 'ORDER_STATUS_UPDATED'
+      ) {
+        void fetchStatsRef.current();
+      }
+    };
+
+    window.addEventListener(REALTIME_WINDOW_EVENT, handleRealtimeEvent);
+    return () => {
+      window.removeEventListener(REALTIME_WINDOW_EVENT, handleRealtimeEvent);
+    };
+  }, []);
 
   // Fallbacks if stats API is seeding or null
   const totalRevenue = stats?.totalRevenue !== undefined ? Number(stats.totalRevenue) : 12450.00;
