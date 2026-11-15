@@ -11,7 +11,6 @@ import 'package:merchant_app/apps/merchant/merchant_order_list_page.dart';
 import 'package:merchant_app/apps/merchant/merchant_product_list_page.dart';
 import 'package:merchant_app/apps/merchant/merchant_settings_page.dart';
 import 'package:merchant_app/apps/merchant/merchant_analytics_page.dart';
-import 'package:merchant_app/apps/merchant/campaign/merchant_campaigns_page.dart';
 import 'package:merchant_app/apps/merchant/campaign/merchant_shop_campaigns_page.dart';
 import 'package:merchant_app/apps/merchant/merchant_sponsorship_page.dart';
 import 'package:merchant_app/apps/merchant/admin/admin_approvals_page.dart';
@@ -127,9 +126,6 @@ class _MerchantMainLayoutState extends ConsumerState<MerchantMainLayout> {
       user.isSuperAdmin;
 
   List<Widget> _getPages(AuthUser user) {
-    if (_isLoading) {
-      return [const Center(child: CircularProgressIndicator())];
-    }
     final List<Widget> pages = [
       MerchantDashboardPage(
         key: ValueKey('dash_$_activeBusinessId'),
@@ -150,12 +146,6 @@ class _MerchantMainLayoutState extends ConsumerState<MerchantMainLayout> {
       ),
     ];
     if (_canSeeCampaigns(user)) {
-      pages.add(
-        MerchantCampaignsPage(
-          key: ValueKey('camp_$_activeBusinessId'),
-          businessId: _activeBusinessId,
-        ),
-      );
       pages.add(
         MerchantShopCampaignsPage(
           key: ValueKey('shop_camp_$_activeBusinessId'),
@@ -193,8 +183,7 @@ class _MerchantMainLayoutState extends ConsumerState<MerchantMainLayout> {
       const _NavItem(Icons.analytics_rounded, 'Raporlar'),
     ];
     if (_canSeeCampaigns(user)) {
-      items.add(const _NavItem(Icons.campaign_rounded, 'Kampanyalar'));
-      items.add(const _NavItem(Icons.design_services_rounded, 'Reklam & Afiş'));
+      items.add(const _NavItem(Icons.campaign_rounded, 'Kampanya & Reklam'));
     }
     items.add(const _NavItem(Icons.bolt_rounded, 'Öne Çıkarma'));
     if (user.isSuperAdmin) {
@@ -216,11 +205,12 @@ class _MerchantMainLayoutState extends ConsumerState<MerchantMainLayout> {
     }
 
     final user = authState.user;
-
+    final pages = _getPages(user);
     final selectedIndex = ref.watch(merchantNavigationIndexProvider);
+    final safeIndex = selectedIndex.clamp(0, pages.length - 1);
 
     return PopScope(
-      canPop: selectedIndex == 0,
+      canPop: safeIndex == 0,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         ref.read(merchantNavigationIndexProvider.notifier).setIndex(0);
@@ -228,7 +218,9 @@ class _MerchantMainLayoutState extends ConsumerState<MerchantMainLayout> {
       child: Scaffold(
         key: merchantDrawerKey,
         drawer: _buildDrawer(theme, colorScheme, user),
-        body: IndexedStack(index: selectedIndex, children: _getPages(user)),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : IndexedStack(index: safeIndex, children: pages),
       ),
     );
   }
@@ -428,6 +420,7 @@ class _MerchantMainLayoutState extends ConsumerState<MerchantMainLayout> {
                 borderRadius: BorderRadius.circular(8),
               ),
               onTap: () async {
+                ref.read(merchantNavigationIndexProvider.notifier).setIndex(0);
                 await ref.read(authControllerProvider.notifier).logout();
                 if (mounted) {
                   Navigator.of(context).pushAndRemoveUntil(

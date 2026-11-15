@@ -111,10 +111,12 @@ class _MerchantShopCampaignsPageState extends ConsumerState<MerchantShopCampaign
               itemCount: campaigns.length,
               itemBuilder: (context, index) {
                 final c = campaigns[index];
-                final targetArea = c['targetArea'] as String;
-                final status = c['status'] as String;
-                final designService = c['designService'] as bool;
-                final isActive = c['isActive'] as bool;
+                final targetArea = (c['targetArea'] ?? '').toString();
+                final status = (c['status'] ?? 'PENDING').toString();
+                final designService = c['designService'] == true;
+                final imageUrl = c['imageUrl']?.toString() ?? '';
+                final title = (c['title'] ?? '').toString();
+                final description = (c['description'] ?? '').toString();
 
                 Color statusColor;
                 String statusLabel;
@@ -151,9 +153,9 @@ class _MerchantShopCampaignsPageState extends ConsumerState<MerchantShopCampaign
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (c['imageUrl'] != null && (c['imageUrl'] as String).isNotEmpty)
+                        if (imageUrl.isNotEmpty)
                           Image.network(
-                            c['imageUrl'],
+                            imageUrl,
                             height: 120,
                             width: double.infinity,
                             fit: BoxFit.cover,
@@ -228,12 +230,12 @@ class _MerchantShopCampaignsPageState extends ConsumerState<MerchantShopCampaign
                               ),
                               const SizedBox(height: 12),
                               Text(
-                                c['title'],
+                                title,
                                 style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16),
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                c['description'],
+                                description,
                                 style: GoogleFonts.poppins(color: Colors.grey.shade600, fontSize: 12),
                               ),
                               const SizedBox(height: 12),

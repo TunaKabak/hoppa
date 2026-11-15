@@ -84,6 +84,8 @@ export default function MerchantLoginForm({
   const safeBusinessName = selectedAccount
     ? sanitizeAccountText(selectedAccount.businessName, 'Hoppa Mağazası')
     : '';
+  const isAdminRole =
+    selectedAccount?.role === 'super_admin' || selectedAccount?.role === 'admin';
 
   return (
     <form onSubmit={handleFormSubmit} noValidate className="space-y-4">
@@ -101,15 +103,41 @@ export default function MerchantLoginForm({
       {isPasswordOnly && selectedAccount && (
         <div
           className={`flex items-center gap-3 p-3.5 rounded-2xl border ${
-            isDark ? 'bg-slate-950/70 border-slate-800' : 'bg-orange-50/50 border-[#FF6B00]/25'
+            isDark
+              ? 'bg-slate-950/70 border-slate-800'
+              : 'bg-slate-50 border-slate-200/90'
           }`}
         >
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#E95D22] to-[#FF8C00] text-white font-black flex items-center justify-center shrink-0">
-            {safeBusinessName.charAt(0).toUpperCase() || 'H'}
-          </div>
+          {selectedAccount.avatarUrl ? (
+            <img
+              src={selectedAccount.avatarUrl}
+              alt={safeBusinessName}
+              className="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shrink-0"
+            />
+          ) : isAdminRole ? (
+            <img
+              src="/logo-square-orange.png"
+              alt="Hoppa"
+              className="w-10 h-10 rounded-xl object-cover shadow-2xs ring-1 ring-black/5 shrink-0"
+            />
+          ) : (
+            <div
+              className={`w-10 h-10 rounded-xl font-extrabold text-sm flex items-center justify-center border shrink-0 ${
+                isDark
+                  ? 'bg-slate-900 border-slate-700 text-slate-100'
+                  : 'bg-slate-900 border-slate-800 text-white'
+              }`}
+            >
+              {safeBusinessName.charAt(0).toUpperCase() || 'H'}
+            </div>
+          )}
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-black truncate">{safeBusinessName}</p>
-            <p className="text-xs font-semibold text-slate-400 truncate">
+            <p className="text-sm font-extrabold tracking-tight truncate">{safeBusinessName}</p>
+            <p
+              className={`text-xs font-medium truncate ${
+                isDark ? 'text-slate-400' : 'text-slate-500'
+              }`}
+            >
               {sanitizeAccountText(selectedAccount.email)}
             </p>
           </div>

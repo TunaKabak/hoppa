@@ -8,15 +8,12 @@ import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:core_auth/core_auth.dart';
 import 'package:core_network/core_network.dart';
 import 'package:core_shared/shared/core/services/notification_navigation_helper.dart';
 import 'package:core_shared/shared/core/services/language_provider.dart';
 import 'package:core_shared/shared/core/l10n/app_localizations.dart';
 import 'package:core_shared/shared/core/theme/app_theme.dart';
-import 'package:core_shared/shared/core/config/app_config.dart';
 import 'apps/merchant/auth/merchant_auth_wrapper.dart';
 import 'apps/merchant/merchant_order_list_page.dart';
 
@@ -46,14 +43,6 @@ void main() async {
   if (Platform.isAndroid || Platform.isIOS) {
     try {
       await Firebase.initializeApp();
-
-      if (!AppConfig.isProduction) {
-        FirebaseAuth.instance.useAuthEmulator(AppConfig.localHostIp, 9300);
-        FirebaseFirestore.instance.useFirestoreEmulator(
-          AppConfig.localHostIp,
-          8080,
-        );
-      }
     } catch (e) {
       debugPrint("🚨 Firebase initialization failed: $e");
     }

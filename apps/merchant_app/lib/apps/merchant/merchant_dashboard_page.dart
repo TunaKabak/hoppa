@@ -1,10 +1,9 @@
 import 'dart:async'; // StreamSubscription için
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:core_auth/core_auth.dart';
 import 'package:core_shared/shared/models/order_status.dart'; // Restored
 import 'package:core_shared/shared/models/order.dart' as model;
-import 'package:core_shared/shared/core/services/business_service.dart';
-import 'package:core_shared/shared/core/services/product_service.dart';
 import 'package:merchant_app/apps/merchant/merchant_order_list_page.dart';
 import 'package:merchant_app/apps/merchant/merchant_product_list_page.dart';
 import 'package:merchant_app/apps/merchant/merchant_main_layout.dart';
@@ -13,6 +12,7 @@ import 'package:merchant_app/apps/merchant/providers/merchant_api_providers.dart
 import 'package:merchant_app/apps/merchant/merchant_settings_page.dart';
 import 'package:merchant_app/apps/merchant/widgets/store_readiness_card.dart';
 import 'package:merchant_app/apps/merchant/repositories/merchant_order_repository.dart';
+import 'package:merchant_app/apps/merchant/repositories/merchant_product_repository.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 class MerchantDashboardPage extends ConsumerStatefulWidget {
@@ -33,13 +33,10 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
 
   // İlk açılışta mevcut siparişleri bildirim olarak saymamak için bayrak
   bool _isFirstListen = true;
-  String? _businessName;
-  final BusinessService _businessService = BusinessService();
 
   @override
   void initState() {
     super.initState();
-    _fetchBusinessDetails();
     _initFlashAnimation();
     
     // Polling orders every 15 seconds for notifications
@@ -56,19 +53,6 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
     _flashController.dispose();
     _audioPlayer.dispose();
     super.dispose();
-  }
-
-  // ... (existing helper methods)
-
-  // ... (existing helper methods)
-
-  Future<void> _fetchBusinessDetails() async {
-    final business = await _businessService.getBusinessById(widget.businessId);
-    if (mounted && business != null) {
-      setState(() {
-        _businessName = business.name;
-      });
-    }
   }
 
   void _initFlashAnimation() {
@@ -225,7 +209,11 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final shopState = ref.watch(shopControllerProvider);
+    final authState = ref.watch(authControllerProvider);
     final isShopOpen = shopState.value?.isActive ?? false;
+    final displayBusinessName = shopState.value?.name ??
+        (authState is AuthAuthenticated ? authState.user.businessName : null) ??
+        "İşletme Paneli";
 
     // Listen for new orders to show notification
     ref.listen<AsyncValue<List<model.Order>>>(
@@ -248,7 +236,7 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
         title: Column(
           children: [
             Text(
-              _businessName ?? "Market Paneli",
+              displayBusinessName,
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -308,6 +296,11 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
   Widget _buildDashboardContent(ThemeData theme, bool isShopOpen) {
     final ordersAsync = ref.watch(merchantOrdersProvider);
     final statsAsync = ref.watch(merchantDashboardStatsProvider);
+    final productsAsync = ref.watch(productControllerProvider);
+    final loadedProducts = productsAsync.asData?.value;
+    final int activeProductCount = loadedProducts != null
+        ? loadedProducts.where((p) => p.isActive).length
+        : 1;
 
     return ordersAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -329,7 +322,7 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
               StoreReadinessCard(
                 businessId: widget.businessId,
                 isShopActive: isShopOpen,
-                activeProductCount: allOrders.isNotEmpty ? 1 : 1,
+                activeProductCount: activeProductCount,
               ),
               const SizedBox(height: 12),
 
@@ -656,94 +649,101 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
   }
 
   Widget _buildLowStockSection() {
-    final ProductService service = ProductService();
+    final productsAsync = ref.watch(productControllerProvider);
+    final loadedProducts = productsAsync.asData?.value ?? <MerchantProduct>[];
+    final lowStockProducts = loadedProducts
+        .where((p) => p.trackStock && (p.stock ?? p.stockQuantity ?? 0) < 5)
+        .toList();
 
-    return StreamBuilder<List<dynamic>>(
-      stream: service.getLowStockProducts(widget.businessId),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const SizedBox.shrink();
-        }
+    if (lowStockProducts.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
-        final products = snapshot.data!;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  "Kritik Stok",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                TextButton(
-                  onPressed: () {
-                    // Yönlendirme mantığını veya dialog'u buraya ekleyebilirsiniz
-                  },
-                  child: const Text("Tümünü Gör"),
-                ),
-              ],
+            const Text(
+              "Kritik Stok",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-            SizedBox(
-              height: 140,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: products.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 12),
-                itemBuilder: (context, index) {
-                  final p = products[index]; // BusinessProduct
-                  return Container(
-                    width: 120,
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Center(
-                            child: Image.network(
-                              p.product.imageUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) => const Icon(
-                                Icons.image,
-                                size: 40,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          p.product.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                          ),
-                        ),
-                        Text(
-                          "${p.stock.toInt()} Adet",
-                          style: const TextStyle(
-                            color: Colors.red,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
+            TextButton(
+              onPressed: () {
+                ref.read(merchantNavigationIndexProvider.notifier).setIndex(2);
+              },
+              child: const Text("Tümünü Gör"),
             ),
           ],
-        );
-      },
+        ),
+        SizedBox(
+          height: 140,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: lowStockProducts.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              final p = lowStockProducts[index];
+              final imageUrl = p.imageUrl;
+              final stockCount = p.stock ?? p.stockQuantity ?? 0;
+
+              return Container(
+                width: 120,
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Center(
+                        child: imageUrl != null && imageUrl.isNotEmpty
+                            ? Image.network(
+                                imageUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    const Icon(
+                                  Icons.image,
+                                  size: 40,
+                                  color: Colors.grey,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.inventory_2_outlined,
+                                size: 36,
+                                color: Colors.grey,
+                              ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      p.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                    Text(
+                      "$stockCount Adet",
+                      style: const TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 

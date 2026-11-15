@@ -1,7 +1,6 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 
-class AuthLayout extends StatefulWidget {
+class AuthLayout extends StatelessWidget {
   final Widget child;
   final Widget? bottomSheet;
   final bool showAppBar;
@@ -18,164 +17,94 @@ class AuthLayout extends StatefulWidget {
   });
 
   @override
-  State<AuthLayout> createState() => _AuthLayoutState();
-}
-
-class _AuthLayoutState extends State<AuthLayout> with WidgetsBindingObserver {
-  final ScrollController _scrollController = ScrollController();
-  bool _showSmallLogo = false;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    if (widget.showAppBar) {
-      _scrollController.addListener(_scrollListener);
-    }
-  }
-
-  void _scrollListener() {
-    if (_scrollController.offset > 100 && !_showSmallLogo) {
-      setState(() => _showSmallLogo = true);
-    } else if (_scrollController.offset <= 100 && _showSmallLogo) {
-      setState(() => _showSmallLogo = false);
-    }
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  @override
-  void didChangeMetrics() {
-    final bottomInset = WidgetsBinding
-        .instance
-        .platformDispatcher
-        .views
-        .first
-        .viewInsets
-        .bottom;
-    if (bottomInset == 0) {
-      // Keyboard closed, scroll to top slightly deferred
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (mounted && _scrollController.hasClients) {
-          _scrollController.animateTo(
-            0,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
-        }
-      });
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-
     return Scaffold(
-      backgroundColor: Colors.white,
-      resizeToAvoidBottomInset: false,
+      backgroundColor: const Color(0xFFF9FAFB),
+      resizeToAvoidBottomInset: true,
       extendBodyBehindAppBar: true,
-      appBar: widget.showAppBar
+      appBar: showAppBar
           ? AppBar(
-              backgroundColor: _showSmallLogo
-                  ? Colors.white.withValues(alpha: 0.9)
-                  : Colors.transparent,
-              elevation: _showSmallLogo ? 1 : 0,
-              centerTitle: true,
+              backgroundColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+              elevation: 0,
+              scrolledUnderElevation: 0,
               automaticallyImplyLeading: false,
-              leading: widget.leading,
-              title: AnimatedOpacity(
-                opacity: _showSmallLogo ? 1.0 : 0.0,
-                duration: const Duration(milliseconds: 300),
-                child: Image.asset(
-                  'assets/images/hoppa_logo.png',
-                  height: 32,
-                  fit: BoxFit.contain,
-                ),
-              ),
+              leading: leading,
             )
           : null,
       body: Stack(
         children: [
-          // 1. Background Image (Full Cover)
-          Positioned.fill(
-            child: Image.asset(
-              'assets/images/auth_bg.png',
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Container(color: Colors.white),
-            ),
-          ),
-
-          // 2. Blur / Overlay
-          Positioned.fill(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              child: Container(
+          const Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 260,
+            child: IgnorePointer(
+              child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Colors.white.withValues(alpha: 0.7),
-                      Colors.white.withValues(alpha: 0.9),
+                      Color(0x1A00A651),
+                      Color(0x0DFF6B00),
+                      Colors.transparent,
                     ],
+                    stops: [0.0, 0.55, 1.0],
                   ),
                 ),
               ),
             ),
           ),
-
-          // 3. Content
           SafeArea(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                return Padding(
-                  padding: EdgeInsets.only(bottom: bottomInset),
-                  child: SingleChildScrollView(
-                    controller: _scrollController,
-                    physics: const ClampingScrollPhysics(),
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        minHeight: constraints.maxHeight,
-                      ),
-                      child: Center(
-                        child: widget.enableGlass
-                            ? ClipRRect(
-                                borderRadius: BorderRadius.circular(24),
-                                child: BackdropFilter(
-                                  filter: ImageFilter.blur(
-                                    sigmaX: 10,
-                                    sigmaY: 10,
+                final minHeight =
+                    (constraints.maxHeight - 24).clamp(0.0, double.infinity);
+                return SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: minHeight),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 420),
+                        child: RepaintBoundary(
+                          child: enableGlass
+                              ? Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                    vertical: 28,
                                   ),
-                                  child: Container(
-                                    constraints: const BoxConstraints(
-                                      maxWidth: 400,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(24),
+                                    border: Border.all(
+                                      color: const Color(0xFFE5E7EB),
                                     ),
-                                    margin: const EdgeInsets.all(24),
-                                    padding: const EdgeInsets.all(24),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.4),
-                                      borderRadius: BorderRadius.circular(24),
-                                      border: Border.all(
-                                        color: Colors.white.withValues(alpha: 0.6),
+                                    boxShadow: const [
+                                      BoxShadow(
+                                        color: Color(0x0D111827),
+                                        blurRadius: 24,
+                                        offset: Offset(0, 8),
                                       ),
-                                    ),
-                                    child: widget.child,
+                                    ],
                                   ),
+                                  child: child,
+                                )
+                              : Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 4,
+                                    vertical: 8,
+                                  ),
+                                  child: child,
                                 ),
-                              )
-                            : Container(
-                                constraints: const BoxConstraints(
-                                  maxWidth: 400,
-                                ),
-                                padding: const EdgeInsets.all(24),
-                                child: widget.child,
-                              ),
+                        ),
                       ),
                     ),
                   ),
@@ -185,9 +114,7 @@ class _AuthLayoutState extends State<AuthLayout> with WidgetsBindingObserver {
           ),
         ],
       ),
-      bottomSheet: widget.bottomSheet != null
-          ? Container(color: Colors.transparent, child: widget.bottomSheet)
-          : null,
+      bottomSheet: bottomSheet,
     );
   }
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronRight, Plus, Shield, UserCheck, X } from 'lucide-react';
+import { ChevronRight, Plus, X } from 'lucide-react';
 import { SavedMerchantAccount } from '../../types/auth.types';
 import { sanitizeAccountText } from '../../utils/saved-accounts';
 
@@ -13,11 +13,38 @@ interface AccountChooserProps {
   onUseAnotherAccount: () => void;
 }
 
-function getRoleBadgeLabel(role: string): string {
-  if (role === 'super_admin' || role === 'admin') {
-    return 'SÜPER ADMİN';
+const GENERIC_OWNER_PLACEHOLDERS = new Set([
+  'super admin',
+  'super_admin',
+  'süper admin',
+  'admin',
+  'sistem yönetimi',
+  'merchant',
+  'satıcı',
+]);
+
+function resolveAccountMetaLabel(
+  account: SavedMerchantAccount,
+  safeBusiness: string,
+  safeMerchantName: string
+): string {
+  const normalizedOwner = safeMerchantName.trim().toLowerCase();
+  const hasDistinctOwner =
+    normalizedOwner.length > 0 &&
+    normalizedOwner !== safeBusiness.trim().toLowerCase() &&
+    !GENERIC_OWNER_PLACEHOLDERS.has(normalizedOwner);
+
+  if (account.role === 'super_admin') {
+    return hasDistinctOwner
+      ? `${safeMerchantName} · Hoppa Merkez Yönetimi`
+      : 'Hoppa Merkez Yönetimi';
   }
-  return 'SATICI';
+  if (account.role === 'admin') {
+    return hasDistinctOwner
+      ? `${safeMerchantName} · Operasyon Yönetimi`
+      : 'Operasyon Yönetimi';
+  }
+  return hasDistinctOwner ? safeMerchantName : 'Mağaza Yönetimi';
 }
 
 function formatLastLogin(isoDate: string): string {
@@ -56,14 +83,15 @@ export default function AccountChooser({
           const isCurrentSession = activeAccountId === account.id;
           const isVerifying = verifyingAccountId === account.id;
           const isAdminRole = account.role === 'super_admin' || account.role === 'admin';
+          const metaLabel = resolveAccountMetaLabel(account, safeBusiness, safeMerchantName);
 
           return (
             <div
               key={account.id}
               className={`group relative flex items-center gap-3 p-3.5 rounded-2xl border transition-all ${
                 isDark
-                  ? 'bg-slate-950/70 border-slate-800 hover:border-[#FF6B00]/60'
-                  : 'bg-slate-50/70 border-slate-200 hover:border-[#FF6B00]/60 hover:bg-orange-50/30'
+                  ? `bg-slate-950/70 ${isCurrentSession ? 'border-slate-700' : 'border-slate-800'} hover:border-slate-700`
+                  : `bg-white ${isCurrentSession ? 'border-slate-300' : 'border-slate-200/90'} hover:border-slate-300 shadow-2xs`
               }`}
             >
               <button
@@ -72,45 +100,70 @@ export default function AccountChooser({
                 onClick={() => onSelectAccount(account)}
                 className="flex-1 flex items-center gap-3 text-left min-w-0 disabled:opacity-60"
               >
-                {account.avatarUrl ? (
-                  <img
-                    src={account.avatarUrl}
-                    alt={safeBusiness}
-                    className="w-11 h-11 rounded-xl object-cover shrink-0 border border-slate-200 dark:border-slate-700"
-                  />
-                ) : (
-                  <div className="w-11 h-11 rounded-xl bg-gradient-to-tr from-[#E95D22] to-[#FF8C00] text-white font-black text-base flex items-center justify-center shrink-0">
-                    {initial}
-                  </div>
-                )}
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-sm font-black truncate">{safeBusiness}</span>
-                    <span
-                      className={`px-1.5 py-0.5 rounded text-[9px] font-black inline-flex items-center gap-0.5 ${
-                        isAdminRole
-                          ? 'bg-[#FF6B00]/15 text-[#FF6B00]'
-                          : 'bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                <div className="relative shrink-0">
+                  {account.avatarUrl ? (
+                    <img
+                      src={account.avatarUrl}
+                      alt={safeBusiness}
+                      className="w-11 h-11 rounded-xl object-cover border border-slate-200 dark:border-slate-700"
+                    />
+                  ) : isAdminRole ? (
+                    <img
+                      src="/logo-square-orange.png"
+                      alt="Hoppa"
+                      className="w-11 h-11 rounded-xl object-cover shadow-2xs ring-1 ring-black/5"
+                    />
+                  ) : (
+                    <div
+                      className={`w-11 h-11 rounded-xl font-extrabold text-sm flex items-center justify-center border ${
+                        isDark
+                          ? 'bg-slate-900 border-slate-700 text-slate-100'
+                          : 'bg-slate-900 border-slate-800 text-white'
                       }`}
                     >
-                      {isAdminRole && <Shield className="w-2.5 h-2.5" />}
-                      {getRoleBadgeLabel(account.role)}
-                    </span>
-                    {isCurrentSession && (
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 inline-flex items-center gap-0.5">
-                        <UserCheck className="w-2.5 h-2.5" />
-                        Aktif Oturum
-                      </span>
-                    )}
-                  </div>
+                      {initial}
+                    </div>
+                  )}
+                  {isCurrentSession && (
+                    <span
+                      title="Bu cihazda oturum açık"
+                      className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-[#00A651] ring-2 ${
+                        isDark ? 'ring-slate-900' : 'ring-white'
+                      }`}
+                    />
+                  )}
+                </div>
 
-                  <p className="text-xs font-semibold text-slate-400 truncate mt-0.5">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-extrabold tracking-tight truncate">{safeBusiness}</p>
+
+                  <p
+                    className={`text-xs font-medium truncate mt-0.5 ${
+                      isDark ? 'text-slate-400' : 'text-slate-500'
+                    }`}
+                  >
                     {safeEmail}
                   </p>
-                  <p className="text-[10px] font-semibold text-slate-400/80 mt-0.5">
-                    {safeMerchantName !== safeBusiness ? `${safeMerchantName} • ` : ''}
-                    Son giriş: {formatLastLogin(account.lastLoginAt)}
+                  <p
+                    className={`text-[11px] font-medium tabular-nums truncate mt-1 flex items-center gap-1.5 ${
+                      isDark ? 'text-slate-500' : 'text-slate-400'
+                    }`}
+                  >
+                    <span
+                      className={
+                        isDark ? 'text-slate-300 font-semibold' : 'text-slate-600 font-semibold'
+                      }
+                    >
+                      {metaLabel}
+                    </span>
+                    <span aria-hidden="true">·</span>
+                    {isCurrentSession ? (
+                      <span className="text-[#00A651] dark:text-emerald-400 font-semibold">
+                        Oturum açık
+                      </span>
+                    ) : (
+                      <span>Son giriş {formatLastLogin(account.lastLoginAt)}</span>
+                    )}
                   </p>
                 </div>
 
@@ -121,21 +174,27 @@ export default function AccountChooser({
                 )}
               </button>
 
-              <button
-                type="button"
-                disabled={verifyingAccountId !== null}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRemoveAccount(account.id);
-                }}
-                title="Profili Bu Cihazdan Kaldır"
-                aria-label={`${safeBusiness} profilini kaldır`}
-                className={`p-1.5 rounded-lg text-slate-400 hover:text-rose-500 transition-colors shrink-0 ${
-                  isDark ? 'hover:bg-slate-800' : 'hover:bg-slate-200/70'
+              <div
+                className={`pl-2 ml-0.5 border-l shrink-0 ${
+                  isDark ? 'border-slate-800' : 'border-slate-200/70'
                 }`}
               >
-                <X className="w-4 h-4" />
-              </button>
+                <button
+                  type="button"
+                  disabled={verifyingAccountId !== null}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemoveAccount(account.id);
+                  }}
+                  title="Profili Bu Cihazdan Kaldır"
+                  aria-label={`${safeBusiness} profilini kaldır`}
+                  className={`p-1.5 rounded-lg text-slate-400 hover:text-rose-500 transition-colors ${
+                    isDark ? 'hover:bg-slate-800' : 'hover:bg-slate-100'
+                  }`}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           );
         })}
