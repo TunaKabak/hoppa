@@ -137,7 +137,14 @@ export class CourierController {
                     name: true,
                     type: true,
                     address: true,
-                    phone: true,
+                    latitude: true,
+                    longitude: true,
+                    merchant: {
+                      select: {
+                        businessPhone: true,
+                        phone: true,
+                      },
+                    },
                   },
                 },
               },
@@ -181,6 +188,22 @@ export class CourierController {
         }),
       ]);
 
+      const mappedShops = courier.shops.map((cs) => ({
+        id: cs.id,
+        courierId: cs.courierId,
+        shopId: cs.shopId,
+        createdAt: cs.createdAt,
+        shop: {
+          id: cs.shop.id,
+          name: cs.shop.name,
+          type: cs.shop.type,
+          address: cs.shop.address,
+          latitude: cs.shop.latitude,
+          longitude: cs.shop.longitude,
+          phone: cs.shop.merchant?.businessPhone || cs.shop.merchant?.phone || null,
+        },
+      }));
+
       res.status(200).json({
         error: false,
         data: {
@@ -194,7 +217,7 @@ export class CourierController {
           status: courier.status,
           isActive: courier.isActive,
           maxServiceDistanceKm: courier.maxServiceDistanceKm,
-          shops: courier.shops,
+          shops: mappedShops,
           todayDeliveriesCount,
           totalDeliveriesCount,
           user,

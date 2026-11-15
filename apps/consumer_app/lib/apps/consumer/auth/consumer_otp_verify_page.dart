@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:core_auth/core_auth.dart';
 import 'package:provider/provider.dart' as p;
@@ -110,7 +109,7 @@ class _OtpVerifyPageState extends ConsumerState<OtpVerifyPage> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
-    final _isLoading = authState is AuthLoading;
+    final isLoading = authState is AuthLoading;
 
     ref.listen<AuthState>(authControllerProvider, (previous, next) async {
       if (!mounted) return;
@@ -155,6 +154,7 @@ class _OtpVerifyPageState extends ConsumerState<OtpVerifyPage> {
             }
           }
           
+          if (!context.mounted) return;
           if (fromCheckout) {
             Navigator.pushAndRemoveUntil(
               context,
@@ -173,6 +173,7 @@ class _OtpVerifyPageState extends ConsumerState<OtpVerifyPage> {
 
     return AuthLayout(
       showAppBar: true,
+      enableGlass: true,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87),
         onPressed: () => Navigator.pop(context),
@@ -187,7 +188,7 @@ class _OtpVerifyPageState extends ConsumerState<OtpVerifyPage> {
               color: kPrimaryColor.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(
+            child: const Icon(
               Icons.lock_open_rounded,
               size: 48,
               color: kPrimaryColor,
@@ -195,9 +196,9 @@ class _OtpVerifyPageState extends ConsumerState<OtpVerifyPage> {
           ),
           const SizedBox(height: 24),
 
-          Text(
+          const Text(
             "Doğrulama Kodu",
-            style: GoogleFonts.poppins(
+            style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
               color: Colors.black87,
@@ -205,11 +206,11 @@ class _OtpVerifyPageState extends ConsumerState<OtpVerifyPage> {
           ),
           const SizedBox(height: 8),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
             child: RichText(
               textAlign: TextAlign.center,
               text: TextSpan(
-                style: GoogleFonts.inter(
+                style: TextStyle(
                   color: Colors.grey.shade600,
                   fontSize: 14,
                 ),
@@ -256,13 +257,14 @@ class _OtpVerifyPageState extends ConsumerState<OtpVerifyPage> {
               // 2. Görsel Kutular (Önde gösterilir)
               GestureDetector(
                 onTap: () {
+                  final focusScope = FocusScope.of(context);
                   if (!_focusNode.hasFocus) {
-                    FocusScope.of(context).requestFocus(_focusNode);
+                    focusScope.requestFocus(_focusNode);
                   } else {
                     _focusNode.unfocus();
                     Future.delayed(const Duration(milliseconds: 50), () {
                       if (mounted) {
-                        FocusScope.of(context).requestFocus(_focusNode);
+                        focusScope.requestFocus(_focusNode);
                       }
                     });
                   }
@@ -277,23 +279,25 @@ class _OtpVerifyPageState extends ConsumerState<OtpVerifyPage> {
 
                     bool isFocused = index == _otpController.text.length;
 
-                    return Container(
-                      width: 45,
-                      height: 55,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(12),
-                        border: isFocused && !_isLoading
-                            ? Border.all(color: kPrimaryColor, width: 2)
-                            : Border.all(color: Colors.grey.shade300),
-                      ),
-                      child: Text(
-                        char,
-                        style: GoogleFonts.inter(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: kSecondaryColor,
+                    return Expanded(
+                      child: Container(
+                        height: 52,
+                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(12),
+                          border: isFocused && !isLoading
+                              ? Border.all(color: kPrimaryColor, width: 2)
+                              : Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: Text(
+                          char,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: kSecondaryColor,
+                          ),
                         ),
                       ),
                     );
@@ -309,7 +313,7 @@ class _OtpVerifyPageState extends ConsumerState<OtpVerifyPage> {
             width: double.infinity,
             height: 56,
             child: ElevatedButton(
-              onPressed: _isLoading
+              onPressed: isLoading
                   ? null
                   : () => _verifyCode(_otpController.text),
               style: ElevatedButton.styleFrom(
@@ -321,7 +325,7 @@ class _OtpVerifyPageState extends ConsumerState<OtpVerifyPage> {
                   borderRadius: BorderRadius.circular(16),
                 ),
               ),
-              child: _isLoading
+              child: isLoading
                   ? const SizedBox(
                       width: 24,
                       height: 24,
@@ -330,9 +334,9 @@ class _OtpVerifyPageState extends ConsumerState<OtpVerifyPage> {
                         strokeWidth: 2,
                       ),
                     )
-                  : Text(
+                  : const Text(
                       "Doğrula",
-                      style: GoogleFonts.poppins(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
@@ -347,12 +351,12 @@ class _OtpVerifyPageState extends ConsumerState<OtpVerifyPage> {
             children: [
               Text(
                 "Kod gelmedi mi? ",
-                style: GoogleFonts.inter(color: Colors.grey.shade600),
+                style: TextStyle(color: Colors.grey.shade600),
               ),
               if (_secondsRemaining > 0)
                 Text(
                   _timerText,
-                  style: GoogleFonts.inter(
+                  style: TextStyle(
                     color: Colors.grey.shade500,
                     fontWeight: FontWeight.bold,
                   ),
@@ -368,9 +372,9 @@ class _OtpVerifyPageState extends ConsumerState<OtpVerifyPage> {
                     // Core Auth ile yeni SMS isteğinde bulun
                     ref.read(authControllerProvider.notifier).sendOtp(widget.phoneNumber);
                   },
-                  child: Text(
+                  child: const Text(
                     "Tekrar Gönder",
-                    style: GoogleFonts.inter(
+                    style: TextStyle(
                       color: kSecondaryColor,
                       fontWeight: FontWeight.bold,
                     ),

@@ -129,6 +129,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
     return AuthLayout(
       showAppBar: true,
+      enableGlass: true,
       leading: IconButton(
         icon: Icon(
           Icons.arrow_back_ios_new,
@@ -141,13 +142,11 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Center(
-            child: Hero(
-              tag: 'app_logo',
-              child: Image.asset(
-                'assets/images/hoppa_logo.png',
-                height: 100,
-                fit: BoxFit.contain,
-              ),
+            child: Image.asset(
+              'assets/images/hoppa_logo.png',
+              height: 60,
+              cacheHeight: 192,
+              fit: BoxFit.contain,
             ),
           ),
           const SizedBox(height: 24),

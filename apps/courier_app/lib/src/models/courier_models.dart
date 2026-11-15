@@ -97,12 +97,15 @@ class CourierShopInfo {
   });
 
   factory CourierShopInfo.fromJson(Map<String, dynamic> json) {
+    final merchantMap = _asMap(json['merchant']);
     return CourierShopInfo(
       id: json['id']?.toString() ?? '',
       name: _asNullableString(json['name']) ?? 'Mağaza',
       type: _asNullableString(json['type']),
       address: _asNullableString(json['address']),
-      phone: _asNullableString(json['phone']),
+      phone: _asNullableString(json['phone']) ??
+          _asNullableString(merchantMap?['businessPhone']) ??
+          _asNullableString(merchantMap?['phone']),
       latitude: _asNullableDouble(json['latitude'] ?? json['lat']),
       longitude: _asNullableDouble(json['longitude'] ?? json['lng']),
     );

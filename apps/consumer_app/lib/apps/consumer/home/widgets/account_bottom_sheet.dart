@@ -25,6 +25,12 @@ class AccountBottomSheet extends ConsumerWidget {
     );
   }
 
+  void _closeSheetAndPush(BuildContext context, Widget page) {
+    final rootNavigator = Navigator.of(context, rootNavigator: true);
+    Navigator.of(context).pop();
+    rootNavigator.push(MaterialPageRoute(builder: (_) => page));
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -134,15 +140,8 @@ class AccountBottomSheet extends ConsumerWidget {
                             width: double.infinity,
                             height: 46,
                             child: ElevatedButton(
-                              onPressed: () {
-                                Navigator.pop(context);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const LoginPage(),
-                                  ),
-                                );
-                              },
+                              onPressed: () =>
+                                  _closeSheetAndPush(context, const LoginPage()),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.white,
                                 foregroundColor: const Color(0xFF00A651),
@@ -167,15 +166,10 @@ class AccountBottomSheet extends ConsumerWidget {
                   ] else ...[
                     // GİRİŞ YAPMIŞ KULLANICI GÖRÜNÜMÜ: Modern Premium Kart
                     InkWell(
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const AccountDetailsPage(),
-                          ),
-                        );
-                      },
+                      onTap: () => _closeSheetAndPush(
+                        context,
+                        const AccountDetailsPage(),
+                      ),
                       borderRadius: BorderRadius.circular(20),
                       child: Container(
                         padding: const EdgeInsets.all(18),
@@ -263,111 +257,50 @@ class AccountBottomSheet extends ConsumerWidget {
                     icon: Icons.account_balance_wallet_outlined,
                     title: "Hoppa Cüzdanım",
                     subtitle: "Bakiye ve bakiye yükleme",
-                    onTap: () {
-                      Navigator.pop(context);
-                      if (isGuest) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const LoginPage(),
-                          ),
-                        );
-                      } else {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const WalletPage(),
-                          ),
-                        );
-                      }
-                    },
+                    onTap: () => _closeSheetAndPush(
+                      context,
+                      isGuest ? const LoginPage() : const WalletPage(),
+                    ),
                     theme: theme,
                   ),
                   _buildMenuTile(
                     icon: Icons.card_giftcard_outlined,
                     title: "Davet Et & Kazan!",
                     subtitle: "Arkadaşlarını davet et, ödül kazan",
-                    onTap: () {
-                      Navigator.pop(context);
-                      if (isGuest) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const LoginPage(),
-                          ),
-                        );
-                      } else {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const ReferralPage(),
-                          ),
-                        );
-                      }
-                    },
+                    onTap: () => _closeSheetAndPush(
+                      context,
+                      isGuest ? const LoginPage() : const ReferralPage(),
+                    ),
                     theme: theme,
                   ),
                   _buildMenuTile(
                     icon: Icons.location_on_outlined,
                     title: "Kayıtlı Adreslerim",
                     subtitle: "Teslimat adreslerini yönet",
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const AddressListPage(),
-                        ),
-                      );
-                    },
+                    onTap: () => _closeSheetAndPush(
+                      context,
+                      const AddressListPage(),
+                    ),
                     theme: theme,
                   ),
                   _buildMenuTile(
                     icon: Icons.history,
                     title: "Sipariş Geçmişim",
                     subtitle: "Eski siparişlerini incele",
-                    onTap: () {
-                      Navigator.pop(context);
-                      if (isGuest) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const LoginPage(),
-                          ),
-                        );
-                      } else {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const OrderHistoryPage(),
-                          ),
-                        );
-                      }
-                    },
+                    onTap: () => _closeSheetAndPush(
+                      context,
+                      isGuest ? const LoginPage() : const OrderHistoryPage(),
+                    ),
                     theme: theme,
                   ),
                   _buildMenuTile(
                     icon: Icons.favorite_outline_rounded,
                     title: "Favorilerim",
                     subtitle: "Favori ürün ve dükkanların",
-                    onTap: () {
-                      Navigator.pop(context);
-                      if (isGuest) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const LoginPage(),
-                          ),
-                        );
-                      } else {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const FavoritesPage(),
-                          ),
-                        );
-                      }
-                    },
+                    onTap: () => _closeSheetAndPush(
+                      context,
+                      isGuest ? const LoginPage() : const FavoritesPage(),
+                    ),
                     theme: theme,
                   ),
 
@@ -376,46 +309,30 @@ class AccountBottomSheet extends ConsumerWidget {
                       icon: Icons.rate_review_outlined,
                       title: "Değerlendirmelerim",
                       subtitle: "Dükkan ve ürün yorumların",
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const MyReviewsPage(),
-                          ),
-                        );
-                      },
+                      onTap: () => _closeSheetAndPush(
+                        context,
+                        const MyReviewsPage(),
+                      ),
                       theme: theme,
                     ),
                     _buildMenuTile(
                       icon: Icons.payment_outlined,
                       title: "Kayıtlı Kartlarım",
                       subtitle: "Ödeme yöntemlerini düzenle",
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const SavedCardsPage(),
-                          ),
-                        );
-                      },
+                      onTap: () => _closeSheetAndPush(
+                        context,
+                        const SavedCardsPage(),
+                      ),
                       theme: theme,
                     ),
                     _buildMenuTile(
                       icon: Icons.notifications_none_outlined,
                       title: "Bildirim Ayarları",
                       subtitle: "Hangi bildirimleri almak istersin?",
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                const NotificationSettingsPage(),
-                          ),
-                        );
-                      },
+                      onTap: () => _closeSheetAndPush(
+                        context,
+                        const NotificationSettingsPage(),
+                      ),
                       theme: theme,
                     ),
                   ],
@@ -424,15 +341,10 @@ class AccountBottomSheet extends ConsumerWidget {
                     icon: Icons.headset_mic_outlined,
                     title: "Canlı Destek",
                     subtitle: "Hoppa Müşteri Hizmetleri",
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SupportChatPage(),
-                        ),
-                      );
-                    },
+                    onTap: () => _closeSheetAndPush(
+                      context,
+                      const SupportChatPage(),
+                    ),
                     theme: theme,
                   ),
 

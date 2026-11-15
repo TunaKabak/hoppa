@@ -2,13 +2,11 @@ import React, { useEffect, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import {
-  Store,
   AlertCircle,
   TrendingUp,
   Clock,
   Users,
   CheckCircle2,
-  Award,
   ChevronRight,
   Sun,
   Moon,
@@ -190,15 +188,21 @@ export default function MerchantLoginPage() {
           }`}
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#FF6B00] text-white flex items-center justify-center font-black">
-              <Store className="w-6 h-6" />
-            </div>
-            <div>
-              <span className="font-black text-xl tracking-tight">
-                Hoppa <span className="text-[#FF6B00]">Satıcı</span>
+            <img
+              src="/logo-square-orange.png"
+              alt="Hoppa"
+              className="w-9 h-9 rounded-xl object-cover shadow-xs ring-1 ring-black/5 shrink-0"
+            />
+            <div className="flex items-center">
+              <span className="font-black text-lg tracking-tight">
+                Hoppa <span className="text-[#FF6B00]">İş Ortağı</span>
               </span>
-              <span className="hidden sm:inline-block ml-3 text-xs font-semibold text-slate-400 border-l border-slate-300 dark:border-slate-700 pl-3">
-                İş Ortaklığı &amp; Ürün Suite
+              <span
+                className={`hidden sm:inline-block ml-3 pl-3 border-l text-xs font-semibold ${
+                  isDark ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-500'
+                }`}
+              >
+                Satıcı &amp; Şube Yönetim Portalı
               </span>
             </div>
           </div>
@@ -232,10 +236,25 @@ export default function MerchantLoginPage() {
           {/* Left Promotional Showcase */}
           <div className="flex-1 space-y-8 text-left">
             <div>
-              <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-wider bg-[#FF6B00]/10 text-[#FF6B00] border border-[#FF6B00]/20 mb-4">
-                <Award className="w-4 h-4 text-[#FF6B00]" />
-                <span>Kuzey Kıbrıs&apos;ın Lider Yerel Pazar Yeri</span>
-              </span>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mb-5">
+                <span className="inline-flex items-center gap-2 text-xs font-extrabold uppercase tracking-[0.14em] text-[#FF6B00]">
+                  <span className="w-2 h-2 rounded-[2px] bg-[#FF6B00]" aria-hidden="true" />
+                  <span>Hoppa Ticari Ağ · KKTC</span>
+                </span>
+                <span
+                  className={`hidden sm:inline-block h-3.5 w-px ${
+                    isDark ? 'bg-slate-800' : 'bg-slate-300'
+                  }`}
+                  aria-hidden="true"
+                />
+                <span
+                  className={`text-xs font-semibold ${
+                    isDark ? 'text-slate-400' : 'text-slate-500'
+                  }`}
+                >
+                  Lefkoşa · Girne · Gazimağusa · İskele · Güzelyurt
+                </span>
+              </div>
 
               <h1 className="text-3xl md:text-5xl font-black tracking-tight leading-tight">
                 İşletmenizi Dijitale Taşıyın, <br className="hidden sm:inline" />

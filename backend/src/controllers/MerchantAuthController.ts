@@ -24,6 +24,7 @@ export class MerchantAuthController {
       // Merchant'ı e-posta ile bul
       const merchant = await prisma.merchant.findUnique({
         where: { email: email.trim().toLowerCase() },
+        include: { shop: { select: { id: true } } },
       });
 
       if (!merchant) {
@@ -62,8 +63,12 @@ export class MerchantAuthController {
         deviceInfo,
       });
 
-      // Şifre hash'ini response'tan çıkar
-      const { passwordHash: _, ...merchantPublic } = merchant;
+      // Şifre hash'ini response'tan çıkar ve dükkan ID'sini businessId olarak ekle
+      const { passwordHash: _, shop, ...merchantRest } = merchant;
+      const merchantPublic = {
+        ...merchantRest,
+        businessId: shop?.id ?? merchantRest.businessId ?? null,
+      };
 
       res.status(200).json({
         error: false,
