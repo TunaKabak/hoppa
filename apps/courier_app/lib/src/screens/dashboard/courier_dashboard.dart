@@ -20,12 +20,14 @@ class CourierDashboardPage extends ConsumerStatefulWidget {
       _CourierDashboardPageState();
 }
 
-class _CourierDashboardPageState extends ConsumerState<CourierDashboardPage> {
+class _CourierDashboardPageState extends ConsumerState<CourierDashboardPage>
+    with WidgetsBindingObserver {
   static const Color _hoppaOrange = Color(0xFFFF6B00);
   static const Color _hoppaGreen = Color(0xFF00A651);
 
   late final CourierLocationEngine _locationEngine;
   Timer? _autoRefreshTimer;
+  AppLifecycleState _appLifecycleState = AppLifecycleState.resumed;
 
   CourierProfile? _profile;
   List<CourierOrder> _activeOrders = const [];
@@ -42,6 +44,7 @@ class _CourierDashboardPageState extends ConsumerState<CourierDashboardPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _locationEngine = CourierLocationEngine(ref.read(apiClientProvider));
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -54,15 +57,29 @@ class _CourierDashboardPageState extends ConsumerState<CourierDashboardPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _stopAutoRefreshTimer();
     _locationEngine.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _appLifecycleState = state;
+    if (state == AppLifecycleState.resumed &&
+        mounted &&
+        ref.read(authControllerProvider) is AuthAuthenticated &&
+        _profile?.isApproved == true) {
+      unawaited(_syncLocationTracking(_isOnDuty));
+      unawaited(_fetchActiveOrders(silent: true));
+    }
   }
 
   void _startAutoRefreshTimer() {
     _stopAutoRefreshTimer();
     _autoRefreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
       if (!mounted) return;
+      if (_appLifecycleState != AppLifecycleState.resumed) return;
       if (ref.read(authControllerProvider) is! AuthAuthenticated) return;
       if (_profile?.isApproved != true) return;
       if (_selectedTabIndex == 0 && !_isLoadingOrders && !_isLoadingProfile) {
@@ -164,6 +181,29 @@ class _CourierDashboardPageState extends ConsumerState<CourierDashboardPage> {
     if (shouldTrack && !_locationEngine.isTracking) {
       try {
         await _locationEngine.startTracking();
+      } on LocationPermissionException catch (e) {
+        debugPrint('🚨 Konum izni/servis hatası: $e');
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.message),
+            backgroundColor: Colors.orange.shade800,
+            behavior: SnackBarBehavior.floating,
+            action: (e.openLocationSettings || e.openAppSettings)
+                ? SnackBarAction(
+                    label: 'Ayarları Aç',
+                    textColor: Colors.white,
+                    onPressed: () {
+                      if (e.openLocationSettings) {
+                        unawaited(Geolocator.openLocationSettings());
+                      } else if (e.openAppSettings) {
+                        unawaited(Geolocator.openAppSettings());
+                      }
+                    },
+                  )
+                : null,
+          ),
+        );
       } catch (e) {
         debugPrint('🚨 Konum takibi başlatılamadı: $e');
         if (!mounted) return;
@@ -212,11 +252,15 @@ class _CourierDashboardPageState extends ConsumerState<CourierDashboardPage> {
     } on AppException catch (e) {
       debugPrint('🚨 Aktif siparişler alınamadı: ${e.message}');
       if (!mounted) return;
-      setState(() => _ordersError = e.message);
+      if (!silent || _activeOrders.isEmpty) {
+        setState(() => _ordersError = e.message);
+      }
     } catch (e) {
       debugPrint('🚨 Aktif siparişler alınamadı: $e');
       if (!mounted) return;
-      setState(() => _ordersError = 'Siparişler yüklenemedi: $e');
+      if (!silent || _activeOrders.isEmpty) {
+        setState(() => _ordersError = 'Siparişler yüklenemedi: $e');
+      }
     } finally {
       if (mounted) {
         setState(() => _isLoadingOrders = false);

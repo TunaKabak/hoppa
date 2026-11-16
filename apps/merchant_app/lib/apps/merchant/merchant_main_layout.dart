@@ -71,19 +71,26 @@ class _MerchantMainLayoutState extends ConsumerState<MerchantMainLayout> {
     if (authState is AuthAuthenticated) {
       if (authState.user.isSuperAdmin) {
         await _loadAllBusinesses();
-        if (_activeBusinessId.isEmpty && _allBusinesses.isNotEmpty) {
-          _activeBusinessId = _allBusinesses.first.id;
+        if (!mounted) return;
+        if (_activeBusinessId.isEmpty ||
+            !_allBusinesses.any((b) => b.id == _activeBusinessId)) {
+          _activeBusinessId =
+              _allBusinesses.isNotEmpty ? _allBusinesses.first.id : '';
         }
-        ref.read(selectedMerchantBusinessIdProvider.notifier).setSelectedId(_activeBusinessId);
-        ref.read(apiClientProvider).activeBusinessId = _activeBusinessId;
+        ref.read(apiClientProvider).activeBusinessId =
+            _activeBusinessId.isNotEmpty ? _activeBusinessId : null;
+        ref
+            .read(selectedMerchantBusinessIdProvider.notifier)
+            .setSelectedId(_activeBusinessId);
       } else {
         ref.read(apiClientProvider).activeBusinessId = null;
+        ref.read(selectedMerchantBusinessIdProvider.notifier).setSelectedId('');
       }
       if (_activeBusinessId.isNotEmpty) {
         await _loadBusinessName();
       }
     }
-    
+
     if (mounted) {
       setState(() {
         _isLoading = false;
@@ -92,14 +99,73 @@ class _MerchantMainLayoutState extends ConsumerState<MerchantMainLayout> {
   }
 
   Future<void> _loadAllBusinesses() async {
+    final byId = <String, Business>{};
     try {
-      final list = await ref.read(consumerShopRepositoryProvider).getShops();
-      if (mounted) {
-        setState(() {
-          _allBusinesses = list;
-        });
+      final consumerList = await ref.read(consumerShopRepositoryProvider).getShops();
+      for (final b in consumerList) {
+        if (b.id.isNotEmpty) {
+          byId[b.id] = b;
+        }
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('🚨 Aktif dükkan listesi alınamadı: $e');
+    }
+
+    try {
+      final res = await ref
+          .read(apiClientProvider)
+          .get('/api/admin/merchants/pending?status=ALL');
+      final rawList = res['data'];
+      if (rawList is List) {
+        for (final item in rawList) {
+          if (item is! Map) continue;
+          final shopMap = item['shop'];
+          if (shopMap is! Map) continue;
+          final shopId = shopMap['id']?.toString() ?? '';
+          if (shopId.isEmpty || byId.containsKey(shopId)) continue;
+          final shopName = shopMap['name']?.toString() ??
+              item['businessName']?.toString() ??
+              'İsimsiz İşletme';
+          byId[shopId] = Business(
+            id: shopId,
+            name: shopName,
+            address: item['fullAddress']?.toString() ?? '',
+            phone: (item['businessPhone'] ?? item['ownerPhone'] ?? '').toString(),
+            logoUrl: '',
+            headerImageUrl: '',
+            isOpen: shopMap['isActive'] == true,
+            type: BusinessType.fromString(
+              (shopMap['type'] ?? item['merchantType'] ?? 'market').toString(),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('🚨 Tüm admin işletme listesi alınamadı: $e');
+    }
+
+    if (mounted && byId.isNotEmpty) {
+      final merged = byId.values.toList()
+        ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      setState(() {
+        _allBusinesses = merged;
+      });
+    }
+  }
+
+  Future<void> _switchBusiness(String newVal) async {
+    if (merchantDrawerKey.currentState?.isDrawerOpen ?? false) {
+      Navigator.of(context).pop();
+    }
+    ref.read(apiClientProvider).activeBusinessId = newVal;
+    final selected = _allBusinesses.where((b) => b.id == newVal);
+    setState(() {
+      _activeBusinessId = newVal;
+      if (selected.isNotEmpty) {
+        _businessName = selected.first.name;
+      }
+    });
+    ref.read(selectedMerchantBusinessIdProvider.notifier).setSelectedId(newVal);
   }
 
   Future<void> _loadBusinessName() async {
@@ -276,8 +342,10 @@ class _MerchantMainLayoutState extends ConsumerState<MerchantMainLayout> {
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
                         isExpanded: true,
-                        value: _activeBusinessId.isEmpty ? null : _activeBusinessId,
-                        hint: const Text("Aktif Market Yok"),
+                        value: _allBusinesses.any((b) => b.id == _activeBusinessId)
+                            ? _activeBusinessId
+                            : null,
+                        hint: const Text("İşletme Seçin"),
                         icon: Icon(
                           Icons.arrow_drop_down,
                           color: colorScheme.primary,
@@ -297,20 +365,9 @@ class _MerchantMainLayoutState extends ConsumerState<MerchantMainLayout> {
                             ),
                           );
                         }).toList(),
-                        onChanged: (newVal) async {
+                        onChanged: (newVal) {
                           if (newVal != null && newVal != _activeBusinessId) {
-                            ref.read(selectedMerchantBusinessIdProvider.notifier).setSelectedId(newVal);
-                            ref.read(apiClientProvider).activeBusinessId = newVal;
-                            setState(() {
-                              _activeBusinessId = newVal;
-                              _isLoading = true;
-                            });
-                            await _loadBusinessName();
-                            if (mounted) {
-                              setState(() {
-                                _isLoading = false;
-                              });
-                            }
+                            unawaited(_switchBusiness(newVal));
                           }
                         },
                       ),

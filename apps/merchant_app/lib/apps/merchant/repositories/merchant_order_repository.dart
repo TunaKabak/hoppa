@@ -2,6 +2,7 @@ import 'package:core_auth/core_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:core_network/core_network.dart';
 import 'package:core_shared/shared/models/order.dart';
+import '../providers/merchant_api_providers.dart';
 
 class MerchantOrderRepository {
   final ApiClient _apiClient;
@@ -46,6 +47,16 @@ final merchantOrderRepositoryProvider = Provider<MerchantOrderRepository>((
 final merchantOrdersProvider = FutureProvider.autoDispose<List<Order>>((
   ref,
 ) async {
+  final selectedShopId = ref.watch(selectedMerchantBusinessIdProvider);
+  final authState = ref.watch(authControllerProvider);
+  final apiClient = ref.watch(apiClientProvider);
+  if (syncSelectedBusinessContext(
+    authState: authState,
+    apiClient: apiClient,
+    selectedShopId: selectedShopId,
+  )) {
+    return [];
+  }
   final repository = ref.watch(merchantOrderRepositoryProvider);
   return await repository.getMerchantOrders();
 });
@@ -53,6 +64,16 @@ final merchantOrdersProvider = FutureProvider.autoDispose<List<Order>>((
 final merchantDashboardStatsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((
   ref,
 ) async {
+  final selectedShopId = ref.watch(selectedMerchantBusinessIdProvider);
+  final authState = ref.watch(authControllerProvider);
+  final apiClient = ref.watch(apiClientProvider);
+  if (syncSelectedBusinessContext(
+    authState: authState,
+    apiClient: apiClient,
+    selectedShopId: selectedShopId,
+  )) {
+    return {};
+  }
   final repository = ref.watch(merchantOrderRepositoryProvider);
   return await repository.getDashboardStats();
 });

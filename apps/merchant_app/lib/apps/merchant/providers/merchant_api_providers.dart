@@ -2,15 +2,43 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // Note: apiClientProvider comes from core_auth but since merchant app uses it we can define or import it.
 // Assuming core_auth is imported in merchant_main_layout or we can import it.
 import 'package:core_auth/core_auth.dart';
+import 'package:core_network/core_network.dart';
 import 'package:core_shared/shared/models/category_model.dart';
 
 import '../repositories/merchant_shop_repository.dart';
 import '../repositories/merchant_product_repository.dart';
 
+/// Süper Admin oturumunda seçili işletme bağlamını `ApiClient.activeBusinessId`
+/// ile senkronize eder ve henüz bir dükkan seçilmediyse `true` döndürür.
+bool syncSelectedBusinessContext({
+  required AuthState authState,
+  required ApiClient apiClient,
+  required String selectedShopId,
+}) {
+  final isSuperAdmin =
+      authState is AuthAuthenticated && authState.user.isSuperAdmin;
+  if (isSuperAdmin) {
+    apiClient.activeBusinessId =
+        selectedShopId.isNotEmpty ? selectedShopId : null;
+    return selectedShopId.isEmpty;
+  }
+  apiClient.activeBusinessId = null;
+  return false;
+}
+
 final merchantCategoryTreeProvider = FutureProvider<List<Category>>((
   ref,
 ) async {
+  final selectedShopId = ref.watch(selectedMerchantBusinessIdProvider);
+  final authState = ref.watch(authControllerProvider);
   final apiClient = ref.watch(apiClientProvider);
+  if (syncSelectedBusinessContext(
+    authState: authState,
+    apiClient: apiClient,
+    selectedShopId: selectedShopId,
+  )) {
+    return [];
+  }
   final response = await apiClient.get('/api/consumer/categories');
   final data = response['data'] as List<dynamic>?;
   if (data == null) return [];
@@ -56,6 +84,15 @@ class ShopController extends AsyncNotifier<MerchantShop?> {
 
   Future<MerchantShop?> _fetchShop() async {
     final selectedShopId = ref.watch(selectedMerchantBusinessIdProvider);
+    final authState = ref.watch(authControllerProvider);
+    final apiClient = ref.read(apiClientProvider);
+    if (syncSelectedBusinessContext(
+      authState: authState,
+      apiClient: apiClient,
+      selectedShopId: selectedShopId,
+    )) {
+      return null;
+    }
     final repo = ref.read(merchantShopRepositoryProvider);
     return await repo.getShop(shopId: selectedShopId.isNotEmpty ? selectedShopId : null);
   }
@@ -116,6 +153,16 @@ class ProductController extends AsyncNotifier<List<MerchantProduct>> {
   }
 
   Future<List<MerchantProduct>> _fetchProducts() async {
+    final selectedShopId = ref.watch(selectedMerchantBusinessIdProvider);
+    final authState = ref.watch(authControllerProvider);
+    final apiClient = ref.read(apiClientProvider);
+    if (syncSelectedBusinessContext(
+      authState: authState,
+      apiClient: apiClient,
+      selectedShopId: selectedShopId,
+    )) {
+      return [];
+    }
     final repo = ref.read(merchantProductRepositoryProvider);
     return await repo.getProducts();
   }
@@ -284,12 +331,31 @@ final sponsorshipNotifierProvider =
 );
 
 final merchantShopCampaignsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+  final selectedShopId = ref.watch(selectedMerchantBusinessIdProvider);
+  final authState = ref.watch(authControllerProvider);
+  final apiClient = ref.watch(apiClientProvider);
+  if (syncSelectedBusinessContext(
+    authState: authState,
+    apiClient: apiClient,
+    selectedShopId: selectedShopId,
+  )) {
+    return [];
+  }
   final repo = ref.watch(merchantShopRepositoryProvider);
   return await repo.getShopCampaigns();
 });
 
 final merchantPredictiveStockProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  final selectedShopId = ref.watch(selectedMerchantBusinessIdProvider);
+  final authState = ref.watch(authControllerProvider);
   final apiClient = ref.watch(apiClientProvider);
+  if (syncSelectedBusinessContext(
+    authState: authState,
+    apiClient: apiClient,
+    selectedShopId: selectedShopId,
+  )) {
+    return {};
+  }
   final response = await apiClient.get('/api/merchant/ai/predictive-stock');
   return Map<String, dynamic>.from(response['data'] ?? {});
 });

@@ -277,8 +277,10 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
     }
     _isInitialized = true;
 
-    // Trigger auto GPS location fetch if address is empty
-    if (shop.address == null || shop.address!.trim().isEmpty) {
+    // Trigger auto GPS location fetch only for store owners (never overwrite during SuperAdmin switching)
+    final auth = ref.read(authControllerProvider);
+    final isSuperAdmin = auth is AuthAuthenticated && auth.user.isSuperAdmin;
+    if (!isSuperAdmin && (shop.address == null || shop.address!.trim().isEmpty)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _fetchAndSetLocation(autoTriggered: true);
       });

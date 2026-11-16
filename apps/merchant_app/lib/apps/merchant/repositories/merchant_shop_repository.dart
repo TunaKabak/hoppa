@@ -1,4 +1,5 @@
 import 'package:core_network/core_network.dart';
+import 'package:core_shared/shared/models/business.dart';
 
 class MerchantShop {
   final String id;
@@ -68,7 +69,9 @@ class MerchantShop {
   });
 
   factory MerchantShop.fromMap(Map<String, dynamic> map) {
-    final merchantMap = map['merchant'] as Map<String, dynamic>?;
+    final merchantMap = map['merchant'] is Map
+        ? Map<String, dynamic>.from(map['merchant'] as Map)
+        : null;
     return MerchantShop(
       id: map['id'] ?? '',
       merchantId: map['merchantId'] ?? '',
@@ -82,7 +85,9 @@ class MerchantShop {
       latitude: map['latitude'] != null ? (map['latitude'] as num).toDouble() : null,
       longitude: map['longitude'] != null ? (map['longitude'] as num).toDouble() : null,
       deliveryRadiusKm: map['deliveryRadiusKm'] != null ? (map['deliveryRadiusKm'] as num).toDouble() : null,
-      workingHours: map['workingHours'] != null ? Map<String, dynamic>.from(map['workingHours']) : null,
+      workingHours: map['workingHours'] != null
+          ? normalizeWorkingHoursMap(map['workingHours'])
+          : null,
       minOrderAmount: map['minOrderAmount'] != null ? double.tryParse(map['minOrderAmount'].toString()) : null,
       businessPhone: merchantMap?['businessPhone'],
       identityNumber: merchantMap?['identityNumber'],
@@ -92,13 +97,21 @@ class MerchantShop {
       baseDeliveryFee: map['baseDeliveryFee'] != null ? (map['baseDeliveryFee'] as num).toDouble() : null,
       deliveryFeePerKm: map['deliveryFeePerKm'] != null ? (map['deliveryFeePerKm'] as num).toDouble() : null,
       freeDeliveryThreshold: map['freeDeliveryThreshold'] != null ? (map['freeDeliveryThreshold'] as num).toDouble() : null,
-      deliveryPolygon: map['deliveryPolygon'] != null ? List<dynamic>.from(map['deliveryPolygon']) : null,
-      allowedPaymentMethods: map['allowedPaymentMethods'] != null ? List<String>.from(map['allowedPaymentMethods']) : null,
-      allowedFulfillmentModels: map['allowedFulfillmentModels'] != null ? List<String>.from(map['allowedFulfillmentModels']) : null,
+      deliveryPolygon: map['deliveryPolygon'] is List
+          ? List<dynamic>.from(map['deliveryPolygon'] as List)
+          : null,
+      allowedPaymentMethods: map['allowedPaymentMethods'] is List
+          ? (map['allowedPaymentMethods'] as List).map((e) => e.toString()).toList()
+          : null,
+      allowedFulfillmentModels: map['allowedFulfillmentModels'] is List
+          ? (map['allowedFulfillmentModels'] as List).map((e) => e.toString()).toList()
+          : null,
       campaignText: map['campaignText'],
       minimumOrderLimit: map['minimumOrderLimit'] != null ? double.tryParse(map['minimumOrderLimit'].toString()) : null,
       activeCommissionRate: map['activeCommissionRate'] != null ? (map['activeCommissionRate'] as num).toDouble() : null,
-      activePromotions: map['activePromotions'] != null ? List<dynamic>.from(map['activePromotions']) : null,
+      activePromotions: map['activePromotions'] is List
+          ? List<dynamic>.from(map['activePromotions'] as List)
+          : null,
     );
   }
 

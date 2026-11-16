@@ -4,6 +4,51 @@ import 'package:core_shared/shared/models/delivery_tier.dart';
 export 'package:core_shared/shared/models/business_type.dart';
 export 'package:core_shared/shared/models/delivery_tier.dart';
 
+const Map<String, String> _workingHourDayAliases = {
+  'pazartesi': 'monday',
+  'monday': 'monday',
+  'salı': 'tuesday',
+  'sali': 'tuesday',
+  'tuesday': 'tuesday',
+  'çarşamba': 'wednesday',
+  'carsamba': 'wednesday',
+  'wednesday': 'wednesday',
+  'perşembe': 'thursday',
+  'persembe': 'thursday',
+  'thursday': 'thursday',
+  'cuma': 'friday',
+  'friday': 'friday',
+  'cumartesi': 'saturday',
+  'saturday': 'saturday',
+  'pazar': 'sunday',
+  'sunday': 'sunday',
+};
+
+/// Veritabanından Map veya legacy List formatında dönebilen workingHours alanını
+/// tutarlı şekilde haftalık gün anahtarlı Map yapısına dönüştürür.
+Map<String, dynamic> normalizeWorkingHoursMap(dynamic raw) {
+  if (raw is Map) {
+    return Map<String, dynamic>.from(raw);
+  }
+  if (raw is List) {
+    final result = <String, dynamic>{};
+    for (final item in raw) {
+      if (item is Map) {
+        final rawDay = item['day']?.toString().trim().toLowerCase() ?? '';
+        final dayKey = _workingHourDayAliases[rawDay] ?? rawDay;
+        if (dayKey.isEmpty) continue;
+        result[dayKey] = <String, dynamic>{
+          'isOpen': item['isClosed'] != true && item['isOpen'] != false,
+          'open': (item['open'] ?? item['openTime'] ?? '08:00').toString(),
+          'close': (item['close'] ?? item['closeTime'] ?? '22:00').toString(),
+        };
+      }
+    }
+    return result;
+  }
+  return <String, dynamic>{};
+}
+
 class Business {
   final String id;
   final String name;
@@ -73,29 +118,36 @@ class Business {
       longitude: double.tryParse(data['longitude']?.toString() ?? '') ?? 0.0,
       isOpen: data['isOpen'] ?? true,
       type: BusinessType.fromString(data['type'] ?? 'market'),
-      categories: List<String>.from(data['categories'] ?? []),
+      categories: data['categories'] is List
+          ? (data['categories'] as List).map((e) => e.toString()).toList()
+          : const [],
       openingTime: data['openingTime'] ?? "08:00",
       closingTime: data['closingTime'] ?? "22:00",
       minBasketAmount: double.tryParse(data['minBasketAmount']?.toString() ?? '') ?? 0.0,
       averageDeliveryTime: data['averageDeliveryTime'] ?? "30-45 dk",
       deliveryRadius: double.tryParse(data['deliveryRadius']?.toString() ?? '') ?? 5.0,
-      workingHours: data['workingHours'] is Map
-          ? Map<String, dynamic>.from(data['workingHours'])
-          : {},
-      deliveryTiers:
-          (data['deliveryTiers'] as List<dynamic>?)
-              ?.map((t) => DeliveryTier.fromMap(Map<String, dynamic>.from(t)))
-              .toList() ??
-          [],
+      workingHours: normalizeWorkingHoursMap(data['workingHours']),
+      deliveryTiers: data['deliveryTiers'] is List
+          ? (data['deliveryTiers'] as List)
+              .whereType<Map>()
+              .map((t) => DeliveryTier.fromMap(Map<String, dynamic>.from(t)))
+              .toList()
+          : const [],
       baseDeliveryFee: double.tryParse(data['baseDeliveryFee']?.toString() ?? '') ?? 30.0,
       freeDeliveryThreshold: data['freeDeliveryThreshold'] != null 
           ? double.tryParse(data['freeDeliveryThreshold']?.toString() ?? '') 
           : null,
       averageRating: double.tryParse(data['averageRating']?.toString() ?? '') ?? 5.0,
       reviewCount: int.tryParse(data['reviewCount']?.toString() ?? '') ?? 0,
-      allowedPaymentMethods: List<String>.from(data['allowedPaymentMethods'] ?? const ['CASH_ON_DELIVERY', 'CARD_ON_DELIVERY', 'ONLINE_PAYMENT']),
-      allowedFulfillmentModels: List<String>.from(data['allowedFulfillmentModels'] ?? const ['PLATFORM_DELIVERY', 'PICKUP']),
-      tags: List<String>.from(data['tags'] ?? []),
+      allowedPaymentMethods: data['allowedPaymentMethods'] is List
+          ? (data['allowedPaymentMethods'] as List).map((e) => e.toString()).toList()
+          : const ['CASH_ON_DELIVERY', 'CARD_ON_DELIVERY', 'ONLINE_PAYMENT'],
+      allowedFulfillmentModels: data['allowedFulfillmentModels'] is List
+          ? (data['allowedFulfillmentModels'] as List).map((e) => e.toString()).toList()
+          : const ['PLATFORM_DELIVERY', 'PICKUP'],
+      tags: data['tags'] is List
+          ? (data['tags'] as List).map((e) => e.toString()).toList()
+          : const [],
       campaignText: data['campaignText'],
     );
   }
