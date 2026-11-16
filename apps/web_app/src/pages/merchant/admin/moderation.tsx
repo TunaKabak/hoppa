@@ -8,15 +8,25 @@ import {
   XCircle,
   AlertCircle,
   RefreshCw,
-  Award,
-  Sparkles,
+  Layers,
 } from 'lucide-react';
 import MerchantLayout from '../../../components/merchant/MerchantLayout';
 import HoppaSelect from '../../../components/merchant/HoppaSelect';
+import StatusIndicator, { StatusTone } from '../../../components/merchant/StatusIndicator';
 import { getMerchantProfile, merchantApiFetch } from '../../../utils/merchant-auth';
 import { useMerchantTheme } from '../../../context/MerchantThemeContext';
 
 type ModerationTab = 'reviews' | 'campaigns';
+
+const MODERATION_STATUS_MAP: Record<string, { label: string; tone: StatusTone }> = {
+  APPROVED: { label: 'Onaylı', tone: 'emerald' },
+  REJECTED: { label: 'Reddedildi', tone: 'rose' },
+  PENDING: { label: 'Onay Bekliyor', tone: 'amber' },
+};
+
+function getModerationStatusMeta(status: string): { label: string; tone: StatusTone } {
+  return MODERATION_STATUS_MAP[status] || { label: status || 'Onay Bekliyor', tone: 'slate' };
+}
 
 interface AdminReviewItem {
   id: string;
@@ -272,6 +282,7 @@ export default function AdminModerationPage() {
               {reviews.map((rev) => {
                 const customerName =
                   `${rev.user.name || ''} ${rev.user.surname || ''}`.trim() || rev.user.phone;
+                const statusMeta = getModerationStatusMeta(rev.status);
                 return (
                   <div
                     key={rev.id}
@@ -289,21 +300,11 @@ export default function AdminModerationPage() {
                           </span>
                         </p>
                       </div>
-                      <span
-                        className={`px-2.5 py-1 rounded-full text-[10px] font-black border ${
-                          rev.status === 'APPROVED'
-                            ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30'
-                            : rev.status === 'REJECTED'
-                              ? 'bg-rose-500/15 text-rose-500 border-rose-500/30'
-                              : 'bg-amber-500/15 text-amber-500 border-amber-500/30'
-                        }`}
-                      >
-                        {rev.status === 'APPROVED'
-                          ? 'ONAYLI'
-                          : rev.status === 'REJECTED'
-                            ? 'REDDEDİLDİ'
-                            : 'BEKLİYOR'}
-                      </span>
+                      <StatusIndicator
+                        label={statusMeta.label}
+                        tone={statusMeta.tone}
+                        isDark={isDark}
+                      />
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 text-xs font-black tabular-nums">
@@ -353,7 +354,7 @@ export default function AdminModerationPage() {
                           onClick={() => handleReviewAction(rev.id, 'approve')}
                           className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black inline-flex items-center gap-1"
                         >
-                          <Award className="w-3.5 h-3.5" />
+                          <CheckCircle2 className="w-3.5 h-3.5" />
                           <span>Onayla & Ödül Ver</span>
                         </button>
                       </div>
@@ -374,76 +375,79 @@ export default function AdminModerationPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {campaigns.map((camp) => (
-              <div
-                key={camp.id}
-                className={`p-5 rounded-2xl border space-y-3 ${
-                  isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200/80 shadow-2xs'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <h4 className="text-sm font-black">{camp.title}</h4>
-                    <p className="text-xs text-slate-400 font-semibold">
-                      {camp.shop?.name || 'Platform Kampanyası'} • {camp.targetArea}
-                    </p>
-                  </div>
-                  <span
-                    className={`px-2.5 py-1 rounded-full text-[10px] font-black border ${
-                      camp.status === 'APPROVED'
-                        ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30'
-                        : camp.status === 'REJECTED'
-                          ? 'bg-rose-500/15 text-rose-500 border-rose-500/30'
-                          : 'bg-amber-500/15 text-amber-500 border-amber-500/30'
-                    }`}
-                  >
-                    {camp.status}
-                  </span>
-                </div>
-
-                {camp.imageUrl && (
-                  <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 h-32 bg-slate-100 dark:bg-slate-950">
-                    <img
-                      src={camp.imageUrl}
-                      alt={camp.title}
-                      className="w-full h-full object-cover"
+            {campaigns.map((camp) => {
+              const statusMeta = getModerationStatusMeta(camp.status);
+              return (
+                <div
+                  key={camp.id}
+                  className={`p-5 rounded-2xl border space-y-3 ${
+                    isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200/80 shadow-2xs'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h4 className="text-sm font-black">{camp.title}</h4>
+                      <p className="text-xs text-slate-400 font-semibold">
+                        {camp.shop?.name || 'Platform Kampanyası'} • {camp.targetArea}
+                      </p>
+                    </div>
+                    <StatusIndicator
+                      label={statusMeta.label}
+                      tone={statusMeta.tone}
+                      isDark={isDark}
                     />
                   </div>
-                )}
 
-                <p className="text-xs text-slate-500 dark:text-slate-300">{camp.description}</p>
-
-                {camp.designService && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#FF6B00]/10 text-[#FF6B00] text-[11px] font-black">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    Hoppa Tasarım Desteği Talep Edildi
-                  </span>
-                )}
-
-                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                  {camp.status !== 'REJECTED' && (
-                    <button
-                      type="button"
-                      onClick={() => handleCampaignAction(camp.id, 'REJECTED')}
-                      className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black inline-flex items-center gap-1"
-                    >
-                      <XCircle className="w-3.5 h-3.5" />
-                      <span>Reddet</span>
-                    </button>
+                  {camp.imageUrl && (
+                    <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 h-32 bg-slate-100 dark:bg-slate-950">
+                      <img
+                        src={camp.imageUrl}
+                        alt={camp.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
                   )}
-                  {camp.status !== 'APPROVED' && (
-                    <button
-                      type="button"
-                      onClick={() => handleCampaignAction(camp.id, 'APPROVED')}
-                      className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black inline-flex items-center gap-1"
+
+                  <p className="text-xs text-slate-500 dark:text-slate-300">{camp.description}</p>
+
+                  {camp.designService && (
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-[11px] font-semibold ${
+                        isDark
+                          ? 'bg-slate-950/80 border-slate-800 text-slate-300'
+                          : 'bg-slate-50 border-slate-200 text-slate-700'
+                      }`}
                     >
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>Onayla (Slider Aktif Et)</span>
-                    </button>
+                      <Layers className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Hoppa Tasarım Desteği Talep Edildi</span>
+                    </span>
                   )}
+
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                    {camp.status !== 'REJECTED' && (
+                      <button
+                        type="button"
+                        onClick={() => handleCampaignAction(camp.id, 'REJECTED')}
+                        className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black inline-flex items-center gap-1"
+                      >
+                        <XCircle className="w-3.5 h-3.5" />
+                        <span>Reddet</span>
+                      </button>
+                    )}
+                    {camp.status !== 'APPROVED' && (
+                      <button
+                        type="button"
+                        onClick={() => handleCampaignAction(camp.id, 'APPROVED')}
+                        className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black inline-flex items-center gap-1"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Onayla (Slider Aktif Et)</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useRouter } from 'next/router';
-import { Sparkles, ArrowRight, Clock, AlertTriangle, Tag, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, Clock, AlertTriangle, Tag } from 'lucide-react';
 import { useMerchantTheme } from '../../context/MerchantThemeContext';
 
 interface GuidedOnboardingWidgetProps {
@@ -63,24 +63,7 @@ export default function GuidedOnboardingWidget({
   }
 
   if (actions.length === 0) {
-    return (
-      <div className={`p-4 rounded-2xl border flex items-center justify-between transition-colors ${
-        isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
-      }`}>
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-[#00A651]/15 text-[#00A651] flex items-center justify-center font-bold">
-            <CheckCircle2 className="w-5 h-5" />
-          </div>
-          <div>
-            <h4 className="text-xs font-extrabold">Mağazanız Tam Kapasite Yayında!</h4>
-            <p className="text-[11px] text-slate-400">Tüm ayarlarınız, çalışma saatleriniz ve ürün kataloğunuz güncel.</p>
-          </div>
-        </div>
-        <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#00A651]/15 text-[#00A651] border border-[#00A651]/30">
-          %100 Hazır
-        </span>
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -91,28 +74,25 @@ export default function GuidedOnboardingWidget({
           <div
             key={action.id}
             className={`p-4 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors ${
-              isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+              isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200/90 shadow-2xs'
             }`}
           >
             <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold shrink-0 ${action.color}`}>
+              <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0">
                 <Icon className="w-5 h-5" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-black">{action.title}</h4>
-                  <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-[#FF6B00]/10 text-[#FF6B00]">
-                    <Sparkles className="w-3 h-3 text-[#FF6B00]" />
-                    <span>Önerilen Aksiyon</span>
-                  </span>
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{action.description}</p>
+                <h4 className="text-sm font-extrabold tracking-tight">{action.title}</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  {action.description}
+                </p>
               </div>
             </div>
 
             <button
+              type="button"
               onClick={() => router.push(action.href)}
-              className="px-4 py-2.5 rounded-xl bg-[#FF6B00] hover:bg-[#E56000] text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-all shrink-0 transform active:scale-95"
+              className="px-4 py-2.5 rounded-xl bg-[#FF6B00] hover:bg-[#E56000] text-white font-extrabold text-xs flex items-center justify-center gap-2 transition-colors shrink-0"
             >
               <span>{action.buttonText}</span>
               <ArrowRight className="w-4 h-4" />

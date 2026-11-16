@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import MerchantLayout from '../../../components/merchant/MerchantLayout';
 import GuidedOnboardingWidget from '../../../components/merchant/GuidedOnboardingWidget';
+import HoppaSelect from '../../../components/merchant/HoppaSelect';
+import StatusIndicator from '../../../components/merchant/StatusIndicator';
 import { 
-  Tag, Plus, Sparkles, Check, Trash2, Zap, AlertCircle, Percent, DollarSign, Calendar 
+  Tag, Plus, Check, Trash2, Zap, AlertCircle, Percent, DollarSign, Calendar 
 } from 'lucide-react';
 import { merchantApiFetch } from '../../../utils/merchant-auth';
 import { useMerchantTheme } from '../../../context/MerchantThemeContext';
@@ -91,20 +93,26 @@ export default function MerchantCampaignsPage() {
   };
 
   const campaignHeaderActions = (
-    <div className="flex flex-wrap items-center gap-2.5">
+    <div className="flex flex-wrap items-center gap-2">
       <button
+        type="button"
         onClick={() => setShowSponsorshipModal(true)}
-        className="px-4 py-2.5 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-white border border-amber-300/40 font-bold text-xs flex items-center gap-2 transition-all backdrop-blur-md"
+        className={`px-3.5 py-2 rounded-xl border font-bold text-xs flex items-center gap-2 transition-colors ${
+          isDark
+            ? 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700'
+            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+        }`}
       >
-        <Zap className="w-4 h-4 text-amber-300" />
+        <Zap className="w-3.5 h-3.5 text-[#FF6B00]" />
         <span>Mağazayı Öne Çıkar</span>
       </button>
 
       <button
+        type="button"
         onClick={() => setShowCouponModal(true)}
-        className="px-5 py-2.5 rounded-xl bg-white text-[#E95D22] hover:bg-white/90 font-black text-xs flex items-center gap-2 transition-all transform active:scale-95 shadow-sm"
+        className="px-4 py-2 rounded-xl bg-[#FF6B00] hover:bg-[#E56000] text-white font-black text-xs flex items-center gap-2 transition-colors shadow-2xs"
       >
-        <Plus className="w-4 h-4 text-[#E95D22]" />
+        <Plus className="w-4 h-4" />
         <span>Yeni Kupon Oluştur</span>
       </button>
     </div>
@@ -154,19 +162,23 @@ export default function MerchantCampaignsPage() {
                 >
                   <div>
                     <div className="flex items-center justify-between mb-3">
-                      <span className="px-3 py-1 rounded-full text-xs font-mono font-black bg-[#FF6B00]/15 text-[#FF6B00] border border-[#FF6B00]/30">
+                      <span
+                        className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold border border-dashed ${
+                          isDark
+                            ? 'bg-slate-950 border-slate-700 text-slate-100'
+                            : 'bg-slate-50 border-slate-300 text-slate-900'
+                        }`}
+                      >
                         {camp.code || 'HOPPA10'}
                       </span>
-                      <span className="text-[10px] font-bold text-[#00A651] bg-[#00A651]/15 px-2.5 py-0.5 rounded-full">
-                        AKTİF
-                      </span>
+                      <StatusIndicator tone="emerald" label="Aktif" isDark={isDark} />
                     </div>
 
-                    <h4 className="font-black text-lg">
+                    <h4 className="font-black text-lg tabular-nums">
                       {camp.discountType === 'PERCENTAGE' ? `%${camp.discountValue} İndirim` : `₺${camp.discountValue} İndirim`}
                     </h4>
-                    <p className="text-xs text-slate-400 mt-1">
-                      Min. Sepet Tutarı: <span className="font-bold text-slate-300">₺{camp.minOrderAmount || 0}</span>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      Min. Sepet Tutarı: <span className="font-bold text-slate-700 dark:text-slate-300 tabular-nums">₺{camp.minOrderAmount || 0}</span>
                     </p>
                   </div>
 
@@ -205,17 +217,15 @@ export default function MerchantCampaignsPage() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold uppercase mb-1 text-slate-400">İndirim Tipi</label>
-                    <select
+                    <HoppaSelect
+                      label="İndirim Tipi"
                       value={discountType}
-                      onChange={(e: any) => setDiscountType(e.target.value)}
-                      className={`w-full border rounded-xl p-3 text-xs font-bold hoppa-select ${
-                        isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                      }`}
-                    >
-                      <option value="PERCENTAGE">Yüzde (%) İndirim</option>
-                      <option value="FIXED">Sabit (₺) İndirim</option>
-                    </select>
+                      onChange={(val) => setDiscountType(val as 'PERCENTAGE' | 'FIXED')}
+                      options={[
+                        { value: 'PERCENTAGE', label: 'Yüzde (%) İndirim' },
+                        { value: 'FIXED', label: 'Sabit (₺) İndirim' },
+                      ]}
+                    />
                   </div>
 
                   <div>

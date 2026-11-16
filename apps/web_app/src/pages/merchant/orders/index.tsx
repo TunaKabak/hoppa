@@ -2,11 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import MerchantLayout from '../../../components/merchant/MerchantLayout';
 import GuidedOnboardingWidget from '../../../components/merchant/GuidedOnboardingWidget';
+import HoppaSelect from '../../../components/merchant/HoppaSelect';
+import StatusIndicator, { StatusTone } from '../../../components/merchant/StatusIndicator';
 import { 
   ShoppingBag, Clock, CheckCircle2, XCircle, Bike, AlertTriangle, 
   Printer, Volume2, VolumeX, ChevronRight, X, RefreshCw,
   User, Phone, MapPin, CreditCard, FileText, Package, Eye,
-  Check, Info, Sparkles, Navigation, ArrowRight
+  Check, Info, Navigation, ArrowRight
 } from 'lucide-react';
 import { merchantApiFetch } from '../../../utils/merchant-auth';
 import {
@@ -155,22 +157,38 @@ export default function MerchantOrdersPage() {
   const completedOrders = orders.filter((o) => o.status === 'DELIVERED');
 
   const ordersHeaderActions = (
-    <div className="flex items-center gap-2.5">
+    <div className="flex items-center gap-2">
       <button
+        type="button"
         onClick={() => setAudioEnabled(!audioEnabled)}
-        className={`px-3.5 py-2 rounded-xl backdrop-blur-md border text-xs font-bold flex items-center gap-2 transition-all ${
-          audioEnabled 
-            ? 'bg-emerald-500/30 text-white border-emerald-300/40' 
-            : 'bg-white/15 text-white/70 border-white/20 hover:text-white'
+        className={`px-3.5 py-2 rounded-xl border text-xs font-bold flex items-center gap-2 transition-colors ${
+          isDark
+            ? 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700'
+            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
         }`}
       >
-        {audioEnabled ? <Volume2 className="w-4 h-4 text-emerald-300" /> : <VolumeX className="w-4 h-4" />}
+        <span
+          className={`w-2 h-2 rounded-full shrink-0 ${
+            audioEnabled ? 'bg-[#00A651]' : 'bg-slate-400'
+          }`}
+          aria-hidden="true"
+        />
+        {audioEnabled ? (
+          <Volume2 className="w-3.5 h-3.5 text-slate-500 dark:text-slate-300" />
+        ) : (
+          <VolumeX className="w-3.5 h-3.5 text-slate-400" />
+        )}
         <span>{audioEnabled ? 'Sesli Alarm Açık' : 'Sesli Alarm Kapalı'}</span>
       </button>
 
       <button
-        onClick={fetchOrders}
-        className="p-2 rounded-xl bg-white/15 hover:bg-white/25 border border-white/20 text-white transition-colors"
+        type="button"
+        onClick={() => void fetchOrders()}
+        className={`p-2 rounded-xl border transition-colors ${
+          isDark
+            ? 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700'
+            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+        }`}
         title="Yenile"
       >
         <RefreshCw className="w-4 h-4" />
@@ -236,10 +254,10 @@ export default function MerchantOrdersPage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between px-2">
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-amber-500 animate-pulse" />
+                  <span className="w-2 h-2 rounded-full bg-amber-500" />
                   <h3 className="font-extrabold text-sm uppercase tracking-wider">Yeni Gelenler</h3>
                 </div>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-500/20 text-amber-500">
+                <span className="px-2 py-0.5 rounded-md text-xs font-bold tabular-nums bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                   {pendingOrders.length}
                 </span>
               </div>
@@ -271,10 +289,10 @@ export default function MerchantOrdersPage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between px-2">
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-[#FF6B00]" />
+                  <span className="w-2 h-2 rounded-full bg-[#FF6B00]" />
                   <h3 className="font-extrabold text-sm uppercase tracking-wider">Hazırlanıyor</h3>
                 </div>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-[#FF6B00]/20 text-[#FF6B00]">
+                <span className="px-2 py-0.5 rounded-md text-xs font-bold tabular-nums bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                   {preparingOrders.length}
                 </span>
               </div>
@@ -306,10 +324,10 @@ export default function MerchantOrdersPage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between px-2">
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-indigo-500" />
+                  <span className="w-2 h-2 rounded-full bg-indigo-500" />
                   <h3 className="font-extrabold text-sm uppercase tracking-wider">Yolda / Kuryede</h3>
                 </div>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-indigo-500/20 text-indigo-500">
+                <span className="px-2 py-0.5 rounded-md text-xs font-bold tabular-nums bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                   {onTheWayOrders.length}
                 </span>
               </div>
@@ -340,10 +358,10 @@ export default function MerchantOrdersPage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between px-2">
                 <div className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-[#00A651]" />
+                  <span className="w-2 h-2 rounded-full bg-[#00A651]" />
                   <h3 className="font-extrabold text-sm uppercase tracking-wider">Tamamlananlar</h3>
                 </div>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-[#00A651]/20 text-[#00A651]">
+                <span className="px-2 py-0.5 rounded-md text-xs font-bold tabular-nums bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                   {completedOrders.length}
                 </span>
               </div>
@@ -451,21 +469,20 @@ export default function MerchantOrdersPage() {
               #{cancelModalOrder.orderNumber || cancelModalOrder.id.slice(-6)} numaralı siparişi iptal etmek istediğinize emin misiniz?
             </p>
 
-            <div>
-              <label className="block text-xs font-bold uppercase mb-1 text-slate-400">İptal Sebebi</label>
-              <select
-                value={cancelReason}
-                onChange={(e) => setCancelReason(e.target.value)}
-                className={`w-full border rounded-xl p-3 text-xs font-semibold hoppa-select ${
-                  isDark ? 'bg-slate-950 border-slate-800 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'
-                }`}
-              >
-                <option value="Stok yetersizliği">Stok yetersizliği / Ürün tükendi</option>
-                <option value="Yoğunluk nedeniyle hazırlayamama">Aşırı yoğunluk nedeniyle sipariş kabul edilemiyor</option>
-                <option value="Müşteri talebi">Müşteri talebi üzerine</option>
-                <option value="Kapanış saati geçti">Kapanış saati geçti</option>
-              </select>
-            </div>
+            <HoppaSelect
+              label="İptal Sebebi"
+              value={cancelReason}
+              onChange={(val) => setCancelReason(val)}
+              options={[
+                { value: 'Stok yetersizliği', label: 'Stok yetersizliği / Ürün tükendi' },
+                {
+                  value: 'Yoğunluk nedeniyle hazırlayamama',
+                  label: 'Aşırı yoğunluk nedeniyle sipariş kabul edilemiyor',
+                },
+                { value: 'Müşteri talebi', label: 'Müşteri talebi üzerine' },
+                { value: 'Kapanış saati geçti', label: 'Kapanış saati geçti' },
+              ]}
+            />
 
             <div className="flex items-center justify-end gap-3 pt-2">
               <button
@@ -509,18 +526,17 @@ function OrderCard({
   const orderTotal = Number(order.totalAmount ?? order.total ?? order.finalAmount ?? 0);
 
   const getStatusBadge = () => {
-    switch (order.status) {
-      case 'PENDING':
-        return <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500/15 text-amber-500 border border-amber-500/30">Bekliyor</span>;
-      case 'PREPARING':
-        return <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#FF6B00]/15 text-[#FF6B00] border border-[#FF6B00]/30">Hazırlanıyor</span>;
-      case 'ON_THE_WAY':
-        return <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-indigo-500/15 text-indigo-500 border border-indigo-500/30">Yolda</span>;
-      case 'DELIVERED':
-        return <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#00A651]/15 text-[#00A651] border border-[#00A651]/30">Tamamlandı</span>;
-      default:
-        return <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-slate-500/15 text-slate-500">{order.status}</span>;
-    }
+    const statusMap: Record<string, { label: string; tone: StatusTone }> = {
+      PENDING: { label: 'Bekliyor', tone: 'amber' },
+      PREPARING: { label: 'Hazırlanıyor', tone: 'orange' },
+      ON_THE_WAY: { label: 'Yolda', tone: 'indigo' },
+      DELIVERED: { label: 'Tamamlandı', tone: 'emerald' },
+    };
+    const meta = statusMap[order.status] || {
+      label: String(order.status || 'Bilinmiyor'),
+      tone: 'slate' as StatusTone,
+    };
+    return <StatusIndicator label={meta.label} tone={meta.tone} isDark={isDark} />;
   };
 
   return (
@@ -558,8 +574,8 @@ function OrderCard({
         <p className="font-bold truncate text-slate-800 dark:text-slate-100">{customerName || 'Müşteri'}</p>
         <p className="text-slate-500 dark:text-slate-400 text-[11px] line-clamp-1">{order.deliveryAddress || 'Adres bilgisi yok'}</p>
         {order.customerNote && (
-          <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium bg-amber-50 dark:bg-amber-950/40 p-1.5 rounded-lg mt-1 line-clamp-1">
-            💬 {order.customerNote}
+          <p className="text-[11px] text-amber-700 dark:text-amber-300 font-medium border border-amber-200 dark:border-amber-500/30 bg-amber-50/70 dark:bg-amber-950/30 p-2 rounded-lg mt-1.5 line-clamp-2">
+            <span className="font-bold">Not:</span> {order.customerNote}
           </p>
         )}
       </div>

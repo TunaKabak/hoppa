@@ -6,7 +6,7 @@ import OptionGroupBuilder from '../../../components/merchant/option-group-builde
 import CatalogImportModal from '../../../components/merchant/catalog-import-modal';
 import { 
   Package, Plus, Search, Layers, Database, Edit, Trash2, 
-  Check, Power, DollarSign, LayoutGrid, List, Download, FileSpreadsheet
+  Check, DollarSign, LayoutGrid, List, Download, FileSpreadsheet
 } from 'lucide-react';
 import { merchantApiFetch } from '../../../utils/merchant-auth';
 import { useMerchantTheme } from '../../../context/MerchantThemeContext';
@@ -241,36 +241,47 @@ export default function MerchantProductsPage() {
   };
 
   const productHeaderActions = (
-    <div className="flex flex-wrap items-center gap-2.5">
+    <div className="flex flex-wrap items-center gap-2">
       {/* CSV Export Button */}
       <button
+        type="button"
         onClick={handleExportCSV}
         disabled={products.length === 0}
-        className="px-3.5 py-2.5 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 text-white font-bold text-xs flex items-center gap-2 transition-all disabled:opacity-50"
+        className={`px-3.5 py-2 rounded-xl border font-bold text-xs flex items-center gap-2 transition-colors disabled:opacity-50 ${
+          isDark
+            ? 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700'
+            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+        }`}
         title="Ürün Kataloğunu Excel/CSV Olarak İndir"
       >
-        <Download className="w-4 h-4 text-white" />
+        <Download className="w-3.5 h-3.5" />
         <span className="hidden sm:inline">Dışa Aktar (CSV)</span>
       </button>
 
       {/* Catalog Import Button */}
       <button
+        type="button"
         onClick={() => setShowCatalogImport(true)}
-        className="px-4 py-2.5 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 text-white font-bold text-xs flex items-center gap-2 transition-all"
+        className={`px-3.5 py-2 rounded-xl border font-bold text-xs flex items-center gap-2 transition-colors ${
+          isDark
+            ? 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700'
+            : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+        }`}
       >
-        <Database className="w-4 h-4 text-white" />
+        <Database className="w-3.5 h-3.5" />
         <span>Global Katalogdan Aktar</span>
       </button>
 
       {/* Add Product Button */}
       <button
+        type="button"
         onClick={() => {
           setActiveProductForEdit(null);
           setShowProductModal(true);
         }}
-        className="px-5 py-2.5 rounded-xl bg-white text-[#E95D22] hover:bg-white/90 font-black text-xs flex items-center gap-2 transition-all transform active:scale-95 shadow-sm"
+        className="px-4 py-2 rounded-xl bg-[#FF6B00] hover:bg-[#E56000] text-white font-black text-xs flex items-center gap-2 transition-colors shadow-2xs"
       >
-        <Plus className="w-4 h-4 text-[#E95D22]" />
+        <Plus className="w-4 h-4" />
         <span>Yeni Ürün Ekle</span>
       </button>
     </div>
@@ -508,7 +519,7 @@ export default function MerchantProductsPage() {
 
                         {/* Category */}
                         <td className="p-4">
-                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-semibold border ${
                             isDark 
                               ? 'bg-slate-950 border-slate-800 text-slate-300' 
                               : 'bg-slate-100 border-slate-200 text-slate-700'
@@ -518,7 +529,7 @@ export default function MerchantProductsPage() {
                         </td>
 
                         {/* Inline Editable Price */}
-                        <td className="p-4 text-right font-bold">
+                        <td className="p-4 text-right font-bold tabular-nums">
                           {editingPriceId === p.id ? (
                             <div className="flex items-center justify-end gap-1">
                               <input
@@ -548,7 +559,7 @@ export default function MerchantProductsPage() {
                               className="group inline-flex items-center gap-1 hover:text-[#FF6B00] transition-colors"
                               title="Tıkla Fiyatı Değiştir"
                             >
-                              <span className="text-[#FF6B00] text-sm font-black">₺{Number(p.price).toFixed(2)}</span>
+                              <span className="text-[#FF6B00] text-sm font-black tabular-nums">₺{Number(p.price).toFixed(2)}</span>
                               <Edit className="w-3 h-3 text-slate-400 group-hover:text-[#FF6B00] opacity-0 group-hover:opacity-100 transition-opacity" />
                             </button>
                           )}
@@ -557,14 +568,20 @@ export default function MerchantProductsPage() {
                         {/* Stock Toggle Switch */}
                         <td className="p-4 text-center">
                           <button
+                            type="button"
                             onClick={() => handleToggleProductActive(p)}
-                            className={`px-3 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1.5 transition-all ${
-                              p.isActive
-                                ? 'bg-[#00A651]/15 text-[#00A651] border border-[#00A651]/30'
-                                : 'bg-rose-500/15 text-rose-500 border border-rose-500/30'
+                            className={`px-2.5 py-1 rounded-lg border text-xs font-semibold inline-flex items-center gap-1.5 transition-colors ${
+                              isDark
+                                ? 'bg-slate-950/80 border-slate-800 text-slate-200 hover:border-slate-700'
+                                : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
                             }`}
                           >
-                            <Power className="w-3 h-3" />
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                p.isActive ? 'bg-[#00A651]' : 'bg-rose-500'
+                              }`}
+                              aria-hidden="true"
+                            />
                             <span>{p.isActive ? 'Stokta' : 'Tükendi'}</span>
                           </button>
                         </td>
@@ -639,12 +656,21 @@ export default function MerchantProductsPage() {
                         className="w-full h-full object-contain"
                       />
                       <button
+                        type="button"
                         onClick={() => handleToggleProductActive(p)}
-                        className={`absolute top-2 right-2 px-2.5 py-1 rounded-full text-[10px] font-bold shadow-md ${
-                          p.isActive ? 'bg-[#00A651] text-white' : 'bg-rose-500 text-white'
+                        className={`absolute top-2 right-2 px-2.5 py-1 rounded-lg border text-[11px] font-semibold inline-flex items-center gap-1.5 shadow-xs transition-colors ${
+                          isDark
+                            ? 'bg-slate-950/90 border-slate-800 text-slate-200'
+                            : 'bg-white/95 border-slate-200 text-slate-700'
                         }`}
                       >
-                        {p.isActive ? 'Stokta' : 'Tükendi'}
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                            p.isActive ? 'bg-[#00A651]' : 'bg-rose-500'
+                          }`}
+                          aria-hidden="true"
+                        />
+                        <span>{p.isActive ? 'Stokta' : 'Tükendi'}</span>
                       </button>
                     </div>
 
@@ -655,7 +681,7 @@ export default function MerchantProductsPage() {
                   <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
                     <div>
                       <span className="text-[10px] font-bold text-slate-400 block uppercase">Fiyat</span>
-                      <span className="text-base font-black text-[#FF6B00]">₺{Number(p.price).toFixed(2)}</span>
+                      <span className="text-base font-black text-[#FF6B00] tabular-nums">₺{Number(p.price).toFixed(2)}</span>
                     </div>
 
                     <div className="flex items-center gap-1.5">

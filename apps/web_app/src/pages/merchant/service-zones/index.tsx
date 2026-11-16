@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { 
   MapPin, Plus, Save, RotateCcw, Trash2, CheckCircle2, 
-  AlertTriangle, Sparkles, Shapes, Globe, Layers, ShieldCheck,
+  AlertTriangle, Shapes, Globe, Layers, ShieldCheck,
   Edit3, ArrowRight, DollarSign, Clock, Truck, SlidersHorizontal,
   Maximize2, LayoutGrid, Eye, Target
 } from 'lucide-react';
@@ -336,7 +336,7 @@ export default function KktcServiceZonesPage() {
             className="px-3.5 py-2 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 text-[#FF6B00] font-black text-xs border border-orange-500/30 active:scale-[0.98] transition-all flex items-center gap-1.5"
           >
             <Plus className="w-4 h-4" />
-            <span>+ Yeni Bölge</span>
+            <span>Yeni Bölge</span>
           </button>
 
           <button
@@ -720,13 +720,19 @@ export default function KktcServiceZonesPage() {
                                   e.stopPropagation();
                                   handleUpdateZoneField(zone.id, { isActive: !zone.isActive });
                                 }}
-                                className={`px-2.5 py-1 rounded-full text-[10px] font-black transition-colors ${
-                                  zone.isActive
-                                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
-                                    : 'bg-slate-200 dark:bg-slate-800 text-slate-500'
+                                className={`px-2.5 py-1 rounded-md border text-[11px] font-semibold inline-flex items-center gap-1.5 transition-colors ${
+                                  isDark
+                                    ? 'bg-slate-950/80 border-slate-800 text-slate-200 hover:border-slate-700'
+                                    : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
                                 }`}
                               >
-                                {zone.isActive ? 'AKTİF' : 'PASİF'}
+                                <span
+                                  className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                    zone.isActive ? 'bg-[#00A651]' : 'bg-slate-400'
+                                  }`}
+                                  aria-hidden="true"
+                                />
+                                <span>{zone.isActive ? 'Aktif' : 'Pasif'}</span>
                               </button>
                             </div>
                           </div>

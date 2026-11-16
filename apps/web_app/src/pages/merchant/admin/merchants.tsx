@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import MerchantLayout from '../../../components/merchant/MerchantLayout';
 import HoppaSelect from '../../../components/merchant/HoppaSelect';
+import StatusIndicator, { StatusTone } from '../../../components/merchant/StatusIndicator';
 import {
   getMerchantProfile,
   merchantApiFetch,
@@ -63,27 +64,27 @@ interface AdminMerchantItem {
 
 const STATUS_BADGE_MAP: Record<
   MerchantStatusType,
-  { label: string; className: string }
+  { label: string; tone: StatusTone }
 > = {
   PENDING: {
     label: 'Onay Bekliyor',
-    className: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30',
+    tone: 'amber',
   },
   ACTIVE: {
     label: 'Aktif İşletme',
-    className: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
+    tone: 'emerald',
   },
   REVISION: {
     label: 'Revizyon İstendi',
-    className: 'bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/30',
+    tone: 'sky',
   },
   ON_HOLD: {
     label: 'Askıda',
-    className: 'bg-slate-500/15 text-slate-600 dark:text-slate-300 border-slate-500/30',
+    tone: 'slate',
   },
   REJECTED: {
     label: 'Reddedildi',
-    className: 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30',
+    tone: 'rose',
   },
 };
 
@@ -371,11 +372,11 @@ export default function AdminMerchantsPage() {
                           </div>
                         </td>
                         <td className="py-3.5 px-4">
-                          <span
-                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-black border ${badge.className}`}
-                          >
-                            {badge.label}
-                          </span>
+                          <StatusIndicator
+                            label={badge.label}
+                            tone={badge.tone}
+                            isDark={isDark}
+                          />
                         </td>
                         <td className="py-3.5 px-4 font-semibold text-slate-400 tabular-nums">
                           {new Date(m.createdAt).toLocaleDateString('tr-TR')}
