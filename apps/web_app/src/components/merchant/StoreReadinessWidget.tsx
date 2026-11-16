@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { 
-  ShieldCheck, AlertTriangle, CheckCircle2, ArrowRight, 
-  Sparkles, ExternalLink, RefreshCw 
+  ShieldCheck, ArrowRight, ExternalLink
 } from 'lucide-react';
 import { useMerchantTheme } from '../../context/MerchantThemeContext';
 import { merchantApiFetch } from '../../utils/merchant-auth';
@@ -59,29 +58,29 @@ export default function StoreReadinessWidget() {
   if (isReadyToOpen) {
     return (
       <>
-        <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-4 transition-all ${
-          isDark ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-emerald-50 border-emerald-200'
-        }`}>
+        <div
+          className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all ${
+            isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200/90 shadow-2xs'
+          }`}
+        >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-500 text-white flex items-center justify-center font-bold shrink-0">
-              <CheckCircle2 className="w-6 h-6" />
-            </div>
+            <span className="w-2 h-2 rounded-full bg-[#00A651] shrink-0" aria-hidden="true" />
             <div>
-              <div className="flex items-center gap-2">
-                <h4 className="text-sm font-black text-emerald-900 dark:text-emerald-300">Mağazanız Tam Kapasite Yayına Hazır! 🎉</h4>
-                <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-emerald-500 text-white">
-                  %100 Tamamlandı
-                </span>
-              </div>
-              <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-0.5">
-                Tüm prosedür adımları, çalışma saatleri ve ürün kataloğunuz eksiksiz.
+              <h4 className="text-sm font-extrabold tracking-tight">Mağaza Kurulumu Tamamlandı</h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Tüm operasyon adımları, çalışma saatleri ve ürün kataloğunuz doğrulandı.
               </p>
             </div>
           </div>
 
           <button
+            type="button"
             onClick={() => setIsModalOpen(true)}
-            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black flex items-center gap-1.5 shrink-0 transition-all active:scale-95"
+            className={`px-3.5 py-2 rounded-xl border text-xs font-bold flex items-center gap-1.5 shrink-0 transition-colors ${
+              isDark
+                ? 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700'
+                : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+            }`}
           >
             <span>Detayları İncele</span>
             <ExternalLink className="w-3.5 h-3.5" />
@@ -102,61 +101,78 @@ export default function StoreReadinessWidget() {
 
   return (
     <>
-      <div className={`p-5 rounded-2xl border transition-all ${
-        isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
-      }`}>
+      <div
+        className={`p-5 rounded-2xl border transition-all ${
+          isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200/90 shadow-2xs'
+        }`}
+      >
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#FF6B00]/15 text-[#FF6B00] flex items-center justify-center font-bold shrink-0">
-              <ShieldCheck className="w-6 h-6" />
+            <div
+              className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${
+                isDark
+                  ? 'bg-slate-950 border-slate-800 text-slate-200'
+                  : 'bg-slate-50 border-slate-200 text-slate-700'
+              }`}
+            >
+              <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h4 className="text-sm font-black tracking-tight">Mağaza Hazırlık Prosedürü</h4>
-                <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-[#FF6B00]/10 text-[#FF6B00]">
-                  %{score} Tamamlandı
-                </span>
-              </div>
+              <h4 className="text-sm font-extrabold tracking-tight">
+                Mağaza Hazırlık Kontrol Listesi
+              </h4>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Canlıya alınıp sipariş kabul etmek için kalan {missingSteps.length} adımı tamamlayınız.
+                Sipariş kabulü için kalan {missingSteps.length} adımı tamamlayın.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-3 shrink-0">
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 tabular-nums">
+              {completedStepsCount}/{totalSteps} adım · %{score}
+            </span>
             <button
+              type="button"
               onClick={() => setIsModalOpen(true)}
-              className="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 text-xs font-black flex items-center gap-1.5 transition-all"
+              className={`px-3.5 py-2 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-colors ${
+                isDark
+                  ? 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700'
+                  : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+              }`}
             >
-              <span>Tüm Prosedür ({completedStepsCount}/{totalSteps})</span>
+              <span>Tüm Liste</span>
               <ExternalLink className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
 
         {/* Progress Bar */}
-        <div className="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mb-4">
-          <div 
-            className="h-full bg-gradient-to-r from-[#E95D22] to-[#FF6B00] transition-all duration-500 rounded-full"
+        <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mb-4">
+          <div
+            className="h-full bg-[#FF6B00] transition-all duration-500 rounded-full"
             style={{ width: `${score}%` }}
           />
         </div>
 
         {/* Highlighted Next Action */}
         {firstMissingStep && (
-          <div className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 ${
-            isDark ? 'bg-slate-800/60 border-slate-700' : 'bg-orange-50/60 border-orange-100'
-          }`}>
-            <div className="flex items-center gap-2.5 min-w-0">
-              <AlertTriangle className="w-4 h-4 text-[#FF6B00] shrink-0" />
-              <div className="min-w-0">
-                <span className="text-xs font-black text-[#FF6B00] block truncate">Sıradaki Adım: {firstMissingStep.title}</span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate">{firstMissingStep.description}</span>
-              </div>
+          <div
+            className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 ${
+              isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50 border-slate-200/80'
+            }`}
+          >
+            <div className="min-w-0">
+              <span className="text-xs font-bold text-slate-900 dark:text-slate-100 block truncate">
+                Sıradaki Adım: {firstMissingStep.title}
+              </span>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 block truncate mt-0.5">
+                {firstMissingStep.description}
+              </span>
             </div>
             <button
+              type="button"
               onClick={() => router.push(firstMissingStep.actionUrl)}
-              className="px-3.5 py-1.5 rounded-lg bg-[#FF6B00] hover:bg-[#E56000] text-white text-xs font-extrabold shrink-0 flex items-center gap-1 transition-all active:scale-95"
+              className="px-3.5 py-2 rounded-xl bg-[#FF6B00] hover:bg-[#E56000] text-white text-xs font-extrabold shrink-0 flex items-center gap-1.5 transition-colors"
             >
               <span>{firstMissingStep.actionText}</span>
               <ArrowRight className="w-3.5 h-3.5" />

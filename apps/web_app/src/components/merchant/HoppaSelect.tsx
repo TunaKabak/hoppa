@@ -149,11 +149,19 @@ export default function HoppaSelect({
           </span>
           {selectedOption?.badge && (
             <span
-              className="px-1.5 py-0.5 rounded text-[9px] font-black shrink-0"
-              style={{
-                backgroundColor: selectedOption.badgeColor ? `${selectedOption.badgeColor}20` : 'rgba(255, 107, 0, 0.15)',
-                color: selectedOption.badgeColor || '#FF6B00',
-              }}
+              className={`px-1.5 py-0.5 rounded text-[10px] font-semibold shrink-0 ${
+                selectedOption.badgeColor
+                  ? ''
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+              }`}
+              style={
+                selectedOption.badgeColor
+                  ? {
+                      backgroundColor: `${selectedOption.badgeColor}20`,
+                      color: selectedOption.badgeColor,
+                    }
+                  : undefined
+              }
             >
               {selectedOption.badge}
             </span>
@@ -255,7 +263,7 @@ export default function HoppaSelect({
                     <div className="flex items-center gap-1.5 shrink-0">
                       {option.badge && (
                         <span
-                          className={`px-1.5 py-0.5 rounded text-[9px] font-black ${
+                          className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
                             isSelected
                               ? 'bg-white/20 text-white'
                               : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'

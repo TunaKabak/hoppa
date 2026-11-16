@@ -5,7 +5,7 @@ import GuidedOnboardingWidget from '../../../components/merchant/GuidedOnboardin
 import LocationRadiusPickerMap, { LocationPolygonPoint } from '../../../components/merchant/LocationRadiusPickerMap';
 import { 
   Settings, Clock, MapPin, Store, Check, Save, AlertCircle, Phone, Upload, Map,
-  Building2, FileText, Image as ImageIcon, CreditCard, Truck, ShieldAlert, Sparkles, Copy, Trash2
+  Building2, FileText, Image as ImageIcon, CreditCard, Truck, ShieldAlert, Copy, Trash2
 } from 'lucide-react';
 import { merchantApiFetch, getMerchantToken } from '../../../utils/merchant-auth';
 import { uploadMerchantMedia } from '../../../utils/media-upload';
@@ -335,7 +335,7 @@ export default function MerchantSettingsPage() {
     };
 
     if (!isLocationInKktc(Number(latitude), Number(longitude))) {
-      setErrorMsg('⚠️ Mağaza konumu KKTC (Kuzey Kıbrıs Türk Cumhuriyeti) sınırları içerisinde olmalıdır. Lütfen haritadan KKTC sınırları içerisinde bir konum seçiniz.');
+      setErrorMsg('Mağaza konumu KKTC (Kuzey Kıbrıs Türk Cumhuriyeti) sınırları içerisinde olmalıdır. Lütfen haritadan KKTC sınırları içerisinde bir konum seçiniz.');
       setActiveTab('location');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       setIsSaving(false);
@@ -345,7 +345,7 @@ export default function MerchantSettingsPage() {
     if (isPolygonMode && deliveryPolygon && deliveryPolygon.length > 0) {
       const outsidePoint = deliveryPolygon.find((pt) => !isLocationInKktc(pt.lat, pt.lng));
       if (outsidePoint) {
-        setErrorMsg('⚠️ Teslimat poligonunun tüm köşe noktaları KKTC sınırları içerisinde olmalıdır.');
+        setErrorMsg('Teslimat poligonunun tüm köşe noktaları KKTC sınırları içerisinde olmalıdır.');
         setActiveTab('location');
         window.scrollTo({ top: 0, behavior: 'smooth' });
         setIsSaving(false);
@@ -372,15 +372,16 @@ export default function MerchantSettingsPage() {
 
   const settingsHeaderActions = (
     <button
+      type="button"
       onClick={handleSaveSettings}
       disabled={isSaving}
-      className="px-6 py-2.5 rounded-xl bg-white text-[#E95D22] hover:bg-white/90 font-black text-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50 shrink-0 shadow-sm transform active:scale-95"
+      className="px-5 py-2.5 rounded-xl bg-[#FF6B00] hover:bg-[#E56000] text-white font-black text-xs flex items-center justify-center gap-2 transition-colors disabled:opacity-50 shrink-0 shadow-2xs"
     >
       {isSaving ? (
-        <div className="w-4 h-4 border-2 border-[#E95D22] border-t-transparent rounded-full animate-spin" />
+        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
       ) : (
         <>
-          <Save className="w-4 h-4 text-[#E95D22]" />
+          <Save className="w-4 h-4 text-white" />
           <span>Tüm Değişiklikleri Kaydet</span>
         </>
       )}

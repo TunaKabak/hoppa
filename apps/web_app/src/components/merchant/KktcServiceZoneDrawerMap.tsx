@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { 
   MapPin, Search, Loader2, Trash2, Shapes, CheckCircle2, 
   X, Layers, Compass, Plus, Undo2, MousePointerClick, 
-  HelpCircle, Eye, EyeOff, Sparkles, Navigation, Maximize2, 
+  HelpCircle, Eye, EyeOff, Navigation, Maximize2, 
   Minimize2, ZoomIn, ZoomOut, Target, Crosshair
 } from 'lucide-react';
 import { useMerchantTheme } from '../../context/MerchantThemeContext';
@@ -562,7 +562,7 @@ export default function KktcServiceZoneDrawerMap({
             <div>
               <h2 className="font-black text-sm text-slate-900 dark:text-white flex items-center gap-2">
                 <span>KKTC Harita Çizim Stüdyosu</span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] bg-[#FF6B00] text-white font-black">TAM EKRAN</span>
+                <span className="text-xs font-semibold text-slate-400">· Tam Ekran Modu</span>
               </h2>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
                 Çıkmak için butona tıklayın veya <kbd className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-[10px]">ESC</kbd> tuşuna basın.
@@ -714,7 +714,7 @@ export default function KktcServiceZoneDrawerMap({
       {isDrawingNew ? (
         <div className="p-3.5 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold shrink-0 animate-pulse">
+            <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold shrink-0">
               <Plus className="w-5 h-5" />
             </div>
             <div>
@@ -762,7 +762,7 @@ export default function KktcServiceZoneDrawerMap({
         <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold shrink-0">
-              <Navigation className="w-5 h-5 animate-pulse" />
+              <Navigation className="w-5 h-5" />
             </div>
             <div>
               <h4 className="text-xs font-black text-indigo-700 dark:text-indigo-400 uppercase tracking-wider">

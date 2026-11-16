@@ -352,7 +352,7 @@ export default function AdminCategoriesPage() {
                       <td className="py-3.5 px-4">
                         <div className="flex flex-wrap items-center gap-1.5">
                           {cat.badge ? (
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#FF6B00]/15 text-[#FF6B00]">
+                            <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-300">
                               {cat.badge}
                             </span>
                           ) : (
@@ -372,13 +372,19 @@ export default function AdminCategoriesPage() {
                         <button
                           type="button"
                           onClick={() => handleToggleActive(cat)}
-                          className={`px-2.5 py-1 rounded-full text-[11px] font-black border ${
-                            cat.isActive
-                              ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30'
-                              : 'bg-slate-500/15 text-slate-400 border-slate-500/30'
+                          className={`px-2.5 py-1 rounded-md border text-[11px] font-semibold inline-flex items-center gap-1.5 transition-colors ${
+                            isDark
+                              ? 'bg-slate-950/80 border-slate-800 text-slate-200 hover:border-slate-700'
+                              : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
                           }`}
                         >
-                          {cat.isActive ? 'AKTİF' : 'PASİF'}
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                              cat.isActive ? 'bg-[#00A651]' : 'bg-slate-400'
+                            }`}
+                            aria-hidden="true"
+                          />
+                          <span>{cat.isActive ? 'Aktif' : 'Pasif'}</span>
                         </button>
                       </td>
                       <td className="py-3.5 px-4 text-right">

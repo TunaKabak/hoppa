@@ -2,10 +2,10 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { 
-  Store, Package, ShoppingBag, BarChart3, Settings, LogOut, 
+  Package, ShoppingBag, BarChart3, Settings, LogOut, 
   ChevronRight, ChevronLeft, Power, Menu, X, Sun, Moon, Tag, MapPin,
   Bell, Shield, PanelLeftClose, PanelLeftOpen, User, ChevronDown,
-  Building2, Truck, ShieldCheck, LayoutGrid, Star, Sparkles, AlertTriangle
+  Building2, Truck, ShieldCheck, LayoutGrid, Star, Megaphone, AlertTriangle
 } from 'lucide-react';
 import { 
   getMerchantProfile, getMerchantToken, clearMerchantAuth, merchantApiFetch, 
@@ -228,6 +228,31 @@ function buildRealtimeToast(event: RealtimeEventEnvelope, isAdmin: boolean): Rea
   }
 }
 
+interface AdminShopOption {
+  id: string;
+  name: string;
+  type?: string;
+}
+
+const SHOP_TYPE_LABELS: Record<string, string> = {
+  MARKET: 'Market',
+  RESTAURANT: 'Restoran',
+  FLOWER: 'Çiçek',
+  WATER: 'Su',
+  BUTCHER: 'Kasap',
+  GREENGROCER: 'Manav',
+  CAFE: 'Kafe',
+  NUTS: 'Kuruyemiş',
+};
+
+function formatShopTypeLabel(type?: string): string {
+  if (!type) {
+    return 'Mağaza';
+  }
+  const normalized = type.trim().toUpperCase();
+  return SHOP_TYPE_LABELS[normalized] || 'Mağaza';
+}
+
 export default function MerchantLayout({ 
   children, 
   title = 'Yönetim Portalı', 
@@ -248,13 +273,22 @@ export default function MerchantLayout({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
   const [pendingOrdersCount, setPendingOrdersCount] = useState<number>(0);
-  const [allShops, setAllShops] = useState<any[]>([]);
+  const [allShops, setAllShops] = useState<AdminShopOption[]>([]);
   const [selectedShopIdState, setSelectedShopIdState] = useState<string>('');
   const [realtimeState, setRealtimeState] = useState<RealtimeConnectionState>('disconnected');
   const [realtimeToast, setRealtimeToast] = useState<RealtimeToast | null>(null);
   const realtimeClientRef = useRef<MerchantRealtimeClient | null>(null);
 
   const isAdmin = profile?.role === 'super_admin' || profile?.role === 'admin';
+  const selectedAdminShop = allShops.find((s) => s.id === selectedShopIdState);
+  const activeShopDisplayName =
+    selectedAdminShop?.name || profile?.businessName || 'Mağaza Yükleniyor...';
+  const roleSubtitleLabel =
+    profile?.role === 'super_admin'
+      ? 'Hoppa Merkez'
+      : profile?.role === 'admin'
+        ? 'Operasyon'
+        : 'Mağaza Hesabı';
 
   const fetchPendingOrders = useCallback(async () => {
     try {
@@ -363,7 +397,7 @@ export default function MerchantLayout({
     try {
       const res = await merchantApiFetch('/consumer/shops');
       if (res.data && Array.isArray(res.data)) {
-        setAllShops(res.data);
+        setAllShops(res.data as AdminShopOption[]);
       }
     } catch (err) {
       console.error('Tüm dükkanlar alınamadı:', err);
@@ -412,7 +446,7 @@ export default function MerchantLayout({
     { id: 'orders', label: 'Canlı Siparişler', icon: ShoppingBag, href: '/merchant/orders', badge: pendingOrdersCount },
     { id: 'dashboard', label: 'Performans & Analiz', icon: BarChart3, href: '/merchant/dashboard' },
     { id: 'campaigns', label: 'Kampanya & Kupon', icon: Tag, href: '/merchant/campaigns' },
-    { id: 'promotions', label: 'Sponsorlu Vitrin', icon: Sparkles, href: '/merchant/promotions' },
+    { id: 'promotions', label: 'Sponsorlu Vitrin', icon: Megaphone, href: '/merchant/promotions' },
     { id: 'reviews', label: 'Müşteri Yorumları', icon: Star, href: '/merchant/reviews' },
     { id: 'settings', label: 'Mağaza Ayarları', icon: Settings, href: '/merchant/settings' },
   ];
@@ -441,14 +475,24 @@ export default function MerchantLayout({
           isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
         }`}>
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#E95D22] to-[#FF8C00] text-white font-bold flex items-center justify-center shadow-sm">
-              <Store className="w-5 h-5" />
-            </div>
-            <div>
+            {isAdmin ? (
+              <img
+                src="/logo-square-orange.png"
+                alt="Hoppa"
+                className="w-8 h-8 rounded-lg object-cover ring-1 ring-black/5 shrink-0"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-lg bg-slate-900 text-white border border-slate-800 font-extrabold text-xs flex items-center justify-center shrink-0">
+                {activeShopDisplayName.charAt(0).toUpperCase() || 'H'}
+              </div>
+            )}
+            <div className="min-w-0">
               <h2 className="font-extrabold text-sm truncate max-w-[180px]">
-                {profile?.businessName || 'Hoppa Mağazası'}
+                {activeShopDisplayName}
               </h2>
-              <span className="text-[10px] text-slate-400 block font-medium">Satıcı Portalı</span>
+              <span className="text-[10px] text-slate-400 block font-medium">
+                {roleSubtitleLabel}
+              </span>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -534,25 +578,26 @@ export default function MerchantLayout({
             {/* Admin Shop Context Selector */}
             {isAdmin && (
               !isSidebarCollapsed ? (
-                <div className="p-3 rounded-2xl bg-orange-500/5 border border-[#FF6B00]/20">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[10px] font-black text-[#FF6B00] uppercase tracking-wider">
-                      Yönetici Mağazası
-                    </span>
-                    <span className="px-1.5 py-0.2 rounded text-[8px] bg-[#FF6B00] text-white font-black">
-                      ADMIN
-                    </span>
-                  </div>
+                <div
+                  className={`p-3 rounded-2xl border ${
+                    isDark
+                      ? 'bg-slate-950/60 border-slate-800'
+                      : 'bg-slate-50/80 border-slate-200/80'
+                  }`}
+                >
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">
+                    Aktif Mağaza Bağlamı
+                  </label>
                   <HoppaSelect
                     value={selectedShopIdState}
                     onChange={(val) => handleShopChange(val)}
                     placeholder="-- Kendi Mağazam --"
                     options={[
-                      { value: '', label: 'Kendi Mağazam', badge: 'VARSAYILAN' },
+                      { value: '', label: 'Kendi Mağazam', badge: 'Varsayılan' },
                       ...allShops.map((shop) => ({
                         value: shop.id,
                         label: shop.name,
-                        badge: shop.type?.toUpperCase() || 'MAĞAZA',
+                        badge: formatShopTypeLabel(shop.type),
                       })),
                     ]}
                     size="sm"
@@ -563,11 +608,11 @@ export default function MerchantLayout({
                 </div>
               ) : (
                 <div className="flex justify-center group relative">
-                  <div className="p-2 rounded-xl bg-orange-500/10 text-[#FF6B00] cursor-pointer" title="Admin Mağaza Seçimi">
+                  <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 cursor-pointer" title="Aktif Mağaza Bağlamı">
                     <Shield className="w-4 h-4" />
                   </div>
                   <div className="absolute left-full ml-2 px-2.5 py-1 bg-slate-900 text-white text-[11px] font-bold rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50">
-                    Yönetici Modu
+                    Hoppa Merkez Yönetimi
                   </div>
                 </div>
               )
@@ -578,26 +623,42 @@ export default function MerchantLayout({
               <div className={`border rounded-2xl p-3.5 transition-all ${
                 isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50/80 border-slate-200/80 shadow-xs'
               }`}>
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                     Sipariş Alımı
                   </span>
                   <button
+                    type="button"
+                    role="switch"
+                    aria-checked={isShopActive}
+                    aria-label="Sipariş alım durumu"
                     onClick={handleToggleShopStatus}
                     disabled={isTogglingShop}
-                    className={`px-2.5 py-0.5 rounded-full text-[11px] font-black flex items-center gap-1.5 transition-all ${
-                      isShopActive 
-                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' 
-                        : 'bg-rose-500/15 text-rose-500 border border-rose-500/30'
+                    className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
+                      isShopActive
+                        ? 'bg-[#00A651]'
+                        : isDark
+                          ? 'bg-slate-700'
+                          : 'bg-slate-300'
                     }`}
                   >
-                    <span className={`w-2 h-2 rounded-full ${isShopActive ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
-                    <span>{isShopActive ? 'AÇIK' : 'KAPALI'}</span>
+                    <span
+                      className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow-xs transition-transform ${
+                        isShopActive ? 'translate-x-4' : 'translate-x-1'
+                      }`}
+                    />
                   </button>
                 </div>
-                <h4 className="font-extrabold text-xs truncate mt-1.5 text-slate-800 dark:text-slate-200">
-                  {profile?.businessName || 'Mağaza Yükleniyor...'}
+                <h4 className="font-extrabold text-xs truncate mt-2 text-slate-800 dark:text-slate-200">
+                  {activeShopDisplayName}
                 </h4>
+                <p
+                  className={`text-[11px] font-medium mt-0.5 ${
+                    isShopActive ? 'text-[#00A651] dark:text-emerald-400' : 'text-slate-400'
+                  }`}
+                >
+                  {isShopActive ? 'Sipariş alımına açık' : 'Sipariş alımı duraklatıldı'}
+                </p>
               </div>
             ) : (
               <div className="flex justify-center group relative">
@@ -653,7 +714,7 @@ export default function MerchantLayout({
                     {!isSidebarCollapsed && (
                       <div className="flex items-center gap-1.5 shrink-0">
                         {item.badge && item.badge > 0 ? (
-                          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-white animate-pulse tabular-nums">
+                          <span className="px-1.5 py-0.5 rounded-md text-[11px] font-bold bg-[#FF6B00] text-white tabular-nums">
                             {item.badge}
                           </span>
                         ) : null}
@@ -675,10 +736,9 @@ export default function MerchantLayout({
                 <div className="pt-3 mt-3 border-t border-slate-100 dark:border-slate-800 space-y-1">
                   {!isSidebarCollapsed && (
                     <div className="px-3.5 pb-1 flex items-center justify-between">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-[#FF6B00]">
-                        Süper Admin Merkezi
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        Hoppa Merkez Yönetimi
                       </span>
-                      <Shield className="w-3 h-3 text-[#FF6B00]" />
                     </div>
                   )}
                   {adminNavItems.map((item) => {
@@ -710,21 +770,13 @@ export default function MerchantLayout({
                           )}
                         </div>
 
-                        {!isSidebarCollapsed && (
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <span className="px-1.5 py-0.2 rounded text-[8px] bg-[#FF6B00] text-white font-black">
-                              ADMIN
-                            </span>
-                            {isActive && <ChevronRight className="w-3.5 h-3.5 text-[#FF6B00]" />}
-                          </div>
+                        {!isSidebarCollapsed && isActive && (
+                          <ChevronRight className="w-3.5 h-3.5 text-[#FF6B00] shrink-0" />
                         )}
 
                         {isSidebarCollapsed && (
                           <div className="absolute left-full ml-3 px-3 py-1.5 bg-slate-900 dark:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 flex items-center gap-2 pointer-events-none">
                             <span>{item.label}</span>
-                            <span className="px-1.5 py-0.2 rounded text-[8px] bg-[#FF6B00] text-white font-black">
-                              ADMIN
-                            </span>
                           </div>
                         )}
                       </button>
@@ -822,14 +874,8 @@ export default function MerchantLayout({
             <div className="flex items-center gap-2.5">
               {isAuthReady && realtimeState !== 'disconnected' && (
                 <div
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-bold transition-colors shrink-0 ${
-                    realtimeState === 'connected'
-                      ? isDark
-                        ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
-                        : 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                      : isDark
-                        ? 'bg-amber-500/15 border-amber-500/30 text-amber-400'
-                        : 'bg-amber-50 border-amber-200 text-amber-700'
+                  className={`hidden sm:inline-flex items-center gap-2 pr-3 mr-0.5 border-r text-xs font-semibold shrink-0 ${
+                    isDark ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-500'
                   }`}
                   title={
                     realtimeState === 'connected'
@@ -841,13 +887,11 @@ export default function MerchantLayout({
                   <span
                     className={`w-2 h-2 rounded-full shrink-0 ${
                       realtimeState === 'connected'
-                        ? 'bg-emerald-500 animate-pulse'
+                        ? 'bg-[#00A651]'
                         : 'bg-amber-500 animate-pulse'
                     }`}
                   />
-                  <span>
-                    {realtimeState === 'connected' ? 'Canlı' : 'Bağlanıyor...'}
-                  </span>
+                  <span>{realtimeState === 'connected' ? 'Anlık Akış' : 'Bağlanıyor…'}</span>
                 </div>
               )}
 
@@ -864,19 +908,27 @@ export default function MerchantLayout({
                 {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
 
-              {/* Merchant Profile Pill */}
+              {/* Merchant Profile Lockup */}
               <div className={`hidden sm:flex items-center gap-2 pl-2 border-l ${
                 isDark ? 'border-slate-800' : 'border-slate-200'
               }`}>
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-[#E95D22] to-[#FF8C00] text-white font-bold flex items-center justify-center text-xs">
-                  {profile?.businessName ? profile.businessName.charAt(0).toUpperCase() : 'M'}
-                </div>
+                {isAdmin ? (
+                  <img
+                    src="/logo-square-orange.png"
+                    alt="Hoppa"
+                    className="w-8 h-8 rounded-lg object-cover ring-1 ring-black/5 shrink-0"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-lg bg-slate-900 text-white border border-slate-800 font-extrabold flex items-center justify-center text-xs shrink-0">
+                    {profile?.businessName ? profile.businessName.charAt(0).toUpperCase() : 'M'}
+                  </div>
+                )}
                 <div className="text-left hidden lg:block">
                   <span className="text-xs font-black text-slate-900 dark:text-white block truncate max-w-[120px]">
                     {profile?.businessName || 'Satıcı'}
                   </span>
-                  <span className="text-[9px] font-bold text-slate-400 block uppercase">
-                    {profile?.role === 'super_admin' ? 'Süper Admin' : profile?.role === 'admin' ? 'Yönetici' : 'Satıcı'}
+                  <span className="text-[10px] font-semibold text-slate-400 block">
+                    {roleSubtitleLabel}
                   </span>
                 </div>
               </div>

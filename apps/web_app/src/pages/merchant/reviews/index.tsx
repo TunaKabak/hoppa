@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Star, RefreshCw, AlertCircle, MessageSquare, Clock, Truck, Award } from 'lucide-react';
+import { Star, RefreshCw, AlertCircle, MessageSquare, Clock, Truck, ShieldCheck } from 'lucide-react';
 import MerchantLayout from '../../../components/merchant/MerchantLayout';
 import HoppaSelect from '../../../components/merchant/HoppaSelect';
+import StatusIndicator, { StatusTone } from '../../../components/merchant/StatusIndicator';
 import { merchantApiFetch } from '../../../utils/merchant-auth';
 import { useMerchantTheme } from '../../../context/MerchantThemeContext';
 
@@ -135,7 +136,7 @@ export default function MerchantReviewsPage() {
               label: 'Servis Puanı',
               value: (shopSummary?.avgServiceRating ?? 5).toFixed(2),
               sub: 'Paketleme & sunum',
-              icon: Award,
+              icon: ShieldCheck,
               color: 'text-[#FF6B00]',
             },
             {
@@ -258,6 +259,16 @@ export default function MerchantReviewsPage() {
             {filteredReviews.map((rev) => {
               const customerDisplay =
                 `${rev.user?.name || 'Hoppa'} ${rev.user?.surname ? `${rev.user.surname.charAt(0)}.` : ''}`.trim();
+              const reviewStatusMeta: Record<
+                MerchantReviewItem['status'],
+                { label: string; tone: StatusTone }
+              > = {
+                APPROVED: { label: 'Yayında', tone: 'emerald' },
+                REJECTED: { label: 'Reddedildi', tone: 'rose' },
+                PENDING: { label: 'Onay Bekliyor', tone: 'amber' },
+              };
+              const statusBadge = reviewStatusMeta[rev.status];
+
               return (
                 <div
                   key={rev.id}
@@ -274,21 +285,11 @@ export default function MerchantReviewsPage() {
                       </p>
                     </div>
 
-                    <span
-                      className={`px-2.5 py-1 rounded-full text-[10px] font-black border ${
-                        rev.status === 'APPROVED'
-                          ? 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30'
-                          : rev.status === 'REJECTED'
-                            ? 'bg-rose-500/15 text-rose-500 border-rose-500/30'
-                            : 'bg-amber-500/15 text-amber-500 border-amber-500/30'
-                      }`}
-                    >
-                      {rev.status === 'APPROVED'
-                        ? 'YAYINDA'
-                        : rev.status === 'REJECTED'
-                          ? 'REDDEDİLDİ'
-                          : 'ONAY BEKLİYOR'}
-                    </span>
+                    <StatusIndicator
+                      label={statusBadge.label}
+                      tone={statusBadge.tone}
+                      isDark={isDark}
+                    />
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 text-xs font-black tabular-nums">

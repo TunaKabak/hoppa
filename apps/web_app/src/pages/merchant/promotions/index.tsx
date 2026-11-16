@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Sparkles,
+  Megaphone,
   TrendingUp,
   CheckCircle2,
   AlertCircle,
@@ -11,6 +11,7 @@ import {
   Layers,
 } from 'lucide-react';
 import MerchantLayout from '../../../components/merchant/MerchantLayout';
+import StatusIndicator from '../../../components/merchant/StatusIndicator';
 import { merchantApiFetch } from '../../../utils/merchant-auth';
 import { useMerchantTheme } from '../../../context/MerchantThemeContext';
 
@@ -122,7 +123,7 @@ export default function MerchantPromotionsPage() {
     <MerchantLayout
       title="Sponsorlu Vitrin & Öne Çıkarma"
       subtitle="Mağazanızı ana ekran veya kategori vitrininde üst sıralara taşıyın"
-      headerIcon={Sparkles}
+      headerIcon={Megaphone}
       activeTab="promotions"
       headerActions={
         <button
@@ -195,8 +196,9 @@ export default function MerchantPromotionsPage() {
           >
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="px-3 py-1 rounded-full text-[11px] font-black bg-sky-500/15 text-sky-500">
-                  KATEGORİ VİTRİNİ
+                <span className="inline-flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.12em] text-sky-600 dark:text-sky-400">
+                  <span className="w-2 h-2 rounded-[2px] bg-sky-500" aria-hidden="true" />
+                  <span>Kategori Vitrini</span>
                 </span>
                 <span className="text-xl font-black text-[#FF6B00] tabular-nums">%10 Komisyon</span>
               </div>
@@ -251,8 +253,9 @@ export default function MerchantPromotionsPage() {
           >
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="px-3 py-1 rounded-full text-[11px] font-black bg-[#FF6B00]/15 text-[#FF6B00]">
-                  ANA EKRAN TEPE SLİDER
+                <span className="inline-flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.12em] text-[#FF6B00]">
+                  <span className="w-2 h-2 rounded-[2px] bg-[#FF6B00]" aria-hidden="true" />
+                  <span>Ana Ekran Tepe Vitrin</span>
                 </span>
                 <span className="text-xl font-black text-[#FF6B00] tabular-nums">%15 Komisyon</span>
               </div>
@@ -286,7 +289,7 @@ export default function MerchantPromotionsPage() {
                 onClick={() => handleActivate('MAIN_SCREEN')}
                 className="w-full py-3 px-4 rounded-xl bg-[#FF6B00] hover:bg-[#E56000] text-white text-xs font-black flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
               >
-                <Sparkles className="w-4 h-4" />
+                <Megaphone className="w-4 h-4" />
                 <span>
                   {activeCategory
                     ? 'Ana Sayfa Vitrinine Yükselt'
@@ -329,32 +332,30 @@ export default function MerchantPromotionsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800 tabular-nums">
-                  {promoHistory.map((item) => (
-                    <tr key={item.id}>
-                      <td className="py-3 px-4 font-black">
-                        {item.promoType === 'MAIN_SCREEN' ? 'Ana Sayfa Vitrin (%15)' : 'Kategori Vitrini (%10)'}
-                      </td>
-                      <td className="py-3 px-4 text-slate-400">
-                        {new Date(item.startDate).toLocaleDateString('tr-TR')}
-                      </td>
-                      <td className="py-3 px-4 text-slate-400">
-                        {new Date(item.endDate).toLocaleDateString('tr-TR')}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                            item.isActive && new Date(item.endDate).getTime() > Date.now()
-                              ? 'bg-emerald-500/15 text-emerald-500'
-                              : 'bg-slate-500/15 text-slate-400'
-                          }`}
-                        >
-                          {item.isActive && new Date(item.endDate).getTime() > Date.now()
-                            ? 'AKTİF'
-                            : 'PASİF / TAMAMLANDI'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                  {promoHistory.map((item) => {
+                    const isPromoActive =
+                      item.isActive && new Date(item.endDate).getTime() > Date.now();
+                    return (
+                      <tr key={item.id}>
+                        <td className="py-3 px-4 font-black">
+                          {item.promoType === 'MAIN_SCREEN' ? 'Ana Sayfa Vitrin (%15)' : 'Kategori Vitrini (%10)'}
+                        </td>
+                        <td className="py-3 px-4 text-slate-400">
+                          {new Date(item.startDate).toLocaleDateString('tr-TR')}
+                        </td>
+                        <td className="py-3 px-4 text-slate-400">
+                          {new Date(item.endDate).toLocaleDateString('tr-TR')}
+                        </td>
+                        <td className="py-3 px-4">
+                          <StatusIndicator
+                            label={isPromoActive ? 'Aktif' : 'Tamamlandı'}
+                            tone={isPromoActive ? 'emerald' : 'slate'}
+                            isDark={isDark}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
