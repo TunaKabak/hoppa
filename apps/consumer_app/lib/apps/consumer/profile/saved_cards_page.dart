@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:core_auth/core_auth.dart';
 import 'package:core_shared/shared/core/utils/card_input_formatters.dart';
+import 'package:core_shared/core_shared.dart';
 import 'package:consumer_app/apps/consumer/widgets/hoppa_dialog.dart';
 import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
 
@@ -145,11 +146,11 @@ class _SavedCardsPageState extends ConsumerState<SavedCardsPage> {
                       ),
                       const SizedBox(height: 20),
                       Text(
-                        "Yeni Kart Ekle 💳",
-                        style: GoogleFonts.poppins(
+                        "Yeni Kart Ekle",
+                        style: GoogleFonts.plusJakartaSans(
                           fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF0F172A),
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -200,20 +201,15 @@ class _SavedCardsPageState extends ConsumerState<SavedCardsPage> {
                           CardNumberInputFormatter(),
                         ],
                         onChanged: (val) {
-                          final cleanNum = val.replaceAll(' ', '');
+                          final detected = HoppaPaymentBadge.detectBrand(val);
                           setModalState(() {
-                            if (cleanNum.startsWith('4')) {
-                              selectedCardType = "Visa";
-                              cardLogo = "💳 Visa";
-                            } else if (cleanNum.startsWith('5')) {
-                              selectedCardType = "Mastercard";
-                              cardLogo = "💳 MasterCard";
-                            } else if (cleanNum.startsWith('9792')) {
-                              selectedCardType = "Troy";
-                              cardLogo = "💳 Troy";
+                            cardLogo = detected;
+                            if (detected == 'Visa' ||
+                                detected == 'Mastercard' ||
+                                detected == 'Troy') {
+                              selectedCardType = detected;
                             } else {
                               selectedCardType = "Visa";
-                              cardLogo = "";
                             }
                           });
                         },
@@ -225,14 +221,12 @@ class _SavedCardsPageState extends ConsumerState<SavedCardsPage> {
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                           suffixIcon: cardLogo.isNotEmpty
                               ? Padding(
-                                  padding: const EdgeInsets.all(12),
-                                  child: Text(
-                                    cardLogo,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: kPrimaryColor,
-                                      fontSize: 12,
-                                    ),
+                                  padding: const EdgeInsets.only(right: 10),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      HoppaPaymentBadge(brand: cardLogo, compact: true),
+                                    ],
                                   ),
                                 )
                               : const Icon(Icons.credit_card),

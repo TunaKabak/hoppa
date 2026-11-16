@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart' as p;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:consumer_app/apps/consumer/cart/cart_provider.dart';
@@ -730,17 +731,16 @@ class _CartPageState extends ConsumerState<CartPage> {
               ),
             ),
             const SizedBox(height: 16),
-            const Row(
+            Row(
               children: [
-                Icon(Icons.delete_sweep_outlined, color: Color(0xFFE53935), size: 22),
-                SizedBox(width: 8),
+                const Icon(Icons.delete_sweep_outlined, color: Color(0xFFE11D48), size: 22),
+                const SizedBox(width: 8),
                 Text(
                   "Sepeti Boşalt",
-                  style: TextStyle(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Poppins',
-                    color: Color(0xFF1E293B),
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0F172A),
                   ),
                 ),
               ],

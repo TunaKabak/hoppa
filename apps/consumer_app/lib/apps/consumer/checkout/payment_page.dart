@@ -15,6 +15,7 @@ import 'package:core_shared/shared/core/utils/quantity_formatter.dart';
 import 'package:consumer_app/apps/consumer/widgets/hoppa_header.dart';
 import 'package:core_shared/shared/models/business.dart';
 import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository.dart';
+import 'package:core_shared/core_shared.dart';
 import 'package:consumer_app/apps/consumer/widgets/selected_options_breakdown.dart';
 
 class PaymentPage extends ConsumerStatefulWidget {
@@ -163,24 +164,9 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
   }
 
   void _updateCardLogo(String cardNumber) {
-    final cleanNumber = cardNumber.replaceAll(' ', '');
-    if (cleanNumber.length >= 6) {
-      final bin = cleanNumber.substring(0, 6);
-      if (['454360', '543771', '402235'].contains(bin)) {
-        setState(() => _cardLogo = '💳 Cardplus');
-      } else if (['432042', '516888', '540061'].contains(bin)) {
-        setState(() => _cardLogo = '💳 PAYTR');
-      } else if (cleanNumber.startsWith('4')) {
-        setState(() => _cardLogo = '💳 Visa');
-      } else if (cleanNumber.startsWith('5')) {
-        setState(() => _cardLogo = '💳 MasterCard');
-      } else if (cleanNumber.startsWith('9792')) {
-        setState(() => _cardLogo = '💳 Troy');
-      } else {
-        setState(() => _cardLogo = '💳 Kart');
-      }
-    } else {
-      setState(() => _cardLogo = '');
+    final detected = HoppaPaymentBadge.detectBrand(cardNumber);
+    if (detected != _cardLogo) {
+      setState(() => _cardLogo = detected);
     }
   }
 
@@ -336,7 +322,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
               'cardTitle': cardTitleText.isEmpty ? 'Kayıtlı Kartım' : cardTitleText,
               'cardHolderName': _cardHolderController.text.trim(),
               'cardNumber': _cardNumberController.text.replaceAll(' ', ''),
-              'cardType': _cardLogo.replaceAll('💳 ', ''),
+              'cardType': _cardLogo,
             },
           );
         } catch (e) {
@@ -1773,14 +1759,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87),
                     ),
                     if (_cardLogo.isNotEmpty)
-                      Text(
-                        _cardLogo,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: kPrimaryColor,
-                          fontSize: 14,
-                        ),
-                      ),
+                      HoppaPaymentBadge(brand: _cardLogo),
                   ],
                 ),
                 const SizedBox(height: 16),

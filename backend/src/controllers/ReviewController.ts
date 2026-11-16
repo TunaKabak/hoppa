@@ -130,11 +130,46 @@ export class ReviewController {
         },
         orderBy: { createdAt: 'desc' }
       });
-      res.status(200).json({ error: false, data: reviews });
+      const enriched = await ReviewController.attachMerchantReplies(reviews);
+      res.status(200).json({ error: false, data: enriched });
     } catch (error) {
       console.error("Yorum getirme hatası:", error);
       res.status(500).json({ error: true, message: "Yorumlar getirilirken hata oluştu." });
     }
+  }
+
+  private static async attachMerchantReplies<T extends { id: string }>(
+    reviews: T[]
+  ): Promise<Array<T & { merchantReply: string | null; merchantRepliedAt: string | null }>> {
+    if (reviews.length === 0) {
+      return [];
+    }
+    const keys = reviews.map((r) => `review_reply:${r.id}`);
+    const configs = await prisma.systemConfig.findMany({
+      where: { key: { in: keys } }
+    });
+    const replyMap = new Map<string, { reply: string; repliedAt: string | null }>();
+    for (const cfg of configs) {
+      try {
+        const parsed = JSON.parse(cfg.value) as { reply?: string; repliedAt?: string };
+        if (parsed.reply) {
+          replyMap.set(cfg.key.replace(/^review_reply:/, ""), {
+            reply: parsed.reply,
+            repliedAt: parsed.repliedAt || null
+          });
+        }
+      } catch {
+        // Ignore malformed config entries
+      }
+    }
+    return reviews.map((r) => {
+      const entry = replyMap.get(r.id);
+      return {
+        ...r,
+        merchantReply: entry ? entry.reply : null,
+        merchantRepliedAt: entry ? entry.repliedAt : null
+      };
+    });
   }
 
   // 3. Tüketicinin Kendi Değerlendirmelerini Getir
@@ -353,16 +388,76 @@ export class ReviewController {
         orderBy: { createdAt: 'desc' },
       });
 
+      const enrichedReviews = await ReviewController.attachMerchantReplies(reviews);
+
       res.status(200).json({
         error: false,
         data: {
           shop,
-          reviews,
+          reviews: enrichedReviews,
         },
       });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Mağaza yorumları getirilemedi.";
       console.error("[ReviewController.getMerchantShopReviews] Hata:", error);
+      res.status(500).json({ error: true, message });
+    }
+  }
+
+  // 8. Satıcı Portalı: Değerlendirmeye İşletme Yanıtı Ekle/Güncelle
+  public static async replyToReview(req: Request, res: Response): Promise<void> {
+    try {
+      const merchantId = req.user?.id;
+      if (!merchantId) {
+        res.status(401).json({ error: true, message: "Kullanıcı yetkilendirmesi başarısız." });
+        return;
+      }
+
+      const reviewId = req.params.reviewId as string;
+      const reply = typeof req.body?.reply === "string" ? req.body.reply.trim() : "";
+
+      if (!reviewId) {
+        res.status(400).json({ error: true, message: "Değerlendirme ID gereklidir." });
+        return;
+      }
+      if (reply.length < 2 || reply.length > 500) {
+        res.status(400).json({ error: true, message: "Yanıt metni 2 ile 500 karakter arasında olmalıdır." });
+        return;
+      }
+
+      const shop = await prisma.shop.findUnique({
+        where: { merchantId },
+        select: { id: true }
+      });
+      if (!shop) {
+        res.status(404).json({ error: true, message: "Mağaza bulunamadı." });
+        return;
+      }
+
+      const review = await prisma.review.findUnique({
+        where: { id: reviewId },
+        select: { id: true, shopId: true }
+      });
+      if (!review || review.shopId !== shop.id) {
+        res.status(404).json({ error: true, message: "Değerlendirme bulunamadı veya mağazanıza ait değil." });
+        return;
+      }
+
+      const repliedAt = new Date().toISOString();
+      await prisma.systemConfig.upsert({
+        where: { key: `review_reply:${reviewId}` },
+        update: { value: JSON.stringify({ reply, repliedAt }) },
+        create: { key: `review_reply:${reviewId}`, value: JSON.stringify({ reply, repliedAt }) }
+      });
+
+      res.status(200).json({
+        error: false,
+        message: "Değerlendirme yanıtınız kaydedildi.",
+        data: { reviewId, merchantReply: reply, merchantRepliedAt: repliedAt }
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Yanıt kaydedilemedi.";
+      console.error("[ReviewController.replyToReview] Hata:", error);
       res.status(500).json({ error: true, message });
     }
   }

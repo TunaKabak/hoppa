@@ -21,6 +21,8 @@ import {
 import MerchantLayout from '../../../components/merchant/MerchantLayout';
 import HoppaSelect from '../../../components/merchant/HoppaSelect';
 import StatusIndicator, { StatusTone } from '../../../components/merchant/StatusIndicator';
+import SlideOverDrawer from '../../../components/merchant/SlideOverDrawer';
+import { useConfirm, useToast } from '../../../components/merchant/ToastContext';
 import {
   getMerchantProfile,
   merchantApiFetch,
@@ -91,10 +93,13 @@ const STATUS_BADGE_MAP: Record<
 export default function AdminMerchantsPage() {
   const router = useRouter();
   const { theme } = useMerchantTheme();
+  const toast = useToast();
+  const { confirm } = useConfirm();
   const isDark = theme === 'dark';
 
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [merchants, setMerchants] = useState<AdminMerchantItem[]>([]);
+  const [allMerchantsSummary, setAllMerchantsSummary] = useState<AdminMerchantItem[]>([]);
   const [statusFilter, setStatusFilter] = useState<StatusFilterType>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -104,6 +109,17 @@ export default function AdminMerchantsPage() {
   const [selectedMerchant, setSelectedMerchant] = useState<AdminMerchantItem | null>(null);
   const [revisionNote, setRevisionNote] = useState('');
   const [isUpdatingId, setIsUpdatingId] = useState<string | null>(null);
+
+  const fetchAllSummary = useCallback(async () => {
+    try {
+      const res = await merchantApiFetch('/admin/merchants/pending?status=ALL');
+      if (Array.isArray(res.data)) {
+        setAllMerchantsSummary(res.data as AdminMerchantItem[]);
+      }
+    } catch {
+      // Summary count fallback uses existing list if summary endpoint fails
+    }
+  }, []);
 
   const fetchMerchants = useCallback(async (filter: StatusFilterType, search: string) => {
     setIsLoading(true);
@@ -116,7 +132,11 @@ export default function AdminMerchantsPage() {
       }
       const res = await merchantApiFetch(`/admin/merchants/pending?${params.toString()}`);
       if (Array.isArray(res.data)) {
-        setMerchants(res.data as AdminMerchantItem[]);
+        const list = res.data as AdminMerchantItem[];
+        setMerchants(list);
+        if (filter === 'ALL' && !search.trim()) {
+          setAllMerchantsSummary(list);
+        }
       } else {
         setMerchants([]);
       }
@@ -139,7 +159,7 @@ export default function AdminMerchantsPage() {
       return;
     }
     setIsAuthorized(true);
-    fetchMerchants('ALL', '');
+    void fetchMerchants('ALL', '');
   }, [router, fetchMerchants]);
 
   const handleStatusUpdate = async (
@@ -148,8 +168,23 @@ export default function AdminMerchantsPage() {
     note?: string
   ) => {
     if (nextStatus === 'REVISION' && (!note || !note.trim())) {
-      setErrorMsg('Revizyon talebi göndermek için açıklama notu girmelisiniz.');
+      const msg = 'Revizyon talebi göndermek için açıklama notu girmelisiniz.';
+      setErrorMsg(msg);
+      toast.warning(msg);
       return;
+    }
+
+    if (nextStatus === 'ON_HOLD' || nextStatus === 'REJECTED') {
+      const ok = await confirm({
+        title: nextStatus === 'REJECTED' ? 'İşletmeyi Reddet' : 'İşletmeyi Askıya Al',
+        message:
+          nextStatus === 'REJECTED'
+            ? 'Bu işletme başvurusunu reddetmek istediğinize emin misiniz?'
+            : 'Bu işletmeyi askıya almak istediğinize emin misiniz? Aktif vitrin erişimi duraklatılacaktır.',
+        confirmText: nextStatus === 'REJECTED' ? 'Reddet' : 'Askıya Al',
+        tone: 'danger',
+      });
+      if (!ok) return;
     }
 
     setIsUpdatingId(merchantId);
@@ -164,13 +199,16 @@ export default function AdminMerchantsPage() {
           ...(note !== undefined ? { revisionMessage: note.trim() } : {}),
         }),
       });
-      setSuccessMsg(res.message || 'İşletme durumu başarıyla güncellendi.');
+      const msg = res.message || 'İşletme durumu başarıyla güncellendi.';
+      setSuccessMsg(msg);
+      toast.success(msg);
       setSelectedMerchant(null);
       setRevisionNote('');
-      await fetchMerchants(statusFilter, searchQuery);
+      await Promise.all([fetchMerchants(statusFilter, searchQuery), fetchAllSummary()]);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'İşletme durumu güncellenemedi.';
       setErrorMsg(message);
+      toast.error(message);
     } finally {
       setIsUpdatingId(null);
     }
@@ -182,13 +220,14 @@ export default function AdminMerchantsPage() {
   };
 
   const kpiStats = useMemo(() => {
+    const source = allMerchantsSummary.length > 0 ? allMerchantsSummary : merchants;
     return {
-      total: merchants.length,
-      pending: merchants.filter((m) => m.status === 'PENDING' || m.status === 'REVISION').length,
-      active: merchants.filter((m) => m.status === 'ACTIVE').length,
-      holdOrRejected: merchants.filter((m) => m.status === 'ON_HOLD' || m.status === 'REJECTED').length,
+      total: source.length,
+      pending: source.filter((m) => m.status === 'PENDING' || m.status === 'REVISION').length,
+      active: source.filter((m) => m.status === 'ACTIVE').length,
+      holdOrRejected: source.filter((m) => m.status === 'ON_HOLD' || m.status === 'REJECTED').length,
     };
-  }, [merchants]);
+  }, [allMerchantsSummary, merchants]);
 
   if (!isAuthorized) {
     return null;
@@ -422,80 +461,16 @@ export default function AdminMerchantsPage() {
       </div>
 
       {/* Inspection Modal */}
-      {selectedMerchant && (
-        <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div
-            className={`w-full max-w-xl rounded-3xl border p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto ${
-              isDark ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-            }`}
-          >
-            <div className="flex items-start justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
-              <div>
-                <h3 className="text-lg font-black">{selectedMerchant.businessName}</h3>
-                <p className="text-xs text-slate-400 font-semibold mt-0.5">
-                  İşletme Başvuru ve Durum Yönetimi
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedMerchant(null)}
-                className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 space-y-1">
-                <div className="text-slate-400 font-bold flex items-center gap-1.5">
-                  <Mail className="w-3.5 h-3.5" /> E-Posta
-                </div>
-                <div className="font-bold">{selectedMerchant.email}</div>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 space-y-1">
-                <div className="text-slate-400 font-bold flex items-center gap-1.5">
-                  <Phone className="w-3.5 h-3.5" /> İletişim
-                </div>
-                <div className="font-bold tabular-nums">
-                  {selectedMerchant.businessPhone || selectedMerchant.ownerPhone || selectedMerchant.phone || '-'}
-                </div>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 space-y-1">
-                <div className="text-slate-400 font-bold flex items-center gap-1.5">
-                  <FileText className="w-3.5 h-3.5" /> Vergi / Şirket No
-                </div>
-                <div className="font-bold tabular-nums">
-                  {selectedMerchant.taxNumber || '-'} / {selectedMerchant.msNumber || '-'}
-                </div>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 space-y-1">
-                <div className="text-slate-400 font-bold flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5" /> Adres & Bölge
-                </div>
-                <div className="font-bold">
-                  {selectedMerchant.district || '-'} — {selectedMerchant.fullAddress || '-'}
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-black uppercase tracking-wider text-slate-400 mb-1.5">
-                Revizyon / Yönetici Notu
-              </label>
-              <textarea
-                rows={3}
-                value={revisionNote}
-                onChange={(e) => setRevisionNote(e.target.value)}
-                placeholder="Revizyon gerekiyorsa eksik belgeleri veya düzeltme notunu yazın..."
-                className={`w-full p-3 rounded-xl border text-xs font-semibold outline-none ${
-                  isDark
-                    ? 'bg-slate-950 border-slate-800 text-white focus:border-[#FF6B00]'
-                    : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#FF6B00]'
-                }`}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
+      <SlideOverDrawer
+        isOpen={Boolean(selectedMerchant)}
+        onClose={() => setSelectedMerchant(null)}
+        title={selectedMerchant?.businessName || ''}
+        subtitle="İşletme Başvuru ve Durum Yönetimi"
+        icon={<Building2 className="w-5 h-5" />}
+        widthClass="max-w-xl"
+        footer={
+          selectedMerchant ? (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <button
                 type="button"
                 disabled={isUpdatingId === selectedMerchant.id}
@@ -533,9 +508,63 @@ export default function AdminMerchantsPage() {
                 <span>Reddet</span>
               </button>
             </div>
+          ) : undefined
+        }
+      >
+        {selectedMerchant && (
+          <div className="space-y-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 space-y-1">
+                <div className="text-slate-400 font-bold flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5" /> E-Posta
+                </div>
+                <div className="font-bold break-all">{selectedMerchant.email}</div>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 space-y-1">
+                <div className="text-slate-400 font-bold flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5" /> İletişim
+                </div>
+                <div className="font-bold tabular-nums">
+                  {selectedMerchant.businessPhone || selectedMerchant.ownerPhone || selectedMerchant.phone || '-'}
+                </div>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 space-y-1">
+                <div className="text-slate-400 font-bold flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5" /> Vergi / Şirket No
+                </div>
+                <div className="font-bold tabular-nums">
+                  {selectedMerchant.taxNumber || '-'} / {selectedMerchant.msNumber || '-'}
+                </div>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 space-y-1">
+                <div className="text-slate-400 font-bold flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5" /> Adres & Bölge
+                </div>
+                <div className="font-bold">
+                  {selectedMerchant.district || '-'} — {selectedMerchant.fullAddress || '-'}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-black tracking-wider text-slate-400 mb-1.5">
+                Revizyon / Yönetici Notu
+              </label>
+              <textarea
+                rows={4}
+                value={revisionNote}
+                onChange={(e) => setRevisionNote(e.target.value)}
+                placeholder="Revizyon gerekiyorsa eksik belgeleri veya düzeltme notunu yazın..."
+                className={`w-full p-3 rounded-xl border text-xs font-semibold outline-none ${
+                  isDark
+                    ? 'bg-slate-950 border-slate-800 text-white focus:border-[#FF6B00]'
+                    : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#FF6B00]'
+                }`}
+              />
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </SlideOverDrawer>
     </MerchantLayout>
   );
 }

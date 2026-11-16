@@ -492,9 +492,9 @@ class _SupportChatPageState extends ConsumerState<SupportChatPage> {
 
   Widget _buildQuickRepliesRow() {
     final replies = [
-      {"label": "Siparişim Nerede? 📍", "text": "Aktif siparişim nerede?"},
-      {"label": "Eksik Ürün Geldi 🍎", "text": "Siparişimde eksik ürün var."},
-      {"label": "İptal Etmek İstiyorum ❌", "text": "Siparişimi iptal etmek istiyorum."},
+      {"label": "Siparişim Nerede?", "text": "Aktif siparişim nerede?"},
+      {"label": "Eksik Ürün Geldi", "text": "Siparişimde eksik ürün var."},
+      {"label": "İptal Etmek İstiyorum", "text": "Siparişimi iptal etmek istiyorum."},
     ];
 
     return Container(

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart' as legacy_provider;
 import 'package:core_auth/core_auth.dart';
+import 'package:core_shared/core_shared.dart';
 import 'package:consumer_app/apps/consumer/address/delivery_provider.dart';
 import 'package:consumer_app/apps/consumer/repositories/address_repository.dart';
 import 'package:consumer_app/apps/consumer/checkout/checkout_page.dart';
@@ -116,19 +117,7 @@ class _NameSurnameInputPageState extends ConsumerState<NameSurnameInputPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         automaticallyImplyLeading: false,
-        title: Image.asset(
-          'assets/images/hoppa_logo.png',
-          height: 40,
-          fit: BoxFit.contain,
-          errorBuilder: (context, error, stackTrace) => Text(
-            "Hoppa",
-            style: GoogleFonts.poppins(
-              fontWeight: FontWeight.bold,
-              color: kPrimaryColor,
-              fontSize: 24,
-            ),
-          ),
-        ),
+        title: const HoppaBrandLogo(height: 34),
         centerTitle: true,
       ),
       body: SafeArea(
@@ -141,11 +130,11 @@ class _NameSurnameInputPageState extends ConsumerState<NameSurnameInputPage> {
               children: [
                 const SizedBox(height: 20),
                 Text(
-                  "Hesabınızı Tamamlayın 👤",
-                  style: GoogleFonts.poppins(
+                  "Hesabınızı Tamamlayın",
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0F172A),
                   ),
                   textAlign: TextAlign.center,
                 ),

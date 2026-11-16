@@ -66,9 +66,7 @@ flutter:
   assets:
     - .env
     - assets/categories/
-    - assets/images/hoppa_logo.png
     - assets/images/hoppa_icon.png
-    - assets/images/hoppa_button.png
     - assets/images/market_bg.png
     - assets/images/restaurant_bg.png
     - assets/images/su_bg.png

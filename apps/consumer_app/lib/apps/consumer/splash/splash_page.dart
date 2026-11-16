@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:core_shared/core_shared.dart';
 import 'package:consumer_app/apps/consumer/auth/consumer_auth_wrapper.dart';
 import 'package:http/http.dart' as http;
 
@@ -138,29 +139,15 @@ class _SplashPageState extends State<SplashPage> {
             children: [
               const Spacer(flex: 3),
               // Center Brand Logo
-              Image.asset(
-                'assets/images/hoppa_logo.png',
-                width: 220,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) => Image.asset(
-                  'assets/images/hoppa_button.png',
-                  width: 140,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) => const Icon(
-                    Icons.shopping_basket_rounded,
-                    color: Color(0xFFE95D22),
-                    size: 80,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 32),
+              const HoppaBrandLogo(height: 58),
+              const SizedBox(height: 24),
               // Slogan
               Text(
                 'Hoppa: Siparişin en kısa yolu.',
-                style: GoogleFonts.poppins(
-                  color: const Color(0xFFE95D22),
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                style: GoogleFonts.plusJakartaSans(
+                  color: HoppaDesignTokens.textSecondaryLight,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               const Spacer(flex: 4),

@@ -30,6 +30,7 @@ export default function MerchantLoginForm({
   const [password, setPassword] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [rememberOnDevice, setRememberOnDevice] = useState<boolean>(true);
+  const [showForgotHelp, setShowForgotHelp] = useState<boolean>(false);
   const [fieldErrors, setFieldErrors] = useState<LoginFormErrors>({});
 
   const passwordInputRef = useRef<HTMLInputElement>(null);
@@ -116,7 +117,7 @@ export default function MerchantLoginForm({
             />
           ) : isAdminRole ? (
             <img
-              src="/logo-square-orange.png"
+              src="/logo-mark.svg"
               alt="Hoppa"
               className="w-10 h-10 rounded-xl object-cover shadow-2xs ring-1 ring-black/5 shrink-0"
             />
@@ -215,7 +216,7 @@ export default function MerchantLoginForm({
         )}
       </div>
 
-      <div className="flex items-center justify-between text-xs font-semibold py-1">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold py-1">
         <label className="flex items-center gap-2 cursor-pointer select-none">
           <input
             type="checkbox"
@@ -225,10 +226,49 @@ export default function MerchantLoginForm({
           />
           <span>Profili bu cihazda hatırla</span>
         </label>
-        <a href="/merchant-onboard" className="text-[#FF6B00] hover:underline font-bold">
-          Başvuru Durumu
-        </a>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setShowForgotHelp((prev) => !prev)}
+            className={`font-bold transition-colors ${
+              isDark ? 'text-slate-300 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            Şifremi Unuttum
+          </button>
+          <a href="/merchant-onboard" className="text-[#FF6B00] hover:underline font-bold">
+            Başvuru Durumu
+          </a>
+        </div>
       </div>
+
+      {showForgotHelp && (
+        <div
+          className={`p-3.5 rounded-xl border text-xs space-y-1.5 ${
+            isDark
+              ? 'bg-slate-800/70 border-slate-700 text-slate-200'
+              : 'bg-orange-50/70 border-orange-200 text-slate-700'
+          }`}
+        >
+          <div className="font-black text-[#FF6B00]">Kurumsal Şifre Sıfırlama Desteği</div>
+          <p className="leading-relaxed">
+            Mağaza hesabı güvenliği nedeniyle şifre yenileme işlemleri Hoppa Kurumsal Destek tarafından
+            doğrulanarak yapılır:
+          </p>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 font-bold tabular-nums pt-0.5">
+            <a href="mailto:support@hoppanow.com" className="inline-flex items-center gap-1 hover:underline">
+              <Mail className="w-3.5 h-3.5 text-[#FF6B00]" />
+              <span>support@hoppanow.com</span>
+            </a>
+            <a href="tel:+905338765432" className="hover:underline">
+              +90 533 876 54 32
+            </a>
+            <a href="/#contact" className="text-[#FF6B00] hover:underline">
+              Hoppa Destek Merkezi
+            </a>
+          </div>
+        </div>
+      )}
 
       <button
         type="submit"

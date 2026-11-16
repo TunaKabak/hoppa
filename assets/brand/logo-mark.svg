@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="hoppaMarkBg" x1="6" y1="4" x2="58" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FF7A1A"/>
+      <stop offset="55%" stop-color="#FF6B00"/>
+      <stop offset="100%" stop-color="#E55A00"/>
+    </linearGradient>
+    <linearGradient id="hoppaMarkStar" x1="36" y1="10" x2="54" y2="26" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#34D399"/>
+      <stop offset="100%" stop-color="#00A651"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="url(#hoppaMarkBg)"/>
+  <!-- Geometric Hoppa "H" with signature dynamic cut -->
+  <path d="M16.5 17C16.5 15.3431 17.8431 14 19.5 14C21.1569 14 22.5 15.3431 22.5 17V27.2H37.5V17C37.5 15.3431 38.8431 14 40.5 14C42.1569 14 43.5 15.3431 43.5 17V41C43.5 42.6569 42.1569 44 40.5 44C38.8431 44 37.5 42.6569 37.5 41V32.8H22.5V41C22.5 42.6569 21.1569 44 19.5 44C17.8431 44 16.5 42.6569 16.5 41V17Z" fill="#FFFFFF"/>
+  <!-- Hoppa Smile Arc -->
+  <path d="M16.5 45.8C22.4 51.6 32.8 53.2 42.6 48.2C44.1 47.4 45.1 48.9 43.8 50.2C34.2 58.2 21.4 56.2 15.4 47.8C14.7 46.8 15.6 45.1 16.5 45.8Z" fill="#FFFFFF"/>
+  <!-- Emerald Star Accent -->
+  <path d="M47 10.5L49.1 15.1L54.1 15.7L50.4 19.1L51.4 24L47 21.5L42.6 24L43.6 19.1L39.9 15.7L44.9 15.1L47 10.5Z" fill="url(#hoppaMarkStar)" stroke="#FFFFFF" stroke-width="1.4" stroke-linejoin="round"/>
+</svg>

@@ -44,7 +44,7 @@ class StoreReadinessCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Mağazanız Canlıda & Hazır 🎉",
+                    "Mağazanız Canlıda & Hazır",
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,

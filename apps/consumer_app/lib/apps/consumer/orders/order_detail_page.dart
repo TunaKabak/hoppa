@@ -303,7 +303,7 @@ class _OrderDetailPageState extends ConsumerState<OrderDetailPage> {
                             );
                           },
                           icon: const Icon(Icons.map_outlined),
-                          label: const Text("Kuryeyi Canlı Takip Et 🛵"),
+                          label: const Text("Kuryeyi Canlı Takip Et"),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Theme.of(context).colorScheme.primary,
                             foregroundColor: Colors.white,

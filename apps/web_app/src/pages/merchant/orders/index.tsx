@@ -1,14 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Head from 'next/head';
 import MerchantLayout from '../../../components/merchant/MerchantLayout';
 import GuidedOnboardingWidget from '../../../components/merchant/GuidedOnboardingWidget';
 import HoppaSelect from '../../../components/merchant/HoppaSelect';
+import SlideOverDrawer from '../../../components/merchant/SlideOverDrawer';
+import { useToast } from '../../../components/merchant/ToastContext';
 import StatusIndicator, { StatusTone } from '../../../components/merchant/StatusIndicator';
 import { 
   ShoppingBag, Clock, CheckCircle2, XCircle, Bike, AlertTriangle, 
   Printer, Volume2, VolumeX, ChevronRight, X, RefreshCw,
-  User, Phone, MapPin, CreditCard, FileText, Package, Eye,
-  Check, Info, Navigation, ArrowRight
+  User, Phone, MapPin, Package, Eye,
+  ArrowRight, BellOff, DoorOpen, Search
 } from 'lucide-react';
 import { merchantApiFetch } from '../../../utils/merchant-auth';
 import {
@@ -17,8 +19,12 @@ import {
 } from '../../../utils/realtime-client';
 import { useMerchantTheme } from '../../../context/MerchantThemeContext';
 
+type BoardFilter = 'KANBAN' | 'CANCELLED';
+type MobileStageTab = 'PENDING' | 'PREPARING' | 'ON_THE_WAY' | 'DELIVERED';
+
 export default function MerchantOrdersPage() {
   const { theme } = useMerchantTheme();
+  const toast = useToast();
   const isDark = theme === 'dark';
 
   const [orders, setOrders] = useState<any[]>([]);
@@ -28,9 +34,20 @@ export default function MerchantOrdersPage() {
   const [selectedOrderForReceipt, setSelectedOrderForReceipt] = useState<any | null>(null);
   const [cancelModalOrder, setCancelModalOrder] = useState<any | null>(null);
   const [cancelReason, setCancelReason] = useState('Stok yetersizliği');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [boardFilter, setBoardFilter] = useState<BoardFilter>('KANBAN');
+  const [mobileStage, setMobileStage] = useState<MobileStageTab>('PENDING');
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
 
   const prevPendingCount = useRef(0);
   const fetchOrdersRef = useRef<() => Promise<void>>(async () => {});
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setNowMs(Date.now());
+    }, 30000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const fetchOrders = async () => {
     try {
@@ -120,9 +137,10 @@ export default function MerchantOrdersPage() {
         method: 'PUT',
         body: JSON.stringify({ status: newStatus }),
       });
+      toast.success('Sipariş durumu güncellendi.');
       await fetchOrders();
     } catch (err: any) {
-      alert(err.message || 'Sipariş durumu güncellenemedi.');
+      toast.error(err.message || 'Sipariş durumu güncellenemedi.');
     }
   };
 
@@ -133,28 +151,53 @@ export default function MerchantOrdersPage() {
         method: 'POST',
         body: JSON.stringify({ reason: cancelReason }),
       });
+      toast.info('Sipariş iptal edildi.');
       setCancelModalOrder(null);
       if (selectedOrderForDetail?.id === cancelModalOrder.id) {
         setSelectedOrderForDetail(null);
       }
       await fetchOrders();
     } catch (err: any) {
-      alert(err.message || 'Sipariş iptal edilemedi.');
+      toast.error(err.message || 'Sipariş iptal edilemedi.');
     }
   };
 
   const triggerDirectPrint = (order: any) => {
     setSelectedOrderForReceipt(order);
-    setTimeout(() => {
-      window.print();
-    }, 150);
+    if (typeof window !== 'undefined') {
+      const cleanup = () => {
+        setSelectedOrderForReceipt(null);
+      };
+      window.addEventListener('afterprint', cleanup, { once: true });
+      setTimeout(() => {
+        window.print();
+      }, 150);
+    }
   };
 
-  // Group orders by status
-  const pendingOrders = orders.filter((o) => o.status === 'PENDING');
-  const preparingOrders = orders.filter((o) => o.status === 'PREPARING');
-  const onTheWayOrders = orders.filter((o) => o.status === 'ON_THE_WAY' || o.status === 'READY_FOR_PICKUP');
-  const completedOrders = orders.filter((o) => o.status === 'DELIVERED');
+  const filteredOrders = useMemo(() => {
+    const q = searchQuery.trim().toLocaleLowerCase('tr-TR');
+    if (!q) return orders;
+    return orders.filter((o) => {
+      const ref = `#${o.orderNumber || o.id?.slice(-6) || ''}`.toLocaleLowerCase('tr-TR');
+      const name = (
+        o.consumer
+          ? `${o.consumer.name || ''} ${o.consumer.surname || ''}`
+          : o.user?.fullName || o.customerName || ''
+      ).toLocaleLowerCase('tr-TR');
+      const addr = String(o.deliveryAddress || '').toLocaleLowerCase('tr-TR');
+      return ref.includes(q) || name.includes(q) || addr.includes(q);
+    });
+  }, [orders, searchQuery]);
+
+  // Group filtered orders by status
+  const pendingOrders = filteredOrders.filter((o) => o.status === 'PENDING');
+  const preparingOrders = filteredOrders.filter((o) => o.status === 'PREPARING');
+  const onTheWayOrders = filteredOrders.filter(
+    (o) => o.status === 'ON_THE_WAY' || o.status === 'READY_FOR_PICKUP'
+  );
+  const completedOrders = filteredOrders.filter((o) => o.status === 'DELIVERED');
+  const cancelledOrders = filteredOrders.filter((o) => o.status === 'CANCELLED');
 
   const ordersHeaderActions = (
     <div className="flex items-center gap-2">
@@ -184,6 +227,7 @@ export default function MerchantOrdersPage() {
       <button
         type="button"
         onClick={() => void fetchOrders()}
+        aria-label="Siparişleri Yenile"
         className={`p-2 rounded-xl border transition-colors ${
           isDark
             ? 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700'
@@ -197,8 +241,8 @@ export default function MerchantOrdersPage() {
   );
 
   return (
-    <MerchantLayout 
-      title="Canlı Sipariş Portalı" 
+    <MerchantLayout
+      title="Canlı Sipariş Portalı"
       subtitle="Mutfak, paketleme ve kurye süreçlerinizi anlık takip edin (Detay için karta tıklayın)"
       headerIcon={ShoppingBag}
       headerActions={ordersHeaderActions}
@@ -235,27 +279,129 @@ export default function MerchantOrdersPage() {
         }
       `}</style>
 
-      <div className="space-y-6">
+      <div className="space-y-5">
         {/* Guided Onboarding Bar */}
         <GuidedOnboardingWidget pendingOrdersCount={pendingOrders.length} />
 
-        {/* Kanban Columns Grid */}
+        {/* Search & Board View Filter Bar */}
+        <div
+          className={`p-3.5 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+            isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-2xs'
+          }`}
+        >
+          <div className="relative flex-1 max-w-md">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Sipariş no, müşteri adı veya adres ara..."
+              className={`w-full border rounded-xl py-2.5 pl-10 pr-4 text-xs font-semibold outline-none focus:border-[#FF6B00] ${
+                isDark
+                  ? 'bg-slate-950 border-slate-800 text-white placeholder-slate-500'
+                  : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
+              }`}
+            />
+          </div>
+
+          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 shrink-0">
+            <button
+              type="button"
+              onClick={() => setBoardFilter('KANBAN')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                boardFilter === 'KANBAN'
+                  ? isDark
+                    ? 'bg-slate-950 text-white shadow-2xs'
+                    : 'bg-white text-slate-900 shadow-2xs'
+                  : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'
+              }`}
+            >
+              Aktif &amp; Teslim Panosu ({pendingOrders.length + preparingOrders.length + onTheWayOrders.length + completedOrders.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setBoardFilter('CANCELLED')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+                boardFilter === 'CANCELLED'
+                  ? 'bg-rose-600 text-white shadow-2xs'
+                  : 'text-slate-500 hover:text-rose-500'
+              }`}
+            >
+              İptaller ({cancelledOrders.length})
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile / Tablet Stage Tabs */}
+        {boardFilter === 'KANBAN' && (
+          <div className="lg:hidden flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {(
+              [
+                { id: 'PENDING', label: `Yeni (${pendingOrders.length})` },
+                { id: 'PREPARING', label: `Hazırlanıyor (${preparingOrders.length})` },
+                { id: 'ON_THE_WAY', label: `Yolda (${onTheWayOrders.length})` },
+                { id: 'DELIVERED', label: `Tamamlanan (${completedOrders.length})` },
+              ] as const
+            ).map((stage) => (
+              <button
+                key={stage.id}
+                type="button"
+                onClick={() => setMobileStage(stage.id)}
+                className={`px-3.5 py-2 rounded-xl text-xs font-extrabold whitespace-nowrap border transition-colors ${
+                  mobileStage === stage.id
+                    ? 'bg-[#FF6B00] border-[#FF6B00] text-white'
+                    : isDark
+                      ? 'bg-slate-900 border-slate-800 text-slate-300'
+                      : 'bg-white border-slate-200 text-slate-600'
+                }`}
+              >
+                {stage.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Kanban Columns Grid OR Cancelled Tab */}
         {isLoading ? (
-          <div className={`text-center py-20 rounded-3xl border ${
-            isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
-          }`}>
+          <div
+            className={`text-center py-20 rounded-3xl border ${
+              isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+            }`}
+          >
             <div className="w-10 h-10 border-3 border-[#FF6B00] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
             <p className="text-xs text-slate-400 font-semibold">Canlı sipariş akışı yükleniyor...</p>
           </div>
+        ) : boardFilter === 'CANCELLED' ? (
+          cancelledOrders.length === 0 ? (
+            <div
+              className={`p-14 text-center rounded-3xl border text-slate-400 text-xs font-semibold ${
+                isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+              }`}
+            >
+              İptal edilmiş sipariş bulunmuyor.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {cancelledOrders.map((order) => (
+                <OrderCard
+                  key={order.id}
+                  order={order}
+                  nowMs={nowMs}
+                  isDark={isDark}
+                  onViewDetail={() => setSelectedOrderForDetail(order)}
+                  onPrint={() => triggerDirectPrint(order)}
+                />
+              ))}
+            </div>
+          )
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             {/* Column 1: PENDING (Yeni Gelenler) */}
-            <div className="space-y-4">
+            <div className={`space-y-4 ${mobileStage === 'PENDING' ? 'block' : 'hidden lg:block'}`}>
               <div className="flex items-center justify-between px-2">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-amber-500" />
-                  <h3 className="font-extrabold text-sm uppercase tracking-wider">Yeni Gelenler</h3>
+                  <h3 className="font-extrabold text-sm tracking-wide">Yeni Gelenler</h3>
                 </div>
                 <span className="px-2 py-0.5 rounded-md text-xs font-bold tabular-nums bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                   {pendingOrders.length}
@@ -264,9 +410,11 @@ export default function MerchantOrdersPage() {
 
               <div className="space-y-3">
                 {pendingOrders.length === 0 ? (
-                  <div className={`p-6 text-center rounded-2xl border text-slate-400 text-xs font-semibold ${
-                    isDark ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-50 border-slate-200'
-                  }`}>
+                  <div
+                    className={`p-6 text-center rounded-2xl border text-slate-400 text-xs font-semibold ${
+                      isDark ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-50 border-slate-200'
+                    }`}
+                  >
                     Bekleyen yeni sipariş yok.
                   </div>
                 ) : (
@@ -274,6 +422,7 @@ export default function MerchantOrdersPage() {
                     <OrderCard
                       key={order.id}
                       order={order}
+                      nowMs={nowMs}
                       isDark={isDark}
                       onViewDetail={() => setSelectedOrderForDetail(order)}
                       onApprove={() => handleUpdateStatus(order.id, 'PREPARING')}
@@ -286,11 +435,11 @@ export default function MerchantOrdersPage() {
             </div>
 
             {/* Column 2: PREPARING (Hazırlanıyor) */}
-            <div className="space-y-4">
+            <div className={`space-y-4 ${mobileStage === 'PREPARING' ? 'block' : 'hidden lg:block'}`}>
               <div className="flex items-center justify-between px-2">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-[#FF6B00]" />
-                  <h3 className="font-extrabold text-sm uppercase tracking-wider">Hazırlanıyor</h3>
+                  <h3 className="font-extrabold text-sm tracking-wide">Hazırlanıyor</h3>
                 </div>
                 <span className="px-2 py-0.5 rounded-md text-xs font-bold tabular-nums bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                   {preparingOrders.length}
@@ -299,9 +448,11 @@ export default function MerchantOrdersPage() {
 
               <div className="space-y-3">
                 {preparingOrders.length === 0 ? (
-                  <div className={`p-6 text-center rounded-2xl border text-slate-400 text-xs font-semibold ${
-                    isDark ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-50 border-slate-200'
-                  }`}>
+                  <div
+                    className={`p-6 text-center rounded-2xl border text-slate-400 text-xs font-semibold ${
+                      isDark ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-50 border-slate-200'
+                    }`}
+                  >
                     Hazırlanan sipariş yok.
                   </div>
                 ) : (
@@ -309,6 +460,7 @@ export default function MerchantOrdersPage() {
                     <OrderCard
                       key={order.id}
                       order={order}
+                      nowMs={nowMs}
                       isDark={isDark}
                       onViewDetail={() => setSelectedOrderForDetail(order)}
                       onDeliver={() => handleUpdateStatus(order.id, 'ON_THE_WAY')}
@@ -321,11 +473,11 @@ export default function MerchantOrdersPage() {
             </div>
 
             {/* Column 3: ON_THE_WAY (Yoldakiler / Kuryede) */}
-            <div className="space-y-4">
+            <div className={`space-y-4 ${mobileStage === 'ON_THE_WAY' ? 'block' : 'hidden lg:block'}`}>
               <div className="flex items-center justify-between px-2">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-indigo-500" />
-                  <h3 className="font-extrabold text-sm uppercase tracking-wider">Yolda / Kuryede</h3>
+                  <h3 className="font-extrabold text-sm tracking-wide">Yolda / Kuryede</h3>
                 </div>
                 <span className="px-2 py-0.5 rounded-md text-xs font-bold tabular-nums bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                   {onTheWayOrders.length}
@@ -334,9 +486,11 @@ export default function MerchantOrdersPage() {
 
               <div className="space-y-3">
                 {onTheWayOrders.length === 0 ? (
-                  <div className={`p-6 text-center rounded-2xl border text-slate-400 text-xs font-semibold ${
-                    isDark ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-50 border-slate-200'
-                  }`}>
+                  <div
+                    className={`p-6 text-center rounded-2xl border text-slate-400 text-xs font-semibold ${
+                      isDark ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-50 border-slate-200'
+                    }`}
+                  >
                     Yolda olan sipariş yok.
                   </div>
                 ) : (
@@ -344,6 +498,7 @@ export default function MerchantOrdersPage() {
                     <OrderCard
                       key={order.id}
                       order={order}
+                      nowMs={nowMs}
                       isDark={isDark}
                       onViewDetail={() => setSelectedOrderForDetail(order)}
                       onComplete={() => handleUpdateStatus(order.id, 'DELIVERED')}
@@ -355,11 +510,11 @@ export default function MerchantOrdersPage() {
             </div>
 
             {/* Column 4: DELIVERED (Tamamlananlar) */}
-            <div className="space-y-4">
+            <div className={`space-y-4 ${mobileStage === 'DELIVERED' ? 'block' : 'hidden lg:block'}`}>
               <div className="flex items-center justify-between px-2">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-[#00A651]" />
-                  <h3 className="font-extrabold text-sm uppercase tracking-wider">Tamamlananlar</h3>
+                  <h3 className="font-extrabold text-sm tracking-wide">Tamamlananlar</h3>
                 </div>
                 <span className="px-2 py-0.5 rounded-md text-xs font-bold tabular-nums bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                   {completedOrders.length}
@@ -368,9 +523,11 @@ export default function MerchantOrdersPage() {
 
               <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
                 {completedOrders.length === 0 ? (
-                  <div className={`p-6 text-center rounded-2xl border text-slate-400 text-xs font-semibold ${
-                    isDark ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-50 border-slate-200'
-                  }`}>
+                  <div
+                    className={`p-6 text-center rounded-2xl border text-slate-400 text-xs font-semibold ${
+                      isDark ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-50 border-slate-200'
+                    }`}
+                  >
                     Tamamlanan sipariş yok.
                   </div>
                 ) : (
@@ -378,6 +535,7 @@ export default function MerchantOrdersPage() {
                     <OrderCard
                       key={order.id}
                       order={order}
+                      nowMs={nowMs}
                       isDark={isDark}
                       onViewDetail={() => setSelectedOrderForDetail(order)}
                       onPrint={() => triggerDirectPrint(order)}
@@ -386,7 +544,6 @@ export default function MerchantOrdersPage() {
                 )}
               </div>
             </div>
-
           </div>
         )}
       </div>
@@ -508,29 +665,45 @@ export default function MerchantOrdersPage() {
 // =============================================================================
 // Single Order Card Component
 // =============================================================================
-function OrderCard({ 
-  order, 
-  isDark, 
+function OrderCard({
+  order,
+  nowMs,
+  isDark,
   onViewDetail,
-  onApprove, 
-  onDeliver, 
-  onComplete, 
-  onCancel, 
-  onPrint 
+  onApprove,
+  onDeliver,
+  onComplete,
+  onCancel,
+  onPrint,
 }: any) {
   const items = order.items || [];
-  const itemCount = items.reduce((acc: number, i: any) => acc + (Number(i.quantity) || 1), 0);
   const customerName = order.consumer
     ? `${order.consumer.name || ''} ${order.consumer.surname || ''}`.trim()
-    : (order.user?.fullName || order.customerName || 'Müşteri');
+    : order.user?.fullName || order.customerName || 'Müşteri';
   const orderTotal = Number(order.totalAmount ?? order.total ?? order.finalAmount ?? 0);
+
+  const isTerminal = order.status === 'DELIVERED' || order.status === 'CANCELLED';
+  const elapsedMins = Math.max(
+    0,
+    Math.floor(((nowMs || Date.now()) - new Date(order.createdAt).getTime()) / 60000)
+  );
+  const slaToneClass =
+    elapsedMins >= 25
+      ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30'
+      : elapsedMins >= 15
+        ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
+        : isDark
+          ? 'bg-slate-800 text-slate-300 border-slate-700'
+          : 'bg-slate-100 text-slate-600 border-slate-200';
 
   const getStatusBadge = () => {
     const statusMap: Record<string, { label: string; tone: StatusTone }> = {
       PENDING: { label: 'Bekliyor', tone: 'amber' },
       PREPARING: { label: 'Hazırlanıyor', tone: 'orange' },
+      READY_FOR_PICKUP: { label: 'Hazır', tone: 'sky' },
       ON_THE_WAY: { label: 'Yolda', tone: 'indigo' },
       DELIVERED: { label: 'Tamamlandı', tone: 'emerald' },
+      CANCELLED: { label: 'İptal Edildi', tone: 'rose' },
     };
     const meta = statusMap[order.status] || {
       label: String(order.status || 'Bilinmiyor'),
@@ -540,27 +713,40 @@ function OrderCard({
   };
 
   return (
-    <div 
+    <div
       onClick={onViewDetail}
       className={`border rounded-2xl p-4 space-y-3 transition-all cursor-pointer hover:border-[#FF6B00]/50 hover:shadow-lg ${
         isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
       }`}
     >
       {/* Top info */}
-      <div className="flex items-center justify-between">
-        <div>
-          <span className="font-mono text-xs font-black text-[#FF6B00]">
-            #{order.orderNumber || order.id.slice(-6)}
-          </span>
-          <span className="text-[10px] text-slate-400 block font-semibold">
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className="font-mono text-xs font-black text-[#FF6B00]">
+              #{order.orderNumber || order.id.slice(-6)}
+            </span>
+            {!isTerminal && (
+              <span
+                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[10px] font-bold tabular-nums ${slaToneClass}`}
+                title="Sipariş bekleme süresi (SLA)"
+              >
+                <Clock className="w-2.5 h-2.5 shrink-0" />
+                <span>{elapsedMins} dk</span>
+              </span>
+            )}
+          </div>
+          <span className="text-[10px] text-slate-400 block font-semibold tabular-nums mt-0.5">
             {new Date(order.createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
           </span>
         </div>
 
-        <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
           {getStatusBadge()}
           <button
+            type="button"
             onClick={onPrint}
+            aria-label="Fiş Yazdır"
             className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors"
             title="Fiş Yazdır"
           >
@@ -572,7 +758,14 @@ function OrderCard({
       {/* Customer Info */}
       <div className="text-xs">
         <p className="font-bold truncate text-slate-800 dark:text-slate-100">{customerName || 'Müşteri'}</p>
-        <p className="text-slate-500 dark:text-slate-400 text-[11px] line-clamp-1">{order.deliveryAddress || 'Adres bilgisi yok'}</p>
+        <p className="text-slate-500 dark:text-slate-400 text-[11px] line-clamp-1">
+          {order.deliveryAddress || 'Adres bilgisi yok'}
+        </p>
+        {order.status === 'CANCELLED' && order.cancelReason && (
+          <p className="text-[11px] text-rose-600 dark:text-rose-400 font-semibold mt-1 line-clamp-2">
+            İptal Nedeni: {order.cancelReason}
+          </p>
+        )}
         {order.customerNote && (
           <p className="text-[11px] text-amber-700 dark:text-amber-300 font-medium border border-amber-200 dark:border-amber-500/30 bg-amber-50/70 dark:bg-amber-950/30 p-2 rounded-lg mt-1.5 line-clamp-2">
             <span className="font-bold">Not:</span> {order.customerNote}
@@ -589,7 +782,7 @@ function OrderCard({
           return (
             <div key={idx} className="flex justify-between font-semibold text-slate-700 dark:text-slate-300">
               <span className="truncate">{itemQty}x {item.product?.name || item.name || 'Ürün'}</span>
-              <span className="text-slate-500 font-bold shrink-0 ml-2">₺{itemTotal.toFixed(2)}</span>
+              <span className="text-slate-500 font-bold shrink-0 ml-2 tabular-nums">₺{itemTotal.toFixed(2)}</span>
             </div>
           );
         })}
@@ -601,15 +794,20 @@ function OrderCard({
       </div>
 
       {/* Total & Action Buttons */}
-      <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div>
-          <span className="text-[10px] text-slate-400 uppercase font-bold block">Toplam</span>
-          <span className="text-sm font-black text-[#FF6B00]">₺{orderTotal.toFixed(2)}</span>
+          <span className="text-[10px] text-slate-400 font-bold block">Toplam</span>
+          <span className="text-sm font-black text-[#FF6B00] tabular-nums">₺{orderTotal.toFixed(2)}</span>
         </div>
 
         <div className="flex items-center gap-1.5">
           <button
+            type="button"
             onClick={onViewDetail}
+            aria-label="Sipariş detayı"
             className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold text-xs hover:bg-slate-200 dark:hover:bg-slate-700"
             title="Detay Gör"
           >
@@ -618,7 +816,9 @@ function OrderCard({
 
           {onCancel && (
             <button
+              type="button"
               onClick={onCancel}
+              aria-label="Siparişi iptal et"
               className="p-2 rounded-xl bg-rose-500/10 text-rose-500 font-bold text-xs hover:bg-rose-500/20"
               title="İptal Et"
             >
@@ -628,6 +828,7 @@ function OrderCard({
 
           {onApprove && (
             <button
+              type="button"
               onClick={onApprove}
               className="px-3 py-2 rounded-xl bg-[#FF6B00] hover:bg-[#E56000] text-white font-bold text-xs shadow-md flex items-center gap-1"
             >
@@ -638,6 +839,7 @@ function OrderCard({
 
           {onDeliver && (
             <button
+              type="button"
               onClick={onDeliver}
               className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md flex items-center gap-1"
             >
@@ -648,6 +850,7 @@ function OrderCard({
 
           {onComplete && (
             <button
+              type="button"
               onClick={onComplete}
               className="px-3 py-2 rounded-xl bg-[#00A651] hover:bg-[#008C44] text-white font-bold text-xs shadow-md flex items-center gap-1"
             >
@@ -662,7 +865,7 @@ function OrderCard({
 }
 
 // =============================================================================
-// Comprehensive Order Detail Modal Component
+// Comprehensive Order Detail Drawer Component
 // =============================================================================
 function OrderDetailModal({
   order,
@@ -677,57 +880,121 @@ function OrderDetailModal({
   const items = order.items || [];
   const customerName = order.consumer
     ? `${order.consumer.name || ''} ${order.consumer.surname || ''}`.trim()
-    : (order.user?.fullName || order.customerName || 'Müşteri');
-  const customerPhone = order.consumer?.phone || order.user?.phoneNumber || order.customerPhone || '';
+    : order.user?.fullName || order.customerName || 'Müşteri';
+  const customerPhone =
+    order.consumer?.phone || order.user?.phoneNumber || order.customerPhone || '';
   const orderTotal = Number(order.totalAmount ?? order.total ?? order.finalAmount ?? 0);
   const deliveryFee = Number(order.deliveryFee ?? 0);
   const subtotal = orderTotal > deliveryFee ? orderTotal - deliveryFee : orderTotal;
 
+  const statusLabel =
+    order.status === 'PENDING'
+      ? 'Yeni Sipariş'
+      : order.status === 'PREPARING'
+        ? 'Hazırlanıyor'
+        : order.status === 'READY_FOR_PICKUP'
+          ? 'Teslimata Hazır'
+          : order.status === 'ON_THE_WAY'
+            ? 'Kuryede / Yolda'
+            : order.status === 'DELIVERED'
+              ? 'Teslim Edildi'
+              : order.status === 'CANCELLED'
+                ? 'İptal Edildi'
+                : order.status;
+
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
-      <div className={`border rounded-3xl w-full max-w-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden ${
-        isDark ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-      }`}>
-        
-        {/* Modal Header */}
-        <div className="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#FF6B00]/15 text-[#FF6B00] flex items-center justify-center font-black">
-              <ShoppingBag className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-black tracking-tight font-mono">
-                  #{order.orderNumber || order.id.slice(-6)}
-                </h2>
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-black ${
-                  order.status === 'PENDING' ? 'bg-amber-500/20 text-amber-500' :
-                  order.status === 'PREPARING' ? 'bg-[#FF6B00]/20 text-[#FF6B00]' :
-                  order.status === 'ON_THE_WAY' ? 'bg-indigo-500/20 text-indigo-500' :
-                  order.status === 'DELIVERED' ? 'bg-[#00A651]/20 text-[#00A651]' : 'bg-rose-500/20 text-rose-500'
-                }`}>
-                  {order.status === 'PENDING' ? 'Yeni Sipariş' :
-                   order.status === 'PREPARING' ? 'Hazırlanıyor' :
-                   order.status === 'ON_THE_WAY' ? 'Kuryede / Yolda' :
-                   order.status === 'DELIVERED' ? 'Teslim Edildi' : order.status}
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 font-semibold mt-0.5">
-                {new Date(order.createdAt).toLocaleDateString('tr-TR')} • {new Date(order.createdAt).toLocaleTimeString('tr-TR')}
-              </p>
-            </div>
-          </div>
-
-          <button 
-            onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+    <SlideOverDrawer
+      isOpen={true}
+      onClose={onClose}
+      title={`Sipariş #${order.orderNumber || order.id.slice(-6)} · ${statusLabel}`}
+      subtitle={`${new Date(order.createdAt).toLocaleDateString('tr-TR')} • ${new Date(order.createdAt).toLocaleTimeString('tr-TR')}`}
+      icon={<ShoppingBag className="w-5 h-5" />}
+      widthClass="max-w-2xl"
+      footer={
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={onPrint}
+            className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 shadow-sm"
           >
-            <X className="w-5 h-5" />
+            <Printer className="w-4 h-4 text-[#FF6B00]" />
+            <span>Mutfak Fişi Yazdır</span>
           </button>
-        </div>
 
-        {/* Modal Scrollable Content */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            {order.status === 'PENDING' && (
+              <>
+                <button
+                  type="button"
+                  onClick={onCancel}
+                  className="px-4 py-2.5 rounded-xl bg-rose-500/10 text-rose-500 font-bold text-xs hover:bg-rose-500/20"
+                >
+                  İptal Et
+                </button>
+                <button
+                  type="button"
+                  onClick={onApprove}
+                  className="px-5 py-2.5 rounded-xl bg-[#FF6B00] hover:bg-[#E56000] text-white font-bold text-xs shadow-md flex items-center gap-1.5"
+                >
+                  <span>Siparişi Onayla &amp; Hazırla</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </>
+            )}
+
+            {order.status === 'PREPARING' && (
+              <>
+                <button
+                  type="button"
+                  onClick={onCancel}
+                  className="px-4 py-2.5 rounded-xl bg-rose-500/10 text-rose-500 font-bold text-xs hover:bg-rose-500/20"
+                >
+                  İptal Et
+                </button>
+                <button
+                  type="button"
+                  onClick={onDeliver}
+                  className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md flex items-center gap-1.5"
+                >
+                  <Bike className="w-4 h-4" />
+                  <span>Kuryeye Teslim Et / Yola Çıkar</span>
+                </button>
+              </>
+            )}
+
+            {(order.status === 'ON_THE_WAY' || order.status === 'READY_FOR_PICKUP') && (
+              <button
+                type="button"
+                onClick={onComplete}
+                className="px-5 py-2.5 rounded-xl bg-[#00A651] hover:bg-[#008C44] text-white font-bold text-xs shadow-md flex items-center gap-1.5"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Teslimatı Tamamla</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2.5 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs"
+            >
+              Kapat
+            </button>
+          </div>
+        </div>
+      }
+    >
+      {order.status === 'CANCELLED' && (
+        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-bold flex items-start gap-2.5">
+          <XCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-black">Sipariş İptal Edildi</p>
+            {order.cancelReason && (
+              <p className="mt-0.5 font-semibold">Sebep: {order.cancelReason}</p>
+            )}
+          </div>
+        </div>
+      )}
           
           {/* Customer and Delivery Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -767,11 +1034,21 @@ function OrderDetailModal({
                   {order.deliveryAddress || 'Adres detayı belirtilmedi'}
                 </p>
                 <div className="flex flex-wrap gap-2 pt-1">
-                  <span className="px-2 py-0.5 rounded-lg bg-indigo-500/10 text-indigo-500 text-[10px] font-bold">
-                    {order.fulfillmentModel === 'PICKUP' ? '📦 Gel Al Siparişi' : '🛵 Adrese Teslimat'}
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-indigo-500/10 text-indigo-500 text-[11px] font-semibold">
+                    {order.fulfillmentModel === 'PICKUP' ? (
+                      <>
+                        <Package className="w-3.5 h-3.5" />
+                        <span>Gel Al Siparişi</span>
+                      </>
+                    ) : (
+                      <>
+                        <Bike className="w-3.5 h-3.5" />
+                        <span>Adrese Teslimat</span>
+                      </>
+                    )}
                   </span>
                   {order.courier && (
-                    <span className="px-2 py-0.5 rounded-lg bg-[#00A651]/10 text-[#00A651] text-[10px] font-bold">
+                    <span className="px-2.5 py-0.5 rounded-lg bg-[#00A651]/10 text-[#00A651] text-[11px] font-semibold">
                       Kurye: {order.courier.name || 'Atandı'}
                     </span>
                   )}
@@ -793,20 +1070,23 @@ function OrderDetailModal({
                   "{order.customerNote}"
                 </p>
               )}
-              <div className="flex flex-wrap gap-2 pt-1 text-[11px] font-bold">
+              <div className="flex flex-wrap gap-2 pt-1 text-[11px] font-semibold">
                 {order.dontRingBell && (
-                  <span className="px-2 py-1 rounded-lg bg-amber-500/20 text-amber-700 dark:text-amber-300">
-                    🔕 Zili Çalma
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-700 dark:text-amber-300">
+                    <BellOff className="w-3.5 h-3.5" />
+                    <span>Zili Çalma</span>
                   </span>
                 )}
                 {order.leaveAtDoor && (
-                  <span className="px-2 py-1 rounded-lg bg-amber-500/20 text-amber-700 dark:text-amber-300">
-                    🚪 Kapıya Bırak
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-700 dark:text-amber-300">
+                    <DoorOpen className="w-3.5 h-3.5" />
+                    <span>Kapıya Bırak</span>
                   </span>
                 )}
                 {order.substitutionPreference && (
-                  <span className="px-2 py-1 rounded-lg bg-amber-500/20 text-amber-700 dark:text-amber-300">
-                    🔄 Ürün Yoksa: {order.substitutionPreference === 'SUBSTITUTE' ? 'Muadil ürün seç' : 'Siparişi iptal et/iade et'}
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-700 dark:text-amber-300">
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Ürün Yoksa: {order.substitutionPreference === 'SUBSTITUTE' ? 'Muadil ürün seç' : 'Siparişi iptal et/iade et'}</span>
                   </span>
                 )}
               </div>
@@ -861,10 +1141,16 @@ function OrderDetailModal({
                             const isRemoval = opt.actionType === 'REMOVE' || optPrice < 0;
                             return (
                               <div key={optIdx} className="flex items-center justify-between bg-white dark:bg-slate-900 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-800 text-[11px]">
-                                <span className="font-semibold text-slate-700 dark:text-slate-300">
-                                  {isRemoval ? '❌ ' : '➕ '}
-                                  {opt.groupName ? `${opt.groupName}: ` : ''}
-                                  {opt.name || opt.optionName}
+                                <span className="font-semibold text-slate-700 dark:text-slate-300 inline-flex items-center gap-1.5">
+                                  <span className={`inline-flex items-center justify-center w-4 h-4 rounded text-[10px] font-bold ${
+                                    isRemoval ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400' : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                                  }`}>
+                                    {isRemoval ? '−' : '+'}
+                                  </span>
+                                  <span>
+                                    {opt.groupName ? `${opt.groupName}: ` : ''}
+                                    {opt.name || opt.optionName}
+                                  </span>
                                 </span>
                                 {optPrice !== 0 && (
                                   <span className="font-bold font-mono text-[#FF6B00]">
@@ -906,77 +1192,7 @@ function OrderDetailModal({
               <span className="text-[#00A651]">Ödeme Durumu: {order.paymentStatus === 'COMPLETED' || !order.paymentStatus ? 'Ödendi' : order.paymentStatus}</span>
             </div>
           </div>
-
-        </div>
-
-        {/* Modal Footer Actions */}
-        <div className="p-5 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 shrink-0 bg-slate-50 dark:bg-slate-950/50">
-          <button
-            onClick={onPrint}
-            className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-2 shadow-sm"
-          >
-            <Printer className="w-4 h-4 text-[#FF6B00]" />
-            <span>Mutfak Fişi Yazdır</span>
-          </button>
-
-          <div className="flex items-center gap-2">
-            {order.status === 'PENDING' && (
-              <>
-                <button
-                  onClick={onCancel}
-                  className="px-4 py-2.5 rounded-xl bg-rose-500/10 text-rose-500 font-bold text-xs hover:bg-rose-500/20"
-                >
-                  İptal Et
-                </button>
-                <button
-                  onClick={onApprove}
-                  className="px-5 py-2.5 rounded-xl bg-[#FF6B00] hover:bg-[#E56000] text-white font-bold text-xs shadow-md flex items-center gap-1.5"
-                >
-                  <span>Siparişi Onayla & Hazırla</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </>
-            )}
-
-            {order.status === 'PREPARING' && (
-              <>
-                <button
-                  onClick={onCancel}
-                  className="px-4 py-2.5 rounded-xl bg-rose-500/10 text-rose-500 font-bold text-xs hover:bg-rose-500/20"
-                >
-                  İptal Et
-                </button>
-                <button
-                  onClick={onDeliver}
-                  className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-md flex items-center gap-1.5"
-                >
-                  <Bike className="w-4 h-4" />
-                  <span>Kuryeye Teslim Et / Yola Çıkar</span>
-                </button>
-              </>
-            )}
-
-            {(order.status === 'ON_THE_WAY' || order.status === 'READY_FOR_PICKUP') && (
-              <button
-                onClick={onComplete}
-                className="px-5 py-2.5 rounded-xl bg-[#00A651] hover:bg-[#008C44] text-white font-bold text-xs shadow-md flex items-center gap-1.5"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>Teslimatı Tamamla</span>
-              </button>
-            )}
-
-            <button
-              onClick={onClose}
-              className="px-4 py-2.5 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs"
-            >
-              Kapat
-            </button>
-          </div>
-        </div>
-
-      </div>
-    </div>
+    </SlideOverDrawer>
   );
 }
 
@@ -1030,10 +1246,10 @@ function ThermalReceiptContent({ order }: { order: any }) {
       {/* Special Customer Notes & Instructions */}
       {(order.customerNote || order.dontRingBell || order.leaveAtDoor) && (
         <div className="py-1 border-b-2 border-slate-950 bg-slate-200/60 p-1.5 rounded space-y-0.5">
-          <p className="font-black text-[10px] uppercase">⚠️ SİPARİŞ NOTU & TERCİHİ:</p>
+          <p className="font-black text-[10px] uppercase">[!] SİPARİŞ NOTU &amp; TERCİHİ:</p>
           {order.customerNote && <p className="font-bold">"{order.customerNote}"</p>}
-          {order.dontRingBell && <p className="font-bold">🔔 ZİLİ ÇALMAYIN</p>}
-          {order.leaveAtDoor && <p className="font-bold">🚪 KAPIYA BIRAKIN</p>}
+          {order.dontRingBell && <p className="font-bold">[TERCİH] ZİLİ ÇALMAYIN</p>}
+          {order.leaveAtDoor && <p className="font-bold">[TERCİH] KAPIYA BIRAKIN</p>}
         </div>
       )}
 

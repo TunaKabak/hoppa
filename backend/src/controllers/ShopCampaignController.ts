@@ -6,6 +6,198 @@ const prisma = new PrismaClient();
 
 export class ShopCampaignController {
   /**
+   * GET /api/merchant/coupons
+   * Dükkanın kendi oluşturduğu indirim kuponlarını kullanım sayısıyla listeler.
+   */
+  async getMerchantCoupons(req: Request, res: Response) {
+    try {
+      const merchantId = req.user?.id;
+      if (!merchantId) {
+        return res.status(401).json({ error: true, message: "Kullanıcı yetkilendirmesi başarısız." });
+      }
+
+      const shop = await prisma.shop.findUnique({
+        where: { merchantId },
+        select: { id: true }
+      });
+      if (!shop) {
+        return res.status(404).json({ error: true, message: "Dükkan bulunamadı." });
+      }
+
+      const coupons = await prisma.coupon.findMany({
+        where: { creatorShopId: shop.id },
+        include: {
+          _count: { select: { usages: true } }
+        },
+        orderBy: { createdAt: "desc" }
+      });
+
+      return res.status(200).json({ error: false, data: coupons });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Kuponlar alınamadı.";
+      console.error("[ShopCampaignController.getMerchantCoupons] Error:", error);
+      return res.status(500).json({ error: true, message });
+    }
+  }
+
+  /**
+   * POST /api/merchant/coupons
+   * Dükkana özel indirim kuponu oluşturur.
+   */
+  async createMerchantCoupon(req: Request, res: Response) {
+    try {
+      const merchantId = req.user?.id;
+      if (!merchantId) {
+        return res.status(401).json({ error: true, message: "Kullanıcı yetkilendirmesi başarısız." });
+      }
+
+      const shop = await prisma.shop.findUnique({
+        where: { merchantId },
+        select: { id: true, name: true }
+      });
+      if (!shop) {
+        return res.status(404).json({ error: true, message: "Dükkan bulunamadı." });
+      }
+
+      const rawCode = typeof req.body?.code === "string" ? req.body.code.trim().toUpperCase() : "";
+      const discountType = req.body?.discountType === "FIXED" ? "FIXED" : req.body?.discountType === "PERCENTAGE" ? "PERCENTAGE" : "";
+      const discountValue = Number(req.body?.discountValue);
+      const minOrderAmount = req.body?.minOrderAmount !== undefined ? Number(req.body.minOrderAmount) : 0;
+      const rawTitle = typeof req.body?.title === "string" ? req.body.title.trim() : "";
+
+      if (!/^[A-Z0-9_-]{3,24}$/.test(rawCode)) {
+        return res.status(400).json({
+          error: true,
+          message: "Kupon kodu 3-24 karakter arası harf ve rakamlardan oluşmalıdır."
+        });
+      }
+      if (!discountType) {
+        return res.status(400).json({ error: true, message: "Geçersiz indirim tipi (PERCENTAGE veya FIXED)." });
+      }
+      if (!Number.isFinite(discountValue) || discountValue <= 0) {
+        return res.status(400).json({ error: true, message: "İndirim miktarı sıfırdan büyük olmalıdır." });
+      }
+      if (discountType === "PERCENTAGE" && discountValue > 90) {
+        return res.status(400).json({ error: true, message: "Yüzde indirim oranı en fazla %90 olabilir." });
+      }
+      if (!Number.isFinite(minOrderAmount) || minOrderAmount < 0) {
+        return res.status(400).json({ error: true, message: "Minimum sepet tutarı negatif olamaz." });
+      }
+
+      const startDate = new Date();
+      let endDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      if (typeof req.body?.endDate === "string" && req.body.endDate.trim().length > 0) {
+        const parsedEnd = new Date(req.body.endDate);
+        if (Number.isNaN(parsedEnd.getTime())) {
+          return res.status(400).json({ error: true, message: "Geçersiz son kullanma tarihi." });
+        }
+        parsedEnd.setHours(23, 59, 59, 999);
+        if (parsedEnd <= startDate) {
+          return res.status(400).json({ error: true, message: "Son kullanma tarihi bugünden sonraki bir tarih olmalıdır." });
+        }
+        endDate = parsedEnd;
+      }
+
+      const existing = await prisma.coupon.findUnique({ where: { code: rawCode } });
+      if (existing) {
+        return res.status(400).json({ error: true, message: `"${rawCode}" kupon kodu sistemde zaten tanımlı.` });
+      }
+
+      const defaultTitle = discountType === "PERCENTAGE"
+        ? `${shop.name} %${discountValue} İndirim`
+        : `${shop.name} ₺${discountValue} İndirim`;
+
+      const created = await prisma.$transaction(async (tx) => {
+        const coupon = await tx.coupon.create({
+          data: {
+            code: rawCode,
+            title: rawTitle || defaultTitle,
+            discountType,
+            discountValue,
+            minOrderAmount,
+            startDate,
+            endDate,
+            isActive: true,
+            isSystemCoupon: false,
+            creatorShopId: shop.id
+          }
+        });
+
+        await tx.couponShop.create({
+          data: {
+            couponId: coupon.id,
+            shopId: shop.id
+          }
+        });
+
+        return coupon;
+      });
+
+      return res.status(201).json({
+        error: false,
+        message: "İndirim kuponunuz yayınlandı.",
+        data: { ...created, _count: { usages: 0 } }
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Kupon oluşturulamadı.";
+      console.error("[ShopCampaignController.createMerchantCoupon] Error:", error);
+      return res.status(500).json({ error: true, message });
+    }
+  }
+
+  /**
+   * DELETE /api/merchant/coupons/:id
+   * Dükkana ait indirim kuponunu kaldırır (kullanımı varsa pasife çeker).
+   */
+  async deleteMerchantCoupon(req: Request, res: Response) {
+    try {
+      const merchantId = req.user?.id;
+      if (!merchantId) {
+        return res.status(401).json({ error: true, message: "Kullanıcı yetkilendirmesi başarısız." });
+      }
+
+      const shop = await prisma.shop.findUnique({
+        where: { merchantId },
+        select: { id: true }
+      });
+      if (!shop) {
+        return res.status(404).json({ error: true, message: "Dükkan bulunamadı." });
+      }
+
+      const couponId = req.params.id as string;
+      const coupon = await prisma.coupon.findUnique({
+        where: { id: couponId },
+        include: { _count: { select: { usages: true } } }
+      });
+
+      if (!coupon || coupon.creatorShopId !== shop.id) {
+        return res.status(404).json({ error: true, message: "Kupon bulunamadı veya yetkiniz yok." });
+      }
+
+      if (coupon._count.usages > 0) {
+        await prisma.coupon.update({
+          where: { id: coupon.id },
+          data: { isActive: false }
+        });
+        return res.status(200).json({
+          error: false,
+          message: "Daha önce kullanıldığı için kupon pasife çekildi."
+        });
+      }
+
+      await prisma.coupon.delete({ where: { id: coupon.id } });
+      return res.status(200).json({
+        error: false,
+        message: "Kupon kalıcı olarak kaldırıldı."
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Kupon kaldırılamadı.";
+      console.error("[ShopCampaignController.deleteMerchantCoupon] Error:", error);
+      return res.status(500).json({ error: true, message });
+    }
+  }
+
+  /**
    * GET /api/admin/campaigns
    * Süper Admin için kampanya/slider onay kuyruğunu ve mevcut kampanyaları listeler.
    */

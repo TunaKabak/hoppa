@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import {
   Truck,
@@ -11,15 +11,24 @@ import {
   Navigation,
   Phone,
   ShieldCheck,
+  Search,
 } from 'lucide-react';
 import MerchantLayout from '../../../components/merchant/MerchantLayout';
 import HoppaSelect from '../../../components/merchant/HoppaSelect';
 import StatusIndicator, { StatusTone } from '../../../components/merchant/StatusIndicator';
+import { useConfirm, useToast } from '../../../components/merchant/ToastContext';
 import { getMerchantProfile, merchantApiFetch } from '../../../utils/merchant-auth';
 import { useMerchantTheme } from '../../../context/MerchantThemeContext';
 
 type CourierStatusType = 'APPLIED' | 'INTERVIEWING' | 'APPROVED' | 'REJECTED' | 'SUSPENDED';
 type VehicleType = 'MOTORCYCLE' | 'CAR' | 'BICYCLE' | 'FOOT';
+
+const VEHICLE_LABELS: Record<VehicleType, string> = {
+  MOTORCYCLE: 'Motosiklet',
+  CAR: 'Otomobil',
+  BICYCLE: 'Bisiklet',
+  FOOT: 'Yaya',
+};
 
 interface ShopSummary {
   id: string;
@@ -91,6 +100,8 @@ const COURIER_STATUS_STYLES: Record<CourierStatusType, { label: string; tone: St
 export default function AdminCouriersPage() {
   const router = useRouter();
   const { theme } = useMerchantTheme();
+  const toast = useToast();
+  const { confirm, confirmWithReason } = useConfirm();
   const isDark = theme === 'dark';
 
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -98,6 +109,7 @@ export default function AdminCouriersPage() {
   const [shops, setShops] = useState<ShopSummary[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [dutyFilter, setDutyFilter] = useState<string>('ALL');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -144,24 +156,47 @@ export default function AdminCouriersPage() {
   }, [router, loadData]);
 
   const handleUpdateCourierStatus = async (courierId: string, status: CourierStatusType) => {
+    let note = '';
+    if (status === 'SUSPENDED' || status === 'REJECTED') {
+      const result = await confirmWithReason({
+        title: status === 'REJECTED' ? 'Kurye Başvurusunu Reddet' : 'Kuryeyi Askıya Al',
+        message:
+          status === 'REJECTED'
+            ? 'Bu kurye başvurusunu reddetmek istediğinize emin misiniz?'
+            : 'Bu kuryeyi geçici olarak askıya almak istediğinize emin misiniz?',
+        confirmText: status === 'REJECTED' ? 'Reddet' : 'Askıya Al',
+        tone: 'danger',
+        reasonLabel: 'İşlem Gerekçesi (Opsiyonel)',
+        reasonPlaceholder: 'Kurye için kısa not...',
+        reasonRequired: false,
+      });
+      if (!result.confirmed) return;
+      note = result.reason.trim();
+    }
     setErrorMsg(null);
     setSuccessMsg(null);
     try {
       const res = await merchantApiFetch(`/admin/couriers/${courierId}/status`, {
         method: 'PUT',
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, ...(note ? { note } : {}) }),
       });
-      setSuccessMsg(res.message || 'Kurye durumu güncellendi.');
+      const msg = res.message || 'Kurye durumu güncellendi.';
+      setSuccessMsg(msg);
+      toast.success(msg);
       await loadData(statusFilter, dutyFilter);
     } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : 'Kurye durumu güncellenemedi.');
+      const msg = err instanceof Error ? err.message : 'Kurye durumu güncellenemedi.';
+      setErrorMsg(msg);
+      toast.error(msg);
     }
   };
 
   const handleAssignShop = async (courierId: string) => {
     const shopId = assignShopMap[courierId];
     if (!shopId) {
-      setErrorMsg('Lütfen atamak için bir mağaza seçiniz.');
+      const msg = 'Lütfen atamak için bir mağaza seçiniz.';
+      setErrorMsg(msg);
+      toast.warning(msg);
       return;
     }
     setErrorMsg(null);
@@ -171,27 +206,55 @@ export default function AdminCouriersPage() {
         method: 'POST',
         body: JSON.stringify({ shopId }),
       });
-      setSuccessMsg(res.message || 'Kurye mağazaya atandı.');
+      const msg = res.message || 'Kurye mağazaya atandı.';
+      setSuccessMsg(msg);
+      toast.success(msg);
       setAssignShopMap((prev) => ({ ...prev, [courierId]: '' }));
       await loadData(statusFilter, dutyFilter);
     } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : 'Mağaza ataması yapılamadı.');
+      const msg = err instanceof Error ? err.message : 'Mağaza ataması yapılamadı.';
+      setErrorMsg(msg);
+      toast.error(msg);
     }
   };
 
   const handleRemoveShop = async (courierId: string, shopId: string) => {
+    const ok = await confirm({
+      title: 'Mağaza Atamasını Kaldır',
+      message: 'Bu kuryenin özel mağaza atamasını kaldırmak istediğinize emin misiniz?',
+      confirmText: 'Atamayı Kaldır',
+      tone: 'danger',
+    });
+    if (!ok) return;
+
     setErrorMsg(null);
     setSuccessMsg(null);
     try {
       const res = await merchantApiFetch(`/admin/couriers/${courierId}/shops/${shopId}`, {
         method: 'DELETE',
       });
-      setSuccessMsg(res.message || 'Mağaza ataması kaldırıldı.');
+      const msg = res.message || 'Mağaza ataması kaldırıldı.';
+      setSuccessMsg(msg);
+      toast.success(msg);
       await loadData(statusFilter, dutyFilter);
     } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : 'Atama kaldırılamadı.');
+      const msg = err instanceof Error ? err.message : 'Atama kaldırılamadı.';
+      setErrorMsg(msg);
+      toast.error(msg);
     }
   };
+
+  const filteredCouriers = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return couriers;
+    return couriers.filter((c) => {
+      return (
+        c.name.toLowerCase().includes(q) ||
+        c.phoneNumber.toLowerCase().includes(q) ||
+        (c.vehiclePlate || '').toLowerCase().includes(q)
+      );
+    });
+  }, [couriers, searchQuery]);
 
   const handleOptimizeFleet = async () => {
     setIsOptimizingFleet(true);
@@ -299,10 +362,30 @@ export default function AdminCouriersPage() {
 
         {/* Filter Bar */}
         <div
-          className={`p-4 rounded-2xl border grid grid-cols-1 sm:grid-cols-3 gap-3 items-end ${
+          className={`p-4 rounded-2xl border grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end ${
             isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200/80 shadow-2xs'
           }`}
         >
+          <div>
+            <label className="block text-[11px] font-black uppercase tracking-wider text-slate-400 mb-1.5">
+              Kurye Ara
+            </label>
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Ad, telefon veya plaka..."
+                className={`w-full pl-9 pr-3 py-2.5 rounded-xl border text-xs font-semibold outline-none ${
+                  isDark
+                    ? 'bg-slate-950 border-slate-800 text-white focus:border-[#FF6B00]'
+                    : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-[#FF6B00]'
+                }`}
+              />
+            </div>
+          </div>
+
           <HoppaSelect
             label="Başvuru / Onay Durumu"
             value={statusFilter}
@@ -352,18 +435,20 @@ export default function AdminCouriersPage() {
             <div className="w-6 h-6 border-2 border-[#FF6B00] border-t-transparent rounded-full animate-spin" />
             <span className="text-xs font-bold">Kuryeler yükleniyor...</span>
           </div>
-        ) : couriers.length === 0 ? (
+        ) : filteredCouriers.length === 0 ? (
           <div
             className={`py-16 rounded-2xl border text-center space-y-2 text-slate-400 ${
               isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
             }`}
           >
             <Truck className="w-10 h-10 mx-auto opacity-50" />
-            <p className="text-sm font-bold">Kayıtlı kurye bulunamadı.</p>
+            <p className="text-sm font-bold">
+              {couriers.length === 0 ? 'Kayıtlı kurye bulunamadı.' : 'Arama kriterine uyan kurye bulunamadı.'}
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {couriers.map((courier) => {
+            {filteredCouriers.map((courier) => {
               const badge = COURIER_STATUS_STYLES[courier.status];
               return (
                 <div
@@ -387,7 +472,7 @@ export default function AdminCouriersPage() {
                           <Phone className="w-3 h-3" />
                           {courier.phoneNumber}
                         </span>
-                        <span>• {courier.vehicleType}</span>
+                        <span>• {VEHICLE_LABELS[courier.vehicleType] || courier.vehicleType}</span>
                         {courier.vehiclePlate && <span>• {courier.vehiclePlate}</span>}
                         <span>• {courier.maxServiceDistanceKm} km</span>
                       </div>

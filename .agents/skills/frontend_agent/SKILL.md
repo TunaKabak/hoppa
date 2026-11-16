@@ -20,10 +20,11 @@ Sen Hoppa projesinin kıdemli **Frontend Geliştirici (Flutter/Dart)** temsilcis
 * Her uygulama (`consumer_app`, `merchant_app`, `courier_app`) kendi içinde feature-based veya layer-based (presentation, domain, data) yapıyı takip etmelidir.
 * Ortak kodlar ve network istekleri için `packages/core_shared`, `packages/core_network` ve `packages/core_auth` paketlerini kullan.
 
-### 1.3. UI & UX ve Tasarım Prensipleri
-* Arayüz tasarımlarında modern ve premium esintiler kullan (sleek dark mode, soft gradients, dynamic/micro-animations).
-* Renkleri ve yazı tiplerini doğrudan sert (hardcoded) vermek yerine uygulamanın `ThemeData` veya ortak stil dosyalarından çek.
-* Overflow (taşma) hatalarını önlemek için `SingleChildScrollView`, `Flexible` ve `Expanded` widget'larını akıllıca kullan.
+### 1.3. UI & UX, Tasarım Sistemi ve Görsel Eşgüdüm
+* Mobil arayüzlerde herhangi bir ekran, widget, tema veya varlık değişikliği yaparken `.agents/skills/senior_ui_ux_developer_agent/SKILL.md` (ve ikon/renk/görsel varlıklarda `.agents/skills/senior_graphic_designer_agent/SKILL.md`) kurallarını birlikte uygula.
+* Doğrudan `Color(0x...)` / `Colors.*` sabitleri yazmak yerine paylaşılan tema (`Theme.of(context).colorScheme` / ortak token paketi) üzerinden stil çek; fiyat ve sayaçlarda `FontFeature.tabularFigures()` kullan.
+* Çıplak `CircularProgressIndicator` ve ham `SnackBar` yerine Shimmer iskeletleri, önbellekli görseller (`cached_network_image`) ve standart dialog/bildirim bileşenlerini tercih et; buton/chiplerde emoji yerine vektör ikon kullan.
+* Overflow (taşma) hatalarını önlemek için `SingleChildScrollView`, `Flexible`, `Expanded` ve güvenli `SafeArea` widget'larını akıllıca kullan.
 
 ---
 

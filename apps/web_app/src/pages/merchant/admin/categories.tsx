@@ -12,11 +12,42 @@ import {
   RefreshCw,
   X,
   Save,
+  UtensilsCrossed,
+  ShoppingBag,
+  Droplet,
+  Flower2,
+  Leaf,
+  Beef,
+  Store,
+  Upload,
 } from 'lucide-react';
 import MerchantLayout from '../../../components/merchant/MerchantLayout';
 import HoppaSelect from '../../../components/merchant/HoppaSelect';
+import { useConfirm, useToast } from '../../../components/merchant/ToastContext';
 import { getMerchantProfile, merchantApiFetch } from '../../../utils/merchant-auth';
+import { uploadMerchantMedia } from '../../../utils/media-upload';
 import { useMerchantTheme } from '../../../context/MerchantThemeContext';
+
+const COLOR_PRESETS = ['#FF6B00', '#00A651', '#2563EB', '#DB2777', '#7C3AED', '#0D9488'];
+
+const CATEGORY_ICON_META: Record<
+  string,
+  { label: string; Icon: React.ComponentType<{ className?: string }> }
+> = {
+  restaurant: { label: 'Restoran', Icon: UtensilsCrossed },
+  shopping_basket: { label: 'Market', Icon: ShoppingBag },
+  water_drop: { label: 'Su Bayi', Icon: Droplet },
+  local_florist: { label: 'Çiçekçi', Icon: Flower2 },
+  eco: { label: 'Manav', Icon: Leaf },
+  set_meal: { label: 'Kasap', Icon: Beef },
+  store: { label: 'Genel', Icon: Store },
+};
+
+function renderCategoryIcon(iconKey: string) {
+  const entry = CATEGORY_ICON_META[iconKey] || CATEGORY_ICON_META.store;
+  const IconComp = entry.Icon;
+  return <IconComp className="w-4 h-4" />;
+}
 
 interface BusinessCategoryItem {
   id: string;
@@ -57,12 +88,15 @@ const DEFAULT_FORM: CategoryFormState = {
 export default function AdminCategoriesPage() {
   const router = useRouter();
   const { theme } = useMerchantTheme();
+  const toast = useToast();
+  const { confirm } = useConfirm();
   const isDark = theme === 'dark';
 
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [categories, setCategories] = useState<BusinessCategoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -121,7 +155,9 @@ export default function AdminCategoriesPage() {
   const handleSaveCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim() || !form.icon.trim() || !form.color.trim()) {
-      setErrorMsg('Kategori adı, ikon ve renk kodu zorunludur.');
+      const msg = 'Kategori adı, ikon ve renk kodu zorunludur.';
+      setErrorMsg(msg);
+      toast.warning(msg);
       return;
     }
 
@@ -148,19 +184,42 @@ export default function AdminCategoriesPage() {
           body: JSON.stringify(payload),
         });
         setSuccessMsg('Kategori başarıyla güncellendi.');
+        toast.success('Kategori başarıyla güncellendi.');
       } else {
         await merchantApiFetch('/admin/business-categories', {
           method: 'POST',
           body: JSON.stringify(payload),
         });
         setSuccessMsg('Yeni işletme kategorisi oluşturuldu.');
+        toast.success('Yeni işletme kategorisi oluşturuldu.');
       }
       setIsModalOpen(false);
       await fetchCategories();
     } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : 'Kategori kaydedilemedi.');
+      const msg = err instanceof Error ? err.message : 'Kategori kaydedilemedi.';
+      setErrorMsg(msg);
+      toast.error(msg);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingImage(true);
+    setErrorMsg(null);
+    try {
+      const url = await uploadMerchantMedia(file);
+      setForm((prev) => ({ ...prev, imageUrl: url }));
+      toast.success('Kategori görseli yüklendi.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Görsel yüklenemedi.';
+      setErrorMsg(msg);
+      toast.error(msg);
+    } finally {
+      setIsUploadingImage(false);
+      e.target.value = '';
     }
   };
 
@@ -172,24 +231,40 @@ export default function AdminCategoriesPage() {
         method: 'PUT',
         body: JSON.stringify({ isActive: !cat.isActive }),
       });
-      setSuccessMsg(`${cat.name} durumu güncellendi.`);
+      const msg = `${cat.name} durumu güncellendi.`;
+      setSuccessMsg(msg);
+      toast.success(msg);
       await fetchCategories();
     } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : 'Durum değiştirilemedi.');
+      const msg = err instanceof Error ? err.message : 'Durum değiştirilemedi.';
+      setErrorMsg(msg);
+      toast.error(msg);
     }
   };
 
   const handleDelete = async (cat: BusinessCategoryItem) => {
+    const ok = await confirm({
+      title: 'Kategoriyi Sil',
+      message: `"${cat.name}" kategorisini silmek istediğinize emin misiniz?`,
+      confirmText: 'Sil',
+      tone: 'danger',
+    });
+    if (!ok) return;
+
     setErrorMsg(null);
     setSuccessMsg(null);
     try {
       const res = await merchantApiFetch(`/admin/business-categories/${cat.id}`, {
         method: 'DELETE',
       });
-      setSuccessMsg(res.message || 'Kategori silindi.');
+      const msg = res.message || 'Kategori silindi.';
+      setSuccessMsg(msg);
+      toast.success(msg);
       await fetchCategories();
     } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : 'Kategori silinemedi.');
+      const msg = err instanceof Error ? err.message : 'Kategori silinemedi.';
+      setErrorMsg(msg);
+      toast.error(msg);
     }
   };
 
@@ -339,12 +414,12 @@ export default function AdminCategoriesPage() {
                             className="w-8 h-8 rounded-xl flex items-center justify-center text-white font-black text-xs shrink-0"
                             style={{ backgroundColor: cat.color || '#FF6B00' }}
                           >
-                            {cat.name.charAt(0).toUpperCase()}
+                            {renderCategoryIcon(cat.icon)}
                           </span>
                           <div>
                             <div className="font-black text-sm">{cat.name}</div>
                             <div className="text-[11px] text-slate-400">
-                              {cat.subtitle || `ikon: ${cat.icon}`}
+                              {cat.subtitle || CATEGORY_ICON_META[cat.icon]?.label || 'Genel'}
                             </div>
                           </div>
                         </div>
@@ -475,19 +550,44 @@ export default function AdminCategoriesPage() {
               />
 
               <div>
-                <label className="block text-[11px] font-black uppercase text-slate-400 mb-1">
+                <label className="block text-[11px] font-black text-slate-400 mb-1">
                   Tema Rengi (Hex)
                 </label>
-                <input
-                  type="text"
-                  required
-                  value={form.color}
-                  onChange={(e) => setForm({ ...form, color: e.target.value })}
-                  placeholder="#FF6B00"
-                  className={`w-full px-3 py-2.5 rounded-xl border font-semibold outline-none ${
-                    isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'
-                  }`}
-                />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    aria-label="Kategori tema rengi seçici"
+                    value={/^#[0-9A-Fa-f]{6}$/.test(form.color) ? form.color : '#FF6B00'}
+                    onChange={(e) => setForm({ ...form, color: e.target.value })}
+                    className="w-10 h-10 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent cursor-pointer shrink-0 p-0.5"
+                  />
+                  <input
+                    type="text"
+                    required
+                    value={form.color}
+                    onChange={(e) => setForm({ ...form, color: e.target.value })}
+                    placeholder="#FF6B00"
+                    className={`w-full px-3 py-2.5 rounded-xl border font-semibold tabular-nums outline-none ${
+                      isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'
+                    }`}
+                  />
+                </div>
+                <div className="flex items-center gap-1.5 mt-2">
+                  {COLOR_PRESETS.map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setForm({ ...form, color: preset })}
+                      aria-label={`Renk ${preset}`}
+                      className={`w-5 h-5 rounded-full border-2 transition-transform hover:scale-110 ${
+                        form.color.toUpperCase() === preset
+                          ? 'border-slate-900 dark:border-white scale-110'
+                          : 'border-transparent'
+                      }`}
+                      style={{ backgroundColor: preset }}
+                    />
+                  ))}
+                </div>
               </div>
 
               <HoppaSelect
@@ -503,7 +603,7 @@ export default function AdminCategoriesPage() {
               />
 
               <div>
-                <label className="block text-[11px] font-black uppercase text-slate-400 mb-1">
+                <label className="block text-[11px] font-black text-slate-400 mb-1">
                   Ort. Teslimat Süresi
                 </label>
                 <input
@@ -518,7 +618,7 @@ export default function AdminCategoriesPage() {
               </div>
 
               <div>
-                <label className="block text-[11px] font-black uppercase text-slate-400 mb-1">
+                <label className="block text-[11px] font-black text-slate-400 mb-1">
                   Alt Başlık
                 </label>
                 <input
@@ -534,18 +634,31 @@ export default function AdminCategoriesPage() {
             </div>
 
             <div className="text-xs">
-              <label className="block text-[11px] font-black uppercase text-slate-400 mb-1">
-                Görsel URL (Opsiyonel)
+              <label className="block text-[11px] font-black text-slate-400 mb-1">
+                Görsel URL veya Dosya Yükleme (Opsiyonel)
               </label>
-              <input
-                type="text"
-                value={form.imageUrl}
-                onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-                placeholder="https://..."
-                className={`w-full px-3 py-2.5 rounded-xl border font-semibold outline-none ${
-                  isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'
-                }`}
-              />
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="text"
+                  value={form.imageUrl}
+                  onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+                  placeholder="https://..."
+                  className={`flex-1 px-3 py-2.5 rounded-xl border font-semibold outline-none ${
+                    isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'
+                  }`}
+                />
+                <label className="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 text-white font-black text-xs inline-flex items-center justify-center gap-1.5 cursor-pointer shrink-0 transition-colors">
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>{isUploadingImage ? 'Yükleniyor...' : 'Dosya Yükle'}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={isUploadingImage}
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                </label>
+              </div>
             </div>
 
             <label className="flex items-center gap-2 text-xs font-bold cursor-pointer">

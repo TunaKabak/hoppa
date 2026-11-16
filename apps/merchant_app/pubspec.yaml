@@ -63,3 +63,5 @@ flutter:
   uses-material-design: true
   assets:
     - .env
+    - assets/images/auth_bg.png
+    - assets/sounds/notification.wav

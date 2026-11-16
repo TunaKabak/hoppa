@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class HoppaDialog extends StatelessWidget {
   final IconData icon;
@@ -53,11 +54,10 @@ class HoppaDialog extends StatelessWidget {
             // Title
             Text(
               title,
-              style: const TextStyle(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 18,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'Poppins',
-                color: Colors.black87,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF0F172A),
               ),
               textAlign: TextAlign.center,
             ),
@@ -66,11 +66,10 @@ class HoppaDialog extends StatelessWidget {
             // Content
             Text(
               content,
-              style: TextStyle(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 14,
-                color: Colors.grey.shade600,
-                height: 1.4,
-                fontFamily: 'Inter',
+                color: const Color(0xFF475569),
+                height: 1.45,
               ),
               textAlign: TextAlign.center,
             ),

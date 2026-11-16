@@ -1,38 +1,39 @@
 import 'package:flutter/material.dart';
+import '../theme/hoppa_design_tokens.dart';
 
 class AppColors {
-  // Primary Colors
-  static const Color primary = Color(0xFF2E7D32);
-  static const Color primaryLight = Color(0xFF66BB6A);
-  static const Color primaryDark = Color(0xFF1B5E20);
+  // Canonical Brand Colors (Hoppa Design System v2.0)
+  static const Color primary = HoppaDesignTokens.brandGreen;
+  static const Color primaryLight = Color(0xFF34D399);
+  static const Color primaryDark = HoppaDesignTokens.brandGreenHover;
 
-  // Secondary Colors
-  static const Color secondary = Color(0xFFFF6F00);
-  static const Color secondaryLight = Color(0xFFFFB74D);
-  static const Color secondaryDark = Color(0xFFE65100);
+  // Secondary / Brand Action Orange
+  static const Color secondary = HoppaDesignTokens.brandOrange;
+  static const Color secondaryLight = Color(0xFFFF9248);
+  static const Color secondaryDark = HoppaDesignTokens.brandOrangeHover;
 
   // Neutral Colors
   static const Color white = Color(0xFFFFFFFF);
   static const Color black = Color(0xFF000000);
-  static const Color grey = Color(0xFF9E9E9E);
-  static const Color greyLight = Color(0xFFE0E0E0);
-  static const Color greyDark = Color(0xFF424242);
+  static const Color grey = HoppaDesignTokens.textSecondaryLight;
+  static const Color greyLight = HoppaDesignTokens.borderLight;
+  static const Color greyDark = HoppaDesignTokens.textPrimaryLight;
 
   // Semantic Colors
-  static const Color success = Color(0xFF4CAF50);
-  static const Color warning = Color(0xFFFFC107);
-  static const Color error = Color(0xFFF44336);
-  static const Color info = Color(0xFF2196F3);
+  static const Color success = HoppaDesignTokens.statusSuccess;
+  static const Color warning = HoppaDesignTokens.statusWarning;
+  static const Color error = HoppaDesignTokens.statusDanger;
+  static const Color info = HoppaDesignTokens.statusInfo;
 
   // Status Colors
-  static const Color pendingStatus = Color(0xFFFFC107);
-  static const Color preparingStatus = Color(0xFF2196F3);
-  static const Color onWayStatus = Color(0xFF9C27B0);
-  static const Color deliveredStatus = Color(0xFF4CAF50);
-  static const Color cancelledStatus = Color(0xFFF44336);
+  static const Color pendingStatus = HoppaDesignTokens.statusWarning;
+  static const Color preparingStatus = HoppaDesignTokens.statusInfo;
+  static const Color onWayStatus = HoppaDesignTokens.brandOrange;
+  static const Color deliveredStatus = HoppaDesignTokens.statusSuccess;
+  static const Color cancelledStatus = HoppaDesignTokens.statusDanger;
 
   // Background Colors
-  static const Color background = Color(0xFFFAFAFA);
-  static const Color surface = Color(0xFFFFFFFF);
-  static const Color surfaceVariant = Color(0xFFF5F5F5);
+  static const Color background = HoppaDesignTokens.canvasLight;
+  static const Color surface = HoppaDesignTokens.surfaceLight;
+  static const Color surfaceVariant = HoppaDesignTokens.surfaceSubtleLight;
 }

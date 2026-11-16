@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart' as p;
 import 'package:consumer_app/apps/consumer/business/business_provider.dart';
 import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository.dart';
+import 'package:core_shared/core_shared.dart';
 import 'package:core_shared/shared/models/campaign.dart';
 import 'package:consumer_app/apps/consumer/campaigns/campaign_detail_page.dart';
 
@@ -47,18 +48,18 @@ class _HoppaCampaignSliderState extends ConsumerState<HoppaCampaignSlider> {
   late final List<CampaignItem> _staticCampaigns = [
     CampaignItem(
       imagePath: 'assets/images/campaign_free_delivery.png',
-      title: 'Teslimat Ücreti\nHoppa\'dan! 🏍️',
+      title: 'Teslimat Ücreti\nHoppa\'dan!',
       subtitle: 'İlk 5 siparişinizde teslimat ödemeyin.',
       badgeText: 'ÜCRETSİZ TESLİMAT',
       gradientColors: const [Color(0xFFFFF8F2), Color(0xFFFFECE1)],
-      accentColor: const Color(0xFFE95D22), // Hoppa Orange
+      accentColor: const Color(0xFFFF6B00), // Hoppa Orange
       textColor: Colors.black87,
       subtitleColor: Colors.black54,
       onTap: () {},
     ),
     CampaignItem(
       imagePath: 'assets/images/campaign_welcome_coupon.png',
-      title: 'Hoppa\'ya\nHoş Geldin! 🎉',
+      title: 'Hoppa\'ya\nHoş Geldin!',
       subtitle: 'İlk siparişinize özel 100 TL hediye.',
       badgeText: 'HOŞ GELDİN KUPONU',
       gradientColors: const [Color(0xFFFFF2F6), Color(0xFFFFE1EC)],
@@ -69,18 +70,18 @@ class _HoppaCampaignSliderState extends ConsumerState<HoppaCampaignSlider> {
     ),
     CampaignItem(
       imagePath: 'assets/images/campaign_everything_at_door.png',
-      title: 'Aradığın Her Şey\nKapında! 🛒',
+      title: 'Aradığın Her Şey\nKapında!',
       subtitle: 'Market, yemek, su... İste gelsin.',
       badgeText: 'KOLAY SİPARİŞ',
       gradientColors: const [Color(0xFFF2FBF6), Color(0xFFE1F7EB)],
-      accentColor: const Color(0xFFE95D22), // Hoppa Orange
+      accentColor: const Color(0xFFFF6B00), // Hoppa Orange
       textColor: Colors.black87,
       subtitleColor: Colors.black54,
       onTap: () {},
     ),
     CampaignItem(
       imagePath: 'assets/images/campaign_invite_friend.png',
-      title: 'Arkadaşını\nDavet Et Kazan! 🤝',
+      title: 'Arkadaşını\nDavet Et Kazan!',
       subtitle: 'Davet et, ikiniz de 100 TL kazanın.',
       badgeText: 'DAVET ET KAZAN',
       gradientColors: const [Color(0xFFF2F9FF), Color(0xFFE1F0FF)],
@@ -188,12 +189,12 @@ class _HoppaCampaignSliderState extends ConsumerState<HoppaCampaignSlider> {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: const Color(0xFFFF5200).withOpacity(0.2),
+                          color: const Color(0xFFFF6B00).withValues(alpha: 0.2),
                           width: 1.5,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.06),
+                            color: Colors.black.withValues(alpha: 0.06),
                             blurRadius: 8,
                             offset: const Offset(0, 4),
                           ),
@@ -217,8 +218,8 @@ class _HoppaCampaignSliderState extends ConsumerState<HoppaCampaignSlider> {
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
                                     colors: [
-                                      Colors.black.withOpacity(0.6),
-                                      Colors.black.withOpacity(0.1),
+                                      Colors.black.withValues(alpha: 0.65),
+                                      Colors.black.withValues(alpha: 0.12),
                                     ],
                                     begin: Alignment.bottomCenter,
                                     end: Alignment.topCenter,
@@ -227,13 +228,12 @@ class _HoppaCampaignSliderState extends ConsumerState<HoppaCampaignSlider> {
                               ),
                             ),
                             // Header Hoppa Logo
-                            Positioned(
+                            const Positioned(
                               left: 16,
-                              top: 16,
-                              child: Image.asset(
-                                'assets/images/hoppa_logo.png',
-                                height: 14,
-                                color: Colors.white.withOpacity(0.9),
+                              top: 14,
+                              child: HoppaBrandLogo(
+                                height: 18,
+                                monochromeColor: Colors.white,
                               ),
                             ),
                             Positioned(
@@ -246,14 +246,14 @@ class _HoppaCampaignSliderState extends ConsumerState<HoppaCampaignSlider> {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFFF5200),
+                                      color: const Color(0xFFFF6B00),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
                                       "ÖNE ÇIKAN KAMPANYA",
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 8,
-                                        fontWeight: FontWeight.bold,
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w700,
                                         color: Colors.white,
                                       ),
                                     ),
@@ -296,7 +296,7 @@ class _HoppaCampaignSliderState extends ConsumerState<HoppaCampaignSlider> {
                   height: 6,
                   width: _currentPage == index ? 16 : 6,
                   decoration: BoxDecoration(
-                    color: _currentPage == index ? const Color(0xFFFF5200) : Colors.grey.shade300,
+                    color: _currentPage == index ? const Color(0xFFFF6B00) : Colors.grey.shade300,
                     borderRadius: BorderRadius.circular(3),
                   ),
                 ),
@@ -335,7 +335,7 @@ class _HoppaCampaignSliderState extends ConsumerState<HoppaCampaignSlider> {
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: item.accentColor.withOpacity(0.2),
+                        color: item.accentColor.withValues(alpha: 0.2),
                         width: 1.5,
                       ),
                       image: DecorationImage(
@@ -344,7 +344,7 @@ class _HoppaCampaignSliderState extends ConsumerState<HoppaCampaignSlider> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: item.accentColor.withOpacity(0.04),
+                          color: item.accentColor.withValues(alpha: 0.04),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),
@@ -354,13 +354,27 @@ class _HoppaCampaignSliderState extends ConsumerState<HoppaCampaignSlider> {
                       borderRadius: BorderRadius.circular(20),
                       child: Stack(
                         children: [
+                          if (item.textColor == Colors.white)
+                            Positioned.fill(
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.black.withValues(alpha: 0.45),
+                                      Colors.black.withValues(alpha: 0.10),
+                                      Colors.transparent,
+                                    ],
+                                    stops: const [0.0, 0.55, 1.0],
+                                  ),
+                                ),
+                              ),
+                            ),
                           Positioned(
                             left: 16,
-                            top: 16,
-                            child: Image.asset(
-                              'assets/images/hoppa_logo.png',
-                              height: 14,
-                              color: item.textColor.withOpacity(0.8),
+                            top: 14,
+                            child: HoppaBrandLogo(
+                              height: 18,
+                              monochromeColor: item.textColor.withValues(alpha: 0.9),
                             ),
                           ),
                           Padding(
@@ -372,18 +386,18 @@ class _HoppaCampaignSliderState extends ConsumerState<HoppaCampaignSlider> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                   decoration: BoxDecoration(
-                                    color: item.textColor.withOpacity(0.1),
+                                    color: item.textColor.withValues(alpha: 0.12),
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
-                                      color: item.textColor.withOpacity(0.25),
+                                      color: item.textColor.withValues(alpha: 0.25),
                                       width: 0.8,
                                     ),
                                   ),
                                   child: Text(
                                     item.badgeText,
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.bold,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w700,
                                       color: item.textColor,
                                       letterSpacing: 0.5,
                                     ),
@@ -394,9 +408,9 @@ class _HoppaCampaignSliderState extends ConsumerState<HoppaCampaignSlider> {
                                   children: [
                                     Text(
                                       item.title,
-                                      style: GoogleFonts.poppins(
+                                      style: GoogleFonts.plusJakartaSans(
                                         fontSize: 15,
-                                        fontWeight: FontWeight.bold,
+                                        fontWeight: FontWeight.w700,
                                         color: item.textColor,
                                         height: 1.25,
                                       ),
@@ -408,8 +422,8 @@ class _HoppaCampaignSliderState extends ConsumerState<HoppaCampaignSlider> {
                                         item.subtitle,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: GoogleFonts.inter(
-                                          fontSize: 10,
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 10.5,
                                           color: item.subtitleColor,
                                           fontWeight: FontWeight.w500,
                                         ),

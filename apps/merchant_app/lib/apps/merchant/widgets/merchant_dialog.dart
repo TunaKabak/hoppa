@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class MerchantDialog extends StatelessWidget {
   final IconData icon;
@@ -53,11 +54,10 @@ class MerchantDialog extends StatelessWidget {
             // Title
             Text(
               title,
-              style: const TextStyle(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 18,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'Poppins',
-                color: Colors.black87,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF0F172A),
               ),
               textAlign: TextAlign.center,
             ),
@@ -66,11 +66,10 @@ class MerchantDialog extends StatelessWidget {
             // Content
             Text(
               content,
-              style: TextStyle(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 14,
-                color: Colors.grey.shade600,
-                height: 1.4,
-                fontFamily: 'Inter',
+                color: const Color(0xFF475569),
+                height: 1.45,
               ),
               textAlign: TextAlign.center,
             ),
@@ -106,7 +105,7 @@ class MerchantDialog extends StatelessWidget {
                 Expanded(
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: isDestructive ? Colors.red : const Color(0xFFE95D22), // Hoppa Orange or Red
+                      backgroundColor: isDestructive ? const Color(0xFFE11D48) : const Color(0xFFFF6B00), // Hoppa Orange or Danger Rose
                       foregroundColor: Colors.white,
                       elevation: 0,
                       padding: const EdgeInsets.symmetric(vertical: 14),

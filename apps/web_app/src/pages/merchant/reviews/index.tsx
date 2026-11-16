@@ -1,8 +1,20 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Star, RefreshCw, AlertCircle, MessageSquare, Clock, Truck, ShieldCheck } from 'lucide-react';
+import {
+  Star,
+  RefreshCw,
+  AlertCircle,
+  MessageSquare,
+  Clock,
+  Truck,
+  ShieldCheck,
+  Send,
+  Edit3,
+  Store,
+} from 'lucide-react';
 import MerchantLayout from '../../../components/merchant/MerchantLayout';
 import HoppaSelect from '../../../components/merchant/HoppaSelect';
 import StatusIndicator, { StatusTone } from '../../../components/merchant/StatusIndicator';
+import { useToast } from '../../../components/merchant/ToastContext';
 import { merchantApiFetch } from '../../../utils/merchant-auth';
 import { useMerchantTheme } from '../../../context/MerchantThemeContext';
 
@@ -25,6 +37,8 @@ interface MerchantReviewItem {
   tasteRating?: number | null;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   createdAt: string;
+  merchantReply?: string | null;
+  merchantRepliedAt?: string | null;
   user?: {
     name?: string | null;
     surname?: string | null;
@@ -38,6 +52,7 @@ interface MerchantReviewItem {
 
 export default function MerchantReviewsPage() {
   const { theme } = useMerchantTheme();
+  const toast = useToast();
   const isDark = theme === 'dark';
 
   const [shopSummary, setShopSummary] = useState<ShopRatingSummary | null>(null);
@@ -46,6 +61,11 @@ export default function MerchantReviewsPage() {
   const [ratingFilter, setRatingFilter] = useState<string>('ALL');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Reply Composer State
+  const [replyingId, setReplyingId] = useState<string | null>(null);
+  const [replyDraft, setReplyDraft] = useState<string>('');
+  const [isSendingReply, setIsSendingReply] = useState<boolean>(false);
 
   const fetchReviews = useCallback(async () => {
     setIsLoading(true);
@@ -67,8 +87,42 @@ export default function MerchantReviewsPage() {
   }, []);
 
   useEffect(() => {
-    fetchReviews();
+    void fetchReviews();
   }, [fetchReviews]);
+
+  const handleSaveReply = async (reviewId: string) => {
+    const trimmed = replyDraft.trim();
+    if (trimmed.length < 2) {
+      toast.warning('Lütfen en az 2 karakterlik bir yanıt giriniz.');
+      return;
+    }
+
+    setIsSendingReply(true);
+    try {
+      const res = await merchantApiFetch(`/merchant/reviews/${reviewId}/reply`, {
+        method: 'PUT',
+        body: JSON.stringify({ reply: trimmed }),
+      });
+      setReviews((prev) =>
+        prev.map((item) =>
+          item.id === reviewId
+            ? {
+                ...item,
+                merchantReply: res.data?.merchantReply || trimmed,
+                merchantRepliedAt: res.data?.merchantRepliedAt || new Date().toISOString(),
+              }
+            : item
+        )
+      );
+      setReplyingId(null);
+      setReplyDraft('');
+      toast.success('Müşteri yanıtınız kaydedildi.');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Yanıt gönderilemedi.');
+    } finally {
+      setIsSendingReply(false);
+    }
+  };
 
   const filteredReviews = useMemo(() => {
     return reviews.filter((rev) => {
@@ -92,16 +146,19 @@ export default function MerchantReviewsPage() {
     return counts;
   }, [reviews]);
 
+  const totalReviewCount = shopSummary?.reviewCount ?? reviews.length;
+  const hasReviews = totalReviewCount > 0;
+
   return (
     <MerchantLayout
       title="Müşteri Değerlendirmeleri"
-      subtitle="Mağaza puan kırılımlarını ve müşteri geri bildirimlerini inceleyin"
+      subtitle="Mağaza puan kırılımlarını inceleyin ve müşteri yorumlarına yanıt verin"
       headerIcon={Star}
       activeTab="reviews"
       headerActions={
         <button
           type="button"
-          onClick={fetchReviews}
+          onClick={() => void fetchReviews()}
           disabled={isLoading}
           className={`px-3 py-2 rounded-xl border text-xs font-black flex items-center gap-1.5 ${
             isDark
@@ -127,29 +184,29 @@ export default function MerchantReviewsPage() {
           {[
             {
               label: 'Genel Puan',
-              value: (shopSummary?.averageRating ?? 5).toFixed(2),
-              sub: `${shopSummary?.reviewCount ?? reviews.length} değerlendirme`,
+              value: hasReviews && shopSummary ? shopSummary.averageRating.toFixed(2) : '—',
+              sub: hasReviews ? `${totalReviewCount} değerlendirme` : 'Henüz değerlendirme yok',
               icon: Star,
               color: 'text-amber-500',
             },
             {
               label: 'Servis Puanı',
-              value: (shopSummary?.avgServiceRating ?? 5).toFixed(2),
-              sub: 'Paketleme & sunum',
+              value: hasReviews && shopSummary ? shopSummary.avgServiceRating.toFixed(2) : '—',
+              sub: hasReviews ? 'Paketleme & sunum' : 'Henüz veri yok',
               icon: ShieldCheck,
               color: 'text-[#FF6B00]',
             },
             {
               label: 'Teslimat Hızı',
-              value: (shopSummary?.avgSpeedRating ?? 5).toFixed(2),
-              sub: 'Hazırlık & varış',
+              value: hasReviews && shopSummary ? shopSummary.avgSpeedRating.toFixed(2) : '—',
+              sub: hasReviews ? 'Hazırlık & varış' : 'Henüz veri yok',
               icon: Truck,
               color: 'text-emerald-500',
             },
             {
               label: 'Lezzet / Kalite',
-              value: (shopSummary?.avgTasteRating ?? 5).toFixed(2),
-              sub: 'Ürün memnuniyeti',
+              value: hasReviews && shopSummary ? shopSummary.avgTasteRating.toFixed(2) : '—',
+              sub: hasReviews ? 'Ürün memnuniyeti' : 'Henüz veri yok',
               icon: Clock,
               color: 'text-sky-500',
             },
@@ -163,7 +220,7 @@ export default function MerchantReviewsPage() {
                 }`}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  <span className="text-[11px] font-bold tracking-wide text-slate-400">
                     {kpi.label}
                   </span>
                   <Icon className={`w-4 h-4 ${kpi.color}`} />
@@ -182,7 +239,7 @@ export default function MerchantReviewsPage() {
               isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200/80 shadow-2xs'
             }`}
           >
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 mb-3">
+            <h3 className="text-xs font-black tracking-wide text-slate-400 mb-3">
               Yıldız Dağılımı
             </h3>
             {[5, 4, 3, 2, 1].map((stars) => {
@@ -268,59 +325,143 @@ export default function MerchantReviewsPage() {
                 PENDING: { label: 'Onay Bekliyor', tone: 'amber' },
               };
               const statusBadge = reviewStatusMeta[rev.status];
+              const isEditingThis = replyingId === rev.id;
 
               return (
                 <div
                   key={rev.id}
-                  className={`p-5 rounded-2xl border space-y-3 ${
+                  className={`p-5 rounded-2xl border space-y-3 flex flex-col justify-between ${
                     isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200/80 shadow-2xs'
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <h4 className="text-sm font-black">{customerDisplay}</h4>
-                      <p className="text-[11px] text-slate-400 font-semibold tabular-nums">
-                        {new Date(rev.createdAt).toLocaleString('tr-TR')}
-                        {rev.order?.id ? ` • Sipariş #${rev.order.id.slice(0, 8).toUpperCase()}` : ''}
-                      </p>
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h4 className="text-sm font-black">{customerDisplay}</h4>
+                        <p className="text-[11px] text-slate-400 font-semibold tabular-nums">
+                          {new Date(rev.createdAt).toLocaleString('tr-TR')}
+                          {rev.order?.id ? ` • Sipariş #${rev.order.id.slice(0, 8).toUpperCase()}` : ''}
+                        </p>
+                      </div>
+
+                      <StatusIndicator
+                        label={statusBadge.label}
+                        tone={statusBadge.tone}
+                        isDark={isDark}
+                      />
                     </div>
 
-                    <StatusIndicator
-                      label={statusBadge.label}
-                      tone={statusBadge.tone}
-                      isDark={isDark}
-                    />
+                    <div className="flex flex-wrap items-center gap-2 text-xs font-black tabular-nums">
+                      <span className="px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-500 inline-flex items-center gap-1">
+                        <Star className="w-3.5 h-3.5 fill-amber-500" />
+                        {rev.rating}/5
+                      </span>
+                      {rev.serviceRating && (
+                        <span className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300">
+                          Servis: {rev.serviceRating}
+                        </span>
+                      )}
+                      {rev.speedRating && (
+                        <span className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300">
+                          Hız: {rev.speedRating}
+                        </span>
+                      )}
+                      {rev.tasteRating && (
+                        <span className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300">
+                          Lezzet: {rev.tasteRating}
+                        </span>
+                      )}
+                    </div>
+
+                    <p
+                      className={`text-xs leading-relaxed p-3 rounded-xl ${
+                        isDark ? 'bg-slate-950/60 text-slate-300' : 'bg-slate-50 text-slate-700'
+                      }`}
+                    >
+                      {rev.comment || 'Yalnızca yıldız puanlaması yapıldı.'}
+                    </p>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2 text-xs font-black tabular-nums">
-                    <span className="px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-500 inline-flex items-center gap-1">
-                      <Star className="w-3.5 h-3.5 fill-amber-500" />
-                      {rev.rating}/5
-                    </span>
-                    {rev.serviceRating && (
-                      <span className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300">
-                        Servis: {rev.serviceRating}
-                      </span>
-                    )}
-                    {rev.speedRating && (
-                      <span className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300">
-                        Hız: {rev.speedRating}
-                      </span>
-                    )}
-                    {rev.tasteRating && (
-                      <span className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300">
-                        Lezzet: {rev.tasteRating}
-                      </span>
+                  {/* Merchant Reply Section */}
+                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                    {isEditingThis ? (
+                      <div className="space-y-2.5">
+                        <textarea
+                          rows={2}
+                          value={replyDraft}
+                          onChange={(e) => setReplyDraft(e.target.value)}
+                          placeholder="Müşterinize nazik ve kurumsal bir yanıt yazın..."
+                          className={`w-full border rounded-xl p-2.5 text-xs font-medium outline-none focus:border-[#FF6B00] ${
+                            isDark
+                              ? 'bg-slate-950 border-slate-700 text-white placeholder-slate-500'
+                              : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
+                          }`}
+                        />
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReplyingId(null);
+                              setReplyDraft('');
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-500"
+                          >
+                            Vazgeç
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isSendingReply}
+                            onClick={() => void handleSaveReply(rev.id)}
+                            className="px-3.5 py-1.5 rounded-lg bg-[#FF6B00] hover:bg-[#E56000] text-white text-xs font-black inline-flex items-center gap-1.5 disabled:opacity-50"
+                          >
+                            <Send className="w-3 h-3" />
+                            <span>{isSendingReply ? 'Gönderiliyor...' : 'Yanıtı Yayınla'}</span>
+                          </button>
+                        </div>
+                      </div>
+                    ) : rev.merchantReply ? (
+                      <div
+                        className={`p-3 rounded-xl border space-y-1.5 ${
+                          isDark
+                            ? 'bg-orange-500/5 border-orange-500/20'
+                            : 'bg-orange-50/70 border-orange-200/80'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="inline-flex items-center gap-1.5 text-[11px] font-extrabold text-[#FF6B00]">
+                            <Store className="w-3.5 h-3.5" />
+                            <span>İşletme Yanıtınız</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReplyingId(rev.id);
+                              setReplyDraft(rev.merchantReply || '');
+                            }}
+                            className="text-[11px] font-bold text-slate-400 hover:text-[#FF6B00] inline-flex items-center gap-1"
+                          >
+                            <Edit3 className="w-3 h-3" />
+                            <span>Düzenle</span>
+                          </button>
+                        </div>
+                        <p className="text-xs font-medium text-slate-700 dark:text-slate-300 leading-relaxed">
+                          {rev.merchantReply}
+                        </p>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReplyingId(rev.id);
+                          setReplyDraft('');
+                        }}
+                        className="text-xs font-bold text-[#FF6B00] hover:underline inline-flex items-center gap-1.5"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <span>Müşteriye Yanıt Yaz</span>
+                      </button>
                     )}
                   </div>
-
-                  <p
-                    className={`text-xs leading-relaxed p-3 rounded-xl ${
-                      isDark ? 'bg-slate-950/60 text-slate-300' : 'bg-slate-50 text-slate-700'
-                    }`}
-                  >
-                    {rev.comment || 'Yalnızca yıldız puanlaması yapıldı.'}
-                  </p>
                 </div>
               );
             })}

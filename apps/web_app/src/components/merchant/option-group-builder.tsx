@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { X, Plus, Trash2, Check, Layers, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Check, Layers, AlertCircle } from 'lucide-react';
 import { merchantApiFetch } from '../../utils/merchant-auth';
 import { useMerchantTheme } from '../../context/MerchantThemeContext';
+import HoppaSelect from './HoppaSelect';
+import SlideOverDrawer from './SlideOverDrawer';
 
 interface OptionGroupBuilderProps {
   product: any;
@@ -111,32 +113,41 @@ export default function OptionGroupBuilder({ product, onClose, onSuccess }: Opti
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto font-sans">
-      <div className={`border rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl my-8 transition-colors ${
-        isDark ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
-      }`}>
-        {/* Modal Header */}
-        <div className={`px-6 py-5 border-b flex items-center justify-between transition-colors ${
-          isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'
-        }`}>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#FF6B00] text-white flex items-center justify-center font-bold">
-              <Layers className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold">
-                Opsiyon Grupları & Ekstra Malzeme Kurucusu
-              </h2>
-              <p className="text-xs text-[#FF6B00] font-bold">{product?.name}</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white">
-            <X className="w-5 h-5" />
+    <SlideOverDrawer
+      isOpen={true}
+      onClose={onClose}
+      title="Opsiyon Grupları & Ekstra Malzeme Kurucusu"
+      subtitle={product?.name || 'Ürün Varyasyonları'}
+      icon={<Layers className="w-5 h-5" />}
+      widthClass="max-w-3xl"
+      footer={
+        <div className="flex items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs transition-colors"
+          >
+            İptal
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={isSaving}
+            className="px-6 py-2.5 rounded-xl bg-[#FF6B00] hover:bg-[#E56000] text-white font-black text-xs flex items-center gap-2 transition-all disabled:opacity-50"
+          >
+            {isSaving ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <>
+                <Check className="w-4 h-4" />
+                <span>Opsiyon Gruplarını Kaydet</span>
+              </>
+            )}
           </button>
         </div>
-
-        {/* Modal Body */}
-        <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+      }
+    >
+      <div className="space-y-6">
           {errorMsg && (
             <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-500 text-xs font-bold flex items-center gap-2">
               <AlertCircle className="w-5 h-5 text-rose-500 shrink-0" />
@@ -216,20 +227,17 @@ export default function OptionGroupBuilder({ product, onClose, onSuccess }: Opti
                     isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
                   }`}>
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
-                        Seçim Tipi
-                      </label>
-                      <select
+                      <HoppaSelect
+                        label="Seçim Tipi"
+                        size="sm"
                         value={group.selectionType}
-                        onChange={(e) => handleGroupChange(gIdx, 'selectionType', e.target.value)}
-                        className={`w-full border rounded-lg p-2 text-xs font-semibold hoppa-select ${
-                          isDark ? 'bg-slate-950 border-slate-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'
-                        }`}
-                      >
-                        <option value="RADIO">Tekli Seçim (Radio)</option>
-                        <option value="CHECKBOX">Çoklu Seçim (Checkbox)</option>
-                        <option value="COUNTER">Adetli Seçim (Counter)</option>
-                      </select>
+                        onChange={(val) => handleGroupChange(gIdx, 'selectionType', val)}
+                        options={[
+                          { value: 'RADIO', label: 'Tekli Seçim (Radio)' },
+                          { value: 'CHECKBOX', label: 'Çoklu Seçim (Checkbox)' },
+                          { value: 'COUNTER', label: 'Adetli Seçim (Counter)' },
+                        ]}
+                      />
                     </div>
 
                     <div>
@@ -357,36 +365,7 @@ export default function OptionGroupBuilder({ product, onClose, onSuccess }: Opti
               </button>
             </div>
           )}
-        </div>
-
-        {/* Modal Footer */}
-        <div className={`px-6 py-4 border-t flex items-center justify-end gap-3 transition-colors ${
-          isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-50 border-slate-200'
-        }`}>
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs transition-colors"
-          >
-            İptal
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={isSaving}
-            className="px-6 py-2.5 rounded-xl bg-[#FF6B00] hover:bg-[#E56000] text-white font-black text-xs flex items-center gap-2 transition-all disabled:opacity-50 transform active:scale-95"
-          >
-            {isSaving ? (
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <>
-                <Check className="w-4 h-4" />
-                <span>Opsiyon Gruplarını Kaydet</span>
-              </>
-            )}
-          </button>
-        </div>
       </div>
-    </div>
+    </SlideOverDrawer>
   );
 }

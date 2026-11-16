@@ -175,13 +175,24 @@ class MerchantSponsorshipPage extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                hasActivePromo ? "🔥 Premium Mağaza Oranı" : "🛡️ Standart Mağaza Oranı",
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    hasActivePromo ? Icons.local_fire_department_rounded : Icons.verified_user_rounded,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    hasActivePromo ? "Premium Mağaza Oranı" : "Standart Mağaza Oranı",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
               ),
               if (hasActivePromo)
                 Container(

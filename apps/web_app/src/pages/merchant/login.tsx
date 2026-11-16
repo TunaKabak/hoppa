@@ -189,7 +189,7 @@ export default function MerchantLoginPage() {
         >
           <div className="flex items-center gap-3">
             <img
-              src="/logo-square-orange.png"
+              src="/logo-mark.svg"
               alt="Hoppa"
               className="w-9 h-9 rounded-xl object-cover shadow-xs ring-1 ring-black/5 shrink-0"
             />

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { MapPin, Navigation, Compass, Search, Loader2, X, Trash2, Shapes, Circle, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { MapPin, Navigation, Compass, Search, Loader2, X, Trash2, Shapes, Circle, AlertTriangle, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { useMerchantTheme } from '../../context/MerchantThemeContext';
 import { isLocationInKktc, KKTC_DEFAULT_CENTER, KKTC_POLYGON } from '../../utils/kktcBoundary';
 
@@ -36,11 +36,14 @@ export default function LocationRadiusPickerMap({
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
+  const tileLayerRef = useRef<any>(null);
   const markerInstanceRef = useRef<any>(null);
   const circleInstanceRef = useRef<any>(null);
   const polygonInstanceRef = useRef<any>(null);
   const maskLayerRef = useRef<any>(null);
   const vertexMarkersRef = useRef<any[]>([]);
+  const isDarkRef = useRef<boolean>(isDark);
+  isDarkRef.current = isDark;
 
   // Address Search & Dropdown State
   const [searchQuery, setSearchQuery] = useState('');
@@ -131,14 +134,16 @@ export default function LocationRadiusPickerMap({
       zoomControl: false,
     });
 
-    // Modern, bright, high-contrast CartoDB Voyager
-    const tileUrl = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+    const tileUrl = isDarkRef.current
+      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+      : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
 
-    L.tileLayer(tileUrl, {
+    const layer = L.tileLayer(tileUrl, {
       attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap',
       subdomains: 'abcd',
       maxZoom: 19,
     }).addTo(map);
+    tileLayerRef.current = layer;
 
     // Official KKTC Boundary Line
     const mask = L.polygon(KKTC_POLYGON.map((p) => [p.lat, p.lng]), {
@@ -168,12 +173,14 @@ export default function LocationRadiusPickerMap({
           box-shadow: 0 12px 28px rgba(255, 107, 0, 0.45);
           border: 3px solid #ffffff;
         ">
-          <img src="/logo-square-orange.png" style="
+          <img src="/logo-mark.svg" alt="Hoppa" style="
             width: 26px;
             height: 26px;
             border-radius: 50%;
             transform: rotate(45deg);
             object-fit: cover;
+            background: #FFFFFF;
+            padding: 2px;
           " />
         </div>
       `,
@@ -196,7 +203,7 @@ export default function LocationRadiusPickerMap({
     marker.on('dragend', () => {
       const pos = marker.getLatLng();
       if (!isLocationInKktc(pos.lat, pos.lng)) {
-        showKktcWarning('⚠️ Yalnızca KKTC (Kuzey Kıbrıs Türk Cumhuriyeti) sınırları içerisinde konum seçebilirsiniz.');
+        showKktcWarning('Yalnızca KKTC (Kuzey Kıbrıs Türk Cumhuriyeti) sınırları içerisinde konum seçebilirsiniz.');
         // Revert marker to previous valid location
         marker.setLatLng([latitude || initialLat, longitude || initialLng]);
         circle.setLatLng([latitude || initialLat, longitude || initialLng]);
@@ -210,7 +217,7 @@ export default function LocationRadiusPickerMap({
     map.on('click', (e: any) => {
       const { lat, lng } = e.latlng;
       if (!isLocationInKktc(lat, lng)) {
-        showKktcWarning('⚠️ Seçilen konum KKTC sınırları dışındadır. Lütfen KKTC sınırları içerisine tıklayınız.');
+        showKktcWarning('Seçilen konum KKTC sınırları dışındadır. Lütfen KKTC sınırları içerisine tıklayınız.');
         return;
       }
       setKktcWarning(null);
@@ -232,6 +239,27 @@ export default function LocationRadiusPickerMap({
     markerInstanceRef.current = marker;
     circleInstanceRef.current = circle;
   };
+
+  // Switch CartoDB tile layer dynamically on theme change
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const L = (window as any).L;
+    if (!map || !L) return;
+
+    const nextTileUrl = isDark
+      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+      : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+
+    if (tileLayerRef.current) {
+      tileLayerRef.current.setUrl(nextTileUrl);
+    } else {
+      tileLayerRef.current = L.tileLayer(nextTileUrl, {
+        attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap',
+        subdomains: 'abcd',
+        maxZoom: 19,
+      }).addTo(map);
+    }
+  }, [isDark]);
 
   // Keep global window refs updated for event handlers
   useEffect(() => {
@@ -278,15 +306,35 @@ export default function LocationRadiusPickerMap({
       }).addTo(mapInstanceRef.current);
       polygonInstanceRef.current = polygonLayer;
 
-      // Add vertex dot markers
+      const vertexIcon = L.divIcon({
+        className: 'hoppa-poly-vertex',
+        html: '<div style="width:14px;height:14px;border-radius:9999px;background:#ffffff;border:3px solid #2563EB;box-shadow:0 2px 6px rgba(15,23,42,0.35);cursor:grab;"></div>',
+        iconSize: [14, 14],
+        iconAnchor: [7, 7],
+      });
+
+      // Add draggable vertex handles
       deliveryPolygon.forEach((pt, idx) => {
-        const dot = L.circleMarker([pt.lat, pt.lng], {
-          radius: 6,
-          color: '#2563EB',
-          fillColor: '#FFFFFF',
-          fillOpacity: 1,
-          weight: 2,
+        const dot = L.marker([pt.lat, pt.lng], {
+          draggable: true,
+          icon: vertexIcon,
+          title: 'Taşımak için sürükleyin, silmek için tıklayın',
         }).addTo(mapInstanceRef.current);
+
+        dot.on('dragend', () => {
+          const pos = dot.getLatLng();
+          if (!isLocationInKktc(pos.lat, pos.lng)) {
+            showKktcWarning('Köşe noktaları yalnızca KKTC sınırları içinde konumlandırılabilir.');
+            dot.setLatLng([pt.lat, pt.lng]);
+            return;
+          }
+          if (onPolygonChange) {
+            const moved = deliveryPolygon.map((item, i) =>
+              i === idx ? { lat: pos.lat, lng: pos.lng } : item
+            );
+            onPolygonChange(moved);
+          }
+        });
 
         dot.on('click', (e: any) => {
           L.DomEvent.stopPropagation(e);
@@ -343,7 +391,7 @@ export default function LocationRadiusPickerMap({
     const lng = parseFloat(item.lon);
 
     if (!isLocationInKktc(lat, lng)) {
-      showKktcWarning('⚠️ Bu arama sonucu KKTC sınırları dışındadır. Lütfen KKTC içi bir adres seçiniz.');
+      showKktcWarning('Bu arama sonucu KKTC sınırları dışındadır. Lütfen KKTC içi bir adres seçiniz.');
       setShowDropdown(false);
       return;
     }
@@ -371,7 +419,7 @@ export default function LocationRadiusPickerMap({
           const lat = pos.coords.latitude;
           const lng = pos.coords.longitude;
           if (!isLocationInKktc(lat, lng)) {
-            showKktcWarning('⚠️ Mevcut cihaz konumunuz KKTC sınırları dışındadır. İşletme konumu yalnızca KKTC sınırları içerisinde seçilebilir.');
+            showKktcWarning('Mevcut cihaz konumunuz KKTC sınırları dışındadır. İşletme konumu yalnızca KKTC sınırları içerisinde seçilebilir.');
             return;
           }
           setKktcWarning(null);
@@ -595,7 +643,7 @@ export default function LocationRadiusPickerMap({
                 Özel Poligon Bölge Noktaları
               </p>
               <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-                Haritadaki herhangi bir yere tıklayarak poligon köşesi ekleyin. Bir noktayı kaldırmak için üzerine tıklayın.
+                Haritaya tıklayarak köşe ekleyin; köşe tutamaçlarını sürükleyerek düzenleyin veya kaldırmak için tıklayın.
               </p>
             </div>
             {deliveryPolygon.length > 0 && (
@@ -611,16 +659,19 @@ export default function LocationRadiusPickerMap({
           </div>
 
           {deliveryPolygon.length === 0 ? (
-            <div className="mt-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-bold">
-              ⚠️ Henüz poligon noktası eklenmedi. Teslimat alanınızı oluşturmak için haritada en az 3 nokta işaretleyin.
+            <div className="mt-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-bold flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>Henüz poligon noktası eklenmedi. Teslimat alanınızı oluşturmak için haritada en az 3 nokta işaretleyin.</span>
             </div>
           ) : deliveryPolygon.length < 3 ? (
-            <div className="mt-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-bold">
-              ⚠️ Geçerli bir bölge alanı için en az 3 köşe noktası gereklidir ({deliveryPolygon.length}/3 eklendi).
+            <div className="mt-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-bold flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>Geçerli bir bölge alanı için en az 3 köşe noktası gereklidir ({deliveryPolygon.length}/3 eklendi).</span>
             </div>
           ) : (
             <div className="mt-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold flex items-center gap-2">
-              <span>✓ Poligon alanı başarıyla tanımlandı ({deliveryPolygon.length} köşe noktası).</span>
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>Poligon alanı başarıyla tanımlandı ({deliveryPolygon.length} köşe noktası).</span>
             </div>
           )}
         </div>

@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:core_shared/core_shared.dart';
 
 class AuthLayout extends StatefulWidget {
   final Widget child;
@@ -92,10 +93,9 @@ class _AuthLayoutState extends State<AuthLayout> with WidgetsBindingObserver {
               title: AnimatedOpacity(
                 opacity: _showSmallLogo ? 1.0 : 0.0,
                 duration: const Duration(milliseconds: 300),
-                child: Image.asset(
-                  'assets/images/hoppa_merchant_logo.jpg',
-                  height: 32,
-                  fit: BoxFit.contain,
+                child: const HoppaBrandLogo(
+                  height: 28,
+                  badgeLabel: 'İŞ ORTAĞI',
                 ),
               ),
             )

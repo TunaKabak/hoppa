@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <defs>
+    <linearGradient id="prodBg" x1="0" y1="0" x2="120" y2="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F8FAFC"/>
+      <stop offset="100%" stop-color="#F1F5F9"/>
+    </linearGradient>
+    <linearGradient id="bagAccent" x1="38" y1="42" x2="82" y2="88" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FF7A1A"/>
+      <stop offset="100%" stop-color="#FF6B00"/>
+    </linearGradient>
+  </defs>
+  <rect width="120" height="120" rx="20" fill="url(#prodBg)"/>
+  <rect x="34" y="42" width="52" height="44" rx="10" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="2.5"/>
+  <path d="M47 42V37C47 29.8203 52.8203 24 60 24C67.1797 24 73 29.8203 73 37V42" stroke="#94A3B8" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="60" cy="64" r="10" fill="url(#bagAccent)" fill-opacity="0.14"/>
+  <path d="M54 64H66M60 58V70" stroke="#FF6B00" stroke-width="2.4" stroke-linecap="round"/>
+</svg>

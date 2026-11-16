@@ -1,32 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'hoppa_design_tokens.dart';
 
 class AppTheme {
   // ─────────────────────────────────────────────
-  // CONSUMER THEME — Taze, Güvenilir, Yeşil
+  // CONSUMER THEME — Hoppa Turuncu & Güven Yeşili
   // ─────────────────────────────────────────────
-  static const _consumerPrimary = Color(0xFF00A651); // Orijinal Hoppa Yeşili
-  static const _consumerSecondary = Color(0xFFFF6B00); // Turuncu (Vurgu)
-  static const _consumerBackground = Color(0xFFF9FAFB); // Açık gri/beyazımsı
-  static const _consumerSurface = Colors.white;
-  static const _consumerText = Color(0xFF1F2937); // Koyu gri metin
-  static const _consumerBorder = Color(0xFFE5E7EB); // İnce gri kenarlık
-  static const _consumerRadius = 16.0;
+  static const _consumerPrimary = HoppaDesignTokens.brandGreen;
+  static const _consumerSecondary = HoppaDesignTokens.brandOrange;
+  static const _consumerBackground = HoppaDesignTokens.canvasLight;
+  static const _consumerSurface = HoppaDesignTokens.surfaceLight;
+  static const _consumerText = HoppaDesignTokens.textPrimaryLight;
+  static const _consumerBorder = HoppaDesignTokens.borderLight;
+  static const _consumerRadius = HoppaDesignTokens.radiusLg;
 
   // ─────────────────────────────────────────────
-  // MERCHANT THEME — Profesyonel, veri odaklı, keskin
+  // MERCHANT THEME — Kurumsal Hoppa Turuncu & Slate (Web Portal ile Birebir)
   // ─────────────────────────────────────────────
-  static const _merchantPrimary = Color(0xFF1B2A4A);
-  static const _merchantSecondary = Color(0xFF3B82F6);
-  static const _merchantAccent = Color(0xFF10B981);
-  static const _merchantBackground = Color(0xFFF1F5F9);
-  static const _merchantSurface = Color(0xFFF8FAFC);
-  static const _merchantText = Color(0xFF0F172A);
-  static const _merchantBorder = Color(0xFFE2E8F0);
-  static const _merchantRadius = 8.0;
+  static const _merchantPrimary = HoppaDesignTokens.brandOrange;
+  static const _merchantSecondary = HoppaDesignTokens.brandGreen;
+  static const _merchantAccent = HoppaDesignTokens.brandGreen;
+  static const _merchantBackground = HoppaDesignTokens.canvasLight;
+  static const _merchantSurface = HoppaDesignTokens.surfaceLight;
+  static const _merchantText = HoppaDesignTokens.textPrimaryLight;
+  static const _merchantBorder = HoppaDesignTokens.borderLight;
+  static const _merchantRadius = HoppaDesignTokens.radiusMd;
 
-  // Shared text theme
-  static final _textTheme = GoogleFonts.interTextTheme();
+  // Unified Cross-Platform Typography (Plus Jakarta Sans)
+  static final _textTheme = GoogleFonts.plusJakartaSansTextTheme();
 
   // ═══════════════════════════════════════════
   // CONSUMER LIGHT THEME
@@ -34,9 +35,11 @@ class AppTheme {
   static ThemeData get consumerTheme {
     return ThemeData(
       useMaterial3: true,
+      brightness: Brightness.light,
       scaffoldBackgroundColor: _consumerBackground,
       colorScheme: ColorScheme.fromSeed(
         seedColor: _consumerPrimary,
+        brightness: Brightness.light,
         primary: _consumerPrimary,
         secondary: _consumerSecondary,
         surface: _consumerSurface,
@@ -53,10 +56,10 @@ class AppTheme {
         elevation: 0,
         centerTitle: false,
         iconTheme: const IconThemeData(color: _consumerText),
-        titleTextStyle: GoogleFonts.inter(
+        titleTextStyle: GoogleFonts.plusJakartaSans(
           color: _consumerText,
           fontSize: 20,
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w700,
         ),
       ),
       cardTheme: CardThemeData(
@@ -77,9 +80,9 @@ class AppTheme {
             borderRadius: BorderRadius.circular(_consumerRadius),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-          textStyle: GoogleFonts.inter(
+          textStyle: GoogleFonts.plusJakartaSans(
             fontWeight: FontWeight.w700,
-            fontSize: 16,
+            fontSize: 15,
           ),
         ),
       ),
@@ -97,8 +100,8 @@ class AppTheme {
         filled: true,
         fillColor: _consumerSurface,
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 16,
+          horizontal: 18,
+          vertical: 15,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(_consumerRadius),
@@ -110,13 +113,13 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(_consumerRadius),
-          borderSide: const BorderSide(color: _consumerPrimary, width: 2),
+          borderSide: const BorderSide(color: _consumerPrimary, width: 1.8),
         ),
-        hintStyle: TextStyle(color: Colors.grey.shade400),
+        hintStyle: const TextStyle(color: HoppaDesignTokens.textMutedLight),
       ),
       chipTheme: ChipThemeData(
         backgroundColor: _consumerPrimary.withValues(alpha: 0.1),
-        labelStyle: GoogleFonts.inter(
+        labelStyle: GoogleFonts.plusJakartaSans(
           color: _consumerPrimary,
           fontWeight: FontWeight.w600,
         ),
@@ -132,7 +135,7 @@ class AppTheme {
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: Colors.white,
         selectedItemColor: _consumerPrimary,
-        unselectedItemColor: Colors.grey,
+        unselectedItemColor: HoppaDesignTokens.textMutedLight,
       ),
       dividerTheme: const DividerThemeData(
         color: _consumerBorder,
@@ -142,14 +145,65 @@ class AppTheme {
   }
 
   // ═══════════════════════════════════════════
-  // MERCHANT LIGHT THEME
+  // CONSUMER DARK THEME
+  // ═══════════════════════════════════════════
+  static ThemeData get consumerDarkTheme {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      scaffoldBackgroundColor: HoppaDesignTokens.canvasDark,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: HoppaDesignTokens.statusSuccessDark,
+        brightness: Brightness.dark,
+        primary: HoppaDesignTokens.statusSuccessDark,
+        secondary: HoppaDesignTokens.brandOrange,
+        surface: HoppaDesignTokens.surfaceDark,
+        onPrimary: Colors.white,
+        onSecondary: Colors.white,
+      ),
+      textTheme: _textTheme.apply(
+        bodyColor: HoppaDesignTokens.textPrimaryDark,
+        displayColor: HoppaDesignTokens.textPrimaryDark,
+      ),
+      appBarTheme: AppBarTheme(
+        backgroundColor: HoppaDesignTokens.surfaceDark,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: false,
+        iconTheme: const IconThemeData(color: HoppaDesignTokens.textPrimaryDark),
+        titleTextStyle: GoogleFonts.plusJakartaSans(
+          color: HoppaDesignTokens.textPrimaryDark,
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      cardTheme: CardThemeData(
+        color: HoppaDesignTokens.surfaceDark,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(_consumerRadius),
+          side: const BorderSide(color: HoppaDesignTokens.borderDark, width: 1),
+        ),
+        margin: EdgeInsets.zero,
+      ),
+      dividerTheme: const DividerThemeData(
+        color: HoppaDesignTokens.borderDark,
+        thickness: 1,
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════
+  // MERCHANT LIGHT THEME (Hoppa Orange + Clean Corporate Slate)
   // ═══════════════════════════════════════════
   static ThemeData get merchantTheme {
     return ThemeData(
       useMaterial3: true,
+      brightness: Brightness.light,
       scaffoldBackgroundColor: _merchantBackground,
       colorScheme: ColorScheme.fromSeed(
         seedColor: _merchantPrimary,
+        brightness: Brightness.light,
         primary: _merchantPrimary,
         secondary: _merchantSecondary,
         tertiary: _merchantAccent,
@@ -162,13 +216,13 @@ class AppTheme {
         displayColor: _merchantText,
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: _merchantPrimary,
+        backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         centerTitle: false,
-        iconTheme: const IconThemeData(color: Colors.white),
-        titleTextStyle: GoogleFonts.inter(
-          color: Colors.white,
+        iconTheme: const IconThemeData(color: _merchantText),
+        titleTextStyle: GoogleFonts.plusJakartaSans(
+          color: _merchantText,
           fontSize: 18,
           fontWeight: FontWeight.w700,
         ),
@@ -184,27 +238,27 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: _merchantSecondary,
+          backgroundColor: _merchantPrimary,
           foregroundColor: Colors.white,
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(_merchantRadius),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          textStyle: GoogleFonts.inter(
-            fontWeight: FontWeight.w600,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+          textStyle: GoogleFonts.plusJakartaSans(
+            fontWeight: FontWeight.w700,
             fontSize: 14,
           ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: _merchantSecondary,
+          foregroundColor: _merchantPrimary,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(_merchantRadius),
           ),
-          side: const BorderSide(color: _merchantSecondary, width: 1.5),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          side: const BorderSide(color: _merchantPrimary, width: 1.4),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
@@ -224,14 +278,14 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(_merchantRadius),
-          borderSide: const BorderSide(color: _merchantSecondary, width: 2),
+          borderSide: const BorderSide(color: _merchantPrimary, width: 1.8),
         ),
-        hintStyle: TextStyle(color: Colors.grey.shade400),
+        hintStyle: const TextStyle(color: HoppaDesignTokens.textMutedLight),
       ),
       chipTheme: ChipThemeData(
-        backgroundColor: _merchantSecondary.withValues(alpha: 0.1),
-        labelStyle: GoogleFonts.inter(
-          color: _merchantSecondary,
+        backgroundColor: HoppaDesignTokens.brandOrangeTint,
+        labelStyle: GoogleFonts.plusJakartaSans(
+          color: HoppaDesignTokens.brandOrangeHover,
           fontWeight: FontWeight.w600,
           fontSize: 12,
         ),
@@ -247,8 +301,8 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(_merchantRadius),
         ),
-        selectedTileColor: _merchantSecondary.withValues(alpha: 0.08),
-        selectedColor: _merchantSecondary,
+        selectedTileColor: HoppaDesignTokens.brandOrangeTint,
+        selectedColor: _merchantPrimary,
         iconColor: _merchantText,
       ),
       dividerTheme: const DividerThemeData(
@@ -258,25 +312,73 @@ class AppTheme {
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) return _merchantAccent;
-          return Colors.grey.shade400;
+          return HoppaDesignTokens.textMutedLight;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return _merchantAccent.withValues(alpha: 0.3);
           }
-          return Colors.grey.shade300;
+          return _merchantBorder;
         }),
       ),
     );
   }
 
-  // Legacy getter — konsumer uyumu için
+  // ═══════════════════════════════════════════
+  // MERCHANT DARK THEME
+  // ═══════════════════════════════════════════
+  static ThemeData get merchantDarkTheme {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      scaffoldBackgroundColor: HoppaDesignTokens.canvasDark,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: _merchantPrimary,
+        brightness: Brightness.dark,
+        primary: _merchantPrimary,
+        secondary: HoppaDesignTokens.statusSuccessDark,
+        surface: HoppaDesignTokens.surfaceDark,
+        onPrimary: Colors.white,
+        onSecondary: Colors.white,
+      ),
+      textTheme: _textTheme.apply(
+        bodyColor: HoppaDesignTokens.textPrimaryDark,
+        displayColor: HoppaDesignTokens.textPrimaryDark,
+      ),
+      appBarTheme: AppBarTheme(
+        backgroundColor: HoppaDesignTokens.surfaceDark,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: false,
+        iconTheme: const IconThemeData(color: HoppaDesignTokens.textPrimaryDark),
+        titleTextStyle: GoogleFonts.plusJakartaSans(
+          color: HoppaDesignTokens.textPrimaryDark,
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      cardTheme: CardThemeData(
+        color: HoppaDesignTokens.surfaceDark,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(_merchantRadius),
+          side: const BorderSide(color: HoppaDesignTokens.borderDark, width: 1),
+        ),
+        margin: EdgeInsets.zero,
+      ),
+      dividerTheme: const DividerThemeData(
+        color: HoppaDesignTokens.borderDark,
+        thickness: 1,
+      ),
+    );
+  }
+
+  // Legacy getters
   static ThemeData get lightTheme => consumerTheme;
 
-  // Yardımcı renk getirme (widget'larda kullanım için)
-  static Color consumerPrimary = _consumerPrimary;
-  static Color consumerSecondary = _consumerSecondary;
-  static Color merchantPrimary = _merchantPrimary;
-  static Color merchantSecondary = _merchantSecondary;
-  static Color merchantAccent = _merchantAccent;
+  static const Color consumerPrimary = _consumerPrimary;
+  static const Color consumerSecondary = _consumerSecondary;
+  static const Color merchantPrimary = _merchantPrimary;
+  static const Color merchantSecondary = _merchantSecondary;
+  static const Color merchantAccent = _merchantAccent;
 }

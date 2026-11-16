@@ -265,13 +265,15 @@ class CourierOrderCard extends StatelessWidget {
                     children: [
                       if (order.dontRingBell)
                         const _InstructionChip(
-                          label: '🔕 Zili Çalma',
+                          icon: Icons.notifications_off_outlined,
+                          label: 'Zili Çalma',
                           bgColor: Color(0xFFFEF3C7),
                           textColor: Color(0xFF92400E),
                         ),
                       if (order.leaveAtDoor)
                         const _InstructionChip(
-                          label: '🚪 Kapıya Bırak',
+                          icon: Icons.door_front_door_outlined,
+                          label: 'Kapıya Bırak',
                           bgColor: Color(0xFFDBEAFE),
                           textColor: Color(0xFF1E40AF),
                         ),
@@ -423,7 +425,7 @@ class CourierOrderCard extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: item.options.map((opt) {
-                              final prefix = opt.isRemove ? '❌' : '➕';
+                              final prefix = opt.isRemove ? '-' : '+';
                               final groupPrefix = opt.groupName.isNotEmpty
                                   ? '${opt.groupName}: '
                                   : '';
@@ -704,11 +706,13 @@ class _LocationInfoRow extends StatelessWidget {
 }
 
 class _InstructionChip extends StatelessWidget {
+  final IconData? icon;
   final String label;
   final Color bgColor;
   final Color textColor;
 
   const _InstructionChip({
+    this.icon,
     required this.label,
     required this.bgColor,
     required this.textColor,
@@ -722,13 +726,22 @@ class _InstructionChip extends StatelessWidget {
         color: bgColor,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: textColor,
-          fontWeight: FontWeight.w700,
-          fontSize: 12,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 14, color: textColor),
+            const SizedBox(width: 5),
+          ],
+          Text(
+            label,
+            style: TextStyle(
+              color: textColor,
+              fontWeight: FontWeight.w700,
+              fontSize: 12,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -15,6 +15,7 @@ import {
   getMerchantProfile, merchantApiFetch 
 } from '../../../utils/merchant-auth';
 import { useMerchantTheme } from '../../../context/MerchantThemeContext';
+import { useConfirm, useToast } from '../../../components/merchant/ToastContext';
 import { KKTC_POLYGON } from '../../../utils/kktcBoundary';
 
 const DEFAULT_COLOR_PALETTE = [
@@ -126,9 +127,11 @@ const PRESET_DISTRICT_ZONES: KktcServiceZone[] = [
 export default function KktcServiceZonesPage() {
   const router = useRouter();
   const { theme } = useMerchantTheme();
+  const toast = useToast();
+  const { confirm } = useConfirm();
   const isDark = theme === 'dark';
 
-  const [profile, setProfile] = useState<any>(null);
+  const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
   const [zones, setZones] = useState<KktcServiceZone[]>([]);
   const [activeZoneId, setActiveZoneId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -149,19 +152,19 @@ export default function KktcServiceZonesPage() {
   useEffect(() => {
     const currentProfile = getMerchantProfile();
     if (!currentProfile) {
-      router.push('/merchant/login');
+      router.replace('/merchant/login');
       return;
     }
 
     if (currentProfile.role !== 'super_admin' && currentProfile.role !== 'admin') {
-      alert('⚠️ Bu sayfaya yalnızca sistem yöneticileri (Admin) erişebilir.');
-      router.push('/merchant/dashboard');
+      toast.error('Bu sayfaya yalnızca sistem yöneticileri (Admin) erişebilir.');
+      router.replace('/merchant/dashboard');
       return;
     }
 
-    setProfile(currentProfile);
+    setIsAuthorized(true);
     fetchServiceZones();
-  }, []);
+  }, [router]);
 
   const fetchServiceZones = async () => {
     setIsLoading(true);
@@ -192,10 +195,11 @@ export default function KktcServiceZonesPage() {
         method: 'PUT',
         body: JSON.stringify({ zones }),
       });
-      setSaveSuccessMessage('✅ KKTC hizmet bölgeleri ve poligon sınırları başarıyla kaydedildi!');
+      setSaveSuccessMessage('KKTC hizmet bölgeleri ve poligon sınırları başarıyla kaydedildi.');
+      toast.success('KKTC hizmet bölgeleri kaydedildi.');
       setTimeout(() => setSaveSuccessMessage(null), 5000);
     } catch (err: any) {
-      alert('Kayıt başarısız: ' + (err.message || 'Bilinmeyen hata'));
+      toast.error('Kayıt başarısız: ' + (err.message || 'Bilinmeyen hata'));
     } finally {
       setIsSaving(false);
     }
@@ -213,14 +217,21 @@ export default function KktcServiceZonesPage() {
     );
   };
 
-  const handleDeleteZone = (zoneId: string) => {
-    if (confirm('Bu hizmet bölgesini silmek istediğinize emin misiniz?')) {
-      const updated = zones.filter((z) => z.id !== zoneId);
-      setZones(updated);
-      if (activeZoneId === zoneId) {
-        setActiveZoneId(updated.length > 0 ? updated[0].id : null);
-      }
+  const handleDeleteZone = async (zoneId: string) => {
+    const ok = await confirm({
+      title: 'Hizmet Bölgesini Sil',
+      message: 'Bu hizmet bölgesini silmek istediğinize emin misiniz?',
+      confirmText: 'Bölgeyi Sil',
+      tone: 'danger',
+    });
+    if (!ok) return;
+
+    const updated = zones.filter((z) => z.id !== zoneId);
+    setZones(updated);
+    if (activeZoneId === zoneId) {
+      setActiveZoneId(updated.length > 0 ? updated[0].id : null);
     }
+    toast.info('Hizmet bölgesi listeden kaldırıldı (Kaydetmeyi unutmayın).');
   };
 
   const handleStartDrawingNew = () => {
@@ -232,7 +243,7 @@ export default function KktcServiceZonesPage() {
 
   const handleFinishDrawingNew = () => {
     if (newZoneDraftPolygon.length < 3) {
-      alert('Geçerli bir kapalı alan (poligon) için en az 3 köşe noktası gereklidir.');
+      toast.warning('Geçerli bir kapalı alan (poligon) için en az 3 köşe noktası gereklidir.');
       return;
     }
 
@@ -263,35 +274,52 @@ export default function KktcServiceZonesPage() {
     }
   };
 
-  const handleLoadFullKktcBoundary = () => {
-    if (confirm('Tüm KKTC resmi sınır poligonunu yeni bir hizmet bölgesi olarak eklemek istiyor musunuz?')) {
-      const fullKktcZone: KktcServiceZone = {
-        id: `zone-kktc-all-${Date.now()}`,
-        name: 'Tüm KKTC Kapsamı',
-        district: 'KKTC Genel',
-        isActive: true,
-        minOrderAmount: 250,
-        baseDeliveryFee: 50,
-        deliveryTime: '45-60 dk',
-        colorHex: '#FF6B00',
-        description: 'Tüm Kuzey Kıbrıs Türk Cumhuriyeti resmi sınırlarını kapsayan platform ana hizmet alanı.',
-        polygon: KKTC_POLYGON,
-      };
+  const handleLoadFullKktcBoundary = async () => {
+    const ok = await confirm({
+      title: 'Tüm KKTC Sınırını Ekle',
+      message: 'Tüm KKTC resmi sınır poligonunu yeni bir hizmet bölgesi olarak eklemek istiyor musunuz?',
+      confirmText: 'Sınırı Ekle',
+      tone: 'primary',
+    });
+    if (!ok) return;
 
-      setZones((prev) => [...prev, fullKktcZone]);
-      setActiveZoneId(fullKktcZone.id);
-    }
+    const fullKktcZone: KktcServiceZone = {
+      id: `zone-kktc-all-${Date.now()}`,
+      name: 'Tüm KKTC Kapsamı',
+      district: 'KKTC Genel',
+      isActive: true,
+      minOrderAmount: 250,
+      baseDeliveryFee: 50,
+      deliveryTime: '45-60 dk',
+      colorHex: '#FF6B00',
+      description: 'Tüm Kuzey Kıbrıs Türk Cumhuriyeti resmi sınırlarını kapsayan platform ana hizmet alanı.',
+      polygon: KKTC_POLYGON,
+    };
+
+    setZones((prev) => [...prev, fullKktcZone]);
+    setActiveZoneId(fullKktcZone.id);
   };
 
-  const handleResetToPresets = () => {
-    if (confirm('Tüm bölgeleri varsayılan 5 ilçe şablonuna sıfırlamak istiyor musunuz? Kaydedilmemiş değişiklikler kaybolacaktır.')) {
-      setZones(PRESET_DISTRICT_ZONES);
-      setActiveZoneId(PRESET_DISTRICT_ZONES[0].id);
-      setIsDrawingNew(false);
-    }
+  const handleResetToPresets = async () => {
+    const ok = await confirm({
+      title: 'Varsayılan Şablonlara Sıfırla',
+      message: 'Tüm bölgeleri varsayılan 5 ilçe şablonuna sıfırlamak istiyor musunuz? Kaydedilmemiş değişiklikler kaybolacaktır.',
+      confirmText: 'Şablonlara Sıfırla',
+      tone: 'warning',
+    });
+    if (!ok) return;
+
+    setZones(PRESET_DISTRICT_ZONES);
+    setActiveZoneId(PRESET_DISTRICT_ZONES[0].id);
+    setIsDrawingNew(false);
+    toast.info('Varsayılan 5 ilçe şablonu yüklendi.');
   };
 
   const activeZone = zones.find((z) => z.id === activeZoneId);
+
+  if (!isAuthorized) {
+    return null;
+  }
 
   return (
     <MerchantLayout
