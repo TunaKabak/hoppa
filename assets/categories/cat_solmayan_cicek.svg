@@ -1,16 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-    <rect width="64" height="64" rx="18" fill="url(#bg_eternal)"/>
-    <!-- Glass Bell Jar / Cloche -->
-    <path d="M20 48V28C20 20 24 16 32 16C40 16 44 20 44 28V48H20Z" fill="#E1F5FE" fill-opacity="0.6" stroke="#0288D1" stroke-width="1.5"/>
-    <rect x="16" y="48" width="32" height="5" rx="2" fill="#5D4037"/>
-    <!-- Preserved Rose inside -->
-    <path d="M32 48V34" stroke="#2E7D32" stroke-width="2"/>
-    <circle cx="32" cy="30" r="5" fill="#D81B60"/>
-    <circle cx="32" cy="30" r="2" fill="#F8BBD0"/>
-    <defs>
-      <linearGradient id="bg_eternal" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
-        <stop stop-color="#EFEBE9"/>
-        <stop offset="1" stop-color="#A1887F"/>
-      </linearGradient>
-    </defs>
-  </svg>
+  <defs>
+    <linearGradient id="cloche_glass" x1="18" y1="13" x2="46" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#E0F2FE" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#BAE6FD" stop-opacity="0.45"/>
+    </linearGradient>
+  </defs>
+  <!-- Glass Dome -->
+  <path d="M19 47V29C19 19.5 24.5 14 32 14C39.5 14 45 19.5 45 29V47H19Z" fill="url(#cloche_glass)" stroke="#0284C7" stroke-width="1.8" stroke-linejoin="round"/>
+  <circle cx="32" cy="12" r="2.5" fill="#BAE6FD" stroke="#0284C7" stroke-width="1.5"/>
+  <!-- Preserved Rose -->
+  <path d="M32 47V34" stroke="#15803D" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M32 40C28 38 26 35 28 34C30 34 31.5 37 32 40Z" fill="#22C55E"/>
+  <circle cx="32" cy="29" r="6.5" fill="#E11D48" stroke="#9F1239" stroke-width="1.5"/>
+  <path d="M29 29C29 27.3 30.3 26 32 26C33.7 26 35 27.3 35 29" stroke="#FDA4AF" stroke-width="1.8" stroke-linecap="round"/>
+  <!-- Glass Shine -->
+  <path d="M23 27C23 22.5 25 19.5 28 18" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-opacity="0.85"/>
+  <!-- Wooden Base -->
+  <rect x="14" y="47" width="36" height="6.5" rx="3.2" fill="#78350F" stroke="#451A03" stroke-width="1.6"/>
+</svg>

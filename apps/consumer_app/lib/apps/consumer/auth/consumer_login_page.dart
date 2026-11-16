@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:core_auth/core_auth.dart';
+import 'package:core_shared/core_shared.dart';
 import 'consumer_otp_verify_page.dart';
 import 'consumer_register_page.dart';
 import 'widgets/auth_layout.dart';
@@ -103,13 +104,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Center(
-            child: Image.asset(
-              'assets/images/hoppa_logo.png',
-              height: 64,
-              cacheHeight: 192,
-              fit: BoxFit.contain,
-            ),
+          const Center(
+            child: HoppaBrandLogo(height: 46),
           ),
           const SizedBox(height: 14),
           Center(

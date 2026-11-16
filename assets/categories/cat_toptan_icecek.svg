@@ -1,15 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-    <rect width="64" height="64" rx="18" fill="url(#bg_wholesale)"/>
-    <!-- Cardboard Box -->
-    <path d="M12 28L32 18L52 28L32 38L12 28Z" fill="#FFA726" stroke="#E65100" stroke-width="1.5"/>
-    <path d="M12 28V46L32 54V38L12 28Z" fill="#FB8C00" stroke="#E65100" stroke-width="1.5"/>
-    <path d="M52 28V46L32 54V38L52 28Z" fill="#F57C00" stroke="#E65100" stroke-width="1.5"/>
-    <!-- Tape / Label -->
-    <path d="M26 21L38 27M26 35L38 41" stroke="#FFE082" stroke-width="2"/>
-    <defs>
-      <linearGradient id="bg_wholesale" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
-        <stop stop-color="#FFF3E0"/>
-        <stop offset="1" stop-color="#FFB74D"/>
-      </linearGradient>
-    </defs>
-  </svg>
+  <defs>
+    <linearGradient id="pack_front" x1="12" y1="26" x2="52" y2="54" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FB923C"/>
+      <stop offset="100%" stop-color="#EA580C"/>
+    </linearGradient>
+  </defs>
+  <!-- Bottles Peeking Top -->
+  <rect x="19" y="12" width="10" height="16" rx="4" fill="#38BDF8" stroke="#0369A1" stroke-width="1.6"/>
+  <rect x="21.5" y="9" width="5" height="3.5" rx="1.2" fill="#0284C7"/>
+  <rect x="35" y="12" width="10" height="16" rx="4" fill="#38BDF8" stroke="#0369A1" stroke-width="1.6"/>
+  <rect x="37.5" y="9" width="5" height="3.5" rx="1.2" fill="#0284C7"/>
+  <!-- Bulk Crate / Carton -->
+  <rect x="12" y="25" width="40" height="27" rx="5" fill="url(#pack_front)" stroke="#9A3412" stroke-width="1.8"/>
+  <path d="M12 34H52" stroke="#FED7AA" stroke-width="1.8" stroke-opacity="0.7"/>
+  <rect x="24" y="38" width="16" height="8" rx="3" fill="#FFF7ED" stroke="#9A3412" stroke-width="1.4"/>
+</svg>

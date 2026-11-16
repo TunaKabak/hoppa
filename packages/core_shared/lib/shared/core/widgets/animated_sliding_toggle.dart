@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AnimatedSlidingToggle extends StatelessWidget {
   final List<String> labels;
@@ -70,13 +71,12 @@ class AnimatedSlidingToggle extends StatelessWidget {
                       child: Center(
                         child: AnimatedDefaultTextStyle(
                           duration: const Duration(milliseconds: 300),
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontWeight: FontWeight.w700,
                             fontSize: 14,
                             color: selectedIndex == index
                                 ? activeColor
                                 : inactiveColor,
-                            fontFamily: 'Inter', // Global font
                           ),
                           child: Text(
                             labels[index],

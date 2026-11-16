@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import MerchantLayout from '../../../components/merchant/MerchantLayout';
 import StatusIndicator from '../../../components/merchant/StatusIndicator';
+import { useConfirm, useToast } from '../../../components/merchant/ToastContext';
 import { merchantApiFetch } from '../../../utils/merchant-auth';
 import { useMerchantTheme } from '../../../context/MerchantThemeContext';
 
@@ -44,6 +45,8 @@ function getRemainingDaysText(endDateIso: string): string {
 
 export default function MerchantPromotionsPage() {
   const { theme } = useMerchantTheme();
+  const toast = useToast();
+  const { confirm } = useConfirm();
   const isDark = theme === 'dark';
 
   const [shopOverview, setShopOverview] = useState<ShopPromoOverview | null>(null);
@@ -92,16 +95,29 @@ export default function MerchantPromotionsPage() {
         method: 'POST',
         body: JSON.stringify({ promoType }),
       });
-      setSuccessMsg(res.message || 'Sponsorluk paketi başarıyla aktif edildi.');
+      const msg = res.message || 'Sponsorluk paketi başarıyla aktif edildi.';
+      setSuccessMsg(msg);
+      toast.success(msg);
       await loadPromotionData();
     } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : 'Sponsorluk aktif edilemedi.');
+      const msg = err instanceof Error ? err.message : 'Sponsorluk aktif edilemedi.';
+      setErrorMsg(msg);
+      toast.error(msg);
     } finally {
       setIsProcessing(false);
     }
   };
 
   const handleCancel = async (promoType: PromoType) => {
+    const label = promoType === 'MAIN_SCREEN' ? 'Ana Sayfa Vitrin' : 'Kategori Vitrini';
+    const ok = await confirm({
+      title: `${label} Sponsorluğunu İptal Et`,
+      message: `${label} sponsorluğunu sonlandırmak istediğinize emin misiniz? Komisyon oranınız standart %5 seviyesine dönecektir.`,
+      confirmText: 'Sponsorluğu İptal Et',
+      tone: 'danger',
+    });
+    if (!ok) return;
+
     setIsProcessing(true);
     setErrorMsg(null);
     setSuccessMsg(null);
@@ -110,10 +126,14 @@ export default function MerchantPromotionsPage() {
         method: 'POST',
         body: JSON.stringify({ promoType }),
       });
-      setSuccessMsg(res.message || 'Sponsorluk iptal edildi.');
+      const msg = res.message || 'Sponsorluk iptal edildi.';
+      setSuccessMsg(msg);
+      toast.info(msg);
       await loadPromotionData();
     } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : 'Sponsorluk iptal edilemedi.');
+      const msg = err instanceof Error ? err.message : 'Sponsorluk iptal edilemedi.';
+      setErrorMsg(msg);
+      toast.error(msg);
     } finally {
       setIsProcessing(false);
     }

@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
 
 type Theme = 'light' | 'dark';
 
@@ -11,32 +12,31 @@ interface MerchantThemeContextType {
 const MerchantThemeContext = createContext<MerchantThemeContextType | undefined>(undefined);
 
 export const MerchantThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const router = useRouter();
   const [theme, setThemeState] = useState<Theme>('light');
 
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('hoppa_merchant_theme') as Theme | null;
-    if (savedTheme === 'dark' || savedTheme === 'light') {
-      setThemeState(savedTheme);
-      applyTheme(savedTheme);
-    } else {
-      setThemeState('light');
-      applyTheme('light');
-    }
-  }, []);
-
-  const applyTheme = (newTheme: Theme) => {
+  const applyThemeForRoute = useCallback((targetTheme: Theme, pathname: string) => {
+    if (typeof document === 'undefined') return;
     const root = document.documentElement;
-    if (newTheme === 'dark') {
+    const isMerchantRoute = pathname.startsWith('/merchant');
+    if (isMerchantRoute && targetTheme === 'dark') {
       root.classList.add('dark');
     } else {
       root.classList.remove('dark');
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('hoppa_merchant_theme') as Theme | null;
+    const resolvedTheme: Theme = savedTheme === 'dark' ? 'dark' : 'light';
+    setThemeState(resolvedTheme);
+    applyThemeForRoute(resolvedTheme, router.pathname);
+  }, [router.pathname, applyThemeForRoute]);
 
   const setTheme = (newTheme: Theme) => {
     setThemeState(newTheme);
     localStorage.setItem('hoppa_merchant_theme', newTheme);
-    applyTheme(newTheme);
+    applyThemeForRoute(newTheme, router.pathname);
   };
 
   const toggleTheme = () => {

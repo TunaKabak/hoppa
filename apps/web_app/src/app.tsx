@@ -28,32 +28,76 @@ import {
     ExternalLink,
     Mail,
     ChevronDown,
+    ChevronLeft,
     Bike,
-    Car
+    Car,
+    UtensilsCrossed,
+    Cookie,
+    Flower2,
+    Zap,
+    Home,
+    Lock,
+    ArrowRight,
+    Play,
+    Banknote,
+    Lightbulb,
+    Rocket
 } from 'lucide-react';
 import { translations } from './translations';
 import { legalTexts } from './legalTexts';
 
 // Mock Veritabanı - Uygulama simülatörü ve sayfa için
 const CATEGORIES = [
-    { id: 'market', title: 'Market', badge: 'POPÜLER', icon: '🛒', desc: 'Taze sebze, meyve ve temel gıdalar', bg: 'bg-orange-50' },
-    { id: 'restoran', title: 'Restoran', badge: 'POPÜLER', icon: '🍝', desc: 'En sevdiğin yerel lezzetler kapında', bg: 'bg-red-50' },
-    { id: 'su', title: 'Su', badge: null, icon: '💧', desc: 'Damacana ve pet şişe su siparişi', bg: 'bg-blue-50' },
-    { id: 'kuruyemis', title: 'Kuruyemiş', badge: 'YENİ', icon: '🌰', desc: 'Taze kavrulmuş kuruyemiş çeşitleri', bg: 'bg-yellow-50' },
-    { id: 'kahve', title: 'Kahve', badge: null, icon: '☕', desc: 'Sıcak ve soğuk kahve çeşitleri', bg: 'bg-amber-50' },
-    { id: 'cicek', title: 'Çiçek', badge: null, icon: '🌸', desc: 'Özel günler için taze aranjmanlar', bg: 'bg-pink-50' }
+    { id: 'market', title: 'Market', badge: 'POPÜLER', desc: 'Taze sebze, meyve ve temel gıdalar', bg: 'bg-orange-50 text-[#FF6B00]' },
+    { id: 'restoran', title: 'Restoran', badge: 'POPÜLER', desc: 'En sevdiğin yerel lezzetler kapında', bg: 'bg-rose-50 text-rose-600' },
+    { id: 'su', title: 'Su', badge: null, desc: 'Damacana ve pet şişe su siparişi', bg: 'bg-sky-50 text-sky-600' },
+    { id: 'kuruyemis', title: 'Kuruyemiş', badge: 'YENİ', desc: 'Taze kavrulmuş kuruyemiş çeşitleri', bg: 'bg-amber-50 text-amber-600' },
+    { id: 'kahve', title: 'Kahve', badge: null, desc: 'Sıcak ve soğuk kahve çeşitleri', bg: 'bg-stone-100 text-stone-700' },
+    { id: 'cicek', title: 'Çiçek', badge: null, desc: 'Özel günler için taze aranjmanlar', bg: 'bg-pink-50 text-pink-600' }
 ];
+
+const renderCategoryVectorIcon = (id: string) => {
+    switch (id) {
+        case 'market':
+            return <ShoppingBag size={20} strokeWidth={2} />;
+        case 'restoran':
+            return <UtensilsCrossed size={20} strokeWidth={2} />;
+        case 'su':
+            return <Droplet size={20} strokeWidth={2} />;
+        case 'kuruyemis':
+            return <Cookie size={20} strokeWidth={2} />;
+        case 'kahve':
+            return <Coffee size={20} strokeWidth={2} />;
+        case 'cicek':
+            return <Flower2 size={20} strokeWidth={2} />;
+        default:
+            return <Store size={20} strokeWidth={2} />;
+    }
+};
 
 const PRODUCTS = [
     { id: 'madensuyu', name: 'Doğal Maden Suyu 6\'lı', price: 75.00, brand: 'Beypazarı', category: 'su', image: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3', desc: 'Beypazarı Doğal Maden Suyu, mineral zengini yapısıyla her an taze hissettirir.' },
     { id: 'aycicekyagi', name: 'Ayçiçek Yağı 1L', price: 90.00, brand: 'Yudum', category: 'market', image: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3', desc: 'Yüksek kalite standartlarında üretilmiş yemeklik sıvı yağ.' },
     { id: 'ekmek', name: 'Somun Ekmek 200g', price: 25.00, brand: 'Taş Fırın', category: 'market', image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3', desc: 'Günlük taze pişmiş, çıtır çıtır somun ekmek.' },
     { id: 'patates', name: 'Patates kg', price: 49.99, brand: 'Hoppa Tarım', category: 'market', image: 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3', desc: 'Özenle seçilmiş, yemeklik taze yerli patates.' },
-    { id: 'zerosugar', name: 'Zero Sugar 1L', price: 79.99, brand: 'Coca-Cola', category: 'su', image: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3', desc: 'Şekersiz ve kalorisiz serinlik.' },
+    { id: 'zerosugar', name: 'Zero Sugar 1L', price: 79.99, brand: 'Coca-Cola', category: 'su', image: 'https://images.unsplash.com/photo-1554866585-cd94860890b7?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3', desc: 'Şekersiz ve kalorisiz serinlik.' },
     { id: 'ayran', name: 'Ayran 1L', price: 79.99, brand: 'Sütaş', category: 'market', image: 'https://images.unsplash.com/photo-1528750994863-dd0fd4e7bab6?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3', desc: 'Geleneksel kıvamda, ferahlatıcı lezzet.' }
 ];
 
-export default function App({ initialTab = 'user' }: { initialTab?: string }) {
+const getPublicApiUrl = (): string => {
+    const raw = (process.env.NEXT_PUBLIC_API_URL || 'https://hoppa-backend.onrender.com/api')
+        .trim()
+        .replace(/\/+$/, '');
+    return raw.endsWith('/api') ? raw : `${raw}/api`;
+};
+
+export default function App({
+    initialTab = 'user',
+    autoScrollToPartners = false,
+}: {
+    initialTab?: string;
+    autoScrollToPartners?: boolean;
+}) {
     // Tanıtım Sayfası State'leri
     const [locale, setLocale] = useState<'tr' | 'en' | 'ru'>('tr');
     const [activeLegalDoc, setActiveLegalDoc] = useState<'privacy' | 'kvkk' | 'cookie' | null>(null);
@@ -64,6 +108,15 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
             setLocale(saved);
         }
     }, []);
+
+    useEffect(() => {
+        if (autoScrollToPartners && typeof window !== 'undefined') {
+            const timer = setTimeout(() => {
+                document.getElementById('partners')?.scrollIntoView({ behavior: 'smooth' });
+            }, 120);
+            return () => clearTimeout(timer);
+        }
+    }, [autoScrollToPartners]);
 
     useEffect(() => {
         if (activeLegalDoc) {
@@ -103,7 +156,13 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
 
     const [activeTab, setActiveTab] = useState(initialTab); // user, partner, driver
     const [contactSubmitted, setContactSubmitted] = useState(false);
+    const [contactForm, setContactForm] = useState({ name: '', email: '', message: '' });
+    const [contactLoading, setContactLoading] = useState(false);
+    const [contactError, setContactError] = useState('');
     const [partnerSubmitted, setPartnerSubmitted] = useState(false);
+    const [partnerForm, setPartnerForm] = useState({ storeName: '', contactName: '', phone: '' });
+    const [partnerLoading, setPartnerLoading] = useState(false);
+    const [partnerError, setPartnerError] = useState('');
     const [courierSubmitted, setCourierSubmitted] = useState(false);
     const [courierForm, setCourierForm] = useState({
         name: '',
@@ -120,15 +179,83 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
     const [courierLoading, setCourierLoading] = useState(false);
     const [courierError, setCourierError] = useState('');
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [simOrderTimestamp, setSimOrderTimestamp] = useState<string>('');
 
     const [vehicleOptions, setVehicleOptions] = useState<any[]>([]);
     const [loadingVehicles, setLoadingVehicles] = useState(true);
 
     useEffect(() => {
+        const loc = locale === 'tr' ? 'tr-TR' : locale === 'ru' ? 'ru-RU' : 'en-GB';
+        setSimOrderTimestamp(
+            new Date().toLocaleString(loc, {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+            })
+        );
+    }, [locale]);
+
+    const handlePartnerSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setPartnerLoading(true);
+        setPartnerError('');
+        try {
+            const response = await fetch(`${getPublicApiUrl()}/public/merchant-inquiry`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    storeName: partnerForm.storeName.trim(),
+                    contactName: partnerForm.contactName.trim(),
+                    phone: partnerForm.phone.trim(),
+                    category: t(merchantCategory as keyof typeof translations['tr']),
+                }),
+            });
+            const data = await response.json();
+            if (response.ok && !data.error) {
+                setPartnerSubmitted(true);
+            } else {
+                setPartnerError(data.message || t('form_submit_error'));
+            }
+        } catch {
+            setPartnerError(t('form_submit_error'));
+        } finally {
+            setPartnerLoading(false);
+        }
+    };
+
+    const handleContactSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setContactLoading(true);
+        setContactError('');
+        try {
+            const response = await fetch(`${getPublicApiUrl()}/public/contact`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: contactForm.name.trim(),
+                    email: contactForm.email.trim(),
+                    message: contactForm.message.trim(),
+                }),
+            });
+            const data = await response.json();
+            if (response.ok && !data.error) {
+                setContactSubmitted(true);
+            } else {
+                setContactError(data.message || t('form_submit_error'));
+            }
+        } catch {
+            setContactError(t('form_submit_error'));
+        } finally {
+            setContactLoading(false);
+        }
+    };
+
+    useEffect(() => {
         const fetchVehicleOptions = async () => {
             try {
-                const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-                const res = await fetch(`${apiUrl}/api/couriers/vehicle-options`);
+                const res = await fetch(`${getPublicApiUrl()}/couriers/vehicle-options`);
                 const data = await res.json();
                 if (!data.error && data.data) {
                     setVehicleOptions(data.data.filter((opt: any) => opt.isActive));
@@ -194,7 +321,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
 
         // Ehliyet doğrulaması (motorlu araçlar için)
         if (courierForm.vehicle !== 'BICYCLE' && courierForm.license === 'NO') {
-            setCourierError('Seçtiğiniz motorlu aracı kullanabilmek için geçerli bir sürüş ehliyetinizin olması zorunludur.');
+            setCourierError(t('courier_form_license_warn'));
             return;
         }
 
@@ -202,10 +329,10 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
         setCourierError('');
         
         try {
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+            const apiBase = getPublicApiUrl();
             
             // 1. Handshake token al
-            const handshakeRes = await fetch(`${apiUrl}/api/auth/handshake`, {
+            const handshakeRes = await fetch(`${apiBase}/auth/handshake`, {
                 method: 'POST'
             });
             const handshakeData = await handshakeRes.json();
@@ -216,7 +343,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
             }
 
             // 2. Handshake token ile kurye başvurusu yap
-            const response = await fetch(`${apiUrl}/api/couriers/apply`, {
+            const response = await fetch(`${apiBase}/couriers/apply`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -352,23 +479,27 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                     <div className="flex items-center justify-between h-20">
                         {/* Logo */}
                         <div className="flex items-center cursor-pointer" onClick={() => { setSimScreen('splash'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
-                            <img src="/logo-color.png" alt="Hoppa Logo" className="h-10 w-auto object-contain" />
-                            <span className="text-xs font-semibold text-emerald-600 ml-2 bg-emerald-50 px-2 py-0.5 rounded-full">
-                                now.com
-                            </span>
+                            <img src="/logo-full-light.svg" alt="Hoppa" className="h-9 w-auto object-contain" />
                         </div>
 
                         {/* Masaüstü Navigasyon */}
-                        <nav className="hidden md:flex items-center space-x-8">
-                            <a href="#features" className="font-medium text-slate-600 hover:text-emerald-600 transition-colors">{t('nav_features')}</a>
-                            <a href="#how-it-works" className="font-medium text-slate-600 hover:text-emerald-600 transition-colors">{t('nav_how_it_works')}</a>
-                            <a href="#interactive-demo" className="font-medium text-slate-600 hover:text-emerald-600 transition-colors bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-sm animate-pulse">{t('nav_try_app')}</a>
-                            <a href="#partners" onClick={() => setActiveTab('user')} className="font-medium text-slate-600 hover:text-emerald-600 transition-colors">{t('nav_partnerships')}</a>
-                            <a href="#partners" onClick={() => setActiveTab('partner')} className="font-medium text-slate-600 hover:text-emerald-600 transition-colors">{t('nav_courier')}</a>
+                        <nav className="hidden md:flex items-center space-x-7">
+                            <a href="#features" className="font-medium text-slate-600 hover:text-[#FF6B00] transition-colors">{t('nav_features')}</a>
+                            <a href="#how-it-works" className="font-medium text-slate-600 hover:text-[#FF6B00] transition-colors">{t('nav_how_it_works')}</a>
+                            <a href="#interactive-demo" className="font-semibold text-[#FF6B00] hover:bg-[#FF6B00]/15 transition-colors bg-[#FFF4EC] border border-[#FF6B00]/20 px-3.5 py-1.5 rounded-full text-sm">{t('nav_try_app')}</a>
+                            <a href="#partners" onClick={() => setActiveTab('user')} className="font-medium text-slate-600 hover:text-[#FF6B00] transition-colors">{t('nav_partnerships')}</a>
+                            <a href="#partners" onClick={() => setActiveTab('partner')} className="font-medium text-slate-600 hover:text-[#FF6B00] transition-colors">{t('nav_courier')}</a>
                         </nav>
 
                         {/* App Store / CTA & Dil Seçici */}
-                        <div className="hidden lg:flex items-center space-x-4">
+                        <div className="hidden lg:flex items-center space-x-3">
+                            <a
+                                href="/merchant/login"
+                                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-slate-200 bg-white hover:border-[#FF6B00]/40 hover:text-[#FF6B00] text-slate-700 font-bold text-xs transition-colors"
+                            >
+                                <Store size={14} className="text-[#FF6B00]" />
+                                <span>{t('nav_merchant_login')}</span>
+                            </a>
                             <a
                                 href="#interactive-demo"
                                 className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-full font-semibold transition-all duration-300 shadow-lg shadow-emerald-600/20 text-sm hover:scale-105 active:scale-95 animate-none"
@@ -377,15 +508,17 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                             </a>
 
                             <div className="flex items-center space-x-1 bg-slate-50 border border-slate-200 rounded-full px-1.5 py-1 text-xs font-bold text-slate-600">
-                                <button onClick={() => changeLocale('tr')} className={`px-2 py-0.5 rounded-full transition-colors ${locale === 'tr' ? 'bg-white text-emerald-600 shadow-sm' : 'hover:text-slate-900'}`}>TR</button>
-                                <button onClick={() => changeLocale('en')} className={`px-2 py-0.5 rounded-full transition-colors ${locale === 'en' ? 'bg-white text-emerald-600 shadow-sm' : 'hover:text-slate-900'}`}>EN</button>
-                                <button onClick={() => changeLocale('ru')} className={`px-2 py-0.5 rounded-full transition-colors ${locale === 'ru' ? 'bg-white text-emerald-600 shadow-sm' : 'hover:text-slate-900'}`}>RU</button>
+                                <button type="button" onClick={() => changeLocale('tr')} className={`px-2 py-0.5 rounded-full transition-colors ${locale === 'tr' ? 'bg-white text-emerald-600 shadow-sm' : 'hover:text-slate-900'}`}>TR</button>
+                                <button type="button" onClick={() => changeLocale('en')} className={`px-2 py-0.5 rounded-full transition-colors ${locale === 'en' ? 'bg-white text-emerald-600 shadow-sm' : 'hover:text-slate-900'}`}>EN</button>
+                                <button type="button" onClick={() => changeLocale('ru')} className={`px-2 py-0.5 rounded-full transition-colors ${locale === 'ru' ? 'bg-white text-emerald-600 shadow-sm' : 'hover:text-slate-900'}`}>RU</button>
                             </div>
                         </div>
 
                         {/* Mobil Menü Butonu */}
                         <div className="md:hidden">
                             <button
+                                type="button"
+                                aria-label="Menüyü Aç veya Kapat"
                                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                                 className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors focus:outline-none"
                             >
@@ -439,6 +572,14 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                         >
                             {t('nav_courier')}
                         </a>
+                        <a
+                            href="/merchant/login"
+                            onClick={() => setMobileMenuOpen(false)}
+                            className="flex items-center gap-2 font-bold py-2 text-[#FF6B00] hover:text-[#E56000] transition-colors"
+                        >
+                            <Store size={16} />
+                            <span>{t('nav_merchant_login')}</span>
+                        </a>
                         <div className="pt-2">
                             <a
                                 href="#interactive-demo"
@@ -451,9 +592,9 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                         <div className="pt-3 border-t border-slate-100 flex justify-between items-center">
                             <span className="text-[10px] text-slate-400 font-bold tracking-wider">LANG / DİL / ЯЗЫК</span>
                             <div className="flex items-center space-x-0.5 bg-slate-50 border border-slate-200 rounded-full px-1 py-0.5 text-xs font-bold text-slate-600">
-                                <button onClick={() => { changeLocale('tr'); setMobileMenuOpen(false); }} className={`px-2 py-0.5 rounded-full transition-colors ${locale === 'tr' ? 'bg-white text-emerald-600 shadow-sm' : 'hover:text-slate-900'}`}>TR</button>
-                                <button onClick={() => { changeLocale('en'); setMobileMenuOpen(false); }} className={`px-2 py-0.5 rounded-full transition-colors ${locale === 'en' ? 'bg-white text-emerald-600 shadow-sm' : 'hover:text-slate-900'}`}>EN</button>
-                                <button onClick={() => { changeLocale('ru'); setMobileMenuOpen(false); }} className={`px-2 py-0.5 rounded-full transition-colors ${locale === 'ru' ? 'bg-white text-emerald-600 shadow-sm' : 'hover:text-slate-900'}`}>RU</button>
+                                <button type="button" onClick={() => { changeLocale('tr'); setMobileMenuOpen(false); }} className={`px-2 py-0.5 rounded-full transition-colors ${locale === 'tr' ? 'bg-white text-emerald-600 shadow-sm' : 'hover:text-slate-900'}`}>TR</button>
+                                <button type="button" onClick={() => { changeLocale('en'); setMobileMenuOpen(false); }} className={`px-2 py-0.5 rounded-full transition-colors ${locale === 'en' ? 'bg-white text-emerald-600 shadow-sm' : 'hover:text-slate-900'}`}>EN</button>
+                                <button type="button" onClick={() => { changeLocale('ru'); setMobileMenuOpen(false); }} className={`px-2 py-0.5 rounded-full transition-colors ${locale === 'ru' ? 'bg-white text-emerald-600 shadow-sm' : 'hover:text-slate-900'}`}>RU</button>
                             </div>
                         </div>
                     </div>
@@ -461,19 +602,19 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
             </header>
 
             {/* HERO SECTION */}
-            <section className="relative overflow-hidden pt-12 pb-24 lg:pt-20 lg:pb-32 bg-gradient-to-b from-white via-emerald-50/20 to-transparent">
+            <section className="relative overflow-hidden pt-12 pb-24 lg:pt-20 lg:pb-32 bg-gradient-to-b from-white via-[#FFF4EC]/35 to-transparent">
 
                 {/* Dekoratif Arka Plan Işıkları */}
-                <div className="absolute top-1/4 left-1/10 w-96 h-96 bg-orange-300/20 rounded-full blur-3xl -z-10"></div>
-                <div className="absolute top-1/3 right-1/10 w-96 h-96 bg-emerald-300/10 rounded-full blur-3xl -z-10"></div>
+                <div className="absolute top-1/4 left-[10%] w-96 h-96 bg-orange-300/20 rounded-full blur-3xl -z-10"></div>
+                <div className="absolute top-1/3 right-[10%] w-96 h-96 bg-emerald-300/10 rounded-full blur-3xl -z-10"></div>
 
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
 
                         {/* Sol Sütun - Marka Vaadi & Mesajı */}
                         <div className="lg:col-span-7 space-y-8 text-center lg:text-left">
-                            <div className="inline-flex items-center space-x-2 bg-orange-50 border border-orange-100 text-orange-700 px-4 py-2 rounded-full text-xs sm:text-sm font-semibold tracking-wide">
-                                <Sparkles size={16} className="text-orange-500 animate-spin" style={{ animationDuration: '4s' }} />
+                            <div className="inline-flex items-center space-x-2 bg-[#FFF4EC] border border-[#FF6B00]/20 text-[#E55A00] px-4 py-2 rounded-full text-xs sm:text-sm font-semibold tracking-wide">
+                                <Sparkles size={16} className="text-[#FF6B00]" />
                                 <span>{t('hero_sparkles')}</span>
                             </div>
 
@@ -512,8 +653,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                     <span>{t('hero_btn_try_live')}</span>
                                 </a>
                                 <a
-                                    href="#partners"
-                                    onClick={() => setActiveTab('user')}
+                                    href="/merchant/login"
                                     className="w-full sm:w-auto bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 px-8 py-4 rounded-2xl font-bold flex items-center justify-center space-x-2 transition-all duration-300 hover:border-slate-300"
                                 >
                                     <Store size={20} className="text-emerald-600" />
@@ -552,30 +692,35 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                             <span className="text-xs text-slate-500">{t('active_tracking_store')}</span>
                                         </div>
                                     </div>
-                                    <span className="bg-orange-50 text-orange-700 px-2.5 py-1 rounded-full text-xs font-bold animate-pulse">{t('active_tracking_status')}</span>
+                                    <span className="bg-orange-50 text-[#E55A00] px-2.5 py-1 rounded-full text-xs font-bold inline-flex items-center gap-1.5">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-[#FF6B00]" />
+                                        {t('active_tracking_status')}
+                                    </span>
                                 </div>
 
                                 {/* Kurye Bilgisi */}
                                 <div className="space-y-4">
                                     <div className="bg-slate-50 p-3.5 rounded-2xl flex items-center justify-between">
                                         <div className="flex items-center space-x-3">
-                                            <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-xl">
-                                                🛵
+                                            <div className="w-10 h-10 rounded-full bg-[#FFF4EC] text-[#FF6B00] flex items-center justify-center">
+                                                <Bike size={20} strokeWidth={2.2} />
                                             </div>
                                             <div>
-                                                <div className="text-xs text-slate-400">{t('active_tracking_courier')}</div>
+                                                <div className="text-xs text-slate-500">{t('active_tracking_courier')}</div>
                                                 <div className="text-sm font-bold text-slate-800">Ahmet Y.</div>
                                             </div>
                                         </div>
-                                        <span className="text-emerald-600 text-xs font-bold bg-emerald-50 px-2 py-1 rounded-lg">{t('active_tracking_time')}</span>
+                                        <span className="text-emerald-700 text-xs font-bold bg-emerald-50 px-2.5 py-1 rounded-lg">{t('active_tracking_time')}</span>
                                     </div>
 
                                     {/* Küçük Yol */}
                                     <div className="relative pt-4 pb-2">
-                                        <div className="h-1 w-full bg-slate-200 rounded-full"></div>
-                                        <div className="absolute top-3.5 left-0 h-1 bg-emerald-500 rounded-full" style={{ width: '70%' }}></div>
-                                        <div className="absolute top-1 right-1/4 text-xl transform -translate-x-1/2 animate-bounce">🛵</div>
-                                        <div className="flex justify-between text-[10px] text-slate-400 font-semibold pt-1">
+                                        <div className="h-1.5 w-full bg-slate-200 rounded-full"></div>
+                                        <div className="absolute top-4 left-0 h-1.5 bg-emerald-500 rounded-full" style={{ width: '70%' }}></div>
+                                        <div className="absolute top-1.5 right-1/4 transform -translate-x-1/2 w-6 h-6 rounded-full bg-[#FF6B00] text-white flex items-center justify-center shadow-sm ring-2 ring-white">
+                                            <Bike size={13} strokeWidth={2.3} />
+                                        </div>
+                                        <div className="flex justify-between text-[11px] text-slate-500 font-semibold pt-2">
                                             <span>{t('active_tracking_step_1')}</span>
                                             <span>{t('active_tracking_step_2')}</span>
                                         </div>
@@ -613,8 +758,8 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
 
                         {/* Kart 1 */}
                         <div className="p-8 rounded-3xl bg-slate-50 border border-slate-100/50 hover:bg-white hover:shadow-2xl hover:shadow-slate-200/50 transition-all duration-300 group">
-                            <div className="w-14 h-14 rounded-2xl bg-orange-100 text-orange-600 flex items-center justify-center text-2xl font-bold mb-6 transition-transform group-hover:scale-110">
-                                ⚡
+                            <div className="w-14 h-14 rounded-2xl bg-[#FFF4EC] text-[#FF6B00] flex items-center justify-center mb-6 transition-transform group-hover:scale-105">
+                                <Zap size={26} strokeWidth={2.2} />
                             </div>
                             <h3 className="text-xl font-bold text-slate-900 mb-3">{t('why_hoppa_card1_title')}</h3>
                             <p className="text-slate-600 leading-relaxed">
@@ -624,8 +769,8 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
 
                         {/* Kart 2 */}
                         <div className="p-8 rounded-3xl bg-slate-50 border border-slate-100/50 hover:bg-white hover:shadow-2xl hover:shadow-slate-200/50 transition-all duration-300 group">
-                            <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-2xl font-bold mb-6 transition-transform group-hover:scale-110">
-                                📍
+                            <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center mb-6 transition-transform group-hover:scale-105">
+                                <MapPin size={26} strokeWidth={2.2} />
                             </div>
                             <h3 className="text-xl font-bold text-slate-900 mb-3">{t('why_hoppa_card2_title')}</h3>
                             <p className="text-slate-600 leading-relaxed">
@@ -635,8 +780,8 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
 
                         {/* Kart 3 */}
                         <div className="p-8 rounded-3xl bg-slate-50 border border-slate-100/50 hover:bg-white hover:shadow-2xl hover:shadow-slate-200/50 transition-all duration-300 group">
-                            <div className="w-14 h-14 rounded-2xl bg-blue-100 text-blue-600 flex items-center justify-center text-2xl font-bold mb-6 transition-transform group-hover:scale-110">
-                                🛍️
+                            <div className="w-14 h-14 rounded-2xl bg-sky-100 text-sky-700 flex items-center justify-center mb-6 transition-transform group-hover:scale-105">
+                                <ShoppingBag size={26} strokeWidth={2.2} />
                             </div>
                             <h3 className="text-xl font-bold text-slate-900 mb-3">{t('why_hoppa_card3_title')}</h3>
                             <p className="text-slate-600 leading-relaxed">
@@ -660,14 +805,18 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-12 relative">
                         {/* Bağlantı Çizgisi */}
-                        <div className="hidden md:block absolute top-1/5 left-[15%] right-[15%] h-0.5 bg-gradient-to-r from-orange-300 to-emerald-300 -z-10"></div>
+                        <div className="hidden md:block absolute top-[20%] left-[15%] right-[15%] h-0.5 bg-gradient-to-r from-orange-300 to-emerald-300 -z-10"></div>
 
                         {/* Adım 1 */}
                         <div className="text-center space-y-4 bg-white p-8 rounded-3xl shadow-sm border border-slate-100 relative">
-                            <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 w-12 h-12 bg-orange-500 text-white font-black rounded-2xl flex items-center justify-center text-lg">
+                            <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 w-12 h-12 bg-[#FF6B00] text-white font-black rounded-2xl flex items-center justify-center text-lg">
                                 1
                             </div>
-                            <div className="text-4xl pt-2">📱</div>
+                            <div className="pt-3 flex justify-center">
+                                <div className="w-12 h-12 rounded-2xl bg-[#FFF4EC] text-[#FF6B00] flex items-center justify-center">
+                                    <Smartphone size={24} strokeWidth={2} />
+                                </div>
+                            </div>
                             <h4 className="font-extrabold text-lg text-slate-900">{t('how_step1_title')}</h4>
                             <p className="text-sm text-slate-500">
                                 {t('how_step1_desc')}
@@ -676,10 +825,14 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
 
                         {/* Adım 2 */}
                         <div className="text-center space-y-4 bg-white p-8 rounded-3xl shadow-sm border border-slate-100 relative">
-                            <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 w-12 h-12 bg-emerald-600 text-white font-black rounded-2xl flex items-center justify-center text-lg shadow-lg shadow-emerald-600/20">
+                            <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 w-12 h-12 bg-[#00A651] text-white font-black rounded-2xl flex items-center justify-center text-lg shadow-lg shadow-emerald-600/20">
                                 2
                             </div>
-                            <div className="text-4xl pt-2">🛒</div>
+                            <div className="pt-3 flex justify-center">
+                                <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-[#00A651] flex items-center justify-center">
+                                    <ShoppingBag size={24} strokeWidth={2} />
+                                </div>
+                            </div>
                             <h4 className="font-extrabold text-lg text-slate-900">{t('how_step2_title')}</h4>
                             <p className="text-sm text-slate-500">
                                 {t('how_step2_desc')}
@@ -691,7 +844,11 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                             <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 w-12 h-12 bg-slate-900 text-white font-black rounded-2xl flex items-center justify-center text-lg shadow-lg shadow-slate-900/20">
                                 3
                             </div>
-                            <div className="text-4xl pt-2">🛵</div>
+                            <div className="pt-3 flex justify-center">
+                                <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-800 flex items-center justify-center">
+                                    <Bike size={24} strokeWidth={2} />
+                                </div>
+                            </div>
                             <h4 className="font-extrabold text-lg text-slate-900">{t('how_step3_title')}</h4>
                             <p className="text-sm text-slate-500">
                                 {t('how_step3_desc')}
@@ -769,7 +926,9 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
 
                             {/* Kullanıcı Geribildirimi / Pop-up */}
                             <div className="bg-slate-800/80 border border-slate-700/50 p-5 rounded-2xl flex items-start space-x-4 max-w-md mx-auto lg:mx-0">
-                                <div className="text-3xl">💡</div>
+                                <div className="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center shrink-0">
+                                    <Lightbulb size={20} strokeWidth={2} />
+                                </div>
                                 <div className="text-left space-y-1">
                                     <h5 className="font-bold text-sm text-slate-100">{t('demo_tip_title')}</h5>
                                     <p className="text-xs text-slate-400">
@@ -796,7 +955,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
 
                                     {/* Ekran İçi Bildirim (Toast) */}
                                     {showToast && (
-                                        <div className="absolute top-12 left-4 right-4 bg-slate-900/95 backdrop-blur text-white text-xs py-2.5 px-4 rounded-xl z-50 shadow-lg text-center font-semibold animate-bounce">
+                                        <div className="absolute top-12 left-4 right-4 bg-slate-900/95 backdrop-blur text-white text-xs py-2.5 px-4 rounded-xl z-50 shadow-lg text-center font-semibold">
                                             {toastMessage}
                                         </div>
                                     )}
@@ -808,7 +967,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                             <div className="text-center space-y-4">
                                                 {/* Logo */}
                                                 <div className="flex items-center justify-center">
-                                                    <img src="/logo-square-orange.png" alt="Hoppa Logo" className="w-24 h-24 object-contain rounded-3xl shadow-md" />
+                                                    <img src="/logo-mark.svg" alt="Hoppa" className="w-20 h-20 object-contain rounded-3xl shadow-md" />
                                                 </div>
                                                 <p className="text-orange-500 font-bold text-xs tracking-wider">
                                                     {t('sim_splash_tagline')}
@@ -852,7 +1011,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                         <ArrowLeft size={18} />
                                                     </button>
                                                 ) : (
-                                                    <div className="w-6 h-6 rounded-full bg-orange-100 flex items-center justify-center text-xs">🍊</div>
+                                                    <img src="/logo-mark.svg" alt="Hoppa" className="w-6 h-6 rounded-md object-contain" />
                                                 )}
                                                 <span className="text-xs font-bold text-slate-800">
                                                     {simScreen === 'categories' && t('sim_header_welcome')}
@@ -895,13 +1054,13 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                             {/* Üst Karşılama ve Konum */}
                                             <div className="flex items-center justify-between bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
                                                 <div className="flex items-center space-x-2">
-                                                    <span className="text-emerald-600">📍</span>
+                                                    <MapPin size={16} className="text-emerald-600 shrink-0" />
                                                     <div className="text-left">
                                                         <div className="text-[10px] text-slate-400 font-semibold leading-none">{t('sim_delivery_address')}</div>
                                                         <span className="text-xs font-bold text-slate-700">{t('sim_address_home')}</span>
                                                     </div>
                                                 </div>
-                                                <span className="text-xs text-slate-400">▼</span>
+                                                <ChevronDown size={14} className="text-slate-400" />
                                             </div>
 
                                             {/* Başlık */}
@@ -920,14 +1079,16 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                             className="bg-white p-3 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between items-start h-28 cursor-pointer relative hover:border-emerald-500/50 hover:shadow-md transition-all group"
                                                         >
                                                             {cat.badge && (
-                                                                <span className="absolute top-2 right-2 bg-orange-500 text-white text-[8px] px-1.5 py-0.5 rounded-full font-black">
+                                                                <span className="absolute top-2 right-2 bg-[#FF6B00] text-white text-[9px] px-1.5 py-0.5 rounded-full font-bold">
                                                                     {badgeText}
                                                                 </span>
                                                             )}
-                                                            <div className="text-2xl">{cat.icon}</div>
+                                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${cat.bg}`}>
+                                                                {renderCategoryVectorIcon(cat.id)}
+                                                            </div>
                                                             <div className="text-left">
                                                                 <div className="text-xs font-bold text-slate-800">{getCategoryTitle(cat.id)}</div>
-                                                                <div className="text-[8px] text-slate-400 line-clamp-1">{getCategoryDesc(cat.id)}</div>
+                                                                <div className="text-[10px] text-slate-500 line-clamp-1">{getCategoryDesc(cat.id)}</div>
                                                             </div>
                                                         </div>
                                                     );
@@ -982,7 +1143,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                     </div>
                                                     <div className="py-1">
                                                         <span className="text-[9px] text-slate-400 block">{t('sim_store_dist')}</span>
-                                                        <span className="text-xs font-bold text-slate-700">0.0 km</span>
+                                                        <span className="text-xs font-bold text-slate-700 tabular-nums">1.4 km</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1062,7 +1223,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                         className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-6 py-2 rounded-xl text-xs flex items-center space-x-1.5 transition-all active:scale-95"
                                                     >
                                                         <span>{t('sim_cart_btn_checkout')}</span>
-                                                        <span>➔</span>
+                                                        <ArrowRight size={14} />
                                                     </button>
                                                 </div>
                                             )}
@@ -1081,7 +1242,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                     onClick={() => setSimScreen('store_detail')}
                                                     className="absolute top-2 left-2 w-8 h-8 rounded-full bg-white/90 backdrop-blur shadow-sm flex items-center justify-center text-slate-800"
                                                 >
-                                                    ‹
+                                                    <ChevronLeft size={16} />
                                                 </button>
                                             </div>
 
@@ -1139,8 +1300,8 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                         <div className="flex-1 overflow-y-auto flex flex-col p-4 space-y-4">
                                             {/* Teslimat Yöntemi */}
                                             <div className="space-y-2 text-left">
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1">
-                                                    <span>🚚</span>
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1.5">
+                                                    <Truck size={12} />
                                                     <span>{t('sim_delivery_method')}</span>
                                                 </span>
                                                 <div className="bg-slate-100 p-1 rounded-xl grid grid-cols-2 gap-1">
@@ -1161,13 +1322,13 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
 
                                             {/* Teslimat Adresi */}
                                             <div className="space-y-2 text-left">
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1">
-                                                    <span>📍</span>
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1.5">
+                                                    <MapPin size={12} />
                                                     <span>{simDeliveryMethod === 'eve_teslim' ? t('sim_delivery_address') : t('sim_store_address')}</span>
                                                 </span>
                                                 <div className="bg-white p-3 rounded-2xl border border-slate-100 shadow-sm flex items-start space-x-3">
                                                     <div className="bg-emerald-50 text-emerald-600 p-2 rounded-xl flex-shrink-0">
-                                                        {simDeliveryMethod === 'eve_teslim' ? '🏠' : '🏬'}
+                                                        {simDeliveryMethod === 'eve_teslim' ? <Home size={16} /> : <Store size={16} />}
                                                     </div>
                                                     <div className="space-y-0.5">
                                                         <div className="text-xs font-bold text-slate-800">
@@ -1185,30 +1346,30 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
 
                                             {/* İletişim */}
                                             <div className="space-y-2 text-left">
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1">
-                                                    <span>📞</span>
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1.5">
+                                                    <Phone size={12} />
                                                     <span>{t('sim_contact_lbl')}</span>
                                                 </span>
                                                 <div className="bg-white p-3 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
                                                     <div className="flex items-center space-x-3">
                                                         <div className="bg-emerald-50 text-emerald-600 p-2 rounded-xl">
-                                                            📞
+                                                            <Phone size={16} />
                                                         </div>
                                                         <div>
                                                             <div className="text-[10px] text-slate-400 font-semibold leading-none">{t('sim_contact_phone_lbl')}</div>
-                                                            <span className="text-xs font-bold text-slate-800">
+                                                            <span className="text-xs font-bold text-slate-800 tabular-nums">
                                                                 {simDeliveryMethod === 'eve_teslim' ? '0533 876 54 32' : '0533 123 45 67'}
                                                             </span>
                                                         </div>
                                                     </div>
-                                                    <span className="text-slate-400">🔒</span>
+                                                    <Lock size={14} className="text-slate-400" />
                                                 </div>
                                             </div>
 
                                             {/* Teslimat Zamanı */}
                                             <div className="space-y-2 text-left">
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1">
-                                                    <span>🕒</span>
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1.5">
+                                                    <Clock size={12} />
                                                     <span>{simDeliveryMethod === 'eve_teslim' ? t('sim_time_delivery') : t('sim_time_prepare')}</span>
                                                 </span>
                                                 <div className="bg-slate-100 p-1 rounded-xl grid grid-cols-2 gap-1">
@@ -1229,7 +1390,9 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
 
                                             {/* Tahmini Süre Banner */}
                                             <div className="bg-emerald-50 border border-emerald-100 p-3.5 rounded-2xl flex items-center space-x-3 text-left">
-                                                <span className="text-xl animate-bounce">🚀</span>
+                                                <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                                                    <Rocket size={16} />
+                                                </div>
                                                 <div>
                                                     <div className="text-[10px] text-emerald-800 font-semibold leading-none">
                                                         {simDeliveryMethod === 'eve_teslim' ? t('sim_eta_delivery_lbl') : t('sim_eta_prepare_lbl')}
@@ -1288,7 +1451,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                         onClick={() => setSimPaymentMethod('online_kart')}
                                                         className={`p-2.5 rounded-xl border text-center flex flex-col items-center justify-center space-y-1 transition-all ${simPaymentMethod === 'online_kart' ? 'border-emerald-500 bg-emerald-50/50 text-emerald-800 font-bold' : 'border-slate-100 text-slate-500 hover:bg-slate-50'}`}
                                                     >
-                                                        <span className="text-sm">💳</span>
+                                                        <CreditCard size={16} />
                                                         <span className="text-[10px]">{t('sim_checkout_pay_card')}</span>
                                                     </button>
 
@@ -1296,7 +1459,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                         onClick={() => setSimPaymentMethod('kapida_nakit')}
                                                         className={`p-2.5 rounded-xl border text-center flex flex-col items-center justify-center space-y-1 transition-all ${simPaymentMethod === 'kapida_nakit' ? 'border-emerald-500 bg-emerald-50/50 text-emerald-800 font-bold' : 'border-slate-100 text-slate-500 hover:bg-slate-50'}`}
                                                     >
-                                                        <span className="text-sm">💵</span>
+                                                        <Banknote size={16} />
                                                         <span className="text-[10px]">{t('sim_checkout_pay_cash')}</span>
                                                     </button>
                                                 </div>
@@ -1413,64 +1576,83 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
 
                                                 {/* Sipariş Tarihi / ID */}
                                                 <div className="text-center pt-2 border-t border-slate-50 space-y-1">
-                                                    <div className="text-[9px] text-slate-400">25 Jun 2026, 17:43</div>
-                                                    <div className="text-[10px] font-bold text-slate-700">{t('sim_status_no')}: #FD6FE83B</div>
+                                                    <div className="text-[9px] text-slate-400 tabular-nums">{simOrderTimestamp || '—'}</div>
+                                                    <div className="text-[10px] font-bold text-slate-700 tabular-nums">{t('sim_status_no')}: #FD6FE83B</div>
                                                 </div>
 
                                                 {/* Takip / Yol Tarifi Butonu */}
                                                 {simDeliveryMethod === 'eve_teslim' ? (
                                                     <div className="bg-emerald-600 text-white p-3.5 rounded-xl text-center font-bold text-xs flex items-center justify-center space-x-2 relative overflow-hidden shadow-md shadow-emerald-600/10">
-                                                        <span className="animate-bounce">🛵</span>
+                                                        <Bike size={16} />
                                                         <span>{t('sim_status_track_btn')}</span>
                                                     </div>
                                                 ) : (
                                                     <div className="bg-orange-500 text-white p-3.5 rounded-xl text-center font-bold text-xs flex items-center justify-center space-x-2 relative overflow-hidden">
-                                                        <span>📍</span>
+                                                        <MapPin size={16} />
                                                         <span>{t('sim_status_directions_btn')}</span>
                                                     </div>
                                                 )}
                                             </div>
 
-                                            {/* CANLI DETAYLI SİMÜLASYON HARİTASI (CANVAS veya SVG ile Tasarlanmış Şık Harita) */}
-                                            <div className="h-44 bg-slate-100 rounded-2xl relative overflow-hidden border border-slate-200 text-left">
-
-                                                {/* Harita Arka Plan Deseni (Yollar vb) */}
-                                                <div className="absolute inset-0 opacity-20">
-                                                    <div className="absolute top-1/3 left-0 right-0 h-4 bg-slate-400"></div>
-                                                    <div className="absolute top-2/3 left-0 right-0 h-4 bg-slate-400"></div>
-                                                    <div className="absolute left-1/3 top-0 bottom-0 w-4 bg-slate-400"></div>
-                                                    <div className="absolute left-2/3 top-0 bottom-0 w-4 bg-slate-400"></div>
-                                                </div>
+                                            {/* CANLI VEKTÖREL SİMÜLASYON HARİTASI */}
+                                            <div className="h-44 bg-[#F1F5F9] rounded-2xl relative overflow-hidden border border-slate-200 text-left">
+                                                {/* Şehir Bloğu & Topografi SVG Katmanı */}
+                                                <svg viewBox="0 0 320 176" className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
+                                                    <rect width="320" height="176" fill="#F1F5F9" />
+                                                    {/* Park & Ada Blokları */}
+                                                    <rect x="18" y="16" width="68" height="44" rx="8" fill="#E2E8F0" opacity="0.65" />
+                                                    <rect x="108" y="16" width="84" height="44" rx="8" fill="#DCFCE7" opacity="0.7" />
+                                                    <rect x="214" y="16" width="88" height="44" rx="8" fill="#E2E8F0" opacity="0.65" />
+                                                    <rect x="18" y="78" width="88" height="50" rx="8" fill="#E2E8F0" opacity="0.65" />
+                                                    <rect x="128" y="78" width="76" height="50" rx="8" fill="#E2E8F0" opacity="0.65" />
+                                                    <rect x="224" y="78" width="78" height="50" rx="8" fill="#DCFCE7" opacity="0.6" />
+                                                    {/* Ana Caddeler */}
+                                                    <path d="M0 68 H320 M0 138 H320 M98 0 V176 M206 0 V176" stroke="#FFFFFF" strokeWidth="8" />
+                                                    <path d="M0 68 H320 M0 138 H320 M98 0 V176 M206 0 V176" stroke="#CBD5E1" strokeWidth="1" strokeDasharray="4 4" />
+                                                    {/* Kurye Rota Eğrisi */}
+                                                    <path
+                                                        d="M 62 46 Q 155 46 168 88 T 264 114"
+                                                        fill="none"
+                                                        stroke="#FF6B00"
+                                                        strokeWidth="3"
+                                                        strokeDasharray="6 4"
+                                                        strokeLinecap="round"
+                                                    />
+                                                </svg>
 
                                                 {/* Başlangıç Noktası (Sol) */}
-                                                <div className="absolute top-8 left-10 bg-white p-1.5 rounded-xl border border-slate-300 shadow-sm z-10 text-center">
-                                                    <span className="text-sm">{simDeliveryMethod === 'eve_teslim' ? '🏬' : '🏠'}</span>
-                                                    <span className="text-[7px] block font-black text-slate-700">
+                                                <div className="absolute top-6 left-7 bg-white px-2 py-1.5 rounded-xl border border-slate-200 shadow-sm z-10 flex items-center gap-1.5">
+                                                    <div className="w-5 h-5 rounded-lg bg-[#FFF4EC] text-[#FF6B00] flex items-center justify-center">
+                                                        {simDeliveryMethod === 'eve_teslim' ? <Store size={12} /> : <Home size={12} />}
+                                                    </div>
+                                                    <span className="text-[9px] font-bold text-slate-700">
                                                         {simDeliveryMethod === 'eve_teslim' ? t('sim_map_market') : t('sim_map_home')}
                                                     </span>
                                                 </div>
 
                                                 {/* Bitiş Noktası (Sağ) */}
-                                                <div className="absolute bottom-8 right-10 bg-emerald-50 p-1.5 rounded-xl border border-emerald-300 shadow-sm z-10 text-center">
-                                                    <span className="text-sm">{simDeliveryMethod === 'eve_teslim' ? '🏠' : '🏬'}</span>
-                                                    <span className="text-[7px] block font-black text-emerald-700">
+                                                <div className="absolute bottom-10 right-7 bg-emerald-50 px-2 py-1.5 rounded-xl border border-emerald-200 shadow-sm z-10 flex items-center gap-1.5">
+                                                    <div className="w-5 h-5 rounded-lg bg-emerald-600 text-white flex items-center justify-center">
+                                                        {simDeliveryMethod === 'eve_teslim' ? <Home size={12} /> : <Store size={12} />}
+                                                    </div>
+                                                    <span className="text-[9px] font-bold text-emerald-800">
                                                         {simDeliveryMethod === 'eve_teslim' ? t('sim_map_home') : t('sim_map_pickup')}
                                                     </span>
                                                 </div>
 
-                                                {/* Hareket Eden Simge (Kurye / Alıcı) */}
+                                                {/* Hareket Eden Vektörel Simge (Kurye / Alıcı) */}
                                                 <div
-                                                    className="absolute text-2xl transition-all duration-300 z-20"
+                                                    className="absolute w-8 h-8 rounded-full bg-[#FF6B00] text-white shadow-md ring-2 ring-white flex items-center justify-center transition-all duration-300 z-20"
                                                     style={{
                                                         left: `${20 + (scooterPos * 0.5)}%`,
-                                                        top: `${20 + (scooterPos * 0.45)}%`
+                                                        top: `${22 + (scooterPos * 0.36)}%`
                                                     }}
                                                 >
-                                                    {simDeliveryMethod === 'eve_teslim' ? '🛵' : '🚗'}
+                                                    {simDeliveryMethod === 'eve_teslim' ? <Bike size={15} /> : <Car size={15} />}
                                                 </div>
 
                                                 {/* Canlı Bilgilendirme Kutucuğu */}
-                                                <div className="absolute bottom-2 left-2 right-2 bg-white/90 backdrop-blur-sm p-1.5 rounded-lg border border-slate-200/50 text-[9px] font-bold text-slate-800 text-center">
+                                                <div className="absolute bottom-2 left-2 right-2 bg-white/95 backdrop-blur-sm py-1.5 px-2.5 rounded-lg border border-slate-200/80 text-[10px] font-bold text-slate-800 text-center">
                                                     {simDeliveryMethod === 'eve_teslim' ? (
                                                         orderStep === 3 ? t('sim_map_alert_delivery_done') : t('sim_map_alert_delivery_road')
                                                     ) : (
@@ -1613,22 +1795,49 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                 </p>
                                             </div>
                                         ) : (
-                                            <form onSubmit={(e) => { e.preventDefault(); setPartnerSubmitted(true); }} className="space-y-4">
+                                            <form onSubmit={handlePartnerSubmit} className="space-y-4">
                                                 <h4 className="font-extrabold text-lg text-slate-900 mb-2">{t('partners_merchant_form_title')}</h4>
+
+                                                {partnerError && (
+                                                    <div className="text-red-600 text-xs font-semibold bg-red-50 p-3 rounded-xl border border-red-100">
+                                                        {partnerError}
+                                                    </div>
+                                                )}
 
                                                 <div>
                                                     <label className="text-xs font-bold text-slate-500 mb-1.5 block">{t('partners_merchant_form_store')}</label>
-                                                    <input required type="text" placeholder={t('partners_merchant_form_store_placeholder')} className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600" />
+                                                    <input
+                                                        required
+                                                        type="text"
+                                                        value={partnerForm.storeName}
+                                                        onChange={(e) => setPartnerForm((prev) => ({ ...prev, storeName: e.target.value }))}
+                                                        placeholder={t('partners_merchant_form_store_placeholder')}
+                                                        className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600"
+                                                    />
                                                 </div>
 
-                                                <div className="grid grid-cols-2 gap-4">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                     <div>
                                                         <label className="text-xs font-bold text-slate-500 mb-1.5 block">{t('partners_merchant_form_name')}</label>
-                                                        <input required type="text" placeholder={t('partners_merchant_form_name_placeholder')} className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600" />
+                                                        <input
+                                                            required
+                                                            type="text"
+                                                            value={partnerForm.contactName}
+                                                            onChange={(e) => setPartnerForm((prev) => ({ ...prev, contactName: e.target.value }))}
+                                                            placeholder={t('partners_merchant_form_name_placeholder')}
+                                                            className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600"
+                                                        />
                                                     </div>
                                                     <div>
                                                         <label className="text-xs font-bold text-slate-500 mb-1.5 block">{t('partners_merchant_form_phone')}</label>
-                                                        <input required type="tel" placeholder={t('partners_merchant_form_phone_placeholder')} className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600" />
+                                                        <input
+                                                            required
+                                                            type="tel"
+                                                            value={partnerForm.phone}
+                                                            onChange={(e) => setPartnerForm((prev) => ({ ...prev, phone: e.target.value }))}
+                                                            placeholder={t('partners_merchant_form_phone_placeholder')}
+                                                            className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600"
+                                                        />
                                                     </div>
                                                 </div>
 
@@ -1644,7 +1853,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                                 <Store size={18} />
                                                             </div>
                                                             <span className={merchantCategory ? 'text-slate-800 font-semibold' : 'text-slate-400'}>
-                                                                {merchantCategory ? t(merchantCategory as any) : 'Kategori seçiniz...'}
+                                                                {merchantCategory ? t(merchantCategory as any) : t('partners_merchant_form_cat_placeholder')}
                                                             </span>
                                                             <ChevronDown size={18} className={`text-slate-400 transition-transform ${showMerchantCategoryDropdown ? 'rotate-180' : ''}`} />
                                                         </button>
@@ -1683,8 +1892,16 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                     </div>
                                                 </div>
 
-                                                <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl text-sm shadow-md transition-all">
-                                                    {t('partners_merchant_form_btn')}
+                                                <button
+                                                    type="submit"
+                                                    disabled={partnerLoading}
+                                                    className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:text-slate-500 text-white font-bold py-4 rounded-xl text-sm shadow-md transition-all flex items-center justify-center gap-2"
+                                                >
+                                                    {partnerLoading ? (
+                                                        <span className="inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                                    ) : (
+                                                        <span>{t('partners_merchant_form_btn')}</span>
+                                                    )}
                                                 </button>
                                             </form>
                                         )}
@@ -1733,10 +1950,10 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                         </div>
 
                                         <h3 className="text-2xl sm:text-3xl font-black text-slate-900 leading-tight text-center mb-2">
-                                            Kurye Başvuru Formu
+                                            {t('partners_courier_form_title')}
                                         </h3>
                                         <p className="text-slate-400 text-xs sm:text-sm text-center mb-8 font-medium">
-                                            Hoppa ailesine katılarak yeşil ve akıllı lojistik ağının bir parçası ol.
+                                            {t('courier_form_subtitle')}
                                         </p>
 
                                         {courierSubmitted ? (
@@ -1759,7 +1976,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
 
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                     <div className="space-y-1.5">
-                                                        <label className="text-xs font-bold text-slate-500 block">Adınız Soyadınız</label>
+                                                        <label className="text-xs font-bold text-slate-500 block">{t('partners_courier_form_name')}</label>
                                                         <div className="relative">
                                                             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
                                                                 <User size={18} />
@@ -1769,13 +1986,13 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                                 type="text" 
                                                                 value={courierForm.name}
                                                                 onChange={(e) => setCourierForm(prev => ({ ...prev, name: e.target.value }))}
-                                                                placeholder="Örn: Can Demir" 
-                                                                className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-105 rounded-2xl text-sm focus:outline-none focus:border-emerald-600 focus:bg-white transition-all text-slate-800 placeholder-slate-400 font-medium" 
+                                                                placeholder={t('partners_courier_form_name_placeholder')} 
+                                                                className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:border-emerald-600 focus:bg-white transition-all text-slate-800 placeholder-slate-400 font-medium" 
                                                             />
                                                         </div>
                                                     </div>
                                                     <div className="space-y-1.5">
-                                                        <label className="text-xs font-bold text-slate-500 block">Telefon Numaranız</label>
+                                                        <label className="text-xs font-bold text-slate-500 block">{t('partners_courier_form_phone')}</label>
                                                         <div className="relative">
                                                             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
                                                                 <Phone size={18} />
@@ -1785,8 +2002,8 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                                 type="tel" 
                                                                 value={courierForm.phone}
                                                                 onChange={(e) => setCourierForm(prev => ({ ...prev, phone: e.target.value }))}
-                                                                placeholder="Örn: 0533..." 
-                                                                className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-105 rounded-2xl text-sm focus:outline-none focus:border-emerald-600 focus:bg-white transition-all text-slate-800 placeholder-slate-400 font-medium" 
+                                                                placeholder={t('partners_courier_form_phone_placeholder')} 
+                                                                className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:border-emerald-600 focus:bg-white transition-all text-slate-800 placeholder-slate-400 font-medium" 
                                                             />
                                                         </div>
                                                     </div>
@@ -1794,8 +2011,8 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
 
                                                 <div className="space-y-1.5">
                                                     <div className="flex justify-between items-center">
-                                                        <label className="text-xs font-bold text-slate-500 block">E-posta Adresiniz</label>
-                                                        <span className="text-[9px] font-bold text-slate-450 bg-slate-100 px-2 py-0.5 rounded-md tracking-wider">İSTEĞE BAĞLI</span>
+                                                        <label className="text-xs font-bold text-slate-500 block">{t('courier_form_email')}</label>
+                                                        <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md tracking-wider">{t('courier_form_optional')}</span>
                                                     </div>
                                                     <div className="relative">
                                                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
@@ -1805,25 +2022,25 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                             type="email" 
                                                             value={courierForm.email}
                                                             onChange={(e) => setCourierForm(prev => ({ ...prev, email: e.target.value }))}
-                                                            placeholder="Örn: can.demir@email.com (Sözleşme ve evrak gönderimleri için)" 
-                                                            className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-105 rounded-2xl text-sm focus:outline-none focus:border-emerald-600 focus:bg-white transition-all text-slate-800 placeholder-slate-400 font-medium" 
+                                                            placeholder={t('courier_form_email_placeholder')} 
+                                                            className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:border-emerald-600 focus:bg-white transition-all text-slate-800 placeholder-slate-400 font-medium" 
                                                         />
                                                     </div>
                                                 </div>
 
                                                 <div className="space-y-1.5 relative">
-                                                    <label className="text-xs font-bold text-slate-500 block">Çalışmak İstediğiniz Bölge</label>
+                                                    <label className="text-xs font-bold text-slate-500 block">{t('courier_form_district')}</label>
                                                     <div className="relative">
                                                         <button
                                                             type="button"
                                                             onClick={() => setShowDistrictDropdown(!showDistrictDropdown)}
-                                                            className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-105 rounded-2xl text-sm focus:outline-none focus:border-emerald-600 focus:bg-white transition-all text-left flex items-center justify-between font-medium text-slate-700 hover:bg-slate-100/30"
+                                                            className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:border-emerald-600 focus:bg-white transition-all text-left flex items-center justify-between font-medium text-slate-700 hover:bg-slate-100/30"
                                                         >
                                                             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
                                                                 <MapPin size={18} />
                                                             </div>
                                                             <span className={courierForm.district ? 'text-slate-800 font-semibold' : 'text-slate-400'}>
-                                                                {courierForm.district || 'Bölge seçiniz...'}
+                                                                {courierForm.district || t('courier_form_district_placeholder')}
                                                             </span>
                                                             <ChevronDown size={18} className={`text-slate-400 transition-transform ${showDistrictDropdown ? 'rotate-180' : ''}`} />
                                                         </button>
@@ -1857,7 +2074,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                 </div>
 
                                                 <div className="space-y-2">
-                                                    <label className="text-xs font-bold text-slate-500 block">Araç Tipi</label>
+                                                    <label className="text-xs font-bold text-slate-500 block">{t('partners_courier_form_vehicle')}</label>
                                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                                         {vehicleOptions.map(item => {
                                                             const label = locale === 'tr' ? item.nameTr : locale === 'ru' ? item.nameRu : item.nameEn;
@@ -1892,7 +2109,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                     {/* Sürüş Ehliyeti Sorusu (Koşullu) */}
                                                     {courierForm.vehicle !== 'BICYCLE' && (
                                                         <div className="space-y-2">
-                                                            <label className="text-xs font-bold text-slate-500 block">Sürüş Ehliyetiniz Var mı?</label>
+                                                            <label className="text-xs font-bold text-slate-500 block">{t('courier_form_license_q')}</label>
                                                             <div className="grid grid-cols-2 gap-3">
                                                                 <button
                                                                     type="button"
@@ -1900,10 +2117,10 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                                     className={`py-3.5 text-xs sm:text-sm font-semibold rounded-xl border text-center transition-all ${
                                                                         courierForm.license === 'YES'
                                                                             ? 'border-emerald-600 bg-emerald-50 text-emerald-700 shadow-sm font-bold'
-                                                                            : 'border-slate-105 bg-slate-50/30 text-slate-600 hover:border-slate-200'
+                                                                            : 'border-slate-200 bg-slate-50/30 text-slate-600 hover:border-slate-300'
                                                                     }`}
                                                                 >
-                                                                    Evet, Var
+                                                                    {t('courier_form_yes')}
                                                                 </button>
                                                                 <button
                                                                     type="button"
@@ -1911,10 +2128,10 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                                     className={`py-3.5 text-xs sm:text-sm font-semibold rounded-xl border text-center transition-all ${
                                                                         courierForm.license === 'NO'
                                                                             ? 'border-orange-500 bg-orange-50 text-orange-700 shadow-sm font-bold'
-                                                                            : 'border-slate-105 bg-slate-50/30 text-slate-600 hover:border-slate-200'
+                                                                            : 'border-slate-200 bg-slate-50/30 text-slate-600 hover:border-slate-300'
                                                                     }`}
                                                                 >
-                                                                    Hayır, Yok
+                                                                    {t('courier_form_no')}
                                                                 </button>
                                                             </div>
                                                         </div>
@@ -1922,29 +2139,29 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
 
                                                     {/* Çalışma Şekli Tercihi (Her Zaman Görünür) */}
                                                     <div className="space-y-2">
-                                                        <label className="text-xs font-bold text-slate-500 block">Çalışma Şekli Tercihi</label>
+                                                        <label className="text-xs font-bold text-slate-500 block">{t('courier_form_work_style')}</label>
                                                         <div className="grid grid-cols-2 gap-3">
                                                             <button
                                                                 type="button"
                                                                 onClick={() => setCourierForm(prev => ({ ...prev, workingStyle: 'FULL_TIME' }))}
                                                                 className={`py-3.5 text-xs sm:text-sm font-semibold rounded-xl border text-center transition-all ${
                                                                     courierForm.workingStyle === 'FULL_TIME'
-                                                                        ? 'border-emerald-600 bg-emerald-50 text-emerald-750 shadow-sm font-bold'
-                                                                        : 'border-slate-105 bg-slate-50/30 text-slate-600 hover:border-slate-200'
+                                                                        ? 'border-emerald-600 bg-emerald-50 text-emerald-700 shadow-sm font-bold'
+                                                                        : 'border-slate-200 bg-slate-50/30 text-slate-600 hover:border-slate-300'
                                                                 }`}
                                                             >
-                                                                Full-Time
+                                                                {t('courier_form_full_time')}
                                                             </button>
                                                             <button
                                                                 type="button"
                                                                 onClick={() => setCourierForm(prev => ({ ...prev, workingStyle: 'PART_TIME' }))}
                                                                 className={`py-3.5 text-xs sm:text-sm font-semibold rounded-xl border text-center transition-all ${
                                                                     courierForm.workingStyle === 'PART_TIME'
-                                                                        ? 'border-emerald-600 bg-emerald-50 text-emerald-750 shadow-sm font-bold'
-                                                                        : 'border-slate-105 bg-slate-50/30 text-slate-600 hover:border-slate-200'
+                                                                        ? 'border-emerald-600 bg-emerald-50 text-emerald-700 shadow-sm font-bold'
+                                                                        : 'border-slate-200 bg-slate-50/30 text-slate-600 hover:border-slate-300'
                                                                 }`}
                                                             >
-                                                                Part-Time
+                                                                {t('courier_form_part_time')}
                                                             </button>
                                                         </div>
                                                     </div>
@@ -1959,7 +2176,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                             <line x1="12" y1="17" x2="12.01" y2="17"/>
                                                         </svg>
                                                         <span className="text-xs sm:text-sm font-semibold text-amber-800 leading-relaxed">
-                                                            Seçtiğiniz motorlu aracı kullanabilmek için geçerli bir sürüş ehliyetinizin olması zorunludur.
+                                                            {t('courier_form_license_warn')}
                                                         </span>
                                                     </div>
                                                 )}
@@ -1977,8 +2194,8 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                                         <span className="inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
                                                     ) : (
                                                         <>
-                                                            <span>Kurye Başvurusunu Gönder</span>
-                                                            <span className="text-sm">▷</span>
+                                                            <span>{t('partners_courier_form_btn')}</span>
+                                                            <Play size={14} className="fill-current" />
                                                         </>
                                                     )}
                                                 </button>
@@ -2044,26 +2261,61 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                                     </p>
                                 </div>
                             ) : (
-                                <form onSubmit={(e) => { e.preventDefault(); setContactSubmitted(true); }} className="space-y-4">
+                                <form onSubmit={handleContactSubmit} className="space-y-4">
                                     <h4 className="font-extrabold text-lg text-slate-900 mb-2">{t('contact_form_title')}</h4>
+
+                                    {contactError && (
+                                        <div className="text-red-600 text-xs font-semibold bg-red-50 p-3 rounded-xl border border-red-100">
+                                            {contactError}
+                                        </div>
+                                    )}
 
                                     <div>
                                         <label className="text-xs font-bold text-slate-500 mb-1.5 block">{t('contact_form_name')}</label>
-                                        <input required type="text" placeholder={t('contact_form_name_placeholder')} className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600" />
+                                        <input
+                                            required
+                                            type="text"
+                                            value={contactForm.name}
+                                            onChange={(e) => setContactForm((prev) => ({ ...prev, name: e.target.value }))}
+                                            placeholder={t('contact_form_name_placeholder')}
+                                            className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600"
+                                        />
                                     </div>
 
                                     <div>
                                         <label className="text-xs font-bold text-slate-500 mb-1.5 block">{t('contact_form_email')}</label>
-                                        <input required type="email" placeholder={t('contact_form_email_placeholder')} className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600" />
+                                        <input
+                                            required
+                                            type="email"
+                                            value={contactForm.email}
+                                            onChange={(e) => setContactForm((prev) => ({ ...prev, email: e.target.value }))}
+                                            placeholder={t('contact_form_email_placeholder')}
+                                            className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600"
+                                        />
                                     </div>
 
                                     <div>
                                         <label className="text-xs font-bold text-slate-500 mb-1.5 block">{t('contact_form_msg')}</label>
-                                        <textarea required rows={4} placeholder={t('contact_form_msg_placeholder')} className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600"></textarea>
+                                        <textarea
+                                            required
+                                            rows={4}
+                                            value={contactForm.message}
+                                            onChange={(e) => setContactForm((prev) => ({ ...prev, message: e.target.value }))}
+                                            placeholder={t('contact_form_msg_placeholder')}
+                                            className="w-full bg-slate-50 border border-slate-100 rounded-xl p-3 text-sm focus:outline-none focus:border-emerald-600"
+                                        />
                                     </div>
 
-                                    <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl text-sm shadow-md transition-all">
-                                        {t('contact_form_btn')}
+                                    <button
+                                        type="submit"
+                                        disabled={contactLoading}
+                                        className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:text-slate-500 text-white font-bold py-4 rounded-xl text-sm shadow-md transition-all flex items-center justify-center gap-2"
+                                    >
+                                        {contactLoading ? (
+                                            <span className="inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        ) : (
+                                            <span>{t('contact_form_btn')}</span>
+                                        )}
                                     </button>
                                 </form>
                             )}
@@ -2082,7 +2334,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                         {/* Logo ve Hakkında */}
                         <div className="space-y-4 text-left">
                             <div className="flex items-center cursor-pointer" onClick={() => { setSimScreen('splash'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
-                                <img src="/logo-color.png" alt="Hoppa Logo" className="h-10 w-auto object-contain brightness-0 invert" />
+                                <img src="/logo-full-dark.svg" alt="Hoppa" className="h-9 w-auto object-contain" />
                             </div>
                             <p className="text-xs text-slate-400 leading-relaxed">
                                 {t('footer_desc')}
@@ -2091,7 +2343,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
 
                         {/* Hızlı Linkler */}
                         <div className="text-left space-y-3">
-                            <h4 className="text-xs font-extrabold uppercase tracking-widest text-slate-400">{t('footer_corporate')}</h4>
+                            <h4 className="text-xs font-extrabold tracking-widest text-slate-400">{t('footer_corporate')}</h4>
                             <ul className="space-y-2 text-xs text-slate-300">
                                 <li><a href="#features" className="hover:text-emerald-400 transition-colors">{t('footer_link_who')}</a></li>
                                 <li><a href="#partners" onClick={() => setActiveTab('user')} className="hover:text-emerald-400 transition-colors">{t('footer_link_merchant')}</a></li>
@@ -2102,7 +2354,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
 
                         {/* İletişim Bilgileri */}
                         <div className="text-left space-y-3">
-                            <h4 className="text-xs font-extrabold uppercase tracking-widest text-slate-400">{t('footer_contact')}</h4>
+                            <h4 className="text-xs font-extrabold tracking-widest text-slate-400">{t('footer_contact')}</h4>
                             <ul className="space-y-2 text-xs text-slate-300">
                                 <li>{t('footer_contact_support')}</li>
                                 <li>{t('footer_contact_pr')}</li>
@@ -2113,18 +2365,24 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
 
                         {/* Mobil Mağazalar */}
                         <div className="text-left space-y-3">
-                            <h4 className="text-xs font-extrabold uppercase tracking-widest text-slate-400">{t('footer_download')}</h4>
+                            <h4 className="text-xs font-extrabold tracking-widest text-slate-400">{t('footer_download')}</h4>
                             <div className="space-y-2">
                                 <a
                                     href="#interactive-demo"
-                                    className="bg-slate-800 hover:bg-slate-750 text-white text-[10px] px-4 py-2.5 rounded-xl font-bold flex items-center justify-center space-x-2 border border-slate-700"
+                                    className="bg-slate-800 hover:bg-slate-700 text-white text-xs px-4 py-2.5 rounded-xl font-bold flex items-center justify-center space-x-2 border border-slate-700 transition-colors"
                                 >
+                                    <svg aria-hidden="true" className="w-4 h-4 shrink-0 fill-current" viewBox="0 0 24 24">
+                                        <path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.945 1.34-1.94 2.71-3.43 2.71-1.517 0-1.9-.88-3.63-.88-1.698 0-2.302.91-3.67.91-1.377 0-2.332-1.26-3.428-2.8-1.287-1.82-2.323-4.63-2.323-7.28 0-4.28 2.797-6.55 5.552-6.55 1.448 0 2.675.95 3.6.95.865 0 2.222-1.01 3.902-1.01.613 0 2.886.06 4.374 2.19-.13.09-2.383 1.37-2.383 4.19 0 3.26 2.854 4.42 2.955 4.45z" />
+                                    </svg>
                                     <span>{t('footer_download_ios')}</span>
                                 </a>
                                 <a
                                     href="#interactive-demo"
-                                    className="bg-slate-800 hover:bg-slate-750 text-white text-[10px] px-4 py-2.5 rounded-xl font-bold flex items-center justify-center space-x-2 border border-slate-700"
+                                    className="bg-slate-800 hover:bg-slate-700 text-white text-xs px-4 py-2.5 rounded-xl font-bold flex items-center justify-center space-x-2 border border-slate-700 transition-colors"
                                 >
+                                    <svg aria-hidden="true" className="w-4 h-4 shrink-0 fill-current" viewBox="0 0 24 24">
+                                        <path d="M3.61 1.814L13.793 12 3.61 22.186a1.48 1.48 0 0 1-.486-1.106V2.92c0-.436.185-.836.486-1.106zm1.425-.863L16.32 7.49l-2.613 2.613L5.035.951zm12.66 7.313l3.153 1.827c.868.503.868 1.315 0 1.818l-3.153 1.827-2.893-2.736 2.893-2.736zm-4.015 3.795L5.035 23.049l8.672-9.152 2.613 2.613-2.64-4.451z" />
+                                    </svg>
                                     <span>{t('footer_download_android')}</span>
                                 </a>
                             </div>
@@ -2182,7 +2440,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                             onClick={(e) => e.stopPropagation()}
                         >
                             {/* Header */}
-                            <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-gradient-to-r from-slate-900 via-slate-900 to-slate-850">
+                            <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-gradient-to-r from-slate-900 via-slate-900 to-slate-800">
                                 <div className="flex items-center space-x-3">
                                     <div className="p-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
                                         <ShieldCheck className="w-6 h-6 text-emerald-500" />
@@ -2205,7 +2463,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                             </div>
 
                             {/* Content */}
-                            <div className="p-6 overflow-y-auto space-y-6 text-sm leading-relaxed text-slate-350 legal-scrollbar bg-slate-900/50">
+                            <div className="p-6 overflow-y-auto space-y-6 text-sm leading-relaxed text-slate-300 legal-scrollbar bg-slate-900/50">
                                 {doc.sections.map((section, idx) => (
                                     <div key={idx} className="space-y-3">
                                         {section.title && (
@@ -2225,7 +2483,7 @@ export default function App({ initialTab = 'user' }: { initialTab?: string }) {
                             </div>
 
                             {/* Footer */}
-                            <div className="px-6 py-4 bg-slate-950/80 border-t border-slate-850 flex items-center justify-between text-[10px] md:text-xs text-slate-500">
+                            <div className="px-6 py-4 bg-slate-950/80 border-t border-slate-800 flex items-center justify-between text-[10px] md:text-xs text-slate-500">
                                 <span className="font-semibold tracking-wide">Hoppa Technology and Consultant Limited</span>
                                 <button
                                     onClick={() => setActiveLegalDoc(null)}

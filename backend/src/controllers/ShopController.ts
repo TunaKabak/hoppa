@@ -3,7 +3,58 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+export interface ShopBankInfo {
+  iban: string;
+  bankName: string;
+  accountHolder: string;
+  updatedAt?: string;
+}
+
 export class ShopController {
+  private async getShopCommissionContext(shopId: string) {
+    const now = new Date();
+    const activePromotions = await prisma.shopPromotion.findMany({
+      where: {
+        shopId,
+        isActive: true,
+        startDate: { lte: now },
+        endDate: { gte: now }
+      }
+    });
+
+    const hasMainScreen = activePromotions.some(p => p.promoType === "MAIN_SCREEN");
+    const hasCategory = activePromotions.some(p => p.promoType === "CATEGORY");
+
+    let activeCommissionRate = 0.05;
+    if (hasMainScreen) {
+      activeCommissionRate = 0.15;
+    } else if (hasCategory) {
+      activeCommissionRate = 0.10;
+    }
+
+    return { activeCommissionRate, activePromotions };
+  }
+
+  private async getShopBankInfo(shopId: string): Promise<ShopBankInfo | null> {
+    try {
+      const record = await prisma.systemConfig.findUnique({
+        where: { key: `shop_bank:${shopId}` }
+      });
+      if (!record?.value) return null;
+      const parsed = JSON.parse(record.value) as Partial<ShopBankInfo>;
+      if (!parsed.iban || !parsed.bankName || !parsed.accountHolder) return null;
+      return {
+        iban: String(parsed.iban),
+        bankName: String(parsed.bankName),
+        accountHolder: String(parsed.accountHolder),
+        updatedAt: parsed.updatedAt ? String(parsed.updatedAt) : undefined
+      };
+    } catch (err) {
+      console.error("[ShopController.getShopBankInfo] Parse error:", err);
+      return null;
+    }
+  }
+
   async getMyShop(req: Request, res: Response) {
     try {
       const isSuperAdmin = req.user?.role === "super_admin" || req.user?.role === "admin";
@@ -27,25 +78,7 @@ export class ShopController {
       }
 
       if (shop) {
-        const now = new Date();
-        const activePromotions = await prisma.shopPromotion.findMany({
-          where: {
-            shopId: shop.id,
-            isActive: true,
-            startDate: { lte: now },
-            endDate: { gte: now }
-          }
-        });
-
-        const hasMainScreen = activePromotions.some(p => p.promoType === "MAIN_SCREEN");
-        const hasCategory = activePromotions.some(p => p.promoType === "CATEGORY");
-
-        let activeCommissionRate = 0.05;
-        if (hasMainScreen) {
-          activeCommissionRate = 0.15;
-        } else if (hasCategory) {
-          activeCommissionRate = 0.10;
-        }
+        const { activeCommissionRate, activePromotions } = await this.getShopCommissionContext(shop.id);
 
         const enrichedShop = {
           ...shop,
@@ -243,51 +276,299 @@ export class ShopController {
       const shop = await prisma.shop.findUnique({ where: { merchantId } });
       if (!shop) return res.status(404).json({ error: true, message: "Dükkan bulunamadı." });
 
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      const rangeRaw = typeof req.query.range === "string" ? req.query.range.trim().toLowerCase() : "week";
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
 
-      const allOrders = await prisma.order.findMany({
-        where: { shopId: shop.id }
-      });
+      const periodStart = new Date(todayStart);
+      if (rangeRaw === "month") {
+        periodStart.setDate(periodStart.getDate() - 29);
+      } else if (rangeRaw !== "today") {
+        periodStart.setDate(periodStart.getDate() - 6);
+      }
 
-      const todayOrders = allOrders.filter(o => o.createdAt >= today && o.status !== "CANCELLED");
+      const [allOrders, periodItems, commissionCtx, bankInfo] = await Promise.all([
+        prisma.order.findMany({
+          where: { shopId: shop.id },
+          select: {
+            id: true,
+            totalAmount: true,
+            deliveryFee: true,
+            status: true,
+            paymentStatus: true,
+            commissionRate: true,
+            commissionAmount: true,
+            createdAt: true
+          }
+        }),
+        prisma.orderItem.findMany({
+          where: {
+            order: {
+              shopId: shop.id,
+              status: { not: "CANCELLED" },
+              createdAt: { gte: periodStart }
+            }
+          },
+          select: {
+            productId: true,
+            quantity: true,
+            unitPrice: true,
+            product: { select: { name: true } }
+          }
+        }),
+        this.getShopCommissionContext(shop.id),
+        this.getShopBankInfo(shop.id)
+      ]);
+
+      const todayOrders = allOrders.filter(o => o.createdAt >= todayStart && o.status !== "CANCELLED");
       const todayOrderCount = todayOrders.length;
 
-      const totalRevenue = allOrders
-        .filter(o => o.paymentStatus === "SUCCESS")
-        .reduce((sum, o) => sum + Number(o.totalAmount), 0);
+      const periodOrders = allOrders.filter(o => o.createdAt >= periodStart);
+      const periodNonCancelled = periodOrders.filter(o => o.status !== "CANCELLED");
+      const periodCancelledCount = periodOrders.length - periodNonCancelled.length;
 
-      const totalOrdersCount = allOrders.length;
-      const cancelledOrdersCount = allOrders.filter(o => o.status === "CANCELLED").length;
-      const cancelRate = totalOrdersCount > 0 ? (cancelledOrdersCount / totalOrdersCount) * 100 : 0;
+      const totalOrders = periodNonCancelled.length;
+      const totalRevenue = Number(
+        periodNonCancelled
+          .filter(o => o.paymentStatus === "SUCCESS" || o.status === "DELIVERED")
+          .reduce((sum, o) => sum + Number(o.totalAmount), 0)
+          .toFixed(2)
+      );
 
-      // Haftalık Trend: Son 7 günün başarılı siparişleri
-      const weeklyTrend = [];
+      const cancelRate = periodOrders.length > 0
+        ? Number(((periodCancelledCount / periodOrders.length) * 100).toFixed(1))
+        : 0;
+      const acceptanceRate = periodOrders.length > 0
+        ? Number((((periodOrders.length - periodCancelledCount) / periodOrders.length) * 100).toFixed(1))
+        : null;
+
+      const liveFunnel = {
+        pending: allOrders.filter(o => o.status === "PENDING").length,
+        preparing: allOrders.filter(o => o.status === "PREPARING").length,
+        onTheWay: allOrders.filter(o => o.status === "ON_THE_WAY" || o.status === "READY_FOR_PICKUP").length,
+        deliveredToday: allOrders.filter(o => o.createdAt >= todayStart && o.status === "DELIVERED").length
+      };
+
+      // Son 7 günün sipariş ve ciro trendi
+      const weeklyTrend: Array<{ date: string; label: string; orderCount: number; revenue: number }> = [];
       for (let i = 6; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        d.setHours(0, 0, 0, 0);
+        const d = new Date(todayStart);
+        d.setDate(todayStart.getDate() - i);
         const nextD = new Date(d);
         nextD.setDate(d.getDate() + 1);
 
-        const dailyCount = allOrders.filter(
+        const dailyNonCancelled = allOrders.filter(
           o => o.createdAt >= d && o.createdAt < nextD && o.status !== "CANCELLED"
-        ).length;
+        );
+        const dailyRevenue = dailyNonCancelled
+          .filter(o => o.paymentStatus === "SUCCESS" || o.status === "DELIVERED")
+          .reduce((sum, o) => sum + Number(o.totalAmount), 0);
 
-        weeklyTrend.push({ date: d.toISOString().split('T')[0], orderCount: dailyCount });
+        weeklyTrend.push({
+          date: d.toISOString().split("T")[0],
+          label: d.toLocaleDateString("tr-TR", { weekday: "short" }),
+          orderCount: dailyNonCancelled.length,
+          revenue: Number(dailyRevenue.toFixed(2))
+        });
       }
+
+      // En çok satan 5 ürün
+      const productMap = new Map<string, { name: string; count: number; revenue: number }>();
+      for (const item of periodItems) {
+        const qty = Number(item.quantity) || 0;
+        const lineRevenue = qty * Number(item.unitPrice || 0);
+        const current = productMap.get(item.productId);
+        if (current) {
+          current.count += qty;
+          current.revenue += lineRevenue;
+        } else {
+          productMap.set(item.productId, {
+            name: item.product?.name || "Ürün",
+            count: qty,
+            revenue: lineRevenue
+          });
+        }
+      }
+
+      const topProducts = Array.from(productMap.values())
+        .sort((a, b) => b.revenue - a.revenue || b.count - a.count)
+        .slice(0, 5)
+        .map(p => ({
+          name: p.name,
+          count: Math.round(p.count),
+          revenue: Number(p.revenue.toFixed(2))
+        }));
 
       return res.status(200).json({
         error: false,
         data: {
+          range: rangeRaw,
           todayOrderCount,
+          totalOrders,
           totalRevenue,
           cancelRate,
-          weeklyTrend
+          acceptanceRate,
+          avgDeliveryTimeLabel: shop.deliveryTime || null,
+          activeCommissionRate: commissionCtx.activeCommissionRate,
+          liveFunnel,
+          weeklyTrend,
+          topProducts,
+          bankInfo
         }
       });
     } catch (error: any) {
       return res.status(500).json({ error: true, message: error.message });
+    }
+  }
+
+  async getFinanceOverview(req: Request, res: Response) {
+    try {
+      const merchantId = req.user?.id;
+      if (!merchantId) return res.status(401).json({ error: true, message: "Kullanıcı bilgisi eksik." });
+
+      const shop = await prisma.shop.findUnique({
+        where: { merchantId },
+        select: { id: true, name: true }
+      });
+      if (!shop) return res.status(404).json({ error: true, message: "Dükkan bulunamadı." });
+
+      const [commissionCtx, bankInfo, orders] = await Promise.all([
+        this.getShopCommissionContext(shop.id),
+        this.getShopBankInfo(shop.id),
+        prisma.order.findMany({
+          where: { shopId: shop.id },
+          orderBy: { createdAt: "desc" },
+          take: 200,
+          select: {
+            id: true,
+            totalAmount: true,
+            deliveryFee: true,
+            status: true,
+            paymentMethod: true,
+            paymentStatus: true,
+            commissionRate: true,
+            commissionAmount: true,
+            createdAt: true
+          }
+        })
+      ]);
+
+      let grossRevenue = 0;
+      let commissionTotal = 0;
+      let settledOrderCount = 0;
+
+      const settlements = orders.map((order) => {
+        const gross = Number(order.totalAmount || 0);
+        const orderRate = Number(order.commissionRate) > 0
+          ? Number(order.commissionRate)
+          : commissionCtx.activeCommissionRate;
+        const calculatedCommission = Number(order.commissionAmount) > 0
+          ? Number(order.commissionAmount)
+          : Number((gross * orderRate).toFixed(2));
+        const net = Number(Math.max(0, gross - calculatedCommission).toFixed(2));
+        const isSettled = order.status !== "CANCELLED" && (order.paymentStatus === "SUCCESS" || order.status === "DELIVERED");
+
+        if (isSettled) {
+          grossRevenue += gross;
+          commissionTotal += calculatedCommission;
+          settledOrderCount += 1;
+        }
+
+        return {
+          id: order.id,
+          createdAt: order.createdAt.toISOString(),
+          status: order.status,
+          paymentMethod: order.paymentMethod,
+          paymentStatus: order.paymentStatus,
+          grossAmount: Number(gross.toFixed(2)),
+          commissionRate: orderRate,
+          commissionAmount: calculatedCommission,
+          netAmount: net,
+          isSettled
+        };
+      });
+
+      return res.status(200).json({
+        error: false,
+        data: {
+          shopId: shop.id,
+          shopName: shop.name,
+          activeCommissionRate: commissionCtx.activeCommissionRate,
+          activePromotions: commissionCtx.activePromotions,
+          grossRevenue: Number(grossRevenue.toFixed(2)),
+          commissionTotal: Number(commissionTotal.toFixed(2)),
+          netPayout: Number(Math.max(0, grossRevenue - commissionTotal).toFixed(2)),
+          settledOrderCount,
+          bankInfo,
+          settlements
+        }
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Finansal veriler alınamadı.";
+      console.error("[ShopController.getFinanceOverview] Error:", error);
+      return res.status(500).json({ error: true, message });
+    }
+  }
+
+  async updateBankDetails(req: Request, res: Response) {
+    try {
+      const merchantId = req.user?.id;
+      if (!merchantId) return res.status(401).json({ error: true, message: "Kullanıcı bilgisi eksik." });
+
+      const shop = await prisma.shop.findUnique({
+        where: { merchantId },
+        select: { id: true }
+      });
+      if (!shop) return res.status(404).json({ error: true, message: "Dükkan bulunamadı." });
+
+      const rawIban = typeof req.body?.iban === "string" ? req.body.iban.replace(/\s+/g, "").toUpperCase() : "";
+      const bankName = typeof req.body?.bankName === "string" ? req.body.bankName.trim() : "";
+      const accountHolder = typeof req.body?.accountHolder === "string" ? req.body.accountHolder.trim() : "";
+
+      if (!rawIban) {
+        return res.status(400).json({ error: true, message: "IBAN numarası zorunludur." });
+      }
+      if (rawIban.startsWith("TR") && !/^TR\d{24}$/.test(rawIban)) {
+        return res.status(400).json({
+          error: true,
+          message: "TR IBAN numarası 26 karakter olmalıdır (TR + 24 rakam)."
+        });
+      }
+      if (!/^[A-Z]{2}[0-9A-Z]{14,32}$/.test(rawIban)) {
+        return res.status(400).json({
+          error: true,
+          message: "Geçerli bir IBAN formatı giriniz (Örn: TR12 0006 ...)."
+        });
+      }
+      if (bankName.length < 2 || bankName.length > 120) {
+        return res.status(400).json({ error: true, message: "Banka adı en az 2 karakter olmalıdır." });
+      }
+      if (accountHolder.length < 3 || accountHolder.length > 140) {
+        return res.status(400).json({ error: true, message: "Hesap sahibi / ünvan en az 3 karakter olmalıdır." });
+      }
+
+      const payload: ShopBankInfo = {
+        iban: rawIban,
+        bankName,
+        accountHolder,
+        updatedAt: new Date().toISOString()
+      };
+
+      await prisma.systemConfig.upsert({
+        where: { key: `shop_bank:${shop.id}` },
+        update: { value: JSON.stringify(payload) },
+        create: { key: `shop_bank:${shop.id}`, value: JSON.stringify(payload) }
+      });
+
+      return res.status(200).json({
+        error: false,
+        message: "Kurumsal banka ve IBAN bilgileriniz güncellendi.",
+        data: payload
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Banka bilgileri kaydedilemedi.";
+      console.error("[ShopController.updateBankDetails] Error:", error);
+      return res.status(500).json({ error: true, message });
     }
   }
 

@@ -1,16 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-    <rect width="64" height="64" rx="18" fill="url(#bg_world)"/>
-    <!-- Noodle Box / Taco -->
-    <path d="M18 24H46L42 50H22L18 24Z" fill="#E53935" stroke="#C62828" stroke-width="1.8"/>
-    <path d="M22 24L32 30L42 24" fill="#FFCDD2"/>
-    <!-- Noodles spilling -->
-    <path d="M26 20C28 16 34 16 36 22M30 18C32 14 38 14 40 20" stroke="#FFD54F" stroke-width="2.5" stroke-linecap="round"/>
-    <!-- Chopsticks -->
-    <path d="M16 12L42 34M24 10L46 32" stroke="#8D6E63" stroke-width="2" stroke-linecap="round"/>
-    <defs>
-      <linearGradient id="bg_world" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
-        <stop stop-color="#EDE7F6"/>
-        <stop offset="1" stop-color="#B39DDB"/>
-      </linearGradient>
-    </defs>
-  </svg>
+  <defs>
+    <linearGradient id="noodle_box" x1="16" y1="24" x2="48" y2="54" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F87171"/>
+      <stop offset="100%" stop-color="#DC2626"/>
+    </linearGradient>
+  </defs>
+  <!-- Chopsticks -->
+  <path d="M18 11L40 27M27 9L45 27" stroke="#92400E" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- Noodles Mound -->
+  <path d="M22 25C24 19 30 19 32 23C34 19 40 19 42 25" fill="#FDE047" stroke="#D97706" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Takeout Box -->
+  <path d="M16 25H48L43.5 52C43.2 53.2 42.2 54 41 54H23C21.8 54 20.8 53.2 20.5 52L16 25Z" fill="url(#noodle_box)" stroke="#991B1B" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="M20 25L32 32L44 25" fill="#FECACA" stroke="#991B1B" stroke-width="1.4" stroke-linejoin="round"/>
+  <circle cx="32" cy="42" r="5" fill="#FFFFFF" fill-opacity="0.22"/>
+</svg>

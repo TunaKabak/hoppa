@@ -1,5 +1,4 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-    <rect width="64" height="64" rx="18" fill="url(#bg_salad)"/>
     <!-- Bowl -->
     <path d="M12 28C12 42 20 50 32 50C44 50 52 42 52 28H12Z" fill="#FFF8E1" stroke="#8D6E63" stroke-width="2"/>
     <!-- Salad Leaves -->
@@ -10,10 +9,4 @@
     <circle cx="40" cy="24" r="3" fill="#E53935"/>
     <ellipse cx="32" cy="24" rx="3.5" ry="4.5" fill="#9CCC65"/>
     <circle cx="32" cy="24" r="1.8" fill="#558B2F"/>
-    <defs>
-      <linearGradient id="bg_salad" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
-        <stop stop-color="#E8F5E9"/>
-        <stop offset="1" stop-color="#A5D6A7"/>
-      </linearGradient>
-    </defs>
-  </svg>
+    </svg>

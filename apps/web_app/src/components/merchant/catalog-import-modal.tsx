@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Search, Plus, Check, Database, AlertCircle } from 'lucide-react';
 import { merchantApiFetch } from '../../utils/merchant-auth';
 import { useMerchantTheme } from '../../context/MerchantThemeContext';
+import { useToast } from './ToastContext';
 
 interface CatalogImportModalProps {
   onClose: () => void;
@@ -10,6 +11,7 @@ interface CatalogImportModalProps {
 
 export default function CatalogImportModal({ onClose, onSuccess }: CatalogImportModalProps) {
   const { theme } = useMerchantTheme();
+  const toast = useToast();
   const isDark = theme === 'dark';
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -73,7 +75,7 @@ export default function CatalogImportModal({ onClose, onSuccess }: CatalogImport
   const handleImport = async () => {
     const keys = Object.keys(selectedItems);
     if (keys.length === 0) {
-      alert('Lütfen içe aktarmak istediğiniz en az bir ürün seçiniz.');
+      toast.warning('Lütfen içe aktarmak istediğiniz en az bir ürün seçiniz.');
       return;
     }
 
@@ -202,7 +204,7 @@ export default function CatalogImportModal({ onClose, onSuccess }: CatalogImport
                       isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
                     }`}>
                       <img
-                        src={item.imageUrl || '/images/default-product.png'}
+                        src={item.imageUrl || '/images/default-product.svg'}
                         alt={item.name}
                         className="w-full h-full object-contain"
                       />

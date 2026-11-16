@@ -3,9 +3,9 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { 
   Package, ShoppingBag, BarChart3, Settings, LogOut, 
-  ChevronRight, ChevronLeft, Power, Menu, X, Sun, Moon, Tag, MapPin,
-  Bell, Shield, PanelLeftClose, PanelLeftOpen, User, ChevronDown,
-  Building2, Truck, ShieldCheck, LayoutGrid, Star, Megaphone, AlertTriangle
+  ChevronRight, Power, Menu, X, Sun, Moon, Tag, MapPin,
+  Bell, Shield, PanelLeftClose, PanelLeftOpen, User,
+  Building2, Truck, ShieldCheck, LayoutGrid, Star, Megaphone, AlertTriangle, Wallet
 } from 'lucide-react';
 import { 
   getMerchantProfile, getMerchantToken, clearMerchantAuth, merchantApiFetch, 
@@ -19,11 +19,13 @@ import {
 } from '../../utils/realtime-client';
 import { useMerchantTheme } from '../../context/MerchantThemeContext';
 import HoppaSelect from './HoppaSelect';
+import { useToast } from './ToastContext';
 
 export type MerchantNavTab =
   | 'products'
   | 'orders'
   | 'dashboard'
+  | 'finance'
   | 'campaigns'
   | 'settings'
   | 'promotions'
@@ -264,6 +266,7 @@ export default function MerchantLayout({
 }: MerchantLayoutProps) {
   const router = useRouter();
   const { theme, toggleTheme } = useMerchantTheme();
+  const toast = useToast();
   const isDark = theme === 'dark';
 
   const [profile, setProfile] = useState<MerchantProfile | null>(null);
@@ -280,6 +283,9 @@ export default function MerchantLayout({
   const realtimeClientRef = useRef<MerchantRealtimeClient | null>(null);
 
   const isAdmin = profile?.role === 'super_admin' || profile?.role === 'admin';
+  const isAdminPlatformPage =
+    activeTab.startsWith('admin-') || activeTab === 'service-zones';
+  const showShopToggle = !(isAdmin && isAdminPlatformPage && !selectedShopIdState);
   const selectedAdminShop = allShops.find((s) => s.id === selectedShopIdState);
   const activeShopDisplayName =
     selectedAdminShop?.name || profile?.businessName || 'Mağaza Yükleniyor...';
@@ -427,9 +433,14 @@ export default function MerchantLayout({
       const res = await merchantApiFetch('/merchant/shop/toggle-status', { method: 'POST' });
       if (res.data) {
         setIsShopActive(res.data.isActive);
+        toast.success(
+          res.data.isActive
+            ? 'Mağaza sipariş alımına açıldı.'
+            : 'Mağaza sipariş alımına kapatıldı.'
+        );
       }
     } catch (err: any) {
-      alert(err.message || 'Dükkan durumu değiştirilemedi.');
+      toast.error(err.message || 'Dükkan durumu değiştirilemedi.');
     } finally {
       setIsTogglingShop(false);
     }
@@ -445,6 +456,7 @@ export default function MerchantLayout({
     { id: 'products', label: 'Ürün & Menü Portalı', icon: Package, href: '/merchant/products' },
     { id: 'orders', label: 'Canlı Siparişler', icon: ShoppingBag, href: '/merchant/orders', badge: pendingOrdersCount },
     { id: 'dashboard', label: 'Performans & Analiz', icon: BarChart3, href: '/merchant/dashboard' },
+    { id: 'finance', label: 'Finans & Hakediş', icon: Wallet, href: '/merchant/finance' },
     { id: 'campaigns', label: 'Kampanya & Kupon', icon: Tag, href: '/merchant/campaigns' },
     { id: 'promotions', label: 'Sponsorlu Vitrin', icon: Megaphone, href: '/merchant/promotions' },
     { id: 'reviews', label: 'Müşteri Yorumları', icon: Star, href: '/merchant/reviews' },
@@ -460,6 +472,31 @@ export default function MerchantLayout({
         { id: 'service-zones', label: 'KKTC Hizmet Alanları', icon: MapPin, href: '/merchant/service-zones', adminOnly: true },
       ]
     : [];
+
+  if (!isAuthReady) {
+    return (
+      <>
+        <Head>
+          <title>{title} | Hoppa Satıcı Portalı</title>
+        </Head>
+        <div
+          className={`min-h-screen flex items-center justify-center p-6 font-sans ${
+            isDark ? 'bg-[#0B1120] text-slate-300' : 'bg-[#F8FAFC] text-slate-600'
+          }`}
+        >
+          <div className="flex flex-col items-center gap-3">
+            <img
+              src="/logo-mark.svg"
+              alt="Hoppa"
+              className="w-10 h-10 rounded-xl shadow-xs ring-1 ring-black/5"
+            />
+            <div className="w-6 h-6 border-2 border-[#FF6B00] border-t-transparent rounded-full animate-spin" />
+            <span className="text-xs font-bold text-slate-400">Oturum doğrulanıyor...</span>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -477,7 +514,7 @@ export default function MerchantLayout({
           <div className="flex items-center gap-3">
             {isAdmin ? (
               <img
-                src="/logo-square-orange.png"
+                src="/logo-mark.svg"
                 alt="Hoppa"
                 className="w-8 h-8 rounded-lg object-cover ring-1 ring-black/5 shrink-0"
               />
@@ -496,14 +533,18 @@ export default function MerchantLayout({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button 
+            <button
+              type="button"
               onClick={toggleTheme}
+              aria-label={isDark ? 'Aydınlık temaya geç' : 'Karanlık temaya geç'}
               className="p-2 rounded-xl border text-xs font-bold bg-slate-100 dark:bg-slate-800 dark:border-slate-700"
             >
               {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
             </button>
-            <button 
+            <button
+              type="button"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              aria-label={isMobileMenuOpen ? 'Menüyü kapat' : 'Menüyü aç'}
               className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white"
             >
               {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -530,13 +571,11 @@ export default function MerchantLayout({
             {/* Logo & Collapse Header */}
             {isSidebarCollapsed ? (
               <div className="flex flex-col items-center gap-2 pb-3.5 border-b border-slate-100 dark:border-slate-800">
-                <div className="p-0.5 rounded-xl bg-gradient-to-tr from-[#E95D22] to-[#FF8C00] shadow-sm shrink-0">
-                  <img 
-                    src="/logo-square-orange.png" 
-                    alt="Hoppa" 
-                    className="w-9 h-9 rounded-[10px] object-cover bg-white" 
-                  />
-                </div>
+                <img
+                  src="/logo-mark.svg"
+                  alt="Hoppa"
+                  className="w-9 h-9 rounded-xl object-cover shadow-xs ring-1 ring-black/5 shrink-0"
+                />
                 <button
                   onClick={toggleSidebarCollapse}
                   className="hidden md:flex p-1.5 rounded-lg text-slate-400 hover:text-[#FF6B00] hover:bg-orange-500/10 dark:hover:bg-slate-800 transition-colors"
@@ -548,13 +587,11 @@ export default function MerchantLayout({
             ) : (
               <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="p-0.5 rounded-xl bg-gradient-to-tr from-[#E95D22] to-[#FF8C00] shadow-sm shrink-0">
-                    <img 
-                      src="/logo-square-orange.png" 
-                      alt="Hoppa" 
-                      className="w-9 h-9 rounded-[10px] object-cover bg-white" 
-                    />
-                  </div>
+                  <img
+                    src="/logo-mark.svg"
+                    alt="Hoppa"
+                    className="w-9 h-9 rounded-xl object-cover shadow-xs ring-1 ring-black/5 shrink-0"
+                  />
                   <div className="min-w-0 transition-opacity duration-200">
                     <h1 className="font-black text-lg tracking-tight text-slate-900 dark:text-white leading-tight">
                       Hoppa <span className="text-[#FF6B00]">Satıcı</span>
@@ -618,67 +655,81 @@ export default function MerchantLayout({
               )
             )}
 
-            {/* Live Store Status Card */}
-            {!isSidebarCollapsed ? (
-              <div className={`border rounded-2xl p-3.5 transition-all ${
-                isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50/80 border-slate-200/80 shadow-xs'
-              }`}>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    Sipariş Alımı
-                  </span>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={isShopActive}
-                    aria-label="Sipariş alım durumu"
-                    onClick={handleToggleShopStatus}
-                    disabled={isTogglingShop}
-                    className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
-                      isShopActive
-                        ? 'bg-[#00A651]'
-                        : isDark
-                          ? 'bg-slate-700'
-                          : 'bg-slate-300'
+            {/* Live Store Status Card (Hidden on platform-level admin pages unless a specific shop is targeted) */}
+            {showShopToggle ? (
+              !isSidebarCollapsed ? (
+                <div className={`border rounded-2xl p-3.5 transition-all ${
+                  isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50/80 border-slate-200/80 shadow-xs'
+                }`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Sipariş Alımı
+                    </span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={isShopActive}
+                      aria-label="Sipariş alım durumu"
+                      onClick={handleToggleShopStatus}
+                      disabled={isTogglingShop}
+                      className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
+                        isShopActive
+                          ? 'bg-[#00A651]'
+                          : isDark
+                            ? 'bg-slate-700'
+                            : 'bg-slate-300'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow-xs transition-transform ${
+                          isShopActive ? 'translate-x-4' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                  <h4 className="font-extrabold text-xs truncate mt-2 text-slate-800 dark:text-slate-200">
+                    {activeShopDisplayName}
+                  </h4>
+                  <p
+                    className={`text-[11px] font-medium mt-0.5 ${
+                      isShopActive ? 'text-[#00A651] dark:text-emerald-400' : 'text-slate-400'
                     }`}
                   >
-                    <span
-                      className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow-xs transition-transform ${
-                        isShopActive ? 'translate-x-4' : 'translate-x-1'
-                      }`}
-                    />
+                    {isShopActive ? 'Sipariş alımına açık' : 'Sipariş alımı duraklatıldı'}
+                  </p>
+                </div>
+              ) : (
+                <div className="flex justify-center group relative">
+                  <button
+                    type="button"
+                    aria-label={isShopActive ? 'Mağaza açık, kapat' : 'Mağaza kapalı, aç'}
+                    onClick={handleToggleShopStatus}
+                    disabled={isTogglingShop}
+                    className={`p-2.5 rounded-xl border transition-all ${
+                      isShopActive
+                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500'
+                        : 'bg-rose-500/10 border-rose-500/30 text-rose-500'
+                    }`}
+                    title={isShopActive ? 'Mağaza Canlı (Sipariş Alıyor)' : 'Mağaza Kapalı'}
+                  >
+                    <Power className="w-4 h-4" />
                   </button>
+                  <div className="absolute left-full ml-2 px-2.5 py-1 bg-slate-900 text-white text-[11px] font-bold rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50">
+                    {isShopActive ? 'Mağaza: Açık' : 'Mağaza: Kapalı'}
+                  </div>
                 </div>
-                <h4 className="font-extrabold text-xs truncate mt-2 text-slate-800 dark:text-slate-200">
-                  {activeShopDisplayName}
-                </h4>
-                <p
-                  className={`text-[11px] font-medium mt-0.5 ${
-                    isShopActive ? 'text-[#00A651] dark:text-emerald-400' : 'text-slate-400'
-                  }`}
-                >
-                  {isShopActive ? 'Sipariş alımına açık' : 'Sipariş alımı duraklatıldı'}
-                </p>
-              </div>
-            ) : (
-              <div className="flex justify-center group relative">
-                <button
-                  onClick={handleToggleShopStatus}
-                  disabled={isTogglingShop}
-                  className={`p-2.5 rounded-xl border transition-all ${
-                    isShopActive
-                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500'
-                      : 'bg-rose-500/10 border-rose-500/30 text-rose-500'
-                  }`}
-                  title={isShopActive ? 'Mağaza Canlı (Sipariş Alıyor)' : 'Mağaza Kapalı'}
-                >
-                  <Power className="w-4 h-4" />
-                </button>
-                <div className="absolute left-full ml-2 px-2.5 py-1 bg-slate-900 text-white text-[11px] font-bold rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50">
-                  {isShopActive ? 'Mağaza: Açık' : 'Mağaza: Kapalı'}
+              )
+            ) : !isSidebarCollapsed ? (
+              <div className={`border rounded-2xl p-3 flex items-center gap-2.5 ${
+                isDark ? 'bg-slate-950/60 border-slate-800 text-slate-300' : 'bg-orange-50/60 border-orange-200/70 text-slate-700'
+              }`}>
+                <Shield className="w-4 h-4 text-[#FF6B00] shrink-0" />
+                <div className="min-w-0">
+                  <span className="text-[11px] font-black block truncate">Platform Kontrol Modu</span>
+                  <span className="text-[10px] text-slate-400 block truncate">Yönetici genel görünümü</span>
                 </div>
               </div>
-            )}
+            ) : null}
 
             {/* Navigation Menu */}
             <nav className="space-y-1 pt-1">
@@ -914,7 +965,7 @@ export default function MerchantLayout({
               }`}>
                 {isAdmin ? (
                   <img
-                    src="/logo-square-orange.png"
+                    src="/logo-mark.svg"
                     alt="Hoppa"
                     className="w-8 h-8 rounded-lg object-cover ring-1 ring-black/5 shrink-0"
                   />

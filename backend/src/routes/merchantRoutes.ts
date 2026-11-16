@@ -78,6 +78,9 @@ router.post("/shop/toggle-status", (req, res) => shopController.openCloseShop(re
 
 // Category / Kategori İşlemleri
 router.get("/categories", (req, res) => categoryController.getMerchantCategories(req, res));
+router.post("/categories", (req, res) => categoryController.createMerchantCategory(req, res));
+router.put("/categories/:id", (req, res) => categoryController.updateMerchantCategory(req, res));
+router.delete("/categories/:id", (req, res) => categoryController.deleteMerchantCategory(req, res));
 
 // Product / Ürün İşlemleri
 router.get("/products", (req, res) => productController.getProductsByShop(req, res));
@@ -97,8 +100,10 @@ router.get("/orders", (req, res) => orderController.getMerchantOrders(req, res))
 router.put("/orders/:id/status", (req, res) => orderController.updateOrderStatus(req, res));
 router.post("/orders/:id/cancel", (req, res) => orderController.cancelOrder(req, res));
 
-// Dashboard İşlemleri
+// Dashboard & Finans İşlemleri
 router.get("/dashboard/stats", (req, res) => shopController.getDashboardStats(req, res));
+router.get("/finance", (req, res) => shopController.getFinanceOverview(req, res));
+router.put("/finance/bank", (req, res) => shopController.updateBankDetails(req, res));
 
 // Öne Çıkarma / Sponsorluk İşlemleri
 router.get("/promotions", (req, res) => shopController.getPromotions(req, res));
@@ -107,10 +112,14 @@ router.post("/promotions/cancel", (req, res) => shopController.cancelPromotion(r
 
 // Müşteri Değerlendirmeleri & Yorumlar
 router.get("/reviews", (req, res) => ReviewController.getMerchantShopReviews(req, res));
+router.put("/reviews/:reviewId/reply", (req, res) => ReviewController.replyToReview(req, res));
 
-// Kampanya Yönetimi
+// Kampanya & Kupon Yönetimi
 router.post("/campaigns", (req, res) => shopCampaignController.createCampaign(req, res));
 router.get("/campaigns", (req, res) => shopCampaignController.getMyCampaigns(req, res));
+router.get("/coupons", (req, res) => shopCampaignController.getMerchantCoupons(req, res));
+router.post("/coupons", (req, res) => shopCampaignController.createMerchantCoupon(req, res));
+router.delete("/coupons/:id", (req, res) => shopCampaignController.deleteMerchantCoupon(req, res));
 
 // Yapay Zeka (AI) ve Tahminleme İşlemleri
 router.post("/ai/scan-menu", (req, res) => merchantAIController.scanMenu(req, res));

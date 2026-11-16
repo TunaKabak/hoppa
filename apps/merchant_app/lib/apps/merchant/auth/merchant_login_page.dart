@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:core_auth/core_auth.dart';
+import 'package:core_shared/core_shared.dart';
 import 'package:core_shared/shared/core/services/database_seeder.dart';
 import 'widgets/auth_layout.dart';
 import 'widgets/auth_text_field.dart';
@@ -136,8 +137,7 @@ class _LoginPageState extends ConsumerState<LoginPage>
 
   @override
   Widget build(BuildContext context) {
-    const kPrimaryColor = Color(0xFF00A651);
-    const kSecondaryColor = Color(0xFFE95D22);
+    const kPrimaryColor = Color(0xFFFF6B00);
 
     final authState = ref.watch(authControllerProvider);
     final isLoading = authState is AuthLoading;
@@ -162,29 +162,28 @@ class _LoginPageState extends ConsumerState<LoginPage>
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Logo
-            Hero(
+            // Vector Hoppa Brand Logo
+            const Hero(
               tag: 'app_logo',
-              child: Image.asset(
-                'assets/images/hoppa_merchant_logo.jpg',
-                height: 120,
-                fit: BoxFit.contain,
+              child: HoppaBrandLogo(
+                height: 48,
+                badgeLabel: 'İŞ ORTAĞI',
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
-            // Slogan
+            // B2B Slogan
             TypewriterSlogan(
               prefix: "Hoppa: ",
               phrases: const [
-                "Siparişin en kısa yolu.",
-                "Tıkla ve Rahatla.",
-                "Mutluluk kapında.",
+                "Siparişleri anında yönet.",
+                "Satışlarını canlı takip et.",
+                "İşletmeni güvenle büyüt.",
               ],
-              style: GoogleFonts.poppins(
-                fontSize: 18,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: kSecondaryColor,
+                color: const Color(0xFF0F172A),
               ),
             ),
             const SizedBox(height: 36),

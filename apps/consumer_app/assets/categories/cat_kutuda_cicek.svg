@@ -1,17 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-    <rect width="64" height="64" rx="18" fill="url(#bg_boxflower)"/>
-    <!-- Round Luxury Box -->
-    <rect x="18" y="32" width="28" height="20" rx="6" fill="#212121" stroke="#FFD700" stroke-width="1.5"/>
-    <path d="M18 38H46" stroke="#FFD700" stroke-width="1.5"/>
-    <!-- Flowers popping out -->
-    <circle cx="26" cy="26" r="6" fill="#E53935"/>
-    <circle cx="38" cy="26" r="6" fill="#E53935"/>
-    <circle cx="32" cy="22" r="7" fill="#C62828"/>
-    <circle cx="32" cy="22" r="3" fill="#FFCDD2"/>
-    <defs>
-      <linearGradient id="bg_boxflower" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
-        <stop stop-color="#FFF8E1"/>
-        <stop offset="1" stop-color="#FFD54F"/>
-      </linearGradient>
-    </defs>
-  </svg>
+  <defs>
+    <linearGradient id="box_dark" x1="16" y1="30" x2="48" y2="54" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#334155"/>
+      <stop offset="100%" stop-color="#0F172A"/>
+    </linearGradient>
+  </defs>
+  <!-- Leaves Behind Flowers -->
+  <path d="M18 30C15 23 20 18 25 22L28 30H18Z" fill="#10B981" stroke="#065F46" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M46 30C49 23 44 18 39 22L36 30H46Z" fill="#10B981" stroke="#065F46" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- Blooms -->
+  <circle cx="24" cy="25" r="7" fill="#FB7185" stroke="#9F1239" stroke-width="1.6"/>
+  <circle cx="40" cy="25" r="7" fill="#FB7185" stroke="#9F1239" stroke-width="1.6"/>
+  <circle cx="32" cy="21" r="8.5" fill="#E11D48" stroke="#881337" stroke-width="1.6"/>
+  <circle cx="32" cy="21" r="3" fill="#FFE4E6"/>
+  <!-- Luxury Gift Box -->
+  <rect x="16" y="31" width="32" height="22" rx="5" fill="url(#box_dark)" stroke="#D97706" stroke-width="1.8"/>
+  <path d="M16 38H48" stroke="#FBBF24" stroke-width="2.2"/>
+  <rect x="28" y="35" width="8" height="6" rx="2" fill="#FBBF24"/>
+</svg>

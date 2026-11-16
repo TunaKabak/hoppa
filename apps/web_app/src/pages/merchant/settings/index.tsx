@@ -1,18 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import MerchantLayout from '../../../components/merchant/MerchantLayout';
 import GuidedOnboardingWidget from '../../../components/merchant/GuidedOnboardingWidget';
 import LocationRadiusPickerMap, { LocationPolygonPoint } from '../../../components/merchant/LocationRadiusPickerMap';
 import { 
-  Settings, Clock, MapPin, Store, Check, Save, AlertCircle, Phone, Upload, Map,
-  Building2, FileText, Image as ImageIcon, CreditCard, Truck, ShieldAlert, Copy, Trash2
+  Settings, Clock, MapPin, Store, Check, Save, Upload, Map,
+  Building2, FileText, Image as ImageIcon, CreditCard, Truck, ShieldAlert, Copy, ArrowRight
 } from 'lucide-react';
-import { merchantApiFetch, getMerchantToken } from '../../../utils/merchant-auth';
+import { merchantApiFetch } from '../../../utils/merchant-auth';
 import { uploadMerchantMedia } from '../../../utils/media-upload';
 import { useMerchantTheme } from '../../../context/MerchantThemeContext';
 import { KKTC_CITIES, KKTC_DISTRICTS } from '../../../data/kktcDistricts';
 import { isLocationInKktc } from '../../../utils/kktcBoundary';
 import HoppaSelect from '../../../components/merchant/HoppaSelect';
+import { useConfirm, useToast } from '../../../components/merchant/ToastContext';
 
 const DAYS_KEY_MAP: Record<string, string> = {
   monday: 'Pazartesi',
@@ -33,7 +35,10 @@ interface DaySchedule {
 }
 
 export default function MerchantSettingsPage() {
+  const router = useRouter();
   const { theme } = useMerchantTheme();
+  const toast = useToast();
+  const { confirm } = useConfirm();
   const isDark = theme === 'dark';
 
   const [activeTab, setActiveTab] = useState<'profile' | 'operation' | 'location'>('profile');
@@ -93,25 +98,103 @@ export default function MerchantSettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [savedSnapshot, setSavedSnapshot] = useState<string | null>(null);
+
+  const currentSnapshot = useMemo(
+    () =>
+      JSON.stringify({
+        businessName,
+        phoneNumber,
+        taxNumber,
+        identityNumber,
+        logoUrl,
+        headerImageUrl,
+        minOrderAmount,
+        deliveryTime,
+        deliveryPricingType,
+        baseDeliveryFee,
+        deliveryFeePerKm,
+        freeDeliveryThreshold,
+        supportsOnline,
+        supportsCash,
+        supportsCard,
+        supportsPlatformDelivery,
+        supportsSelfDelivery,
+        supportsPickup,
+        workingHours,
+        selectedCity,
+        selectedDistrict,
+        addressLine,
+        latitude,
+        longitude,
+        deliveryRadiusKm,
+        isPolygonMode,
+        deliveryPolygon,
+      }),
+    [
+      businessName,
+      phoneNumber,
+      taxNumber,
+      identityNumber,
+      logoUrl,
+      headerImageUrl,
+      minOrderAmount,
+      deliveryTime,
+      deliveryPricingType,
+      baseDeliveryFee,
+      deliveryFeePerKm,
+      freeDeliveryThreshold,
+      supportsOnline,
+      supportsCash,
+      supportsCard,
+      supportsPlatformDelivery,
+      supportsSelfDelivery,
+      supportsPickup,
+      workingHours,
+      selectedCity,
+      selectedDistrict,
+      addressLine,
+      latitude,
+      longitude,
+      deliveryRadiusKm,
+      isPolygonMode,
+      deliveryPolygon,
+    ]
+  );
+
+  const isDirty = Boolean(!isLoading && savedSnapshot !== null && savedSnapshot !== currentSnapshot);
 
   useEffect(() => {
-    fetchShopDetails();
+    if (!isDirty || typeof window === 'undefined') return;
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isDirty]);
+
+  useEffect(() => {
+    void fetchShopDetails();
   }, []);
 
-  const parseAddressParts = (rawAddress: string) => {
-    if (!rawAddress) return;
+  const parseAddressParts = (rawAddress: string): { city: string; district: string; line: string } => {
+    if (!rawAddress) return { city: 'Lefkoşa', district: '', line: '' };
     const parts = rawAddress.split(',').map((p) => p.trim());
     if (parts.length >= 3) {
       const cityCand = parts[parts.length - 1];
       const distCand = parts[parts.length - 2];
       if (KKTC_CITIES.includes(cityCand as any)) {
-        setSelectedCity(cityCand);
-        setSelectedDistrict(distCand);
-        setAddressLine(parts.slice(0, parts.length - 2).join(', '));
-        return;
+        return {
+          city: cityCand,
+          district: distCand,
+          line: parts.slice(0, parts.length - 2).join(', '),
+        };
       }
     }
-    setAddressLine(rawAddress);
+    return { city: 'Lefkoşa', district: '', line: rawAddress };
   };
 
   const fetchShopDetails = async () => {
@@ -121,51 +204,60 @@ export default function MerchantSettingsPage() {
       const res = await merchantApiFetch('/merchant/shop');
       if (res.data) {
         const shop = res.data;
-        setBusinessName(shop.businessName || shop.name || '');
-        setPhoneNumber(shop.businessPhone || shop.phone || shop.merchant?.businessPhone || '');
-        setTaxNumber(shop.taxNumber || shop.merchant?.taxNumber || '');
-        setIdentityNumber(shop.identityNumber || shop.merchant?.identityNumber || '');
-        setLogoUrl(shop.imageUrl || shop.logoUrl || '');
-        setHeaderImageUrl(shop.headerImageUrl || '');
+        const bName = shop.businessName || shop.name || '';
+        const pNum = shop.businessPhone || shop.phone || shop.merchant?.businessPhone || '';
+        const tNum = shop.taxNumber || shop.merchant?.taxNumber || '';
+        const idNum = shop.identityNumber || shop.merchant?.identityNumber || '';
+        const lUrl = shop.imageUrl || shop.logoUrl || '';
+        const hUrl = shop.headerImageUrl || '';
+        const minOrd = shop.minOrderAmount ?? shop.minimumOrderAmount ?? 150;
+        const delTime = shop.deliveryTime || '30-45 dk';
+        const delPriceType = shop.deliveryPricingType || 'FIXED';
+        const baseFee = shop.baseDeliveryFee ?? 30;
+        const perKmFee = shop.deliveryFeePerKm ?? 5;
+        const freeThresh =
+          shop.freeDeliveryThreshold !== null && shop.freeDeliveryThreshold !== undefined
+            ? shop.freeDeliveryThreshold
+            : '';
 
-        setMinOrderAmount(shop.minOrderAmount ?? shop.minimumOrderAmount ?? 150);
-        setDeliveryTime(shop.deliveryTime || '30-45 dk');
-        setDeliveryPricingType(shop.deliveryPricingType || 'FIXED');
-        setBaseDeliveryFee(shop.baseDeliveryFee ?? 30);
-        setDeliveryFeePerKm(shop.deliveryFeePerKm ?? 5);
-        setFreeDeliveryThreshold(shop.freeDeliveryThreshold !== null && shop.freeDeliveryThreshold !== undefined ? shop.freeDeliveryThreshold : '');
+        const paymentMethods: string[] = shop.allowedPaymentMethods || [
+          'ONLINE_PAYMENT',
+          'CASH_ON_DELIVERY',
+          'CARD_ON_DELIVERY',
+        ];
+        const sOnline = paymentMethods.includes('ONLINE_PAYMENT');
+        const sCash = paymentMethods.includes('CASH_ON_DELIVERY');
+        const sCard = paymentMethods.includes('CARD_ON_DELIVERY');
 
-        // Payment Methods
-        const paymentMethods: string[] = shop.allowedPaymentMethods || ['ONLINE_PAYMENT', 'CASH_ON_DELIVERY', 'CARD_ON_DELIVERY'];
-        setSupportsOnline(paymentMethods.includes('ONLINE_PAYMENT'));
-        setSupportsCash(paymentMethods.includes('CASH_ON_DELIVERY'));
-        setSupportsCard(paymentMethods.includes('CARD_ON_DELIVERY'));
+        const fulfillmentModels: string[] = shop.allowedFulfillmentModels || [
+          'PLATFORM_DELIVERY',
+          'PICKUP',
+        ];
+        const sPlat = fulfillmentModels.includes('PLATFORM_DELIVERY');
+        const sSelf = fulfillmentModels.includes('SELF_DELIVERY');
+        const sPick = fulfillmentModels.includes('PICKUP');
 
-        // Fulfillment Models
-        const fulfillmentModels: string[] = shop.allowedFulfillmentModels || ['PLATFORM_DELIVERY', 'PICKUP'];
-        setSupportsPlatformDelivery(fulfillmentModels.includes('PLATFORM_DELIVERY'));
-        setSupportsSelfDelivery(fulfillmentModels.includes('SELF_DELIVERY'));
-        setSupportsPickup(fulfillmentModels.includes('PICKUP'));
+        const latVal = shop.latitude || 35.1856;
+        const lngVal = shop.longitude || 33.3823;
+        const radVal = shop.deliveryRadiusKm || 5;
+        const polyActive = Boolean(
+          shop.deliveryPolygon && Array.isArray(shop.deliveryPolygon) && shop.deliveryPolygon.length > 0
+        );
+        const polyVal: LocationPolygonPoint[] = polyActive ? shop.deliveryPolygon : [];
+        const addrParsed = parseAddressParts(shop.address || '');
 
-        // Location & Map
-        setLatitude(shop.latitude || 35.1856);
-        setLongitude(shop.longitude || 33.3823);
-        setDeliveryRadiusKm(shop.deliveryRadiusKm || 5);
-        if (shop.deliveryPolygon && Array.isArray(shop.deliveryPolygon) && shop.deliveryPolygon.length > 0) {
-          setIsPolygonMode(true);
-          setDeliveryPolygon(shop.deliveryPolygon);
-        } else {
-          setIsPolygonMode(false);
-          setDeliveryPolygon([]);
-        }
+        let hydratedHours: Record<string, DaySchedule> = {
+          monday: { isOpen: true, open: '08:00', close: '22:00' },
+          tuesday: { isOpen: true, open: '08:00', close: '22:00' },
+          wednesday: { isOpen: true, open: '08:00', close: '22:00' },
+          thursday: { isOpen: true, open: '08:00', close: '22:00' },
+          friday: { isOpen: true, open: '08:00', close: '22:00' },
+          saturday: { isOpen: true, open: '08:00', close: '22:00' },
+          sunday: { isOpen: true, open: '08:00', close: '22:00' },
+        };
 
-        parseAddressParts(shop.address || '');
-
-        // Working Hours Hydration
         if (shop.workingHours) {
           if (Array.isArray(shop.workingHours)) {
-            // Legacy Array format conversion
-            const mapObj: Record<string, DaySchedule> = {};
             const trMap: Record<string, string> = {
               Pazartesi: 'monday',
               Salı: 'tuesday',
@@ -175,33 +267,91 @@ export default function MerchantSettingsPage() {
               Cumartesi: 'saturday',
               Pazar: 'sunday',
             };
-            DEFAULT_DAYS.forEach((d) => {
-              mapObj[d] = { isOpen: true, open: '08:00', close: '22:00' };
-            });
             shop.workingHours.forEach((wh: any) => {
               const key = trMap[wh.day] || wh.day?.toLowerCase();
-              if (key && mapObj[key]) {
-                mapObj[key] = {
+              if (key && hydratedHours[key]) {
+                hydratedHours[key] = {
                   isOpen: !wh.isClosed,
                   open: wh.open || '08:00',
                   close: wh.close || '22:00',
                 };
               }
             });
-            setWorkingHours(mapObj);
           } else if (typeof shop.workingHours === 'object') {
             const mapObj: Record<string, DaySchedule> = {};
             DEFAULT_DAYS.forEach((d) => {
               const existing = shop.workingHours[d];
-              mapObj[d] = existing ? {
-                isOpen: existing.isOpen !== undefined ? Boolean(existing.isOpen) : true,
-                open: existing.open || '08:00',
-                close: existing.close || '22:00',
-              } : { isOpen: true, open: '08:00', close: '22:00' };
+              mapObj[d] = existing
+                ? {
+                    isOpen: existing.isOpen !== undefined ? Boolean(existing.isOpen) : true,
+                    open: existing.open || '08:00',
+                    close: existing.close || '22:00',
+                  }
+                : { isOpen: true, open: '08:00', close: '22:00' };
             });
-            setWorkingHours(mapObj);
+            hydratedHours = mapObj;
           }
         }
+
+        setBusinessName(bName);
+        setPhoneNumber(pNum);
+        setTaxNumber(tNum);
+        setIdentityNumber(idNum);
+        setLogoUrl(lUrl);
+        setHeaderImageUrl(hUrl);
+        setMinOrderAmount(minOrd);
+        setDeliveryTime(delTime);
+        setDeliveryPricingType(delPriceType);
+        setBaseDeliveryFee(baseFee);
+        setDeliveryFeePerKm(perKmFee);
+        setFreeDeliveryThreshold(freeThresh);
+        setSupportsOnline(sOnline);
+        setSupportsCash(sCash);
+        setSupportsCard(sCard);
+        setSupportsPlatformDelivery(sPlat);
+        setSupportsSelfDelivery(sSelf);
+        setSupportsPickup(sPick);
+        setLatitude(latVal);
+        setLongitude(lngVal);
+        setDeliveryRadiusKm(radVal);
+        setIsPolygonMode(polyActive);
+        setDeliveryPolygon(polyVal);
+        setSelectedCity(addrParsed.city);
+        setSelectedDistrict(addrParsed.district);
+        setAddressLine(addrParsed.line);
+        setWorkingHours(hydratedHours);
+
+        setSavedSnapshot(
+          JSON.stringify({
+            businessName: bName,
+            phoneNumber: pNum,
+            taxNumber: tNum,
+            identityNumber: idNum,
+            logoUrl: lUrl,
+            headerImageUrl: hUrl,
+            minOrderAmount: minOrd,
+            deliveryTime: delTime,
+            deliveryPricingType: delPriceType,
+            baseDeliveryFee: baseFee,
+            deliveryFeePerKm: perKmFee,
+            freeDeliveryThreshold: freeThresh,
+            supportsOnline: sOnline,
+            supportsCash: sCash,
+            supportsCard: sCard,
+            supportsPlatformDelivery: sPlat,
+            supportsSelfDelivery: sSelf,
+            supportsPickup: sPick,
+            workingHours: hydratedHours,
+            selectedCity: addrParsed.city,
+            selectedDistrict: addrParsed.district,
+            addressLine: addrParsed.line,
+            latitude: latVal,
+            longitude: lngVal,
+            deliveryRadiusKm: radVal,
+            isPolygonMode: polyActive,
+            deliveryPolygon: polyVal,
+          })
+        );
       }
     } catch (err: any) {
       console.error('Mağaza detayları alınamadı:', err);
@@ -221,17 +371,24 @@ export default function MerchantSettingsPage() {
     }));
   };
 
-  const copyMondayScheduleToAll = () => {
+  const copyMondayScheduleToAll = async () => {
     const mondaySched = workingHours['monday'];
     if (!mondaySched) return;
 
-    if (confirm("Pazartesi gününün çalışma saatleri tüm haftaya kopyalansın mı?")) {
-      const updated: Record<string, DaySchedule> = {};
-      DEFAULT_DAYS.forEach((d) => {
-        updated[d] = { ...mondaySched };
-      });
-      setWorkingHours(updated);
-    }
+    const ok = await confirm({
+      title: 'Çalışma Saatlerini Kopyala',
+      message: 'Pazartesi gününün çalışma saatleri tüm haftaya kopyalansın mı?',
+      confirmText: 'Tüm Haftaya Uygula',
+      tone: 'primary',
+    });
+    if (!ok) return;
+
+    const updated: Record<string, DaySchedule> = {};
+    DEFAULT_DAYS.forEach((d) => {
+      updated[d] = { ...mondaySched };
+    });
+    setWorkingHours(updated);
+    toast.info('Pazartesi çalışma saatleri tüm haftaya uygulandı.');
   };
 
   // Upload Handler for Logo / Header
@@ -240,7 +397,7 @@ export default function MerchantSettingsPage() {
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('Görsel boyutu maksimum 5MB olmalıdır.');
+      toast.warning('Görsel boyutu maksimum 5MB olmalıdır.');
       return;
     }
 
@@ -255,8 +412,9 @@ export default function MerchantSettingsPage() {
       } else {
         setHeaderImageUrl(finalUrl);
       }
+      toast.success('Görsel yüklendi. Değişiklikleri kaydetmeyi unutmayın.');
     } catch (err: any) {
-      alert(err.message || 'Görsel yüklenirken hata oluştu.');
+      toast.error(err.message || 'Görsel yüklenirken hata oluştu.');
     } finally {
       if (type === 'logo') setIsUploadingLogo(false);
       else setIsUploadingHeader(false);
@@ -360,32 +518,49 @@ export default function MerchantSettingsPage() {
       });
 
       if (res.data) {
+        setSavedSnapshot(currentSnapshot);
         setSuccessMsg('Mağaza profiliniz, çalışma saatleriniz ve teslimat ayarlarınız başarıyla güncellendi!');
+        toast.success('Mağaza ayarlarınız başarıyla kaydedildi.');
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Ayarlar kaydedilirken bir hata oluştu.');
+      const msg = err.message || 'Ayarlar kaydedilirken bir hata oluştu.';
+      setErrorMsg(msg);
+      toast.error(msg);
     } finally {
       setIsSaving(false);
     }
   };
 
   const settingsHeaderActions = (
-    <button
-      type="button"
-      onClick={handleSaveSettings}
-      disabled={isSaving}
-      className="px-5 py-2.5 rounded-xl bg-[#FF6B00] hover:bg-[#E56000] text-white font-black text-xs flex items-center justify-center gap-2 transition-colors disabled:opacity-50 shrink-0 shadow-2xs"
-    >
-      {isSaving ? (
-        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-      ) : (
-        <>
-          <Save className="w-4 h-4 text-white" />
-          <span>Tüm Değişiklikleri Kaydet</span>
-        </>
+    <div className="flex items-center gap-2.5 shrink-0">
+      {isDirty && (
+        <span
+          className={`hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-bold border ${
+            isDark
+              ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+              : 'bg-amber-50 text-amber-700 border-amber-200'
+          }`}
+        >
+          Kaydedilmemiş Değişiklikler
+        </span>
       )}
-    </button>
+      <button
+        type="button"
+        onClick={handleSaveSettings}
+        disabled={isSaving}
+        className="px-5 py-2.5 rounded-xl bg-[#FF6B00] hover:bg-[#E56000] text-white font-black text-xs flex items-center justify-center gap-2 transition-colors disabled:opacity-50 shrink-0 shadow-2xs"
+      >
+        {isSaving ? (
+          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+        ) : (
+          <>
+            <Save className="w-4 h-4 text-white" />
+            <span>Tüm Değişiklikleri Kaydet</span>
+          </>
+        )}
+      </button>
+    </div>
   );
 
   return (
@@ -652,6 +827,33 @@ export default function MerchantSettingsPage() {
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {/* Bank & Settlement Link Card */}
+              <div
+                className={`p-5 rounded-3xl border flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all ${
+                  isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'
+                }`}
+              >
+                <div className="flex items-start gap-3.5">
+                  <div className="w-10 h-10 rounded-2xl bg-[#FF6B00]/10 text-[#FF6B00] flex items-center justify-center shrink-0">
+                    <CreditCard className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-black text-sm">Banka / IBAN ve Hakediş Ayarları</h4>
+                    <p className="text-xs text-slate-400 font-semibold mt-0.5">
+                      Online ödeme aktarımları, IBAN tanımlama ve komisyon detaylarını Finans Merkezinden yönetin.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => router.push('/merchant/finance')}
+                  className="px-4 py-2.5 rounded-xl bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white text-xs font-black flex items-center justify-center gap-2 shrink-0 transition-colors"
+                >
+                  <span>Finans Merkezine Git</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
               </div>
             </div>
           )}

@@ -65,6 +65,15 @@ export function isPointInPolygon(point: ServiceZonePoint, vs: ServiceZonePoint[]
   return inside;
 }
 
+function escapeHtml(raw: unknown): string {
+  return String(raw ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export default function KktcServiceZoneDrawerMap({
   zones,
   activeZoneId,
@@ -83,10 +92,13 @@ export default function KktcServiceZoneDrawerMap({
   const rootWrapperRef = useRef<HTMLDivElement>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
+  const tileLayerRef = useRef<any>(null);
   const zoneLayersRef = useRef<Map<string, any>>(new Map());
   const vertexMarkersRef = useRef<any[]>([]);
   const draftPolygonLayerRef = useRef<any>(null);
   const testMarkerRef = useRef<any>(null);
+  const isDarkRef = useRef<boolean>(isDark);
+  isDarkRef.current = isDark;
 
   // Address & Test Pin Drop State
   const [searchQuery, setSearchQuery] = useState('');
@@ -185,14 +197,16 @@ export default function KktcServiceZoneDrawerMap({
       zoomControl: false,
     });
 
-    // Modern, bright, high-contrast, crisp map layer (CartoDB Voyager)
-    const tileUrl = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+    const tileUrl = isDarkRef.current
+      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+      : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
 
-    L.tileLayer(tileUrl, {
+    const layer = L.tileLayer(tileUrl, {
       attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap',
       subdomains: 'abcd',
       maxZoom: 19,
     }).addTo(map);
+    tileLayerRef.current = layer;
 
     // Official KKTC Boundary Line (Bright orange dashed border, NO black mask)
     L.polygon(KKTC_POLYGON.map((p) => [p.lat, p.lng]), {
@@ -257,6 +271,27 @@ export default function KktcServiceZoneDrawerMap({
     }, 150);
   };
 
+  // Switch CartoDB tile layer dynamically on theme change
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const L = (window as any).L;
+    if (!map || !L) return;
+
+    const nextTileUrl = isDark
+      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+      : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+
+    if (tileLayerRef.current) {
+      tileLayerRef.current.setUrl(nextTileUrl);
+    } else {
+      tileLayerRef.current = L.tileLayer(nextTileUrl, {
+        attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap',
+        subdomains: 'abcd',
+        maxZoom: 19,
+      }).addTo(map);
+    }
+  }, [isDark]);
+
   // Keep window global refs synced for Leaflet callbacks
   useEffect(() => {
     (window as any)._isTestModeActive = isTestMode;
@@ -266,11 +301,19 @@ export default function KktcServiceZoneDrawerMap({
     (window as any)._allZones = zones;
   }, [isTestMode, isDrawingNew, newZoneDraftPolygon, activeZoneId, zones]);
 
-  // Render Polygons & Vertices
+  // Render Polygons & Draggable Vertices
   const renderAllPolygons = useCallback(() => {
     const map = mapInstanceRef.current;
     const L = (window as any).L;
     if (!map || !L) return;
+
+    const createVertexIcon = (fillColor: string, size = 14) =>
+      L.divIcon({
+        className: 'hoppa-poly-vertex',
+        html: `<div style="width:${size}px;height:${size}px;border-radius:9999px;background:${escapeHtml(fillColor)};border:3px solid #ffffff;box-shadow:0 2px 6px rgba(15,23,42,0.4);cursor:grab;"></div>`,
+        iconSize: [size, size],
+        iconAnchor: [size / 2, size / 2],
+      });
 
     // Clear old zone polygon layers
     zoneLayersRef.current.forEach((layer) => layer.remove());
@@ -301,11 +344,11 @@ export default function KktcServiceZoneDrawerMap({
         dashArray: zone.isActive ? undefined : '6, 6',
       }).addTo(map);
 
-      // Tooltip label
+      // HTML-escaped tooltip label
       polygonLayer.bindTooltip(`
         <div style="font-family: inherit; font-weight: 800; font-size: 12px; padding: 2px 4px;">
-          <span>${zone.name}</span>
-          <span style="display: block; font-size: 10px; font-weight: 600; opacity: 0.85;">${zone.district} • ${zone.isActive ? 'Aktif' : 'Pasif'} • Min: ₺${zone.minOrderAmount}</span>
+          <span>${escapeHtml(zone.name)}</span>
+          <span style="display: block; font-size: 10px; font-weight: 600; opacity: 0.85;">${escapeHtml(zone.district)} • ${zone.isActive ? 'Aktif' : 'Pasif'} • Min: ₺${escapeHtml(zone.minOrderAmount)}</span>
         </div>
       `, {
         permanent: false,
@@ -322,18 +365,25 @@ export default function KktcServiceZoneDrawerMap({
 
       zoneLayersRef.current.set(zone.id, polygonLayer);
 
-      // If this zone is currently selected, add draggable vertices
+      // If this zone is currently selected, add genuinely draggable vertex handles
       if (isSelected && !isDrawingNew) {
         zone.polygon.forEach((pt, idx) => {
-          const vertexMarker = L.circleMarker([pt.lat, pt.lng], {
-            radius: 7.5,
-            color: '#FFFFFF',
-            fillColor: zone.colorHex || '#FF6B00',
-            fillOpacity: 1,
-            weight: 3,
+          const vertexMarker = L.marker([pt.lat, pt.lng], {
+            draggable: true,
+            icon: createVertexIcon(zone.colorHex || '#FF6B00', 14),
+            title: 'Taşımak için sürükleyin, silmek için tıklayın',
           }).addTo(map);
 
-          // Click vertex to delete
+          vertexMarker.on('dragend', () => {
+            const pos = vertexMarker.getLatLng();
+            const moved = zone.polygon.map((item, i) =>
+              i === idx
+                ? { lat: Number(pos.lat.toFixed(5)), lng: Number(pos.lng.toFixed(5)) }
+                : item
+            );
+            onUpdateZonePolygon(zone.id, moved);
+          });
+
           vertexMarker.on('click', (e: any) => {
             L.DomEvent.stopPropagation(e);
             const filtered = zone.polygon.filter((_, i) => i !== idx);
@@ -357,15 +407,23 @@ export default function KktcServiceZoneDrawerMap({
       }).addTo(map);
       draftPolygonLayerRef.current = draftLayer;
 
-      // Add vertex dots for draft
+      // Add draggable vertex handles for draft
       newZoneDraftPolygon.forEach((pt, idx) => {
-        const dot = L.circleMarker([pt.lat, pt.lng], {
-          radius: 8,
-          color: '#FFFFFF',
-          fillColor: '#2563EB',
-          fillOpacity: 1,
-          weight: 3,
+        const dot = L.marker([pt.lat, pt.lng], {
+          draggable: true,
+          icon: createVertexIcon('#2563EB', 15),
+          title: 'Taşımak için sürükleyin, silmek için tıklayın',
         }).addTo(map);
+
+        dot.on('dragend', () => {
+          const pos = dot.getLatLng();
+          const moved = newZoneDraftPolygon.map((item, i) =>
+            i === idx
+              ? { lat: Number(pos.lat.toFixed(5)), lng: Number(pos.lng.toFixed(5)) }
+              : item
+          );
+          onUpdateNewZoneDraftPolygon(moved);
+        });
 
         dot.on('click', (e: any) => {
           L.DomEvent.stopPropagation(e);
@@ -455,7 +513,7 @@ export default function KktcServiceZoneDrawerMap({
             box-shadow: 0 10px 24px rgba(37, 99, 235, 0.55);
             border: 3px solid #ffffff;
           ">
-            <span style="transform: rotate(45deg); color: white; font-size: 18px; font-weight: bold;">📍</span>
+            <svg style="transform: rotate(45deg);" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
           </div>
         `,
         iconSize: [40, 40],
@@ -809,7 +867,7 @@ export default function KktcServiceZoneDrawerMap({
                 </span>
               </div>
               <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mt-0.5">
-                Haritaya tıklayarak yeni köşe ekleyebilir veya mevcut beyaz köşe noktalarına tıklayarak silebilirsiniz.
+                Haritaya tıklayarak yeni köşe ekleyin; mevcut köşe tutamaçlarını sürükleyerek taşıyın veya tıklayarak silin.
               </p>
             </div>
           </div>

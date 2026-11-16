@@ -53,24 +53,21 @@ Hoppa projesinde görevler, etki alanına göre aşağıdaki agent rollerine ata
 * **Doğrulama Protokolü:**
   * `npx prisma db push && npx prisma generate` ile şema bütünlük kontrolü.
 
-### 2.4. 🛡️ QA & Security Agent (Kalite & Güvenlik Temsilcisi)
-* **Sorumluluk Alanı:** Tüm test senaryoları, CI/CD workflow'ları (`.github/workflows/`), hata logları (`*.log`) ve güvenlik politikaları.
+### 2.4. 🛡️ QA & AppSec (Kalite & Üretim Güvenliği) Agent (`qa_agent`)
+* **Sorumluluk Alanı:** Test senaryoları, CI/CD workflow'ları (`.github/workflows/`), hata logları (`*.log`) ve prodüksiyon sıfır-açık (AppSec) güvenlik kapıları.
 * **Standartlar:**
-  * Hata yakalama mekanizmalarının doğruluğu.
-  * Kod kalitesi, gereksiz kodların/paketlerin silinmesi.
-  * Güvenlik açıklarının önlenmesi (SQL injection, XSS vb.).
+  * Sunucu taraflı fiyat/opsiyon/cüzdan bütünlüğü, atomik `$transaction` iade koruması, `LIVE` ödeme webhook HMAC doğrulaması ve ham kart verisiz (PCI-uyumlu) akışları denetlemek.
+  * IDOR, hassas veri (`passwordHash`, `identityNumber`) sızıntısı, wildcard CORS, unauthenticated upload, `badCertificateCallback => true`, `.env` sızıntısı ve XSS/CSP açıklarını prod öncesi engellemek.
 * **Doğrulama Protokolü:**
-  * Değiştirilen CI/CD yaml dosyalarının validasyonu, test suitlerinin çalıştırılması.
+  * CI/CD yaml validasyonu, test suitleri, `flutter analyze`, `npx tsc --noEmit` ve AppSec ön-yayım kontrol listesi doğrulaması.
 
-### 2.5. 🎨 Designer Agent (Grafik Tasarımcı & UI/UX Temsilcisi)
-* **Sorumluluk Alanı:** `assets/` dizini, uygulama renk paletleri, görsel varlıklar (logolar, afişler, ikonlar), font tanımları ve sayfa yerleşim (UI layout/spacing) kararları.
+### 2.5. 🎨 Senior Graphic Designer Agent (`senior_graphic_designer_agent`)
+* **Sorumluluk Alanı:** `assets/`, `apps/*/assets/`, `apps/web_app/public/`, marka kimliği, vektörel logo/logomark seti (`logo-mark.svg`, `logo-full-*.svg`), kanonsal Hoppa renk paleti (`#FF6B00` / `#00A651`), özel kategori SVG'leri, boş durum/hata illüstrasyonları ve tipografik sanat yönetimi.
 * **Standartlar:**
-  * Tasarımda modern ve premium eğilimleri (sleek dark mode, soft gradients, glassmorphism, micro-animations) uygulamak.
-  * Görsel varlıklar üretmek için gerektiğinde `generate_image` yeteneğini kullanmak.
-  * Ekran yerleşimlerinde tutarlı padding, margin ve yazı tipi hiyerarşisi kullanmak.
+  * "Yapay/AI-slop" unsurları (UI içi OS emojileri, sahte şeffaflık dama tahtası, `animate-spin`/`animate-bounce` süslemeler, cihaz çerçeveli afişler, JPEG-`.png` dosyaları, `7.85 MB` gibi ağır görseller) sıfırlamak.
+  * Tekil marka kimliği, WCAG AA renk kontrastı, karanlık mod harita uyumu ve Türkçe büyük harf (`İ`/`I`) imla bütünlüğünü korumak.
 * **Doğrulama Protokolü:**
-  * Görsel asset dosya formatlarının (PNG, SVG, WebP) ve boyutlarının doğruluğu.
-  * Farklı ekran çözünürlükleri için responsive uyumluluk testleri.
+  * SVG/WebP format ve boyut bütçesi kontrolü (`< 2 MB`, kartlar `< 300 KB`), gerçek alfa/header kontrolü ve `pubspec.yaml` varlık kayıt doğrulaması.
 
 ### 2.6. 🔍 Planner & Analyzer Agent (Analiz ve Planlama Temsilcisi)
 * **Sorumluluk Alanı:** Yeni gelen geliştirme isteklerinin, hata raporlarının analizi, etki analizi (impact analysis), bağımlılıkların tespiti, teknik tasarım hazırlanması ve uygulama planının planlanması.
@@ -122,10 +119,23 @@ Hoppa projesinde görevler, etki alanına göre aşağıdaki agent rollerine ata
   * Web SSE değişiklikleri için `cd apps/web_app && npx tsc --noEmit && npm run build`.
   * Mobil 3DS WebView değişiklikleri için `cd apps/consumer_app && flutter analyze`.
 
+### 2.11. ✨ Senior UI/UX Developer Agent (`senior_ui_ux_developer_agent`)
+* **Sorumluluk Alanı:** `apps/web_app/`, `apps/consumer_app/`, `apps/merchant_app/`, `apps/courier_app/` ve `packages/` genelinde çapraz platform tasarım sistemi, bileşen ergonomisi, akış mimarisi, erişilebilirlik (WCAG 2.1 AA) ve arayüz güvenliği.
+* **Standartlar:**
+  * Merkezi tasarım token'ları (sıfır hardcoded hex/`Color`), Tailwind v3.4 geçerli sınıf disiplini, FOUC-free Dark/Light tema, `tabular-nums`/`tabularFigures()`, Shimmer iskeletleri ve önbellekli görseller kullanmak.
+  * Sahte fallback metrikleri/formları, native `alert()`/`confirm()` çağrılarını, 1 tıkla onaysız SuperAdmin silmelerini ve 3DS öncesi sepet temizleme gibi dönüşüm/ergonomi hatalarını ortadan kaldırmak; Slide-Over Drawer, canlı SLA sayacı ve saha (`48x48dp`) ergonomisi uygulamak.
+  * Leaflet/HTML XSS kaçışı, `isAuthReady` koruması, SRI/paketli script kullanımı ve CSP başlıklarıyla arayüz güvenliğini sağlamak.
+* **Doğrulama Protokolü:**
+  * Web: `cd apps/web_app && npx tsc --noEmit && npm run build`.
+  * Mobil: ilgili uygulama dizininde `flutter analyze` (ve `flutter test`).
+
 ---
 
 ## 3. Rol Geçiş ve Tetiklenme Kuralları
 
 1. Gemini, kendisine verilen komutun hangi dosyalara dokunduğunu analiz eder.
-2. Değişiklik yapılacak alana ait **Agent Skill** dosyasını (`.agents/skills/<agent_name>/SKILL.md`) otomatik olarak okur.
-3. Çalışma süresince ilgili agent'ın kurallarını ve doğrulama adımlarını eksiksiz uygular.
+2. İlgili ana **Agent Skill** dosyasını (`.agents/skills/<agent_name>/SKILL.md`) otomatik olarak okur.
+3. **Çapraz Eşgüdüm Zorunluluğu:**
+   * Web veya Mobil UI/UX görevlerinde `web_agent` / `frontend_agent` ile birlikte mutlaka `senior_ui_ux_developer_agent` (renk, logo, SVG, illüstrasyon, afiş ve varlık dokunuşlarında ayrıca `senior_graphic_designer_agent`) devreye alınır.
+   * API, Kimlik Doğrulama, Ödeme, Dosya Yükleme ve Prodüksiyon Yayım görevlerinde ilgili alan agent'ına ek olarak `qa_agent` (AppSec kapıları) zorunlu olarak çalıştırılır.
+4. Çalışma süresince ilgili tüm agent'ların kurallarını ve doğrulama adımlarını eksiksiz uygular.

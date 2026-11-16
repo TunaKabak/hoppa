@@ -117,15 +117,15 @@ class _MerchantOrderListPageState extends ConsumerState<MerchantOrderListPage> {
                   children: [
                     _buildFilterChip(null, "Tümü", theme),
                     const SizedBox(width: 8),
-                    _buildFilterChip(OrderStatus.pending.value, "Bekleyenler ⏳", theme),
+                    _buildFilterChip(OrderStatus.pending.value, "Bekleyenler", theme),
                     const SizedBox(width: 8),
-                    _buildFilterChip(OrderStatus.preparing.value, "Hazırlananlar 🍳", theme),
+                    _buildFilterChip(OrderStatus.preparing.value, "Hazırlananlar", theme),
                     const SizedBox(width: 8),
-                    _buildFilterChip(OrderStatus.onWay.value, "Yoldakiler 🛵", theme),
+                    _buildFilterChip(OrderStatus.onWay.value, "Yoldakiler", theme),
                     const SizedBox(width: 8),
-                    _buildFilterChip(OrderStatus.delivered.value, "Tamamlananlar ✅", theme),
+                    _buildFilterChip(OrderStatus.delivered.value, "Tamamlananlar", theme),
                     const SizedBox(width: 8),
-                    _buildFilterChip(OrderStatus.cancelled.value, "İptaller ❌", theme),
+                    _buildFilterChip(OrderStatus.cancelled.value, "İptaller", theme),
                   ],
                 ),
               ),
@@ -561,7 +561,7 @@ class _MerchantOrderListPageState extends ConsumerState<MerchantOrderListPage> {
                   Icon(Icons.door_front_door, size: 16, color: Colors.blue.shade800),
                   const SizedBox(width: 6),
                   Text(
-                    "KAPIYA BIRAK 🚪",
+                    "KAPIYA BIRAK",
                     style: TextStyle(
                       color: Colors.blue.shade900, 
                       fontWeight: FontWeight.bold,
@@ -587,7 +587,7 @@ class _MerchantOrderListPageState extends ConsumerState<MerchantOrderListPage> {
                   Icon(Icons.notifications_off, size: 16, color: Colors.orange.shade800),
                   const SizedBox(width: 6),
                   Text(
-                    "ZİLİ ÇALMA 🔕",
+                    "ZİLİ ÇALMA",
                     style: TextStyle(
                       color: Colors.orange.shade900, 
                       fontWeight: FontWeight.bold,

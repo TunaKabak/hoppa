@@ -100,6 +100,33 @@ class CourierApp extends StatelessWidget {
           ),
         ),
       ),
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        brightness: Brightness.dark,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: hoppaOrange,
+          brightness: Brightness.dark,
+          primary: hoppaOrange,
+          secondary: hoppaGreen,
+          surface: const Color(0xFF111827),
+        ),
+        scaffoldBackgroundColor: const Color(0xFF0B0F17),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF111827),
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          foregroundColor: Color(0xFFF8FAFC),
+        ),
+        cardTheme: CardThemeData(
+          color: const Color(0xFF111827),
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: Color(0xFF1E293B)),
+          ),
+        ),
+      ),
+      themeMode: ThemeMode.light,
       home: const CourierDashboardPage(),
     );
   }

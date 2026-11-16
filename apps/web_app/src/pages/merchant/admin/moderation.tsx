@@ -13,6 +13,7 @@ import {
 import MerchantLayout from '../../../components/merchant/MerchantLayout';
 import HoppaSelect from '../../../components/merchant/HoppaSelect';
 import StatusIndicator, { StatusTone } from '../../../components/merchant/StatusIndicator';
+import { useConfirm, useToast } from '../../../components/merchant/ToastContext';
 import { getMerchantProfile, merchantApiFetch } from '../../../utils/merchant-auth';
 import { useMerchantTheme } from '../../../context/MerchantThemeContext';
 
@@ -75,6 +76,8 @@ interface AdminCampaignItem {
 export default function AdminModerationPage() {
   const router = useRouter();
   const { theme } = useMerchantTheme();
+  const toast = useToast();
+  const { confirm } = useConfirm();
   const isDark = theme === 'dark';
 
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -120,6 +123,15 @@ export default function AdminModerationPage() {
   }, [router, loadModerationData]);
 
   const handleReviewAction = async (reviewId: string, action: 'approve' | 'reject') => {
+    if (action === 'reject') {
+      const ok = await confirm({
+        title: 'Yorumu Reddet',
+        message: 'Bu müşteri değerlendirmesini kalıcı olarak reddetmek istediğinize emin misiniz?',
+        confirmText: 'Reddet',
+        tone: 'danger',
+      });
+      if (!ok) return;
+    }
     setErrorMsg(null);
     setSuccessMsg(null);
     try {
@@ -130,14 +142,27 @@ export default function AdminModerationPage() {
         action === 'approve' && res.rewardAmount !== undefined
           ? ` (+${res.rewardAmount} Hoppa Para tanımlandı)`
           : '';
-      setSuccessMsg((res.message || 'Yorum güncellendi.') + rewardInfo);
+      const msg = (res.message || 'Yorum güncellendi.') + rewardInfo;
+      setSuccessMsg(msg);
+      toast.success(msg);
       await loadModerationData(reviewFilter, campaignFilter);
     } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : 'Yorum işlemi başarısız oldu.');
+      const msg = err instanceof Error ? err.message : 'Yorum işlemi başarısız oldu.';
+      setErrorMsg(msg);
+      toast.error(msg);
     }
   };
 
   const handleCampaignAction = async (campaignId: string, status: 'APPROVED' | 'REJECTED') => {
+    if (status === 'REJECTED') {
+      const ok = await confirm({
+        title: 'Kampanyayı Reddet',
+        message: 'Bu işletme kampanya / banner talebini reddetmek istediğinize emin misiniz?',
+        confirmText: 'Reddet',
+        tone: 'danger',
+      });
+      if (!ok) return;
+    }
     setErrorMsg(null);
     setSuccessMsg(null);
     try {
@@ -145,10 +170,14 @@ export default function AdminModerationPage() {
         method: 'PUT',
         body: JSON.stringify({ status }),
       });
-      setSuccessMsg(res.message || 'Kampanya durumu güncellendi.');
+      const msg = res.message || 'Kampanya durumu güncellendi.';
+      setSuccessMsg(msg);
+      toast.success(msg);
       await loadModerationData(reviewFilter, campaignFilter);
     } catch (err: unknown) {
-      setErrorMsg(err instanceof Error ? err.message : 'Kampanya işlemi başarısız oldu.');
+      const msg = err instanceof Error ? err.message : 'Kampanya işlemi başarısız oldu.';
+      setErrorMsg(msg);
+      toast.error(msg);
     }
   };
 

@@ -19,6 +19,10 @@ def detect_agent_role(text: str) -> str:
         return "🤖 DevOps & Bridge Agent (CI/CD & Remote Bridge)"
     elif any(k in lowered for k in ["kurye", "courier", "rota", "fleet", "batching", "matching", "poligon", "service-zone", "hizmet alanı", "konum takibi"]):
         return "🛵 Logistics & Fleet Agent (Kurye & Geofencing)"
+    elif any(k in lowered for k in ["logo", "ikon", "svg", "illüstrasyon", "afiş", "banner", "renk", "palet", "görsel", "asset", "grafik", "marka"]):
+        return "🎨 Senior Graphic Designer Agent (Marka & Görsel Tasarım)"
+    elif any(k in lowered for k in ["ux", "ui", "tasarım sistemi", "design system", "ergonomi", "erişilebilirlik", "wcag", "responsive", "shimmer", "drawer", "modal", "header", "spacing", "animasyon"]):
+        return "✨ Senior UI/UX Developer Agent (Tasarım Sistemi & UX)"
     elif any(k in lowered for k in ["web", "nextjs", "next.js", "react", "tsx", "tailwind", "leaflet", "portal", "hoppaselect"]):
         return "🌐 Web Agent (Next.js / React Portal)"
     elif any(k in lowered for k in ["flutter", "dart", "consumer", "mobil", "riverpod", "ekran", "widget", "sayfa", "ui"]):
@@ -27,10 +31,8 @@ def detect_agent_role(text: str) -> str:
         return "⚙️ Backend Agent (Node.js / TypeScript)"
     elif any(k in lowered for k in ["prisma", "veritabanı", "database", "tablo", "şema", "sql", "migration"]):
         return "🗄️ Database & Infra Agent (Prisma / DB)"
-    elif any(k in lowered for k in ["test", "analyze", "hata", "log", "güvenlik", "lint"]):
-        return "🛡️ QA & Security Agent (Test & Kalite)"
-    elif any(k in lowered for k in ["tasarım", "renk", "gradient", "logo", "ikon", "header", "spacing"]):
-        return "🎨 Designer Agent (UI/UX Tasarım)"
+    elif any(k in lowered for k in ["test", "analyze", "hata", "log", "güvenlik", "lint", "appsec", "xss", "idor"]):
+        return "🛡️ QA & AppSec Agent (Test, Kalite & Güvenlik)"
     return "🔍 Planner & Analyzer Agent (Genel Görev)"
 
 

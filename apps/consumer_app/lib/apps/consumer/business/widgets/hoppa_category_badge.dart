@@ -335,14 +335,14 @@ class HoppaCategoryCard extends StatelessWidget {
                 curve: Curves.easeInOut,
                 width: 56,
                 height: 56,
-                padding: const EdgeInsets.all(4),
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
                   gradient: isSelected
                       ? const LinearGradient(
                           colors: [
-                            Color(0xFFFF6B00),
-                            Color(0xFFFF8A00),
+                            Color(0xFFFFF4EC),
+                            Color(0xFFFFE4D0),
                           ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
@@ -354,16 +354,16 @@ class HoppaCategoryCard extends StatelessWidget {
                         ),
                   border: Border.all(
                     color: isSelected
-                        ? Colors.white
-                        : Colors.grey.shade200,
-                    width: isSelected ? 1.5 : 0.8,
+                        ? const Color(0xFFFF6B00)
+                        : const Color(0xFFE2E8F0),
+                    width: isSelected ? 1.6 : 0.9,
                   ),
                   boxShadow: isSelected
                       ? [
                           BoxShadow(
-                            color: const Color(0xFFFF6B00).withValues(alpha: 0.16),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
+                            color: const Color(0xFFFF6B00).withValues(alpha: 0.18),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
                           ),
                         ]
                       : [

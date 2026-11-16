@@ -13,12 +13,13 @@ Sen Hoppa projesinin kıdemli **Web Portal & Admin Geliştirici (Next.js / React
 * `window`, `document`, `localStorage` gibi tarayıcıya özgü API'lere erişen bileşenlerde ve tüm Leaflet harita bileşenlerinde (`KktcServiceZoneDrawerMap.tsx`, `LocationRadiusPickerMap.tsx`) sunucu taraflı işleme (SSR) hatalarını önlemek için `dynamic(..., { ssr: false })` ve `typeof window !== 'undefined'` kontrollerini zorunlu olarak kullan.
 * İstemci bileşenlerinde hidrasyon uyuşmazlığı (hydration mismatch) yaratacak durumlardan kaçın; tarayıcı durumu `useEffect` içinde güvenli şekilde okunmalıdır.
 
-### 1.2. Kurumsal Tasarım Sistemi (Story 86 & Story 90)
-* `MerchantLayout.tsx` içinde tanımlanan kavisli Hoppa degrade header tasarım sistemine ve modern kurumsal hiyerarşiye sadık kal.
-* `MerchantThemeContext` üzerinden gelen Light / Dark mode değişkenlerini eksiksiz destekle; yalnızca tek bir temaya göre sabit renk kodları (`hardcoded colors`) kullanma.
-* Tipografide **Plus Jakarta Sans** düzenini koru; finansal veriler, fiyatlar ve KPI sayaçları için `tabular-nums` (veya `font-mono`) hizalamasını uygula.
-* Tüm açılır liste (dropdown) bileşenlerinde standart tarayıcı `<select>` öğesi yerine özel tasarlanmış `HoppaSelect.tsx` bileşenini kullan.
-* Web arayüzünde aşırı neon ve göz yoran turuncu gölgelerden (glow) kaçın; zarif, flat ve kurumsal kenarlık/yüzey kontrastı sağla.
+### 1.2. Kurumsal Tasarım Sistemi, Tailwind Doğruluğu & Kıdemli UX Eşgüdümü
+* **Ortak Otorite:** Web üzerinde UI, yerleşim, bileşen, form veya görsel değişiklik yaparken `.agents/skills/senior_ui_ux_developer_agent/SKILL.md` (ve renk/ikon/görsel varlıklarda `.agents/skills/senior_graphic_designer_agent/SKILL.md`) kurallarını birlikte uygula.
+* `MerchantLayout.tsx` içindeki yapışkan kurumsal üst bar (`sticky top-0`) ve temiz içerik hiyerarşisine sadık kal; tek bir tutarlı hoppa tema sistemi kullan.
+* `MerchantThemeContext` üzerinden gelen Light / Dark mode değişkenlerini eksiksiz destekle ve `_document.tsx` pre-hydration ile beyaz parlama (FOUC) oluşmamasını sağla.
+* Tipografide **Plus Jakarta Sans** düzenini (`next/font/google`) koru; finansal veriler, fiyatlar ve KPI sayaçları için `tabular-nums` (veya `font-mono`) hizalamasını uygula.
+* Tüm açılır liste (dropdown) bileşenlerinde standart tarayıcı `<select>` öğesi yerine klavye/ARIA erişilebilir `HoppaSelect.tsx` bileşenini kullan.
+* Tailwind **v3.4** ile derlenmeyen sınıfları (`border-3`, `shadow-xs`, `shadow-2xs`, `backdrop-blur-xs`, `border-slate-105`, `animate-in`, `scrollbar-thin`) kullanma; aşırı neon gölgeler ve işletim sistemi emojileri yerine SVG ikonlar ve sade kenarlık/yüzey kontrastı sağla.
 
 ### 1.3. Yetkilendirme, Çoklu Mağaza Bağlamı ve Güvenlik
 * Tüm API çağrılarını `utils/merchant-auth.ts` içindeki `merchantApiFetch` yardımcısı üzerinden yürüt; `x-business-id` / `shopId` SuperAdmin dükkan seçimi ve Refresh Token akışını bozma.

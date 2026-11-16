@@ -2,12 +2,70 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --hoppa-primary: #FF6B00;
+  --hoppa-primary-hover: #E55A00;
+  --hoppa-primary-tint: #FFF4EC;
+  --hoppa-secondary: #00A651;
+  --hoppa-bg-canvas: #F8FAFC;
+  --hoppa-bg-surface: #FFFFFF;
+  --hoppa-bg-subtle: #F1F5F9;
+  --hoppa-border-subtle: #E2E8F0;
+  --hoppa-text-primary: #0F172A;
+  --hoppa-text-secondary: #475569;
+}
+
+.dark {
+  --hoppa-primary: #FF7A1A;
+  --hoppa-primary-hover: #FF8F3F;
+  --hoppa-primary-tint: rgba(255, 107, 0, 0.14);
+  --hoppa-secondary: #10B981;
+  --hoppa-bg-canvas: #0B0F17;
+  --hoppa-bg-surface: #111827;
+  --hoppa-bg-subtle: #1E293B;
+  --hoppa-border-subtle: rgba(148, 163, 184, 0.16);
+  --hoppa-text-primary: #F8FAFC;
+  --hoppa-text-secondary: #94A3B8;
+}
+
 html {
   scroll-behavior: smooth;
 }
 
 body {
   font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 9999px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-animate {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
 }
 
 /* Scroll Fade In Animation */

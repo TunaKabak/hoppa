@@ -130,10 +130,10 @@ class SelectionCategoryPage extends rp.ConsumerWidget {
                       children: [
                         Builder(
                           builder: (context) {
-                            String titleText = "Hoş Geldiniz 👋";
+                            String titleText = "Hoş Geldiniz";
                             if (authState is AuthAuthenticated) {
                               titleText =
-                                  "Tekrar Hoş Geldin, ${authState.user.displayName} 👋";
+                                  "Tekrar Hoş Geldin, ${authState.user.displayName}";
                             }
                             return Text(
                               titleText,
@@ -235,12 +235,18 @@ class SelectionCategoryPage extends rp.ConsumerWidget {
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             child: Row(
                               children: [
+                                const Icon(
+                                  Icons.auto_awesome_rounded,
+                                  color: Color(0xFFFF6B00),
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 6),
                                 Text(
-                                  "✨ Haftanın Öne Çıkanları",
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.bold,
+                                  "Haftanın Öne Çıkanları",
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontWeight: FontWeight.w700,
                                     fontSize: 15,
-                                    color: Colors.black87,
+                                    color: const Color(0xFF0F172A),
                                   ),
                                 ),
                               ],

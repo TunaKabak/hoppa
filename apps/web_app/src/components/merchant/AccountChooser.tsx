@@ -109,7 +109,7 @@ export default function AccountChooser({
                     />
                   ) : isAdminRole ? (
                     <img
-                      src="/logo-square-orange.png"
+                      src="/logo-mark.svg"
                       alt="Hoppa"
                       className="w-11 h-11 rounded-xl object-cover shadow-2xs ring-1 ring-black/5"
                     />

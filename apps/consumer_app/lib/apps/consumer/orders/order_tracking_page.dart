@@ -868,11 +868,11 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> with Tick
               runSpacing: 4,
               children: [
                 if (_currentOrder.dontRingBell)
-                  _buildPreferenceBadge("🔕 Zili Çalma"),
+                  _buildPreferenceBadge(Icons.notifications_off_outlined, "Zili Çalma"),
                 if (_currentOrder.leaveAtDoor)
-                  _buildPreferenceBadge("🚪 Kapıya Bırak"),
+                  _buildPreferenceBadge(Icons.door_front_door_outlined, "Kapıya Bırak"),
                 if (_currentOrder.orderNote.isNotEmpty)
-                  _buildPreferenceBadge("💬 Not: ${_currentOrder.orderNote}"),
+                  _buildPreferenceBadge(Icons.sticky_note_2_outlined, "Not: ${_currentOrder.orderNote}"),
               ],
             ),
           ],
@@ -955,7 +955,7 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> with Tick
     );
   }
 
-  Widget _buildPreferenceBadge(String text) {
+  Widget _buildPreferenceBadge(IconData icon, String text) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -963,9 +963,18 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> with Tick
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: const Color(0xFFFDE68A)),
       ),
-      child: Text(
-        text,
-        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF92400E)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: const Color(0xFF92400E)),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF92400E)),
+            ),
+          ),
+        ],
       ),
     );
   }
