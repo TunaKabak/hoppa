@@ -5,8 +5,14 @@ import 'package:core_network/core_network.dart';
 
 class LocationPermissionException implements Exception {
   final String message;
+  final bool openAppSettings;
+  final bool openLocationSettings;
 
-  const LocationPermissionException(this.message);
+  const LocationPermissionException(
+    this.message, {
+    this.openAppSettings = false,
+    this.openLocationSettings = false,
+  });
 
   @override
   String toString() => message;
@@ -32,6 +38,7 @@ class CourierLocationEngine {
     if (!serviceEnabled) {
       throw const LocationPermissionException(
         'Konum servisi (GPS) kapalı. Lütfen cihaz konumunu açın.',
+        openLocationSettings: true,
       );
     }
 
@@ -51,6 +58,7 @@ class CourierLocationEngine {
       debugPrint('Location permission denied forever');
       throw const LocationPermissionException(
         'Konum izni kalıcı olarak engellendi. Ayarlardan konum izni verin.',
+        openAppSettings: true,
       );
     }
 
@@ -66,7 +74,16 @@ class CourierLocationEngine {
       latestPosition.value = current;
       unawaited(_streamLocationToBackend(current));
     } catch (e) {
-      debugPrint('⚠️ Anlık ilk konum alınamadı (akış bekleniyor): $e');
+      debugPrint('⚠️ Anlık ilk konum alınamadı (son bilinen konum deneniyor): $e');
+      try {
+        final lastKnown = await Geolocator.getLastKnownPosition();
+        if (lastKnown != null && _isTracking) {
+          latestPosition.value = lastKnown;
+          unawaited(_streamLocationToBackend(lastKnown));
+        }
+      } catch (lastErr) {
+        debugPrint('⚠️ Son bilinen konum alınamadı: $lastErr');
+      }
     }
 
     if (!_isTracking) return;
@@ -108,13 +125,18 @@ class CourierLocationEngine {
 
   /// API Üzerinden Konumu Backend'e Gönderir
   Future<void> _streamLocationToBackend(Position pos) async {
+    if (!pos.latitude.isFinite || !pos.longitude.isFinite) {
+      return;
+    }
+    final safeBearing =
+        (pos.heading.isFinite && pos.heading >= 0) ? pos.heading : 0.0;
     try {
       await _apiClient.post(
         '/api/couriers/location',
         body: {
           'latitude': pos.latitude,
           'longitude': pos.longitude,
-          'bearing': pos.heading,
+          'bearing': safeBearing,
         },
         requiresAuth: true,
       );
