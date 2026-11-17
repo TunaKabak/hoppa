@@ -1,9 +1,10 @@
+import crypto from "crypto";
 import { prisma } from "../config/db";
 import { SystemConfigService } from "./SystemConfigService";
 
 export class ReferralService {
   /**
-   * Benzersiz 8 haneli bir davet kodu üretir.
+   * Kriptografik rastgele benzersiz 8 haneli bir davet kodu üretir.
    */
   static async generateReferralCode(): Promise<string> {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -13,7 +14,7 @@ export class ReferralService {
     while (!isUnique) {
       code = "";
       for (let i = 0; i < 8; i++) {
-        code += chars.charAt(Math.floor(Math.random() * chars.length));
+        code += chars.charAt(crypto.randomInt(0, chars.length));
       }
 
       const existingUser = await prisma.user.findUnique({
@@ -81,8 +82,24 @@ export class ReferralService {
     const bonusAmount = parseFloat(bonusAmountStr);
 
     return await prisma.$transaction(async (tx) => {
-      // 1. Davet edene kupon oluştur
-      const referrerCouponCode = `INV-${referrer.referralCode}-${Math.floor(1000 + Math.random() * 9000)}`;
+      // 0. Atomik tekrar kullanım koruması (yüksek eşzamanlılıkta çift davet engeli)
+      const claimedUser = await tx.user.updateMany({
+        where: {
+          id: referredUserId,
+          referredById: null
+        },
+        data: {
+          referredById: referrer.id
+        }
+      });
+
+      if (claimedUser.count === 0) {
+        throw new Error("Zaten bir davet kodu kullandınız.");
+      }
+
+      // 1. Davet edene tahmin edilemez kriptografik kupon oluştur
+      const referrerSuffix = crypto.randomBytes(4).toString("hex").toUpperCase();
+      const referrerCouponCode = `INV-${referrer.referralCode}-${referrerSuffix}`;
       const referrerCoupon = await tx.coupon.create({
         data: {
           code: referrerCouponCode,
@@ -99,7 +116,8 @@ export class ReferralService {
       });
 
       // 2. Davet edilene (yeni üye) kupon oluştur
-      const referredCouponCode = `WELCOME-${referredUserId.substring(0, 6).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const referredSuffix = crypto.randomBytes(4).toString("hex").toUpperCase();
+      const referredCouponCode = `WELCOME-${referredUserId.substring(0, 6).toUpperCase()}-${referredSuffix}`;
       const referredCoupon = await tx.coupon.create({
         data: {
           code: referredCouponCode,
@@ -115,13 +133,7 @@ export class ReferralService {
         }
       });
 
-      // 3. User tablosunu güncelle (Davet eden ilişkisini kur)
-      await tx.user.update({
-        where: { id: referredUserId },
-        data: { referredById: referrer.id }
-      });
-
-      // 4. Referral kaydı oluştur
+      // 3. Referral kaydı oluştur
       const referral = await tx.referral.create({
         data: {
           referrerId: referrer.id,

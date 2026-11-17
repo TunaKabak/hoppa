@@ -50,7 +50,7 @@ flowchart LR
 ---
 
 ## 🗺️ 3. 4 Fazlı İyileştirme Yol Haritası
-* **Faz A (Story 95A — Güvenlik Sertleştirme / Prod Blocker Giderimi):** `C-01`..`C-09` ve `H-01`..`H-10` maddelerinin kapatılması.
+* **[Tamamlandı] Faz A (Story 95A — Güvenlik Sertleştirme / Prod Blocker Giderimi):** `C-01`..`C-09`, `H-01`..`H-10` ve `M-01`..`M-05` maddelerinin kapatılması.
 * **[Tamamlandı] Faz B (Story 95B — Hoppa Design System v2.0 & Vektör Marka Varlıkları):** SVG logomark/wordmark seti (`logo-mark.svg`, `logo-full-light.svg`, `logo-full-dark.svg`, `images/default-product.svg`), kanonsal token'lar (`tailwind.config.js`, `globals.css`, `hoppa_design_tokens.dart`, `hoppa_brand_widgets.dart`, `app_colors.dart`, `app_theme.dart`), 32 temiz kategori SVG'si ve optimize WebP/asset temizlikleri.
 * **[Tamamlandı] Faz C (Story 95C — Kurumsal Web & Satıcı/SuperAdmin Panel Revizyonu):** Kırık Tailwind sınıflarının düzeltilmesi, FOUC-free Dark/Light tema + dinamik CartoDB harita döşemeleri + sürüklenebilir poligon köşeleri + XSS kaçışı, `ToastContext`/`useConfirm` & `SlideOverDrawer`, canlı SLA & gerçek dashboard grafikleri, Finans/IBAN (`GET /merchant/finance`, `PUT /merchant/finance/bank`) & Menü Kategori CRUD & Kupon CRUD & Yorum Yanıt modülleri, SuperAdmin onay kapıları ve gerçek `/public/merchant-inquiry` & `/public/contact` formları + TR/EN/RU yerelleştirmesi.
-* **Faz D (Story 95D — Mobil Uygulamalar UX & Saha Ergonomisi Revizyonu):** Paylaşılan `core_ui`, Shimmer + `CachedNetworkImage`, Checkout/3DS/Opsiyon akış düzeltmeleri, `merchant_app` Bottom Nav, `courier_app` harita + güneş kontrastı + güvenli Nöbet/Çıkış ayrımı.
+* **[Tamamlandı] Faz D (Story 95D — Mobil Uygulamalar UX & Saha Ergonomisi Revizyonu):** Paylaşılan `core_ui`, Shimmer + `CachedNetworkImage`, Checkout/3DS/Opsiyon akış düzeltmeleri, `merchant_app` Bottom Nav, `courier_app` harita + güneş kontrastı + güvenli Nöbet/Çıkış ayrımı.

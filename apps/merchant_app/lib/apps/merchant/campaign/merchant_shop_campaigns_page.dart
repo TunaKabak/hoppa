@@ -15,9 +15,6 @@ class MerchantShopCampaignsPage extends ConsumerStatefulWidget {
 }
 
 class _MerchantShopCampaignsPageState extends ConsumerState<MerchantShopCampaignsPage> {
-  final _picker = ImagePicker();
-  bool _isCreating = false;
-
   void _showCreateCampaignDialog() {
     showModalBottomSheet(
       context: context,
@@ -37,7 +34,6 @@ class _MerchantShopCampaignsPageState extends ConsumerState<MerchantShopCampaign
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final campaignsAsync = ref.watch(merchantShopCampaignsProvider);
 
     return Scaffold(

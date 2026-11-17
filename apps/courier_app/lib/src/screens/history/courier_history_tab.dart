@@ -1,3 +1,4 @@
+import 'package:core_ui/core_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:core_auth/core_auth.dart';
@@ -114,8 +115,11 @@ class _CourierHistoryTabState extends ConsumerState<CourierHistoryTab> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     if (_isLoading && _orders.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const HoppaListCardSkeleton(itemCount: 4);
     }
 
     if (_errorMessage != null && _orders.isEmpty) {
@@ -189,12 +193,12 @@ class _CourierHistoryTabState extends ConsumerState<CourierHistoryTab> {
           ),
           const SizedBox(height: 18),
 
-          const Text(
+          Text(
             'Tamamlanan Teslimatlar',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w800,
-              color: Color(0xFF0F172A),
+              color: theme.colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 10),
@@ -211,15 +215,15 @@ class _CourierHistoryTabState extends ConsumerState<CourierHistoryTab> {
                     Icon(
                       Icons.history_toggle_off_rounded,
                       size: 56,
-                      color: Colors.grey.shade400,
+                      color: theme.colorScheme.onSurfaceVariant,
                     ),
                     const SizedBox(height: 12),
-                    const Text(
+                    Text(
                       'Henüz tamamlanmış teslimatınız bulunmuyor.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF475569),
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -243,6 +247,7 @@ class _CourierHistoryTabState extends ConsumerState<CourierHistoryTab> {
                               style: const TextStyle(
                                 fontWeight: FontWeight.w800,
                                 color: _hoppaOrange,
+                                fontFeatures: HoppaDesignTokens.tabularFigures,
                               ),
                             ),
                           ),
@@ -252,13 +257,18 @@ class _CourierHistoryTabState extends ConsumerState<CourierHistoryTab> {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFDCFCE7),
+                              color: isDark
+                                  ? HoppaDesignTokens.brandGreen
+                                      .withValues(alpha: 0.2)
+                                  : const Color(0xFFDCFCE7),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Text(
+                            child: Text(
                               'Teslim Edildi',
                               style: TextStyle(
-                                color: Color(0xFF166534),
+                                color: isDark
+                                    ? HoppaDesignTokens.statusSuccessDark
+                                    : const Color(0xFF166534),
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -269,10 +279,10 @@ class _CourierHistoryTabState extends ConsumerState<CourierHistoryTab> {
                       const SizedBox(height: 6),
                       Text(
                         order.shop?.name ?? 'Mağaza',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 15,
-                          color: Color(0xFF0F172A),
+                          color: theme.colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -280,9 +290,9 @@ class _CourierHistoryTabState extends ConsumerState<CourierHistoryTab> {
                         order.resolvedDeliveryAddress,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12.5,
-                          color: Color(0xFF475569),
+                          color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -291,17 +301,19 @@ class _CourierHistoryTabState extends ConsumerState<CourierHistoryTab> {
                         children: [
                           Text(
                             _formatDateTime(order.updatedAt ?? order.createdAt),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 11.5,
-                              color: Color(0xFF64748B),
+                              color: theme.colorScheme.onSurfaceVariant,
+                              fontFeatures: HoppaDesignTokens.tabularFigures,
                             ),
                           ),
                           Text(
                             '${_paymentLabel(order.paymentMethod)} • ₺${order.totalAmount.toStringAsFixed(2)}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF334155),
+                              color: theme.colorScheme.onSurface,
+                              fontFeatures: HoppaDesignTokens.tabularFigures,
                             ),
                           ),
                         ],
@@ -310,20 +322,23 @@ class _CourierHistoryTabState extends ConsumerState<CourierHistoryTab> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
+                          Text(
                             'Teslimat Kazancı',
                             style: TextStyle(
                               fontSize: 12.5,
-                              color: Color(0xFF64748B),
+                              color: theme.colorScheme.onSurfaceVariant,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                           Text(
                             '₺${order.deliveryFee.toStringAsFixed(2)}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w800,
-                              color: _hoppaGreen,
+                              color: isDark
+                                  ? HoppaDesignTokens.statusSuccessDark
+                                  : _hoppaGreen,
+                              fontFeatures: HoppaDesignTokens.tabularFigures,
                             ),
                           ),
                         ],
@@ -374,22 +389,29 @@ class _SummaryMetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(
+          color: isDark
+              ? HoppaDesignTokens.borderOutdoorDark
+              : HoppaDesignTokens.borderLight,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11.5,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF64748B),
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 6),
@@ -401,15 +423,17 @@ class _SummaryMetricCard extends StatelessWidget {
               fontSize: 16,
               fontWeight: FontWeight.w800,
               color: accentColor,
+              fontFeatures: HoppaDesignTokens.tabularFigures,
             ),
           ),
           const SizedBox(height: 2),
           Text(
             '$count teslimat',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11.5,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF334155),
+              color: theme.colorScheme.onSurface,
+              fontFeatures: HoppaDesignTokens.tabularFigures,
             ),
           ),
         ],

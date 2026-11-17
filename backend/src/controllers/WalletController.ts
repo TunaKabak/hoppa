@@ -31,34 +31,23 @@ export class WalletController {
         }
       });
     } catch (err: any) {
-      res.status(500).json({ error: true, message: err.message || "Cüzdan bilgileri alınamadı." });
+      console.error("[WalletController.getWallet] Hata:", err);
+      res.status(500).json({ error: true, message: "Cüzdan bilgileri alınamadı." });
     }
   }
 
   async deposit(req: Request, res: Response): Promise<void> {
-    try {
-      const userId = req.user?.id;
-      const { amount } = req.body;
-
-      if (!userId) {
-        res.status(401).json({ error: true, message: "Yetkisiz işlem." });
-        return;
-      }
-
-      if (!amount || isNaN(amount) || amount <= 0) {
-        res.status(400).json({ error: true, message: "Geçersiz yükleme tutarı." });
-        return;
-      }
-
-      const wallet = await WalletService.deposit(userId, parseFloat(amount));
-      res.status(200).json({
-        error: false,
-        message: "Bakiye başarıyla yüklendi.",
-        balance: Number(wallet.balance)
-      });
-    } catch (err: any) {
-      res.status(500).json({ error: true, message: err.message || "Bakiye yüklenemedi." });
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ error: true, message: "Yetkisiz işlem." });
+      return;
     }
+
+    res.status(403).json({
+      error: true,
+      message:
+        "Doğrulanmamış bakiye yükleme işlemi güvenlik nedeniyle kapatılmıştır. Lütfen 3D Secure ödeme akışını kullanın.",
+    });
   }
 
   async getTransactions(req: Request, res: Response): Promise<void> {
@@ -82,7 +71,8 @@ export class WalletController {
         }))
       });
     } catch (err: any) {
-      res.status(500).json({ error: true, message: err.message || "İşlem geçmişi alınamadı." });
+      console.error("[WalletController.getTransactions] Hata:", err);
+      res.status(500).json({ error: true, message: "İşlem geçmişi alınamadı." });
     }
   }
 }

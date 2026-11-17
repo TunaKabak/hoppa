@@ -91,6 +91,7 @@ export default function KktcServiceZoneDrawerMap({
 
   const rootWrapperRef = useRef<HTMLDivElement>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const leafletRef = useRef<typeof import('leaflet') | null>(null);
   const mapInstanceRef = useRef<any>(null);
   const tileLayerRef = useRef<any>(null);
   const zoneLayersRef = useRef<Map<string, any>>(new Map());
@@ -149,28 +150,19 @@ export default function KktcServiceZoneDrawerMap({
     };
   }, [heightClass, isFullscreen]);
 
-  // Initialize Leaflet Map
+  // Initialize Leaflet Map from local bundled npm package (no unverified external CDN)
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    let isMounted = true;
 
-    if (!document.getElementById('leaflet-css')) {
-      const link = document.createElement('link');
-      link.id = 'leaflet-css';
-      link.rel = 'stylesheet';
-      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-      document.head.appendChild(link);
-    }
-
-    if (!(window as any).L) {
-      const script = document.createElement('script');
-      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-      script.onload = () => initMap();
-      document.head.appendChild(script);
-    } else {
+    import('leaflet').then((mod) => {
+      if (!isMounted) return;
+      leafletRef.current = (mod.default || mod) as typeof import('leaflet');
       initMap();
-    }
+    });
 
     return () => {
+      isMounted = false;
       if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
@@ -180,7 +172,7 @@ export default function KktcServiceZoneDrawerMap({
   }, []);
 
   const initMap = () => {
-    const L = (window as any).L;
+    const L = leafletRef.current;
     if (!L || !mapContainerRef.current || mapInstanceRef.current) return;
 
     const map = L.map(mapContainerRef.current, {
@@ -274,7 +266,7 @@ export default function KktcServiceZoneDrawerMap({
   // Switch CartoDB tile layer dynamically on theme change
   useEffect(() => {
     const map = mapInstanceRef.current;
-    const L = (window as any).L;
+    const L = leafletRef.current;
     if (!map || !L) return;
 
     const nextTileUrl = isDark
@@ -304,7 +296,7 @@ export default function KktcServiceZoneDrawerMap({
   // Render Polygons & Draggable Vertices
   const renderAllPolygons = useCallback(() => {
     const map = mapInstanceRef.current;
-    const L = (window as any).L;
+    const L = leafletRef.current;
     if (!map || !L) return;
 
     const createVertexIcon = (fillColor: string, size = 14) =>
@@ -334,7 +326,7 @@ export default function KktcServiceZoneDrawerMap({
       if (!zone.polygon || zone.polygon.length === 0) return;
 
       const isSelected = zone.id === activeZoneId;
-      const latLngs = zone.polygon.map((p) => [p.lat, p.lng]);
+      const latLngs: [number, number][] = zone.polygon.map((p) => [p.lat, p.lng]);
 
       const polygonLayer = L.polygon(latLngs, {
         color: zone.colorHex || '#FF6B00',
@@ -397,7 +389,7 @@ export default function KktcServiceZoneDrawerMap({
 
     // 2. Render Draft Polygon if Drawing New
     if (isDrawingNew && newZoneDraftPolygon && newZoneDraftPolygon.length > 0) {
-      const draftLatLngs = newZoneDraftPolygon.map((p) => [p.lat, p.lng]);
+      const draftLatLngs: [number, number][] = newZoneDraftPolygon.map((p) => [p.lat, p.lng]);
       const draftLayer = L.polygon(draftLatLngs, {
         color: '#2563EB',
         weight: 3,
@@ -443,7 +435,7 @@ export default function KktcServiceZoneDrawerMap({
   // Fit camera bounds to a polygon
   const handleFitZoneBounds = (polygon: ServiceZonePoint[]) => {
     if (!mapInstanceRef.current || !polygon || polygon.length === 0) return;
-    const L = (window as any).L;
+    const L = leafletRef.current;
     if (!L) return;
 
     const bounds = L.latLngBounds(polygon.map((p) => [p.lat, p.lng]));
@@ -471,7 +463,7 @@ export default function KktcServiceZoneDrawerMap({
 
   // Test Location Checker
   const handleTestLocation = (point: ServiceZonePoint) => {
-    const L = (window as any).L;
+    const L = leafletRef.current;
     if (!L || !mapInstanceRef.current) return;
 
     setTestPoint(point);

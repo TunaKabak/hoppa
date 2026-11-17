@@ -5,11 +5,14 @@ export type PaymentProviderName = "CARDPLUS" | "PAYTR" | "STRIPE";
 export type PaymentMode = "SANDBOX" | "LIVE";
 
 export interface PaymentCardDetails {
-  cardNumber: string;
-  expiryMonth: string;
-  expiryYear: string;
-  cvc: string;
-  cardHolderName: string;
+  cardNumber?: string;
+  expiryMonth?: string;
+  expiryYear?: string;
+  cvc?: string;
+  cardHolderName?: string;
+  cardBin?: string;
+  cardLast4?: string;
+  cardToken?: string;
 }
 
 export interface PaymentInitiationInput {
@@ -98,11 +101,37 @@ export function verifyHmacSignature(
 }
 
 export function getPaymentCallbackSecret(): string {
-  const raw =
-    process.env.PAYMENT_CALLBACK_SECRET ||
-    process.env.JWT_SECRET ||
-    "hoppa_dev_payment_secret";
-  return raw.replace(/^["']|["']$/g, "").trim() || "hoppa_dev_payment_secret";
+  const raw = (process.env.PAYMENT_CALLBACK_SECRET || "")
+    .replace(/^["']|["']$/g, "")
+    .trim();
+  const mode = (
+    process.env.PAYMENT_PROVIDER_MODE ||
+    (process.env.NODE_ENV === "production" ? "LIVE" : "SANDBOX")
+  ).toUpperCase();
+
+  if (process.env.NODE_ENV === "production" || mode === "LIVE") {
+    const jwtFallback = (process.env.JWT_SECRET || "")
+      .replace(/^["']|["']$/g, "")
+      .trim();
+    const effective =
+      raw ||
+      (jwtFallback && jwtFallback !== "default_super_secret_for_dev_mode"
+        ? jwtFallback
+        : "");
+    if (
+      !effective ||
+      effective === "hoppa_dev_payment_secret" ||
+      Buffer.byteLength(effective, "utf8") < 32
+    ) {
+      throw new Error(
+        "[SECURITY FATAL] PAYMENT_CALLBACK_SECRET (min 32 bytes) must be configured in production/LIVE mode."
+      );
+    }
+    return effective;
+  }
+
+  const devRaw = raw || process.env.JWT_SECRET || "hoppa_dev_payment_secret";
+  return devRaw.replace(/^["']|["']$/g, "").trim() || "hoppa_dev_payment_secret";
 }
 
 export function requireEnvVars<K extends string>(

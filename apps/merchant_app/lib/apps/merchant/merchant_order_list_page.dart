@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:core_ui/core_ui.dart';
 import 'package:core_shared/shared/models/order.dart' as model;
 import 'package:core_shared/shared/models/order_status.dart';
 import 'package:merchant_app/apps/merchant/merchant_main_layout.dart';
@@ -131,7 +132,7 @@ class _MerchantOrderListPageState extends ConsumerState<MerchantOrderListPage> {
               ),
             Expanded(
               child: ordersAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const HoppaListCardSkeleton(itemCount: 4),
                 error: (error, stack) => Center(child: Text("Hata: $error")),
                 data: (allOrders) {
                   var orders = allOrders.toList();
@@ -247,8 +248,8 @@ class _MerchantOrderListPageState extends ConsumerState<MerchantOrderListPage> {
       ),
       child: ExpansionTile(
         initiallyExpanded: true,
-        backgroundColor: Colors.white,
-        collapsedBackgroundColor: Colors.white,
+        backgroundColor: theme.colorScheme.surface,
+        collapsedBackgroundColor: theme.colorScheme.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
 
         // Başlık
@@ -350,7 +351,11 @@ class _MerchantOrderListPageState extends ConsumerState<MerchantOrderListPage> {
                             ),
                             Text(
                               "${(item.price * item.quantity).toStringAsFixed(2)} ₺",
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                fontFeatures: HoppaDesignTokens.tabularFigures,
+                              ),
                             ),
                           ],
                         ),
@@ -409,7 +414,12 @@ class _MerchantOrderListPageState extends ConsumerState<MerchantOrderListPage> {
                                           item.quantity > 1
                                               ? "+${optTotal.toStringAsFixed(2)} ₺ (${item.quantity % 1 == 0 ? item.quantity.toInt() : item.quantity}x)"
                                               : "+${optUnitPrice.toStringAsFixed(2)} ₺",
-                                          style: const TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold),
+                                          style: const TextStyle(
+                                            color: HoppaDesignTokens.brandGreen,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            fontFeatures: HoppaDesignTokens.tabularFigures,
+                                          ),
                                         )
                                       else
                                         Text(
@@ -441,7 +451,11 @@ class _MerchantOrderListPageState extends ConsumerState<MerchantOrderListPage> {
                     const SizedBox(width: 4),
                     Text(
                       '${order.createdAt.hour.toString().padLeft(2, '0')}:${order.createdAt.minute.toString().padLeft(2, '0')}',
-                      style: TextStyle(color: Colors.grey[800], fontSize: 13),
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface,
+                        fontSize: 13,
+                        fontFeatures: HoppaDesignTokens.tabularFigures,
+                      ),
                     ),
                   ],
                 ),

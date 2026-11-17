@@ -1,5 +1,6 @@
 import type { AppProps } from 'next/app';
 import '../styles/globals.css';
+import 'leaflet/dist/leaflet.css';
 import { MerchantThemeProvider } from '../context/MerchantThemeContext';
 import { ToastProvider } from '../components/merchant/ToastContext';
 

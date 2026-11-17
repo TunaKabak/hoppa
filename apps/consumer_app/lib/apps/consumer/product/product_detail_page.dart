@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:core_ui/core_ui.dart';
+import 'package:consumer_app/apps/consumer/business/widgets/food_product_customization_sheet.dart';
 import 'package:consumer_app/apps/consumer/cart/cart_provider.dart';
 import 'package:core_shared/shared/models/business_product.dart';
 import 'package:core_shared/shared/models/campaign.dart'; // Campaigns
@@ -194,7 +196,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                       ),
                     ),
                     onPressed: () {
-                      final text = "${product.name} Hoppa'da! 🚀\n"
+                      final text = "${product.name} Hoppa'da!\n"
                           "Fiyatı: ${activePrice.toStringAsFixed(2)} TL\n"
                           "Hemen satın almak için ürünü görüntüle: https://hoppanow.com/product/${widget.businessProduct.id}";
                       Share.share(text);
@@ -233,25 +235,16 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                                 width: double.infinity,
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(20),
-                                  color: Colors.white,
+                                  color: Theme.of(context).colorScheme.surface,
                                 ),
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(20),
-                                  child: Image.network(
-                                    product.imageUrl,
+                                  child: HoppaCachedImage(
+                                    imageUrl: product.imageUrl,
+                                    width: double.infinity,
+                                    height: 250,
                                     fit: BoxFit.contain,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Container(
-                                        color: Colors.grey.shade100,
-                                        child: const Center(
-                                          child: Icon(
-                                            Icons.image_not_supported,
-                                            color: Colors.grey,
-                                            size: 50,
-                                          ),
-                                        ),
-                                      );
-                                    },
+                                    fallbackIcon: Icons.shopping_bag_outlined,
                                   ),
                                 ),
                               ),
@@ -300,10 +293,10 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                           product.brand.toLowerCase() != 'yok') ...[
                         Text(
                           product.brand.toUpperCase(),
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey.shade600,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             letterSpacing: 1.0,
                           ),
                         ),
@@ -312,10 +305,10 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                       // Ürün Adı
                       Text(
                         product.name,
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.plusJakartaSans(
                           fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          fontWeight: FontWeight.w800,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -329,7 +322,7 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: Colors.red,
+                                    color: HoppaDesignTokens.statusDanger,
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
@@ -338,17 +331,19 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                                       color: Colors.white,
                                       fontSize: 11,
                                       fontWeight: FontWeight.bold,
+                                      fontFeatures: HoppaDesignTokens.tabularFigures,
                                     ),
                                   ),
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
                                   "₺${oldPrice.toStringAsFixed(2)}",
-                                  style: GoogleFonts.inter(
+                                  style: GoogleFonts.plusJakartaSans(
                                     fontSize: 16,
-                                    color: Colors.grey.shade500,
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                                     fontWeight: FontWeight.bold,
                                     decoration: TextDecoration.lineThrough,
+                                    fontFeatures: HoppaDesignTokens.tabularFigures,
                                   ),
                                 ),
                               ],
@@ -360,10 +355,13 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                             children: [
                               Text(
                                 '₺${activePrice.toStringAsFixed(2)}',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.plusJakartaSans(
                                   fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                  color: activeDiscountRate > 0 ? Colors.red : const Color(0xFF00A651),
+                                  fontWeight: FontWeight.w800,
+                                  color: activeDiscountRate > 0
+                                      ? HoppaDesignTokens.statusDanger
+                                      : HoppaDesignTokens.brandGreen,
+                                  fontFeatures: HoppaDesignTokens.tabularFigures,
                                 ),
                               ),
                               const SizedBox(width: 8),
@@ -371,9 +369,9 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                                 padding: const EdgeInsets.only(bottom: 6),
                                 child: Text(
                                   product.unit.toLowerCase() == 'adet' ? '/ adet' : '/ ${product.unit}',
-                                  style: GoogleFonts.inter(
+                                  style: GoogleFonts.plusJakartaSans(
                                     fontSize: 16,
-                                    color: Colors.grey.shade600,
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -382,16 +380,49 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                           ),
                         ],
                       ),
+                      if (product.optionGroups.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: HoppaDesignTokens.brandOrange.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(HoppaDesignTokens.radiusMd),
+                            border: Border.all(
+                              color: HoppaDesignTokens.brandOrange.withValues(alpha: 0.25),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.tune_rounded,
+                                size: 18,
+                                color: HoppaDesignTokens.brandOrange,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  "${product.optionGroups.length} özelleştirme seçeneği mevcut — sepete eklerken tercihini seç.",
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: Theme.of(context).colorScheme.onSurface,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 24),
                       const Divider(height: 1),
                       const SizedBox(height: 24),
                       // Açıklama Başlığı
                       Text(
                         "Ürün Açıklaması",
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.plusJakartaSans(
                           fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
+                          fontWeight: FontWeight.w700,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -595,10 +626,11 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                 )
               : Text(
                   QuantityFormatter.format(quantity, widget.businessProduct.product.unit),
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFF00A651), // Green text
+                    color: HoppaDesignTokens.brandGreen,
+                    fontFeatures: HoppaDesignTokens.tabularFigures,
                   ),
                 ),
 
@@ -607,6 +639,25 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
             icon: Icons.add,
             onTap: isClosed ? null : () {
               if (!CartValidation.checkLoginAndAddress(context, ref)) return;
+              if (widget.businessProduct.product.optionGroups.isNotEmpty) {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (ctx) => FoodProductCustomizationSheet(
+                    product: widget.businessProduct.product,
+                    onAddToCart: (prod, options, qty) {
+                      ref.read(cartProvider.notifier).addToCartWithOptions(
+                        widget.businessProduct,
+                        options,
+                        qty.toDouble(),
+                      );
+                      HapticFeedback.lightImpact();
+                    },
+                  ),
+                );
+                return;
+              }
               _handleCartAction(() async {
                 await Future.delayed(const Duration(milliseconds: 200));
                 try {
@@ -614,9 +665,13 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
                   HapticFeedback.lightImpact();
                 } catch (e) {
                   final msg = e.toString();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(msg.replaceAll("Exception: ", ""))),
-                  );
+                  if (mounted) {
+                    HoppaToast.show(
+                      context,
+                      msg.replaceAll("Exception: ", ""),
+                      tone: HoppaToastTone.warning,
+                    );
+                  }
                 }
               });
             },
@@ -633,15 +688,38 @@ class _ProductDetailPageState extends ConsumerState<ProductDetailPage> {
               ? null
               : () {
                   if (!CartValidation.checkLoginAndAddress(context, ref)) return;
+                  if (widget.businessProduct.product.optionGroups.isNotEmpty) {
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (ctx) => FoodProductCustomizationSheet(
+                        product: widget.businessProduct.product,
+                        onAddToCart: (prod, options, qty) {
+                          ref.read(cartProvider.notifier).addToCartWithOptions(
+                            widget.businessProduct,
+                            options,
+                            qty.toDouble(),
+                          );
+                          HapticFeedback.lightImpact();
+                        },
+                      ),
+                    );
+                    return;
+                  }
                   _handleCartAction(() async {
                     try {
                       ref.read(cartProvider.notifier).addToCart(widget.businessProduct);
                       HapticFeedback.lightImpact();
                     } catch (e) {
                       final msg = e.toString();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(msg.replaceAll("Exception: ", ""))),
-                      );
+                      if (mounted) {
+                        HoppaToast.show(
+                          context,
+                          msg.replaceAll("Exception: ", ""),
+                          tone: HoppaToastTone.warning,
+                        );
+                      }
                     }
                   });
                 },

@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import { authMiddleware, optionalAuthMiddleware } from "../middlewares/AuthMiddleware";
+import { aiRateLimiter } from "../middlewares/RateLimiter";
 import { ConsumerShopController } from "../controllers/ConsumerShopController";
 import { OrderController } from "../controllers/OrderController";
 import { AddressController } from "../controllers/AddressController";
@@ -85,7 +86,7 @@ router.get("/reviews/my", (req: Request, res: Response) => ReviewController.getM
 router.get("/shops/:shopId/reviews", (req: Request, res: Response) => ReviewController.getShopReviews(req, res));
 
 // Hoppa Assistant Chat
-router.post("/support/chat", (req: Request, res: Response) => SupportController.chatWithAssistant(req, res));
-router.post("/support/voice-command", (req: Request, res: Response) => SupportController.parseVoiceCommand(req, res));
+router.post("/support/chat", aiRateLimiter, (req: Request, res: Response) => SupportController.chatWithAssistant(req, res));
+router.post("/support/voice-command", aiRateLimiter, (req: Request, res: Response) => SupportController.parseVoiceCommand(req, res));
 
 export default router;

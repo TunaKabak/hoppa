@@ -46,8 +46,11 @@ dependencies:
   speech_to_text: ^7.4.0
   video_player: ^2.8.6
   flutter_svg: ^2.0.17
+  cached_network_image: ^3.4.1
 
   # Monorepo packages
+  core_ui:
+    path: ../../packages/core_ui
   core_auth:
     path: ../../packages/core_auth
   core_network:
@@ -64,7 +67,6 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - .env
     - assets/categories/
     - assets/images/hoppa_icon.png
     - assets/images/market_bg.png

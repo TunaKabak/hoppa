@@ -79,7 +79,7 @@ export class CourierController {
       res.status(200).json({ error: false, data: location });
     } catch (error: any) {
       console.error("Kurye konum güncelleme hatası:", error);
-      res.status(500).json({ error: true, message: error.message || "Konum kaydedilemedi." });
+      res.status(500).json({ error: true, message: "Konum kaydedilemedi." });
     }
   }
 
@@ -90,6 +90,42 @@ export class CourierController {
   public async getCourierLocation(req: Request, res: Response): Promise<void> {
     try {
       const id = String(req.params.id);
+      const userId = req.user?.id;
+      const role = (req.user?.role || "").toLowerCase();
+
+      if (!userId) {
+        res.status(401).json({ error: true, message: "Yetkilendirme gereklidir." });
+        return;
+      }
+
+      const isAdmin = role === "super_admin" || role === "admin";
+      if (!isAdmin) {
+        const ownCourier = await prisma.courier.findFirst({
+          where: { id, userId },
+          select: { id: true },
+        });
+        if (!ownCourier) {
+          const activeOrder = await prisma.order.findFirst({
+            where: {
+              courierId: id,
+              status: { in: ["PENDING", "PREPARING", "READY_FOR_PICKUP", "ON_THE_WAY"] },
+              OR: [
+                { consumerId: userId },
+                { shop: { merchantId: userId } },
+              ],
+            },
+            select: { id: true },
+          });
+          if (!activeOrder) {
+            res.status(403).json({
+              error: true,
+              message: "Bu kuryenin canlı konumunu görüntüleme yetkiniz bulunmuyor.",
+            });
+            return;
+          }
+        }
+      }
+
       const location = await prisma.courierLocation.findUnique({
         where: { courierId: id },
       });
@@ -102,7 +138,7 @@ export class CourierController {
       res.status(200).json({ error: false, data: location });
     } catch (error: any) {
       console.error("Kurye konum getirme hatası:", error);
-      res.status(500).json({ error: true, message: error.message || "Konum alınamadı." });
+      res.status(500).json({ error: true, message: "Konum alınamadı." });
     }
   }
 
@@ -384,7 +420,8 @@ export class CourierController {
 
       res.status(200).json({ error: false, data: activeOrders });
     } catch (error: any) {
-      res.status(500).json({ error: true, message: error.message || "Siparişler getirilemedi." });
+      console.error("Kurye atanmış sipariş hatası:", error);
+      res.status(500).json({ error: true, message: "Siparişler getirilemedi." });
     }
   }
 
@@ -455,7 +492,8 @@ export class CourierController {
 
       res.status(200).json({ error: false, message: "Sipariş başarıyla teslim edildi.", data: updatedOrder });
     } catch (error: any) {
-      res.status(500).json({ error: true, message: error.message || "Sipariş güncellenemedi." });
+      console.error("Kurye teslim hatası:", error);
+      res.status(500).json({ error: true, message: "Sipariş güncellenemedi." });
     }
   }
 
@@ -690,7 +728,7 @@ export class CourierController {
       res.status(201).json({ error: false, message: "Kurye başvurusu başarıyla alındı.", data: courier });
     } catch (error: any) {
       console.error("Kurye başvuru hatası:", error);
-      res.status(500).json({ error: true, message: error.message || "Başvuru kaydedilemedi." });
+      res.status(500).json({ error: true, message: "Başvuru kaydedilemedi." });
     }
   }
 
@@ -737,7 +775,7 @@ export class CourierController {
       });
     } catch (error: any) {
       console.error("Nöbet durumu güncelleme hatası:", error);
-      res.status(500).json({ error: true, message: error.message || "Nöbet durumu güncellenemedi." });
+      res.status(500).json({ error: true, message: "Nöbet durumu güncellenemedi." });
     }
   }
 
@@ -753,7 +791,7 @@ export class CourierController {
       res.status(200).json({ error: false, data: options });
     } catch (error: any) {
       console.error("Araç seçenekleri getirme hatası:", error);
-      res.status(500).json({ error: true, message: error.message || "Araç seçenekleri getirilemedi." });
+      res.status(500).json({ error: true, message: "Araç seçenekleri getirilemedi." });
     }
   }
 }

@@ -1,3 +1,4 @@
+import 'package:core_ui/core_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -27,9 +28,10 @@ class MerchantDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      backgroundColor: Colors.white,
+      backgroundColor: theme.colorScheme.surface,
       elevation: 6,
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -57,7 +59,7 @@ class MerchantDialog extends StatelessWidget {
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: const Color(0xFF0F172A),
+                color: theme.colorScheme.onSurface,
               ),
               textAlign: TextAlign.center,
             ),
@@ -68,7 +70,7 @@ class MerchantDialog extends StatelessWidget {
               content,
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 14,
-                color: const Color(0xFF475569),
+                color: theme.colorScheme.onSurfaceVariant,
                 height: 1.45,
               ),
               textAlign: TextAlign.center,
@@ -82,8 +84,9 @@ class MerchantDialog extends StatelessWidget {
                 Expanded(
                   child: OutlinedButton(
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.grey.shade200),
-                      backgroundColor: Colors.grey.shade50,
+                      side: BorderSide(color: theme.dividerColor),
+                      backgroundColor: theme.colorScheme.surfaceContainerHighest
+                          .withValues(alpha: 0.35),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
@@ -93,7 +96,7 @@ class MerchantDialog extends StatelessWidget {
                     child: Text(
                       cancelText,
                       style: TextStyle(
-                        color: Colors.grey.shade700,
+                        color: theme.colorScheme.onSurfaceVariant,
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                       ),
@@ -105,7 +108,9 @@ class MerchantDialog extends StatelessWidget {
                 Expanded(
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: isDestructive ? const Color(0xFFE11D48) : const Color(0xFFFF6B00), // Hoppa Orange or Danger Rose
+                      backgroundColor: isDestructive
+                          ? HoppaDesignTokens.statusDanger
+                          : HoppaDesignTokens.brandOrange,
                       foregroundColor: Colors.white,
                       elevation: 0,
                       padding: const EdgeInsets.symmetric(vertical: 14),

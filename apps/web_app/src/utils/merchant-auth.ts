@@ -14,19 +14,34 @@ const REFRESH_TOKEN_KEY = 'hoppa_merchant_refresh_token';
 const MERCHANT_KEY = 'hoppa_merchant_profile';
 const SELECTED_SHOP_KEY = 'hoppa_merchant_selected_shop';
 
+function scrubLegacyLocalStorageAuth(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+    localStorage.removeItem(MERCHANT_KEY);
+    localStorage.removeItem(SELECTED_SHOP_KEY);
+  } catch {
+    // Ignore storage access errors in restricted contexts
+  }
+}
+
 export const getMerchantToken = (): string | null => {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem(TOKEN_KEY);
+  scrubLegacyLocalStorageAuth();
+  return sessionStorage.getItem(TOKEN_KEY);
 };
 
 export const getMerchantRefreshToken = (): string | null => {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem(REFRESH_TOKEN_KEY);
+  scrubLegacyLocalStorageAuth();
+  return sessionStorage.getItem(REFRESH_TOKEN_KEY);
 };
 
 export const getMerchantProfile = (): MerchantProfile | null => {
   if (typeof window === 'undefined') return null;
-  const raw = localStorage.getItem(MERCHANT_KEY);
+  scrubLegacyLocalStorageAuth();
+  const raw = sessionStorage.getItem(MERCHANT_KEY);
   if (!raw) return null;
   try {
     return JSON.parse(raw);
@@ -37,41 +52,46 @@ export const getMerchantProfile = (): MerchantProfile | null => {
 
 export const getSelectedShopId = (): string | null => {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem(SELECTED_SHOP_KEY);
+  scrubLegacyLocalStorageAuth();
+  return sessionStorage.getItem(SELECTED_SHOP_KEY);
 };
 
 export const setSelectedShopId = (shopId: string | null) => {
   if (typeof window === 'undefined') return;
+  scrubLegacyLocalStorageAuth();
   if (shopId) {
-    localStorage.setItem(SELECTED_SHOP_KEY, shopId);
+    sessionStorage.setItem(SELECTED_SHOP_KEY, shopId);
   } else {
-    localStorage.removeItem(SELECTED_SHOP_KEY);
+    sessionStorage.removeItem(SELECTED_SHOP_KEY);
   }
 };
 
 export const setMerchantAuth = (token: string, merchant: MerchantProfile, refreshToken?: string) => {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(TOKEN_KEY, token);
+  scrubLegacyLocalStorageAuth();
+  sessionStorage.setItem(TOKEN_KEY, token);
   if (refreshToken) {
-    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    sessionStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
   }
-  localStorage.setItem(MERCHANT_KEY, JSON.stringify(merchant));
+  sessionStorage.setItem(MERCHANT_KEY, JSON.stringify(merchant));
 };
 
 export const updateMerchantTokens = (token: string, refreshToken?: string) => {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(TOKEN_KEY, token);
+  scrubLegacyLocalStorageAuth();
+  sessionStorage.setItem(TOKEN_KEY, token);
   if (refreshToken) {
-    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    sessionStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
   }
 };
 
 export const clearMerchantAuth = () => {
   if (typeof window === 'undefined') return;
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
-  localStorage.removeItem(MERCHANT_KEY);
-  localStorage.removeItem(SELECTED_SHOP_KEY);
+  scrubLegacyLocalStorageAuth();
+  sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(REFRESH_TOKEN_KEY);
+  sessionStorage.removeItem(MERCHANT_KEY);
+  sessionStorage.removeItem(SELECTED_SHOP_KEY);
 };
 
 export const getApiBaseUrl = (): string => {

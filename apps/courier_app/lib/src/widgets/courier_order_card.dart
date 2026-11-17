@@ -1,3 +1,4 @@
+import 'package:core_ui/core_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_swipe_button/flutter_swipe_button.dart';
@@ -170,11 +171,19 @@ class CourierOrderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final distanceLabel = _computeActiveDistanceLabel();
     final isOnTheWay = order.isOnTheWay;
+    final borderColor = isDark
+        ? HoppaDesignTokens.borderOutdoorDark
+        : HoppaDesignTokens.borderOutdoorLight;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(HoppaDesignTokens.radiusLg),
+        side: BorderSide(color: borderColor, width: 1.5),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -193,6 +202,7 @@ class CourierOrderCard extends StatelessWidget {
                           color: _hoppaOrange,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 0.3,
+                          fontFeatures: HoppaDesignTokens.tabularFigures,
                         ),
                       ),
                       if (distanceLabel != null) ...[
@@ -200,18 +210,19 @@ class CourierOrderCard extends StatelessWidget {
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.near_me_rounded,
                               size: 14,
-                              color: Color(0xFF64748B),
+                              color: theme.colorScheme.onSurfaceVariant,
                             ),
                             const SizedBox(width: 4),
                             Text(
                               distanceLabel,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF475569),
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
+                                color: theme.colorScheme.onSurfaceVariant,
+                                fontFeatures: HoppaDesignTokens.tabularFigures,
                               ),
                             ),
                           ],
@@ -312,7 +323,7 @@ class CourierOrderCard extends StatelessWidget {
                 ),
             ],
 
-            // Action Buttons (Shop & Customer Call + Navigate)
+            // Action Buttons (Stage-Highlighted 48dp Touch Targets)
             const SizedBox(height: 14),
             Row(
               children: [
@@ -320,6 +331,7 @@ class CourierOrderCard extends StatelessWidget {
                   child: _ActionOutlineButton(
                     icon: Icons.call_outlined,
                     label: 'Mağazayı Ara',
+                    isHighlighted: order.isAwaitingPickup,
                     onPressed: () =>
                         _callPhone(context, order.shop?.phone, 'Mağaza'),
                   ),
@@ -329,6 +341,7 @@ class CourierOrderCard extends StatelessWidget {
                   child: _ActionOutlineButton(
                     icon: Icons.directions_outlined,
                     label: 'Mağazaya Git',
+                    isHighlighted: order.isAwaitingPickup,
                     onPressed: () => _navigateToLocation(
                       context,
                       latitude: order.shop?.latitude,
@@ -347,6 +360,7 @@ class CourierOrderCard extends StatelessWidget {
                   child: _ActionOutlineButton(
                     icon: Icons.phone_in_talk_outlined,
                     label: 'Müşteriyi Ara',
+                    isHighlighted: isOnTheWay,
                     onPressed: () =>
                         _callPhone(context, order.consumer?.phone, 'Müşteri'),
                   ),
@@ -356,6 +370,7 @@ class CourierOrderCard extends StatelessWidget {
                   child: _ActionOutlineButton(
                     icon: Icons.map_outlined,
                     label: 'Müşteriye Git',
+                    isHighlighted: isOnTheWay,
                     onPressed: () => _navigateToLocation(
                       context,
                       latitude: order.address?.latitude,
@@ -368,105 +383,18 @@ class CourierOrderCard extends StatelessWidget {
               ],
             ),
 
-            // Items & Options Breakdown
-            if (order.items.isNotEmpty) ...[
-              const Divider(height: 24),
-              Text(
-                'Sipariş İçeriği (${order.items.length} kalem)',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                  color: Color(0xFF0F172A),
-                ),
-              ),
-              const SizedBox(height: 8),
-              ...order.items.map(
-                (item) => Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 7,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              '${item.formattedQuantity}x',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 12,
-                                color: Color(0xFF0F172A),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              item.productName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13.5,
-                                color: Color(0xFF1E293B),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (item.options.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(left: 34, top: 4),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: item.options.map((opt) {
-                              final prefix = opt.isRemove ? '-' : '+';
-                              final groupPrefix = opt.groupName.isNotEmpty
-                                  ? '${opt.groupName}: '
-                                  : '';
-                              final qtyPrefix =
-                                  !opt.isRemove && opt.quantity > 1
-                                  ? '${opt.quantity}x '
-                                  : '';
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 2),
-                                child: Text(
-                                  '$prefix $qtyPrefix$groupPrefix${opt.name}',
-                                  style: TextStyle(
-                                    fontSize: 12.5,
-                                    color: opt.isRemove
-                                        ? const Color(0xFFB91C1C)
-                                        : const Color(0xFF475569),
-                                    fontWeight: opt.isRemove
-                                        ? FontWeight.w600
-                                        : FontWeight.w400,
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-
             const Divider(height: 22),
 
-            // 2-Stage SwipeButton.expand
+            // Primary Field Action (Placed BEFORE collapsible item details)
             SwipeButton.expand(
               key: ValueKey('${order.id}_${order.status}'),
               enabled: !isActionLoading,
-              height: 54,
+              height: 56,
               borderRadius: BorderRadius.circular(14),
               activeTrackColor: isOnTheWay ? _hoppaGreen : _hoppaOrange,
-              inactiveTrackColor: Colors.grey.shade300,
+              inactiveTrackColor: isDark
+                  ? HoppaDesignTokens.surfaceSubtleDark
+                  : Colors.grey.shade300,
               activeThumbColor: Colors.white,
               inactiveThumbColor: Colors.grey.shade100,
               thumbPadding: const EdgeInsets.all(4),
@@ -494,12 +422,116 @@ class CourierOrderCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                     fontSize: 15,
                   ),
                 ),
               ),
             ),
+
+            // Collapsible Items & Options Breakdown
+            if (order.items.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Theme(
+                data: theme.copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  initiallyExpanded: order.items.length <= 2,
+                  tilePadding: EdgeInsets.zero,
+                  childrenPadding: const EdgeInsets.only(top: 6),
+                  title: Text(
+                    'Sipariş İçeriği (${order.items.length} kalem)',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13.5,
+                      color: theme.colorScheme.onSurface,
+                      fontFeatures: HoppaDesignTokens.tabularFigures,
+                    ),
+                  ),
+                  children: order.items.map(
+                    (item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 7,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.surfaceContainerHighest
+                                      .withValues(alpha: 0.65),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  '${item.formattedQuantity}x',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 12,
+                                    color: theme.colorScheme.onSurface,
+                                    fontFeatures:
+                                        HoppaDesignTokens.tabularFigures,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  item.productName,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13.5,
+                                    color: theme.colorScheme.onSurface,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (item.options.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 34, top: 4),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: item.options.map((opt) {
+                                  final prefix = opt.isRemove ? '-' : '+';
+                                  final groupPrefix = opt.groupName.isNotEmpty
+                                      ? '${opt.groupName}: '
+                                      : '';
+                                  final qtyPrefix =
+                                      !opt.isRemove && opt.quantity > 1
+                                      ? '${opt.quantity}x '
+                                      : '';
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 2),
+                                    child: Text(
+                                      '$prefix $qtyPrefix$groupPrefix${opt.name}',
+                                      style: TextStyle(
+                                        fontSize: 12.5,
+                                        color: opt.isRemove
+                                            ? (isDark
+                                                ? HoppaDesignTokens
+                                                    .statusDangerDark
+                                                : const Color(0xFFB91C1C))
+                                            : theme
+                                                .colorScheme.onSurfaceVariant,
+                                        fontWeight: opt.isRemove
+                                            ? FontWeight.w600
+                                            : FontWeight.w400,
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ).toList(),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -560,24 +592,34 @@ class _PaymentPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final bool isOnline = order.paymentMethod == 'ONLINE_PAYMENT';
     final bool isWallet = order.paymentMethod == 'WALLET';
     final String amountText = '₺${order.totalAmount.toStringAsFixed(2)}';
 
     if (isOnline || isWallet) {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: const Color(0xFFF0FDF4),
+          color: isDark
+              ? HoppaDesignTokens.brandGreen.withValues(alpha: 0.16)
+              : const Color(0xFFF0FDF4),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFFBBF7D0)),
+          border: Border.all(
+            color: isDark
+                ? HoppaDesignTokens.statusSuccessDark.withValues(alpha: 0.4)
+                : const Color(0xFFBBF7D0),
+            width: 1.3,
+          ),
         ),
         child: Row(
           children: [
-            const Icon(
+            Icon(
               Icons.verified_rounded,
               size: 18,
-              color: Color(0xFF15803D),
+              color: isDark
+                  ? HoppaDesignTokens.statusSuccessDark
+                  : const Color(0xFF15803D),
             ),
             const SizedBox(width: 8),
             Expanded(
@@ -585,10 +627,13 @@ class _PaymentPill extends StatelessWidget {
                 isWallet
                     ? 'Hoppa Cüzdan ile Ödendi ($amountText)'
                     : 'Online Ödendi ($amountText)',
-                style: const TextStyle(
-                  color: Color(0xFF166534),
+                style: TextStyle(
+                  color: isDark
+                      ? HoppaDesignTokens.statusSuccessDark
+                      : const Color(0xFF166534),
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
+                  fontFeatures: HoppaDesignTokens.tabularFigures,
                 ),
               ),
             ),
@@ -599,36 +644,78 @@ class _PaymentPill extends StatelessWidget {
 
     final String methodLabel;
     if (order.paymentMethod == 'CASH_ON_DELIVERY') {
-      methodLabel = 'Kapıda Nakit Ödeme';
+      methodLabel = 'Kapıda Nakit';
     } else if (order.paymentMethod == 'CARD_ON_DELIVERY') {
-      methodLabel = 'Kapıda Kart / POS Ödeme';
+      methodLabel = 'Kapıda Kart / POS';
     } else {
       methodLabel = 'Kapıda Ödeme';
     }
 
+    final bannerBg = isDark
+        ? HoppaDesignTokens.brandOrange.withValues(alpha: 0.16)
+        : const Color(0xFFFFF7ED);
+    final bannerBorder = isDark
+        ? HoppaDesignTokens.brandOrange.withValues(alpha: 0.55)
+        : const Color(0xFFFDBA74);
+    final bannerAccent =
+        isDark ? HoppaDesignTokens.statusWarningDark : const Color(0xFF9A3412);
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF7ED),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFFDBA74), width: 1.3),
+        color: bannerBg,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: bannerBorder, width: 1.5),
       ),
       child: Row(
         children: [
-          const Icon(
-            Icons.warning_amber_rounded,
-            size: 20,
-            color: Color(0xFFC2410C),
+          Icon(
+            Icons.payments_rounded,
+            size: 24,
+            color: bannerAccent,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'KAPIDA TAHSİL EDİLECEK',
+                  style: TextStyle(
+                    color: bannerAccent,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 11,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: bannerAccent.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    methodLabel,
+                    style: TextStyle(
+                      color: bannerAccent,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 11.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              '$methodLabel • Tahsil Et: $amountText',
-              style: const TextStyle(
-                color: Color(0xFF9A3412),
-                fontWeight: FontWeight.w800,
-                fontSize: 13,
-              ),
+          Text(
+            amountText,
+            style: TextStyle(
+              color: isDark ? Colors.white : const Color(0xFF7C2D12),
+              fontWeight: FontWeight.w900,
+              fontSize: 24,
+              fontFeatures: HoppaDesignTokens.tabularFigures,
             ),
           ),
         ],
@@ -654,13 +741,14 @@ class _LocationInfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: iconColor.withValues(alpha: 0.1),
+            color: iconColor.withValues(alpha: 0.14),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: iconColor, size: 20),
@@ -672,28 +760,28 @@ class _LocationInfoRow extends StatelessWidget {
             children: [
               Text(
                 badgeText,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 10.5,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFF64748B),
+                  color: theme.colorScheme.onSurfaceVariant,
                   letterSpacing: 0.4,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 15,
-                  color: Color(0xFF0F172A),
+                  color: theme.colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 subtitle,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
-                  color: Color(0xFF475569),
+                  color: theme.colorScheme.onSurfaceVariant,
                   height: 1.35,
                 ),
               ),
@@ -751,29 +839,53 @@ class _ActionOutlineButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onPressed;
+  final bool isHighlighted;
 
   const _ActionOutlineButton({
     required this.icon,
     required this.label,
     required this.onPressed,
+    this.isHighlighted = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final defaultBorder = isDark
+        ? HoppaDesignTokens.borderOutdoorDark
+        : HoppaDesignTokens.borderOutdoorLight;
+
     return OutlinedButton.icon(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
-        foregroundColor: const Color(0xFF0F172A),
-        side: const BorderSide(color: Color(0xFFCBD5E1)),
+        minimumSize: const Size(0, HoppaDesignTokens.minTouchTarget),
+        backgroundColor: isHighlighted
+            ? HoppaDesignTokens.brandOrange.withValues(alpha: 0.12)
+            : theme.colorScheme.surface,
+        foregroundColor: isHighlighted
+            ? HoppaDesignTokens.brandOrange
+            : theme.colorScheme.onSurface,
+        side: BorderSide(
+          color: isHighlighted ? HoppaDesignTokens.brandOrange : defaultBorder,
+          width: isHighlighted ? 1.8 : 1.3,
+        ),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
-      icon: Icon(icon, size: 17, color: const Color(0xFFFF6B00)),
+      icon: Icon(
+        icon,
+        size: 18,
+        color: HoppaDesignTokens.brandOrange,
+      ),
       label: Text(
         label,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+        style: TextStyle(
+          fontSize: 12.5,
+          fontWeight: isHighlighted ? FontWeight.w800 : FontWeight.w600,
+        ),
       ),
     );
   }

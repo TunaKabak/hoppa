@@ -185,7 +185,7 @@ export class SupportController {
 
       // Gemini 2.5 Flash API Payload hazırlığı
       const stableModel = "gemini-2.5-flash";
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${stableModel}:generateContent?key=${apiKey}`;
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${stableModel}:generateContent`;
       const payload = {
         contents: [
           {
@@ -200,7 +200,10 @@ export class SupportController {
       // API Çağrısı (Retry bacaklı)
       const responseData = await SupportController.fetchWithRetry(geminiUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey,
+        },
         body: JSON.stringify(payload)
       });
 
@@ -295,7 +298,7 @@ export class SupportController {
       }
 
       const stableModel = "gemini-2.5-flash";
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${stableModel}:generateContent?key=${apiKey}`;
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${stableModel}:generateContent`;
       const payload = {
         contents: [
           {
@@ -312,7 +315,10 @@ export class SupportController {
 
       const responseData = await SupportController.fetchWithRetry(geminiUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey,
+        },
         body: JSON.stringify(payload)
       });
 

@@ -2,9 +2,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:core_auth/core_auth.dart';
+import 'package:core_ui/core_ui.dart';
 import 'package:core_shared/shared/models/business.dart';
-import 'package:consumer_app/apps/consumer/repositories/consumer_shop_repository.dart';
+import 'package:core_shared/shared/models/order_status.dart';
 import 'package:merchant_app/apps/merchant/providers/merchant_api_providers.dart';
+import 'package:merchant_app/apps/merchant/repositories/merchant_order_repository.dart';
 import 'package:merchant_app/apps/merchant/auth/merchant_login_page.dart';
 import 'package:merchant_app/apps/merchant/merchant_dashboard_page.dart';
 import 'package:merchant_app/apps/merchant/merchant_order_list_page.dart';
@@ -101,10 +103,28 @@ class _MerchantMainLayoutState extends ConsumerState<MerchantMainLayout> {
   Future<void> _loadAllBusinesses() async {
     final byId = <String, Business>{};
     try {
-      final consumerList = await ref.read(consumerShopRepositoryProvider).getShops();
-      for (final b in consumerList) {
-        if (b.id.isNotEmpty) {
-          byId[b.id] = b;
+      final res = await ref
+          .read(apiClientProvider)
+          .get('/api/consumer/shops', requiresAuth: false);
+      final rawShops = res['data'];
+      if (rawShops is List) {
+        for (final raw in rawShops) {
+          if (raw is! Map) continue;
+          final map = Map<String, dynamic>.from(raw);
+          final id = map['id']?.toString() ?? '';
+          if (id.isEmpty) continue;
+          final normalized = <String, dynamic>{
+            ...map,
+            if ((map['address'] == null || map['address'].toString().isEmpty) &&
+                map['fullAddress'] != null)
+              'address': map['fullAddress'],
+            if ((map['logoUrl'] == null || map['logoUrl'].toString().isEmpty) &&
+                map['imageUrl'] != null)
+              'logoUrl': map['imageUrl'],
+            if (map['isOpen'] == null && map['isActive'] != null)
+              'isOpen': map['isActive'],
+          };
+          byId[id] = Business.fromMap(normalized, id);
         }
       }
     } catch (e) {
@@ -274,6 +294,21 @@ class _MerchantMainLayoutState extends ConsumerState<MerchantMainLayout> {
     final pages = _getPages(user);
     final selectedIndex = ref.watch(merchantNavigationIndexProvider);
     final safeIndex = selectedIndex.clamp(0, pages.length - 1);
+    final settingsIndex = pages.length - 1;
+    final pendingOrdersCount = _isLoading
+        ? 0
+        : (ref.watch(merchantOrdersProvider).asData?.value ?? const [])
+            .where((o) => o.status == OrderStatus.pending.value)
+            .length;
+    final int? activeBottomIndex = safeIndex == 0
+        ? 0
+        : safeIndex == 1
+            ? 1
+            : safeIndex == 2
+                ? 2
+                : safeIndex == settingsIndex
+                    ? 3
+                    : null;
 
     return PopScope(
       canPop: safeIndex == 0,
@@ -285,8 +320,59 @@ class _MerchantMainLayoutState extends ConsumerState<MerchantMainLayout> {
         key: merchantDrawerKey,
         drawer: _buildDrawer(theme, colorScheme, user),
         body: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const HoppaListCardSkeleton(itemCount: 4)
             : IndexedStack(index: safeIndex, children: pages),
+        bottomNavigationBar: _isLoading
+            ? null
+            : NavigationBar(
+                selectedIndex: activeBottomIndex ?? 0,
+                indicatorColor: activeBottomIndex == null
+                    ? Colors.transparent
+                    : colorScheme.primary.withValues(alpha: 0.14),
+                onDestinationSelected: (idx) {
+                  final mappedIndex = switch (idx) {
+                    0 => 0,
+                    1 => 1,
+                    2 => 2,
+                    _ => settingsIndex,
+                  };
+                  ref
+                      .read(merchantNavigationIndexProvider.notifier)
+                      .setIndex(mappedIndex);
+                },
+                destinations: [
+                  const NavigationDestination(
+                    icon: Icon(Icons.dashboard_outlined),
+                    selectedIcon: Icon(Icons.dashboard_rounded),
+                    label: 'Özet',
+                  ),
+                  NavigationDestination(
+                    icon: Badge.count(
+                      count: pendingOrdersCount,
+                      isLabelVisible: pendingOrdersCount > 0,
+                      backgroundColor: HoppaDesignTokens.statusDanger,
+                      child: const Icon(Icons.receipt_long_outlined),
+                    ),
+                    selectedIcon: Badge.count(
+                      count: pendingOrdersCount,
+                      isLabelVisible: pendingOrdersCount > 0,
+                      backgroundColor: HoppaDesignTokens.statusDanger,
+                      child: const Icon(Icons.receipt_long_rounded),
+                    ),
+                    label: 'Siparişler',
+                  ),
+                  const NavigationDestination(
+                    icon: Icon(Icons.inventory_2_outlined),
+                    selectedIcon: Icon(Icons.inventory_2_rounded),
+                    label: 'Ürünler',
+                  ),
+                  const NavigationDestination(
+                    icon: Icon(Icons.settings_outlined),
+                    selectedIcon: Icon(Icons.settings_rounded),
+                    label: 'Ayarlar',
+                  ),
+                ],
+              ),
       ),
     );
   }
@@ -455,8 +541,30 @@ class _MerchantMainLayoutState extends ConsumerState<MerchantMainLayout> {
             ),
           ),
 
-          // ─── LOGOUT ───
+          // ─── THEME TOGGLE & LOGOUT ───
           const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: SwitchListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+              secondary: Icon(
+                ref.watch(merchantThemeModeProvider) == ThemeMode.dark
+                    ? Icons.dark_mode_rounded
+                    : Icons.light_mode_rounded,
+                color: colorScheme.primary,
+              ),
+              title: const Text(
+                'Karanlık Mod',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+              ),
+              value: ref.watch(merchantThemeModeProvider) == ThemeMode.dark,
+              onChanged: (isDark) {
+                ref
+                    .read(merchantThemeModeProvider.notifier)
+                    .setThemeMode(isDark ? ThemeMode.dark : ThemeMode.light);
+              },
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: ListTile(
@@ -477,6 +585,17 @@ class _MerchantMainLayoutState extends ConsumerState<MerchantMainLayout> {
                 borderRadius: BorderRadius.circular(8),
               ),
               onTap: () async {
+                final confirmed = await showHoppaConfirmDialog(
+                  context,
+                  title: 'Çıkış Yap',
+                  message:
+                      'İşletme panelinden çıkış yapmak istediğinize emin misiniz? Aktif sipariş bildirimleri duraklatılacaktır.',
+                  confirmText: 'Çıkış Yap',
+                  cancelText: 'Vazgeç',
+                  isDestructive: true,
+                  icon: Icons.logout_rounded,
+                );
+                if (!confirmed || !mounted) return;
                 ref.read(merchantNavigationIndexProvider.notifier).setIndex(0);
                 await ref.read(authControllerProvider.notifier).logout();
                 if (mounted) {

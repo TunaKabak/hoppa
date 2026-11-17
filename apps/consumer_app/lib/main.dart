@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:core_shared/shared/core/services/navigation_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
@@ -27,42 +28,47 @@ import 'apps/consumer/favorites/favorite_provider.dart';
 import 'apps/consumer/splash/splash_page.dart';
 import 'apps/consumer/orders/order_detail_page.dart';
 
-class MyHttpOverrides extends HttpOverrides {
-  @override
-  HttpClient createHttpClient(SecurityContext? context) {
-    return super.createHttpClient(context)
-      ..badCertificateCallback =
-          (X509Certificate cert, String host, int port) => true;
-  }
-}
-
 void main() async {
-  HttpOverrides.global = MyHttpOverrides();
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 1. Önce çevre değişkenlerini yükle
-  try {
-    await dotenv.load(fileName: ".env");
-  } catch (e) {
-    print("🚨 Hata: .env dosyası yüklenemedi, varsayılanlar kullanılacak: $e");
-    dotenv.testLoad(fileInput: 'LOCAL_IP=127.0.0.1\nSUPABASE_URL=https://buikknlswbpregrsyjzh.supabase.co\nSUPABASE_ANON_KEY=');
+  // Prod build'lerde .env pakete gömülmez; yalnızca geliştirme modunda yüklenir.
+  if (!kReleaseMode) {
+    try {
+      await dotenv.load(fileName: ".env");
+    } catch (e) {
+      debugPrint("Warning: .env not loaded, using dev defaults: $e");
+      dotenv.testLoad(fileInput: 'LOCAL_IP=127.0.0.1');
+    }
+  } else {
+    dotenv.testLoad(fileInput: '');
   }
 
-  final supabaseUrl = dotenv.env['SUPABASE_URL'] ?? 'https://buikknlswbpregrsyjzh.supabase.co';
-  final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
+  const definedSupabaseUrl = String.fromEnvironment(
+    'SUPABASE_URL',
+    defaultValue: 'https://buikknlswbpregrsyjzh.supabase.co',
+  );
+  const definedSupabaseAnonKey = String.fromEnvironment(
+    'SUPABASE_ANON_KEY',
+    defaultValue: '',
+  );
 
-  if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
-    print("🚨 KRİTİK HATA: Supabase anahtarları .env içerisinde bulunamadı!");
-  }
+  final supabaseUrl = kReleaseMode
+      ? definedSupabaseUrl
+      : (dotenv.env['SUPABASE_URL'] ?? definedSupabaseUrl);
+  final supabaseAnonKey = kReleaseMode
+      ? definedSupabaseAnonKey
+      : (dotenv.env['SUPABASE_ANON_KEY'] ?? definedSupabaseAnonKey);
 
-  // 2. Supabase istemcisini başlat
-  try {
-    await Supabase.initialize(
-      url: supabaseUrl,
-      anonKey: supabaseAnonKey,
-    );
-  } catch (e) {
-    print("🚨 Supabase initialization failed: $e");
+  // Supabase yalnızca anahtar tanımlıysa başlatılır
+  if (supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty) {
+    try {
+      await Supabase.initialize(
+        url: supabaseUrl,
+        anonKey: supabaseAnonKey,
+      );
+    } catch (e) {
+      debugPrint("Supabase initialization failed: $e");
+    }
   }
 
   FlavorConfig(name: "consumer", variables: {"flavor": "consumer"});
@@ -79,23 +85,28 @@ void main() async {
     try {
       await Firebase.initializeApp();
 
-      // Disable App Verification for Dev/QA Testing
-      if (const String.fromEnvironment('flavor') == 'consumer' ||
-          const bool.fromEnvironment('dart.vm.product') == false) {
+      // App Verification bypass strictly restricted to local debug mode only
+      if (kDebugMode) {
         await FirebaseAuth.instance.setSettings(
           appVerificationDisabledForTesting: true,
         );
       }
     } catch (e) {
-      print("🚨 Firebase initialization failed: $e");
+      debugPrint("Firebase initialization failed: $e");
     }
   }
 
   await initializeDateFormatting('tr_TR', null);
 
-  final localIp = dotenv.env['LOCAL_IP'] ?? '127.0.0.1';
-  final apiBaseUrl = dotenv.env['API_URL'] ?? 'http://$localIp:3000';
-  print("🔌 Connecting to Backend API: $apiBaseUrl");
+  const definedApiUrl = String.fromEnvironment(
+    'API_URL',
+    defaultValue: 'https://hoppa-backend.onrender.com',
+  );
+  final localIp = kReleaseMode ? '127.0.0.1' : (dotenv.env['LOCAL_IP'] ?? '127.0.0.1');
+  final apiBaseUrl = kReleaseMode
+      ? definedApiUrl
+      : (dotenv.env['API_URL'] ?? 'http://$localIp:3000');
+  debugPrint("Connecting to Backend API: $apiBaseUrl");
 
   runApp(riverpod.ProviderScope(
     overrides: [
@@ -169,6 +180,7 @@ class _ConsumerAppState extends riverpod.ConsumerState<ConsumerApp> {
             ],
 
             theme: AppTheme.consumerTheme,
+            darkTheme: AppTheme.consumerDarkTheme,
             home: const SplashPage(),
           );
         },

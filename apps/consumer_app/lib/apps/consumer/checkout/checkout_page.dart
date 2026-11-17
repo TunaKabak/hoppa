@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:core_ui/core_ui.dart';
+import 'package:consumer_app/apps/consumer/address/address_list_page.dart';
 import 'package:provider/provider.dart' as p;
 import 'package:intl/intl.dart';
 import 'package:consumer_app/apps/consumer/services/customer_auth_service.dart';
@@ -93,17 +95,16 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
     if (userPhone != null && userPhone.isNotEmpty) {
       _phoneController.text = userPhone;
     } else {
-      _phoneController.text = "0533 876 54 32";
+      _phoneController.text = '';
     }
 
-    // YENİ: Adres null ise geri dön
+    // Adres null ise geri dön
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_isPickUp && _selectedAddress == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Lütfen önce bir teslimat adresi seçiniz."),
-            backgroundColor: Colors.red,
-          ),
+        HoppaToast.show(
+          context,
+          "Lütfen önce bir teslimat adresi seçiniz.",
+          tone: HoppaToastTone.error,
         );
         Navigator.pop(context);
       }
@@ -244,11 +245,44 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
 
     // Adres Belirleme (Gel Al ise İşletme Adresi)
     Address finalAddress;
+    final trimmedPhone = _phoneController.text.trim();
+    if (trimmedPhone.length < 7) {
+      HoppaToast.show(
+        context,
+        "Lütfen kuryenin ulaşabileceği geçerli bir telefon numarası girin.",
+        tone: HoppaToastTone.warning,
+      );
+      return;
+    }
+
+    String resolvePickupCity(String address) {
+      const kktcCities = [
+        'Lefkoşa',
+        'Girne',
+        'Gazimağusa',
+        'İskele',
+        'Güzelyurt',
+        'Lefke',
+      ];
+      final lower = address.toLowerCase();
+      for (final city in kktcCities) {
+        if (lower.contains(city.toLowerCase())) {
+          return city;
+        }
+      }
+      final parts = address
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+      return parts.isNotEmpty ? parts.last : 'KKTC';
+    }
+
     if (_isPickUp) {
       finalAddress = Address(
         id: 'business',
         title: selectedBusiness.name, // İşletme Adı Başlık Olsun
-        city: 'Gazimağusa',
+        city: resolvePickupCity(selectedBusiness.address),
         district: selectedBusiness.name,
         fullDetails: selectedBusiness.address,
         latitude: selectedBusiness.latitude,
@@ -466,34 +500,35 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                     )
                   else
                     // EVE TESLİM: Kullanıcı Adresi
-                    GestureDetector(
-                      // onTap: () async {
-                      //   final selectedAddress = await Navigator.push(
-                      //     context,
-                      //     MaterialPageRoute(
-                      //       builder: (context) =>
-                      //           const AddressListPage(isSelectionMode: true),
-                      //     ),
-                      //   );
+                    InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () async {
+                        final selectedAddress = await Navigator.push<Address>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const AddressListPage(isSelectionMode: true),
+                          ),
+                        );
 
-                      //   if (selectedAddress != null) {
-                      //     setState(() {
-                      //       _selectedAddress = selectedAddress;
-                      //     });
-                      //     Provider.of<DeliveryProvider>(
-                      //       context,
-                      //       listen: false,
-                      //     ).setAddress(selectedAddress);
-                      //   }
-                      // },
+                        if (selectedAddress != null && mounted) {
+                          setState(() {
+                            _selectedAddress = selectedAddress;
+                          });
+                          p.Provider.of<DeliveryProvider>(
+                            context,
+                            listen: false,
+                          ).setAddress(selectedAddress);
+                        }
+                      },
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade50,
+                          color: Theme.of(context).colorScheme.surface,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: Colors.grey.shade300,
-                            width: 1,
+                            color: kPrimaryColor.withValues(alpha: 0.35),
+                            width: 1.2,
                           ),
                         ),
                         child: Row(
@@ -501,7 +536,7 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                             Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: kPrimaryColor.withAlpha(26),
+                                color: kPrimaryColor.withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Icon(
@@ -525,9 +560,9 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                                   Text(
                                     _selectedAddress != null
                                         ? "${_selectedAddress!.district}, ${_selectedAddress!.city}"
-                                        : "Lütfen bir teslimat adresi seçiniz.",
+                                        : "Teslimat adresi seçmek için dokunun.",
                                     style: TextStyle(
-                                      color: Colors.grey[600],
+                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                                       fontSize: 13,
                                     ),
                                     maxLines: 1,
@@ -536,21 +571,26 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                                 ],
                               ),
                             ),
-                            // const Icon(
-                            //   Icons.edit,
-                            //   color: Colors.grey,
-                            //   size: 20,
-                            // ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: kPrimaryColor.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                "Değiştir",
+                                style: TextStyle(
+                                  color: kPrimaryColor,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
                           ],
                         ),
-                      ),
-                    ),
-                  if (!_isPickUp)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 8, left: 4),
-                      child: Text(
-                        "Teslimat adresini değiştirmek için lütfen ana sayfaya dönünüz.",
-                        style: TextStyle(color: Colors.grey, fontSize: 12),
                       ),
                     ),
 
@@ -562,53 +602,87 @@ class _CheckoutPageState extends ConsumerState<CheckoutPage> {
                   p.Consumer<BusinessProvider>(
                     builder: (context, businessProvider, child) {
                       final shopPhone = businessProvider.selectedBusiness?.phone ?? '';
-                      final displayText = _isPickUp ? shopPhone : _phoneController.text;
-                      return Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade50,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.grey.shade300, width: 1),
+                      if (_isPickUp) {
+                        return Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surface,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: Theme.of(context).dividerColor,
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: kPrimaryColor.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(Icons.store_outlined, color: kPrimaryColor),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      "İşletme İletişim Numarası",
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      shopPhone.isNotEmpty ? shopPhone : 'Belirtilmemiş',
+                                      style: TextStyle(
+                                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                        fontSize: 13,
+                                        fontFeatures: HoppaDesignTokens.tabularFigures,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      return TextFormField(
+                        controller: _phoneController,
+                        keyboardType: TextInputType.phone,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                          fontFeatures: HoppaDesignTokens.tabularFigures,
                         ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: kPrimaryColor.withAlpha(26),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Icon(Icons.phone, color: kPrimaryColor),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    "İletişim Numarası",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    displayText.isNotEmpty ? displayText : 'Belirtilmemiş',
-                                    style: TextStyle(
-                                      color: Colors.grey[600],
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const Icon(
-                              Icons.lock_outline,
-                              color: Colors.grey,
-                              size: 20,
-                            ),
-                          ],
+                        decoration: InputDecoration(
+                          labelText: "Kurye İletişim Numarası",
+                          hintText: "05XX XXX XX XX",
+                          prefixIcon: Icon(Icons.phone_outlined, color: kPrimaryColor),
+                          suffixIcon: Icon(
+                            Icons.edit_outlined,
+                            size: 18,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                          filled: true,
+                          fillColor: Theme.of(context).colorScheme.surface,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(color: Theme.of(context).dividerColor),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(color: Theme.of(context).dividerColor),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(color: kPrimaryColor, width: 1.5),
+                          ),
                         ),
                       );
                     },

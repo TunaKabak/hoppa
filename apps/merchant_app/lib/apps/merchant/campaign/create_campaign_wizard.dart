@@ -6,7 +6,6 @@ import 'package:core_shared/shared/core/services/media_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:core_shared/shared/models/campaign.dart';
 import '../providers/merchant_api_providers.dart';
-import '../repositories/merchant_product_repository.dart';
 
 class CreateCampaignWizard extends ConsumerStatefulWidget {
   final String businessId;

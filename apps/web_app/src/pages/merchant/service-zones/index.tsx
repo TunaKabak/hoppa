@@ -156,7 +156,7 @@ export default function KktcServiceZonesPage() {
       return;
     }
 
-    if (currentProfile.role !== 'super_admin' && currentProfile.role !== 'admin') {
+    if (currentProfile.role !== 'super_admin') {
       toast.error('Bu sayfaya yalnızca sistem yöneticileri (Admin) erişebilir.');
       router.replace('/merchant/dashboard');
       return;

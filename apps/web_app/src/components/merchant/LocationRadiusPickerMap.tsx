@@ -35,6 +35,7 @@ export default function LocationRadiusPickerMap({
   const isDark = theme === 'dark';
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
+  const leafletRef = useRef<typeof import('leaflet') | null>(null);
   const mapInstanceRef = useRef<any>(null);
   const tileLayerRef = useRef<any>(null);
   const markerInstanceRef = useRef<any>(null);
@@ -69,27 +70,16 @@ export default function LocationRadiusPickerMap({
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    let isMounted = true;
 
-    // Load Leaflet CSS
-    if (!document.getElementById('leaflet-css')) {
-      const link = document.createElement('link');
-      link.id = 'leaflet-css';
-      link.rel = 'stylesheet';
-      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-      document.head.appendChild(link);
-    }
-
-    // Load Leaflet JS
-    if (!(window as any).L) {
-      const script = document.createElement('script');
-      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-      script.onload = () => initMap();
-      document.head.appendChild(script);
-    } else {
+    import('leaflet').then((mod) => {
+      if (!isMounted) return;
+      leafletRef.current = (mod.default || mod) as typeof import('leaflet');
       initMap();
-    }
+    });
 
     return () => {
+      isMounted = false;
       if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current);
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
@@ -117,7 +107,7 @@ export default function LocationRadiusPickerMap({
   }, []);
 
   const initMap = () => {
-    const L = (window as any).L;
+    const L = leafletRef.current;
     if (!L || !mapContainerRef.current || mapInstanceRef.current) return;
 
     const map = L.map(mapContainerRef.current, {
@@ -243,7 +233,7 @@ export default function LocationRadiusPickerMap({
   // Switch CartoDB tile layer dynamically on theme change
   useEffect(() => {
     const map = mapInstanceRef.current;
-    const L = (window as any).L;
+    const L = leafletRef.current;
     if (!map || !L) return;
 
     const nextTileUrl = isDark
@@ -270,7 +260,7 @@ export default function LocationRadiusPickerMap({
   // Update map visual layers on state change
   useEffect(() => {
     if (!mapInstanceRef.current) return;
-    const L = (window as any).L;
+    const L = leafletRef.current;
     if (!L) return;
 
     if (latitude && longitude && markerInstanceRef.current) {
@@ -297,7 +287,7 @@ export default function LocationRadiusPickerMap({
 
     // Render Polygon Mode Layer if active
     if (isPolygonMode && deliveryPolygon && deliveryPolygon.length > 0) {
-      const latLngs = deliveryPolygon.map((pt) => [pt.lat, pt.lng]);
+      const latLngs: [number, number][] = deliveryPolygon.map((pt) => [pt.lat, pt.lng]);
       const polygonLayer = L.polygon(latLngs, {
         color: '#3B82F6',
         fillColor: '#3B82F6',

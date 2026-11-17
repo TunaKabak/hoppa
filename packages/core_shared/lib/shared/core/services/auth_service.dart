@@ -75,15 +75,6 @@ class AuthService {
         .map((doc) => doc.data());
   }
 
-  // --- TEST İÇİN: KULLANICIYI İŞLETME YAP ---
-  Future<void> upgradeToMerchant(String businessId) async {
-    if (_auth.currentUser == null) return;
-    await _db.collection('users').doc(_auth.currentUser!.uid).set({
-      'role': 'merchant',
-      'businessId': businessId,
-    }, SetOptions(merge: true));
-  }
-
   // --- GOOGLE GİRİŞİ ---
   Future<User?> signInWithGoogle() async {
     try {

@@ -1,5 +1,6 @@
-import { Router } from "express";
+import express, { Router } from "express";
 import { authMiddleware } from "../middlewares/AuthMiddleware";
+import { aiRateLimiter } from "../middlewares/RateLimiter";
 import { ShopController } from "../controllers/ShopController";
 import { ProductController } from "../controllers/ProductController";
 import { OrderController } from "../controllers/OrderController";
@@ -122,11 +123,11 @@ router.post("/coupons", (req, res) => shopCampaignController.createMerchantCoupo
 router.delete("/coupons/:id", (req, res) => shopCampaignController.deleteMerchantCoupon(req, res));
 
 // Yapay Zeka (AI) ve Tahminleme İşlemleri
-router.post("/ai/scan-menu", (req, res) => merchantAIController.scanMenu(req, res));
-router.get("/ai/predictive-stock", (req, res) => merchantAIController.getPredictiveStock(req, res));
+router.post("/ai/scan-menu", express.json({ limit: "12mb" }), aiRateLimiter, (req, res) => merchantAIController.scanMenu(req, res));
+router.get("/ai/predictive-stock", aiRateLimiter, (req, res) => merchantAIController.getPredictiveStock(req, res));
 
 // Medya / Görsel Yükleme İşlemleri
-router.post("/media/upload", (req, res) => mediaController.uploadDirect(req, res));
+router.post("/media/upload", express.json({ limit: "12mb" }), (req, res) => mediaController.uploadDirect(req, res));
 router.post("/media/upload-url", (req, res) => mediaController.getUploadUrl(req, res));
 
 export default router;

@@ -63,11 +63,32 @@ export function isRealtimeEventEnvelope(value: unknown): value is RealtimeEventE
   );
 }
 
-export function buildRealtimeStreamUrl(token: string, shopId?: string | null): string {
+export function buildRealtimeStreamUrl(ticket: string, shopId?: string | null): string {
   const baseUrl = getApiBaseUrl();
   const trimmedShopId = typeof shopId === 'string' ? shopId.trim() : '';
   const shopQuery = trimmedShopId ? `&shopId=${encodeURIComponent(trimmedShopId)}` : '';
-  return `${baseUrl}/events/stream?token=${encodeURIComponent(token)}${shopQuery}`;
+  return `${baseUrl}/events/stream?ticket=${encodeURIComponent(ticket)}${shopQuery}`;
+}
+
+async function fetchRealtimeTicket(token: string): Promise<string | null> {
+  try {
+    const baseUrl = getApiBaseUrl();
+    const res = await fetch(`${baseUrl}/events/ticket`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as { error?: boolean; data?: { ticket?: string } };
+    if (!json.error && typeof json.data?.ticket === 'string' && json.data.ticket.length > 0) {
+      return json.data.ticket;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 export class MerchantRealtimeClient {
@@ -152,7 +173,21 @@ export class MerchantRealtimeClient {
       return;
     }
 
-    const streamUrl = buildRealtimeStreamUrl(token, this.options.shopId);
+    void this.openStreamWithTicket(token);
+  }
+
+  private async openStreamWithTicket(token: string): Promise<void> {
+    const ticket = await fetchRealtimeTicket(token);
+    if (this.isManuallyDisconnected) {
+      return;
+    }
+    if (!ticket) {
+      this.closeEventSource();
+      this.scheduleReconnect();
+      return;
+    }
+
+    const streamUrl = buildRealtimeStreamUrl(ticket, this.options.shopId);
     const es = new EventSource(streamUrl);
     this.eventSource = es;
 

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:core_ui/core_ui.dart';
 import 'package:core_auth/core_auth.dart';
 import 'package:core_shared/shared/models/order.dart' as model;
 import 'package:core_shared/shared/models/courier_location.dart';
@@ -349,10 +350,41 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> with Tick
               maxZoom: 19.0,
             ),
             children: [
-              // High Performance OpenStreetMap Tiles
+              // CartoDB Voyager (Light) / Dark All (Dark) Map Tiles
               TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                urlTemplate: Theme.of(context).brightness == Brightness.dark
+                    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
+                    : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+                subdomains: const ['a', 'b', 'c', 'd'],
                 userAgentPackageName: 'com.hoppa.consumer',
+              ),
+
+              // Rota Çizgisi (İşletme -> Kurye -> Teslimat Adresi)
+              Builder(
+                builder: (context) {
+                  final routePoints = <LatLng>[
+                    if (_shopLatLng != null) _shopLatLng!,
+                    if (_courierLatLng != null) _courierLatLng!,
+                    _destinationLatLng,
+                  ];
+                  if (routePoints.length < 2) {
+                    return const SizedBox.shrink();
+                  }
+                  return PolylineLayer(
+                    polylines: [
+                      Polyline(
+                        points: routePoints,
+                        strokeWidth: 6.0,
+                        color: HoppaDesignTokens.brandOrange.withValues(alpha: 0.28),
+                      ),
+                      Polyline(
+                        points: routePoints,
+                        strokeWidth: 3.5,
+                        color: HoppaDesignTokens.brandOrange,
+                      ),
+                    ],
+                  );
+                },
               ),
 
               // Map Markers
@@ -409,7 +441,7 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> with Tick
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.95),
+                      color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.95),
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
@@ -449,10 +481,11 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> with Tick
                                 statusStr == 'ON_THE_WAY' || statusStr == 'ONWAY'
                                     ? "Tahmini Varış: $_etaMinutes dk"
                                     : (statusStr == 'PREPARING' ? "Sipariş Hazırlanıyor" : "Canlı Takip"),
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontWeight: FontWeight.w900,
                                   fontSize: 13,
-                                  color: Color(0xFF1E293B),
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                  fontFeatures: HoppaDesignTokens.tabularFigures,
                                 ),
                               ),
                               Text(
@@ -460,7 +493,8 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> with Tick
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
-                                  color: Colors.grey[600],
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  fontFeatures: HoppaDesignTokens.tabularFigures,
                                 ),
                               ),
                             ],
@@ -670,7 +704,7 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> with Tick
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         boxShadow: [
           BoxShadow(
@@ -680,8 +714,11 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> with Tick
           ),
         ],
       ),
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-      child: Column(
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -895,7 +932,12 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> with Tick
                 leading: const Icon(Icons.receipt_long_rounded, color: Color(0xFFFF6B00), size: 20),
                 title: Text(
                   "${_currentOrder.items.length} Ürün • ${_currentOrder.totalAmount.toStringAsFixed(2)} ₺",
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF1E293B)),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontFeatures: HoppaDesignTokens.tabularFigures,
+                  ),
                 ),
                 children: _currentOrder.items.map((item) {
                   return Padding(
@@ -941,7 +983,11 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> with Tick
                         const SizedBox(width: 6),
                         Text(
                           "${(item.price * item.quantity).toStringAsFixed(2)} ₺",
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            fontFeatures: HoppaDesignTokens.tabularFigures,
+                          ),
                         ),
                       ],
                     ),
@@ -951,6 +997,8 @@ class _OrderTrackingPageState extends ConsumerState<OrderTrackingPage> with Tick
             ),
           ],
         ],
+      ),
+        ),
       ),
     );
   }

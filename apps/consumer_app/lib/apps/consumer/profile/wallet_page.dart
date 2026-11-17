@@ -56,58 +56,9 @@ class _WalletPageState extends ConsumerState<WalletPage> {
     }
   }
 
-  Future<void> _depositMoney(double amount) async {
-    Navigator.pop(context); // Close bottom sheet
-    
-    // Show loading dialog
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(color: Color(0xFFE95D22)),
-      ),
-    );
-
-    try {
-      final apiClient = ref.read(apiClientProvider);
-      await apiClient.post(
-        '/api/consumer/wallet/deposit',
-        body: {'amount': amount},
-      );
-
-      Navigator.pop(context); // Dismiss loading dialog
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${amount.toStringAsFixed(2)} TL başarıyla cüzdanınıza yüklendi!'),
-          backgroundColor: const Color(0xFF00A651),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      _fetchWalletData(); // Refresh wallet
-    } catch (e) {
-      Navigator.pop(context); // Dismiss loading dialog
-      _showErrorSnackBar('İşlem sırasında bir hata oluştu: $e');
-    }
-  }
-
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
   void _showDepositBottomSheet() {
-    double? customAmount;
-    final formKey = GlobalKey<FormState>();
-
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.only(
@@ -117,117 +68,80 @@ class _WalletPageState extends ConsumerState<WalletPage> {
       ),
       builder: (context) {
         return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-            left: 24,
-            right: 24,
-            top: 24,
-          ),
-          child: Form(
-            key: formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '3D Secure Bakiye Yükleme',
+                    style: GoogleFonts.outfit(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00A651).withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: const Color(0xFF00A651).withOpacity(0.25),
+                  ),
+                ),
+                child: const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Bakiye Yükle',
-                      style: GoogleFonts.outfit(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                    Icon(
+                      Icons.verified_user_rounded,
+                      color: Color(0xFF00A651),
+                      size: 24,
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Güvenlik politikamız gereği cüzdanınıza yalnızca doğrulanmış sipariş iadeleri ve davet/kampanya ödülleri aktarılır. Doğrudan kartla cüzdana yükleme çok yakında 3D Secure ile açılacaktır.',
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          height: 1.45,
+                          color: Colors.black87,
+                        ),
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                    ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Yüklemek istediğiniz tutarı seçin veya girin:',
-                  style: TextStyle(color: Colors.grey, fontSize: 14),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildAmountChip(100),
-                    _buildAmountChip(250),
-                    _buildAmountChip(500),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(
-                    labelText: 'Diğer Tutar (TL)',
-                    prefixIcon: const Icon(Icons.add_card_rounded, color: Color(0xFFE95D22)),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: const BorderSide(color: Color(0xFFE95D22), width: 2),
-                    ),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFE95D22),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Lütfen bir tutar girin.';
-                    }
-                    final amt = double.tryParse(value);
-                    if (amt == null || amt <= 0) {
-                      return 'Lütfen geçerli bir tutar girin.';
-                    }
-                    return null;
-                  },
-                  onSaved: (value) {
-                    if (value != null) {
-                      customAmount = double.tryParse(value);
-                    }
-                  },
                 ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: () {
-                    if (formKey.currentState!.validate()) {
-                      formKey.currentState!.save();
-                      if (customAmount != null) {
-                        _depositMoney(customAmount!);
-                      }
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE95D22),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: const Text('Devam Et', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                child: const Text(
+                  'Anladım',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       },
-    );
-  }
-
-  Widget _buildAmountChip(double amount) {
-    return ActionChip(
-      label: Text(
-        '${amount.toStringAsFixed(0)} TL',
-        style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFE95D22)),
-      ),
-      backgroundColor: const Color(0xFFE95D22).withOpacity(0.1),
-      side: BorderSide.none,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      onPressed: () => _depositMoney(amount),
     );
   }
 

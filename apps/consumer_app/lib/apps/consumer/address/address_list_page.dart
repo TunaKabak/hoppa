@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:core_ui/core_ui.dart';
 import 'package:consumer_app/apps/consumer/repositories/address_repository.dart';
 import 'package:core_shared/shared/models/address.dart';
 import 'package:consumer_app/apps/consumer/address/add_address_page.dart';
@@ -94,11 +95,14 @@ class AddressListPage extends ConsumerWidget {
                         child: isGuest
                             ? _buildListContent(context, ref, addressesToShow, selectedAddress, isGuest, deliveryProvider, theme)
                             : ref.watch(addressesProvider).when(
-                                loading: () => const Center(child: CircularProgressIndicator()),
+                                loading: () => const HoppaListCardSkeleton(
+                                  itemCount: 4,
+                                  cardHeight: 96,
+                                ),
                                 error: (err, stack) => Center(
                                   child: Text(
                                     "Hatalar yüklenemedi: $err",
-                                    style: const TextStyle(color: Colors.red),
+                                    style: const TextStyle(color: HoppaDesignTokens.statusDanger),
                                   ),
                                 ),
                                 data: (addresses) => _buildListContent(context, ref, addresses, selectedAddress, isGuest, deliveryProvider, theme),
@@ -109,10 +113,10 @@ class AddressListPage extends ConsumerWidget {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: theme.colorScheme.surface,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
+                              color: Colors.black.withValues(alpha: 0.05),
                               blurRadius: 10,
                               offset: const Offset(0, -5),
                             ),
@@ -201,12 +205,12 @@ class AddressListPage extends ConsumerWidget {
       itemBuilder: (context, index) {
         final address = addresses[index];
         final isSelected = selectedAddress?.id == address.id;
-        final highlightColor = const Color(0xFFE95D22);
+        final highlightColor = HoppaDesignTokens.brandOrange;
         return Card(
           elevation: isSelected ? 3 : 0,
-          shadowColor: isSelected ? highlightColor.withOpacity(0.15) : Colors.transparent,
+          shadowColor: isSelected ? highlightColor.withValues(alpha: 0.15) : Colors.transparent,
           color: isSelected
-              ? Colors.white
+              ? theme.colorScheme.surface
               : theme.cardTheme.color,
           margin: const EdgeInsets.only(bottom: 12),
           shape: RoundedRectangleBorder(
@@ -220,8 +224,8 @@ class AddressListPage extends ConsumerWidget {
             contentPadding: const EdgeInsets.all(12),
             leading: CircleAvatar(
               backgroundColor: isSelected
-                  ? highlightColor.withOpacity(0.15)
-                  : theme.primaryColor.withOpacity(0.1),
+                  ? highlightColor.withValues(alpha: 0.15)
+                  : theme.primaryColor.withValues(alpha: 0.1),
               child: Icon(
                 _getIconForTitle(address.title),
                 color: isSelected ? highlightColor : theme.primaryColor,
@@ -237,7 +241,9 @@ class AddressListPage extends ConsumerWidget {
             subtitle: Text(
               "${address.city}, ${address.district}\n${address.fullDetails}",
               style: TextStyle(
-                color: isSelected ? Colors.grey.shade900 : Colors.grey.shade600,
+                color: isSelected
+                    ? theme.colorScheme.onSurface
+                    : theme.colorScheme.onSurfaceVariant,
                 fontSize: 13,
               ),
             ),

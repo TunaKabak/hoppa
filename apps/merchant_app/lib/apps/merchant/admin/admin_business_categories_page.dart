@@ -343,8 +343,6 @@ class _AdminBusinessCategoriesPageState
   @override
   Widget build(BuildContext context) {
     final categoriesAsync = ref.watch(adminBusinessCategoriesProvider);
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7F6),

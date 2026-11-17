@@ -19,9 +19,48 @@ export interface RealtimeEventEnvelope<TPayload extends RealtimeEventPayload = R
 }
 
 const HEARTBEAT_INTERVAL_MS = 25_000;
+const SSE_TICKET_TTL_MS = 60_000;
+
+interface SseTicketEntry {
+  userId: string;
+  role: string;
+  expiresAt: number;
+}
 
 export class RealtimeEventService {
   private readonly channels = new Map<string, Set<Response>>();
+  private readonly sseTickets = new Map<string, SseTicketEntry>();
+
+  /**
+   * Issues a short-lived (60s), single-use opaque ticket for SSE EventSource connections
+   * so long-lived JWT access tokens are never exposed in query strings.
+   */
+  public issueSseTicket(userId: string, role: string): string {
+    const now = Date.now();
+    for (const [key, entry] of this.sseTickets.entries()) {
+      if (entry.expiresAt <= now) {
+        this.sseTickets.delete(key);
+      }
+    }
+    const ticket = crypto.randomBytes(32).toString("hex");
+    this.sseTickets.set(ticket, {
+      userId,
+      role,
+      expiresAt: now + SSE_TICKET_TTL_MS,
+    });
+    return ticket;
+  }
+
+  public consumeSseTicket(ticket: string): { userId: string; role: string } | null {
+    if (!ticket) return null;
+    const entry = this.sseTickets.get(ticket);
+    if (!entry) return null;
+    this.sseTickets.delete(ticket);
+    if (Date.now() > entry.expiresAt) {
+      return null;
+    }
+    return { userId: entry.userId, role: entry.role };
+  }
 
   /**
    * Registers an SSE Response stream on one or more channels, sends the initial
