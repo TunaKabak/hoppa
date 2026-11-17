@@ -344,25 +344,17 @@ class _AdminBusinessCategoriesPageState
   Widget build(BuildContext context) {
     final categoriesAsync = ref.watch(adminBusinessCategoriesProvider);
 
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F6),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () {
             ref.read(merchantNavigationIndexProvider.notifier).setIndex(0);
           },
         ),
-        title: Text(
-          "İşletme Kategori Yönetimi",
-          style: GoogleFonts.poppins(
-            color: Colors.black87,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
+        title: const Text("İşletme Kategori Yönetimi"),
         actions: [
           if (_isOrderDirty)
             TextButton.icon(

@@ -2,23 +2,25 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:core_auth/core_auth.dart';
 import 'package:core_shared/core_shared.dart';
+import 'package:core_ui/core_ui.dart';
 import 'package:consumer_app/apps/consumer/auth/consumer_auth_wrapper.dart';
 import 'package:http/http.dart' as http;
 
 // Splash ekranının olası durumları (Flutter'ın ConnectionState sınıfı ile çakışmaması için SplashConnectionState adını kullanıyoruz)
 enum SplashConnectionState { loading, offline, serverDown }
 
-class SplashPage extends StatefulWidget {
+class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
 
   @override
-  State<SplashPage> createState() => _SplashPageState();
+  ConsumerState<SplashPage> createState() => _SplashPageState();
 }
 
-class _SplashPageState extends State<SplashPage> {
+class _SplashPageState extends ConsumerState<SplashPage> {
   SplashConnectionState _currentState = SplashConnectionState.loading;
   bool _isRetrying = false;
 
@@ -28,7 +30,6 @@ class _SplashPageState extends State<SplashPage> {
     _startSystemChecks();
   }
 
-  // Tüm ağ ve sistem kontrollerini başlatır
   Future<void> _startSystemChecks() async {
     if (_isRetrying && _currentState == SplashConnectionState.loading) return;
 
@@ -39,23 +40,23 @@ class _SplashPageState extends State<SplashPage> {
 
     final startTime = DateTime.now();
 
-    // 1. Adım: Cihazın internet bağlantısı var mı? (Hızlı DNS Sorgusu)
+    // 1. Adım: Cihazın internet bağlantısı var mı?
     final hasInternet = await _checkPhysicalConnection();
     if (!hasInternet) {
       _setSplashState(SplashConnectionState.offline);
       return;
     }
 
-    // 2. Adım: Hoppa Backend & Supabase Sağlıklı mı?
+    // 2. Adım: Hoppa Backend sağlıklı mı? (apiClientProvider URL üzerinden okunur, prod'da .env gerektirmez)
     final isServerUp = await _checkServerHealth();
     if (!isServerUp) {
       _setSplashState(SplashConnectionState.serverDown);
       return;
     }
 
-    // 3. Adım: Her şey yolundaysa minimum bekleme süresini (2 saniye) tamamla ve uygulamaya geçiş yap
+    // 3. Minimum görsel geçiş süresi (1.5s)
     final elapsed = DateTime.now().difference(startTime);
-    const minDuration = Duration(seconds: 2);
+    const minDuration = Duration(milliseconds: 1500);
     if (elapsed < minDuration) {
       await Future.delayed(minDuration - elapsed);
     }
@@ -63,32 +64,43 @@ class _SplashPageState extends State<SplashPage> {
     _proceedToApp();
   }
 
-  // Fiziksel internet kontrolü
   Future<bool> _checkPhysicalConnection() async {
     try {
       final result = await InternetAddress.lookup(
-        'google.com',
-      ).timeout(const Duration(seconds: 4));
+        'hoppa-backend.onrender.com',
+      ).timeout(const Duration(seconds: 5));
       return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
     } catch (_) {
-      return false;
+      try {
+        final fallback = await InternetAddress.lookup(
+          'google.com',
+        ).timeout(const Duration(seconds: 4));
+        return fallback.isNotEmpty && fallback[0].rawAddress.isNotEmpty;
+      } catch (_) {
+        return false;
+      }
     }
   }
 
-  // API Sağlık Kontrolü (Hoppa Health Endpoint)
   Future<bool> _checkServerHealth() async {
     try {
-      // API_URL çevre değişkeninizden veya config'den okunmalıdır
-      final baseUrl = dotenv.env['API_URL'] ?? 'http://127.0.0.1:3000';
-      final url = Uri.parse("$baseUrl/api/public/health");
+      final baseUrl = ref.read(apiClientProvider).baseUrl.replaceAll(RegExp(r'/+$'), '');
+      final url = Uri.parse('$baseUrl/api/public/health');
 
       final response = await http
           .get(url)
-          .timeout(
-            const Duration(seconds: 5),
-          ); // 5 saniye içinde cevap gelmelidir
+          .timeout(const Duration(seconds: 12));
 
-      return response.statusCode == 200;
+      if (response.statusCode == 200) {
+        return true;
+      }
+
+      // Render cold-start / routing fallback için /health uç noktasını da dene
+      final rootHealthUrl = Uri.parse('$baseUrl/health');
+      final fallbackRes = await http
+          .get(rootHealthUrl)
+          .timeout(const Duration(seconds: 8));
+      return fallbackRes.statusCode == 200;
     } catch (_) {
       return false;
     }
@@ -100,7 +112,7 @@ class _SplashPageState extends State<SplashPage> {
         _currentState = state;
         _isRetrying = false;
       });
-      HapticFeedback.mediumImpact(); // Hafif/orta titreşim uyarısı
+      HapticFeedback.mediumImpact();
     }
   }
 
@@ -116,42 +128,43 @@ class _SplashPageState extends State<SplashPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isWhiteBg = _currentState == SplashConnectionState.loading;
+    final isDark = theme.brightness == Brightness.dark;
+    final isLoading = _currentState == SplashConnectionState.loading;
 
     return Scaffold(
-      backgroundColor: isWhiteBg ? Colors.white : theme.colorScheme.secondary,
+      backgroundColor: isLoading
+          ? theme.scaffoldBackgroundColor
+          : (isDark ? HoppaDesignTokens.surfaceDark : HoppaDesignTokens.brandOrange),
       body: SafeArea(
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 300),
-          child: _buildBodyForState(theme),
+          child: _buildBodyForState(theme, isDark),
         ),
       ),
     );
   }
 
-  Widget _buildBodyForState(ThemeData theme) {
+  Widget _buildBodyForState(ThemeData theme, bool isDark) {
     switch (_currentState) {
-      // 1. DURUM: Sistem Yükleniyor (Standart Splash)
       case SplashConnectionState.loading:
         return Center(
           key: const ValueKey('loading'),
           child: Column(
             children: [
               const Spacer(flex: 3),
-              // Center Brand Logo
               const HoppaBrandLogo(height: 58),
-              const SizedBox(height: 24),
-              // Slogan
+              const SizedBox(height: 20),
               Text(
                 'Hoppa: Siparişin en kısa yolu.',
                 style: GoogleFonts.plusJakartaSans(
-                  color: HoppaDesignTokens.textSecondaryLight,
+                  color: isDark
+                      ? HoppaDesignTokens.textSecondaryDark
+                      : HoppaDesignTokens.textSecondaryLight,
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),
               ),
               const Spacer(flex: 4),
-              // Bottom Progress Bar & Loading Text
               Padding(
                 padding: const EdgeInsets.only(bottom: 48.0, left: 80.0, right: 80.0),
                 child: Column(
@@ -159,19 +172,21 @@ class _SplashPageState extends State<SplashPage> {
                   children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(4),
-                      child: const SizedBox(
-                        height: 5,
-                        child: LinearProgressIndicator(
-                          color: Color(0xFF00A651),
-                          backgroundColor: Color(0xFFF5F5F5),
-                        ),
+                      child: LinearProgressIndicator(
+                        minHeight: 5,
+                        color: HoppaDesignTokens.brandGreen,
+                        backgroundColor: isDark
+                            ? HoppaDesignTokens.borderDark
+                            : HoppaDesignTokens.borderLight,
                       ),
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Yükleniyor...',
-                      style: GoogleFonts.inter(
-                        color: Colors.grey.shade400,
+                      'Bağlantı doğrulanıyor...',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: isDark
+                            ? HoppaDesignTokens.textMutedDark
+                            : HoppaDesignTokens.textMutedLight,
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),
@@ -183,33 +198,30 @@ class _SplashPageState extends State<SplashPage> {
           ),
         );
 
-      // 2. DURUM: Cihaz Çevrimdışı (No Internet)
       case SplashConnectionState.offline:
         return _buildErrorStateUI(
           key: const ValueKey('offline'),
           icon: Icons.wifi_off_rounded,
-          title: "İnternet Bağlantısı Yok",
+          title: 'İnternet Bağlantısı Yok',
           description:
-              "Hoppa ile lezzetli anlara ulaşabilmek için aktif bir internet bağlantınızın olması gerekir. Lütfen ayarlarınızı kontrol edip tekrar deneyiniz.",
-          buttonText: "Tekrar Dene",
+              'Hoppa ile hızlı siparişe ulaşabilmek için aktif internet bağlantınız olmalıdır. Lütfen bağlantınızı kontrol edip tekrar deneyin.',
+          buttonText: 'Tekrar Dene',
           theme: theme,
         );
 
-      // 3. DURUM: Sunucu Kapalı veya Bakımda (Server Down)
       case SplashConnectionState.serverDown:
         return _buildErrorStateUI(
           key: const ValueKey('server_down'),
           icon: Icons.cloud_off_rounded,
-          title: "Size Daha İyi Hizmet Verebilmek İçin Bakımdayız",
+          title: 'Sunuculara Ulaşılıyor...',
           description:
-              "Sistemlerimizi güncelliyor ve sizin için Hoppa'yı daha hızlı hale getiriyoruz. Kısa süre sonra tekrar yanınızda olacağız.",
-          buttonText: "Yeniden Dene",
+              'Sistem kısa süreli bir uyanma veya bakım sürecinde olabilir. Birkaç saniye içinde tekrar bağlanmayı deneyebilirsiniz.',
+          buttonText: 'Yeniden Dene',
           theme: theme,
         );
     }
   }
 
-  // Kurumsal Hata Pencerelerini Çizen Şablon Widget
   Widget _buildErrorStateUI({
     required Key key,
     required IconData icon,
@@ -224,63 +236,54 @@ class _SplashPageState extends State<SplashPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Şık Hata İllüstrasyonu (İkonlu)
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.12),
+              color: Colors.white.withValues(alpha: 0.14),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 72, color: Colors.white),
+            child: Icon(icon, size: 68, color: Colors.white),
           ),
-          const SizedBox(height: 32),
-
-          // Kurumsal Başlık
+          const SizedBox(height: 28),
           Text(
             title,
             textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(
+            style: GoogleFonts.plusJakartaSans(
               color: Colors.white,
               fontSize: 22,
-              fontWeight: FontWeight.bold,
-              letterSpacing: -0.5,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.4,
             ),
           ),
           const SizedBox(height: 12),
-
-          // Sakinleştirici Açıklama Metni
           Text(
             description,
             textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
-              color: Colors.white.withValues(alpha: 0.85),
+            style: GoogleFonts.plusJakartaSans(
+              color: Colors.white.withValues(alpha: 0.88),
               fontSize: 14,
-              height: 1.4,
+              height: 1.45,
             ),
           ),
-          const SizedBox(height: 40),
-
-          // İnteraktif Yeniden Dene Butonu
+          const SizedBox(height: 36),
           SizedBox(
             width: double.infinity,
             height: 52,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
-                foregroundColor: theme.colorScheme.secondary,
+                foregroundColor: HoppaDesignTokens.brandOrange,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
               ),
-              onPressed: () {
-                _startSystemChecks();
-              },
+              onPressed: _startSystemChecks,
               child: Text(
                 buttonText,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),

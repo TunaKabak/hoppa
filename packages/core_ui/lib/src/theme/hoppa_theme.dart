@@ -44,6 +44,21 @@ class HoppaTheme {
           fontWeight: FontWeight.w700,
         ),
       ),
+      tabBarTheme: TabBarThemeData(
+        labelColor: primary,
+        unselectedLabelColor: HoppaDesignTokens.textSecondaryLight,
+        indicatorColor: primary,
+        indicatorSize: TabBarIndicatorSize.tab,
+        dividerColor: HoppaDesignTokens.borderLight,
+        labelStyle: GoogleFonts.plusJakartaSans(
+          fontSize: 13.5,
+          fontWeight: FontWeight.w700,
+        ),
+        unselectedLabelStyle: GoogleFonts.plusJakartaSans(
+          fontSize: 13.5,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
       cardTheme: CardThemeData(
         color: HoppaDesignTokens.surfaceLight,
         elevation: 0,
@@ -160,6 +175,21 @@ class HoppaTheme {
           fontWeight: FontWeight.w700,
         ),
       ),
+      tabBarTheme: TabBarThemeData(
+        labelColor: primary,
+        unselectedLabelColor: HoppaDesignTokens.textSecondaryDark,
+        indicatorColor: primary,
+        indicatorSize: TabBarIndicatorSize.tab,
+        dividerColor: HoppaDesignTokens.borderDark,
+        labelStyle: GoogleFonts.plusJakartaSans(
+          fontSize: 13.5,
+          fontWeight: FontWeight.w700,
+        ),
+        unselectedLabelStyle: GoogleFonts.plusJakartaSans(
+          fontSize: 13.5,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
       cardTheme: CardThemeData(
         color: HoppaDesignTokens.surfaceDark,
         elevation: 0,
@@ -230,6 +260,21 @@ class HoppaTheme {
           color: HoppaDesignTokens.textPrimaryLight,
           fontSize: 18,
           fontWeight: FontWeight.w700,
+        ),
+      ),
+      tabBarTheme: TabBarThemeData(
+        labelColor: primary,
+        unselectedLabelColor: HoppaDesignTokens.textSecondaryLight,
+        indicatorColor: primary,
+        indicatorSize: TabBarIndicatorSize.tab,
+        dividerColor: HoppaDesignTokens.borderLight,
+        labelStyle: GoogleFonts.plusJakartaSans(
+          fontSize: 13.5,
+          fontWeight: FontWeight.w700,
+        ),
+        unselectedLabelStyle: GoogleFonts.plusJakartaSans(
+          fontSize: 13.5,
+          fontWeight: FontWeight.w600,
         ),
       ),
       cardTheme: CardThemeData(
@@ -384,6 +429,21 @@ class HoppaTheme {
           color: HoppaDesignTokens.textPrimaryDark,
           fontSize: 18,
           fontWeight: FontWeight.w700,
+        ),
+      ),
+      tabBarTheme: TabBarThemeData(
+        labelColor: primary,
+        unselectedLabelColor: HoppaDesignTokens.textSecondaryDark,
+        indicatorColor: primary,
+        indicatorSize: TabBarIndicatorSize.tab,
+        dividerColor: HoppaDesignTokens.borderDark,
+        labelStyle: GoogleFonts.plusJakartaSans(
+          fontSize: 13.5,
+          fontWeight: FontWeight.w700,
+        ),
+        unselectedLabelStyle: GoogleFonts.plusJakartaSans(
+          fontSize: 13.5,
+          fontWeight: FontWeight.w600,
         ),
       ),
       cardTheme: CardThemeData(

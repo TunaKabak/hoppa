@@ -448,10 +448,7 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
 
       return Scaffold(
         appBar: AppBar(
-          title: const Text(
-            "İşletme Ayarları",
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          ),
+          title: const Text("İşletme Ayarları"),
           centerTitle: true,
           leading: IconButton(
             icon: const Icon(Icons.menu_rounded),
@@ -459,13 +456,22 @@ class _MerchantSettingsPageState extends ConsumerState<MerchantSettingsPage>
           ),
           bottom: TabBar(
             controller: _tabController,
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.white70,
-            indicatorColor: Colors.white,
             tabs: const [
-              Tab(text: "Profil"),
-              Tab(text: "Operasyon"),
-              Tab(text: "Teslimat"),
+              Tab(
+                iconMargin: EdgeInsets.only(bottom: 4),
+                icon: Icon(Icons.storefront_outlined, size: 19),
+                text: "Profil",
+              ),
+              Tab(
+                iconMargin: EdgeInsets.only(bottom: 4),
+                icon: Icon(Icons.schedule_rounded, size: 19),
+                text: "Operasyon",
+              ),
+              Tab(
+                iconMargin: EdgeInsets.only(bottom: 4),
+                icon: Icon(Icons.local_shipping_outlined, size: 19),
+                text: "Teslimat",
+              ),
             ],
           ),
         ),

@@ -1,12 +1,15 @@
+import 'package:core_auth/core_auth.dart';
+import 'package:core_shared/core_shared.dart';
+import 'package:core_ui/core_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart' as legacy_provider;
-import 'package:core_auth/core_auth.dart';
-import 'package:core_shared/core_shared.dart';
 import 'package:consumer_app/apps/consumer/address/delivery_provider.dart';
 import 'package:consumer_app/apps/consumer/repositories/address_repository.dart';
 import 'package:consumer_app/apps/consumer/checkout/checkout_page.dart';
+import 'widgets/auth_layout.dart';
+import 'widgets/auth_text_field.dart';
 
 class NameSurnameInputPage extends ConsumerStatefulWidget {
   final bool fromCheckout;
@@ -14,11 +17,11 @@ class NameSurnameInputPage extends ConsumerStatefulWidget {
   const NameSurnameInputPage({super.key, this.fromCheckout = false});
 
   @override
-  ConsumerState<NameSurnameInputPage> createState() => _NameSurnameInputPageState();
+  ConsumerState<NameSurnameInputPage> createState() =>
+      _NameSurnameInputPageState();
 }
 
 class _NameSurnameInputPageState extends ConsumerState<NameSurnameInputPage> {
-  final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _surnameController = TextEditingController();
   bool _isLoading = false;
@@ -31,7 +34,16 @@ class _NameSurnameInputPageState extends ConsumerState<NameSurnameInputPage> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    FocusScope.of(context).unfocus();
+    final firstName = _nameController.text.trim();
+    final lastName = _surnameController.text.trim();
+
+    if (firstName.isEmpty || lastName.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Lütfen ad ve soyadınızı eksiksiz girin.')),
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
 
@@ -40,8 +52,8 @@ class _NameSurnameInputPageState extends ConsumerState<NameSurnameInputPage> {
       final response = await apiClient.put(
         '/api/consumer/profile',
         body: {
-          'name': _nameController.text.trim(),
-          'surname': _surnameController.text.trim(),
+          'name': firstName,
+          'surname': lastName,
         },
       );
 
@@ -51,52 +63,49 @@ class _NameSurnameInputPageState extends ConsumerState<NameSurnameInputPage> {
         final updatedUser = AuthUser(
           id: authState.user.id,
           phone: authState.user.phone,
-          name: data['name']?.toString() ?? _nameController.text.trim(),
-          surname: data['surname']?.toString() ?? _surnameController.text.trim(),
+          name: data['name']?.toString() ?? firstName,
+          surname: data['surname']?.toString() ?? lastName,
           role: authState.user.role,
         );
 
-        // Update local auth controller & shared preferences
-        await ref.read(authControllerProvider.notifier).updateUserData(updatedUser);
+        await ref
+            .read(authControllerProvider.notifier)
+            .updateUserData(updatedUser);
       }
 
-      // Auto-migrate guest address if exists
       if (mounted) {
-        final deliveryProvider = legacy_provider.Provider.of<DeliveryProvider>(context, listen: false);
+        final deliveryProvider =
+            legacy_provider.Provider.of<DeliveryProvider>(context, listen: false);
         final guestAddress = deliveryProvider.selectedAddress;
-        
+
         if (guestAddress != null && guestAddress.id.startsWith('guest')) {
           try {
             final addressRepo = ref.read(addressRepositoryProvider);
-            // Save address to database
             final savedAddress = await addressRepo.createAddress(guestAddress);
-            // Select the newly generated address
             await deliveryProvider.setAddress(savedAddress);
           } catch (e) {
-            debugPrint("Guest address migration failed: $e");
+            debugPrint('Guest address migration failed: $e');
           }
         }
       }
 
       if (mounted) {
         if (widget.fromCheckout) {
-          // If came from checkout, navigate to checkout page directly
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(builder: (context) => const CheckoutPage()),
             (route) => route.isFirst,
           );
         } else {
-          // Otherwise, pop back to home page
           Navigator.popUntil(context, (route) => route.isFirst);
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Kaydedilemedi: ${e.toString()}"),
-            backgroundColor: Colors.red,
+          const SnackBar(
+            content: Text('Bilgileriniz kaydedilemedi. Lütfen tekrar deneyin.'),
+            backgroundColor: HoppaDesignTokens.statusDanger,
           ),
         );
       }
@@ -109,153 +118,134 @@ class _NameSurnameInputPageState extends ConsumerState<NameSurnameInputPage> {
 
   @override
   Widget build(BuildContext context) {
-    const kPrimaryColor = Color(0xFF00A651);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final primary = theme.colorScheme.primary;
+    final textPrimary = isDark
+        ? HoppaDesignTokens.textPrimaryDark
+        : HoppaDesignTokens.textPrimaryLight;
+    final textSecondary = isDark
+        ? HoppaDesignTokens.textSecondaryDark
+        : HoppaDesignTokens.textSecondaryLight;
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        title: const HoppaBrandLogo(height: 34),
-        centerTitle: true,
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 20),
-                Text(
-                  "Hesabınızı Tamamlayın",
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0F172A),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  "Lütfen siparişlerinizde ve iletişimde kullanılmak üzere isim ve soyisminizi giriniz.",
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: Colors.grey.shade600,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 40),
-
-                // Name Field
-                Text(
-                  "Adınız",
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _nameController,
-                  keyboardType: TextInputType.name,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: InputDecoration(
-                    hintText: "Örn: Ahmet",
-                    filled: true,
-                    fillColor: Colors.grey.shade50,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(color: Colors.grey.shade200),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(color: Colors.grey.shade200),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: const BorderSide(color: kPrimaryColor, width: 1.5),
-                    ),
-                  ),
-                  validator: (v) => v!.trim().isEmpty ? "Lütfen adınızı girin" : null,
-                ),
-                const SizedBox(height: 24),
-
-                // Surname Field
-                Text(
-                  "Soyadınız",
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _surnameController,
-                  keyboardType: TextInputType.name,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: InputDecoration(
-                    hintText: "Örn: Yılmaz",
-                    filled: true,
-                    fillColor: Colors.grey.shade50,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(color: Colors.grey.shade200),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(color: Colors.grey.shade200),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: const BorderSide(color: kPrimaryColor, width: 1.5),
-                    ),
-                  ),
-                  validator: (v) => v!.trim().isEmpty ? "Lütfen soyadınızı girin" : null,
-                ),
-                const SizedBox(height: 40),
-
-                // Submit Button
-                SizedBox(
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _submit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: kPrimaryColor,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : Text(
-                            "Kaydet ve Devam Et",
-                            style: GoogleFonts.poppins(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                  ),
-                ),
-              ],
+    return AuthLayout(
+      showAppBar: false,
+      enableGlass: true,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Center(child: HoppaBrandLogo(height: 44)),
+          const SizedBox(height: 16),
+          Container(
+            width: 56,
+            height: 56,
+            margin: const EdgeInsets.symmetric(horizontal: 120),
+            decoration: BoxDecoration(
+              color: primary.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.person_add_alt_1_rounded, color: primary, size: 28),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'Profilinizi Tamamlayın',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: textPrimary,
+              letterSpacing: -0.3,
             ),
           ),
-        ),
+          const SizedBox(height: 8),
+          Text(
+            'Kuryemizin siparişi size güvenle teslim edebilmesi için ad ve soyadınızı paylaşın.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 13.5,
+              color: textSecondary,
+              height: 1.45,
+            ),
+          ),
+          const SizedBox(height: 26),
+          Text(
+            'Adınız',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          AuthTextField(
+            controller: _nameController,
+            hint: 'Örn: Ahmet',
+            icon: Icons.person_outline_rounded,
+            primaryColor: primary,
+            textCapitalization: TextCapitalization.words,
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Soyadınız',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          AuthTextField(
+            controller: _surnameController,
+            hint: 'Örn: Yılmaz',
+            icon: Icons.badge_outlined,
+            primaryColor: primary,
+            textCapitalization: TextCapitalization.words,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) {
+              if (!_isLoading) _submit();
+            },
+          ),
+          const SizedBox(height: 26),
+          SizedBox(
+            height: 54,
+            child: ElevatedButton(
+              onPressed: _isLoading ? null : _submit,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.2,
+                      ),
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Kaydet ve Devam Et',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 15.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.check_rounded, size: 19),
+                      ],
+                    ),
+            ),
+          ),
+        ],
       ),
     );
   }

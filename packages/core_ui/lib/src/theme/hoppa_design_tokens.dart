@@ -34,6 +34,7 @@ class HoppaDesignTokens {
   static const Color borderOutdoorDark = Color(0xFF334155);
   static const Color textPrimaryDark = Color(0xFFF8FAFC);
   static const Color textSecondaryDark = Color(0xFF94A3B8);
+  static const Color textMutedDark = Color(0xFF94A3B8);
 
   // Semantic Status
   static const Color statusSuccess = Color(0xFF00A651);

@@ -14,14 +14,14 @@ export class OtpService {
   }
 
   private static getWhitelistNumbers(): string[] {
-    const isProd = process.env.NODE_ENV === "production";
-    if (isProd && process.env.ALLOW_STORE_REVIEW_TEST_ACCOUNTS !== "true") {
+    if (process.env.ALLOW_STORE_REVIEW_TEST_ACCOUNTS === "false") {
       return [];
     }
+    const e164Regex = /^\+[1-9]\d{8,14}$/;
     return (process.env.TEST_PHONE_NUMBERS || "")
       .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
+      .map((s) => s.replace(/^["']|["']$/g, "").trim())
+      .filter((num) => e164Regex.test(num));
   }
 
   private static constantTimeEquals(a: string, b: string): boolean {
@@ -81,18 +81,36 @@ export class OtpService {
    * Kullanıcının girdiği OTP kodunu doğrular.
    */
   public async verifyOtp(phoneNumber: string, code: string): Promise<boolean> {
-    // 1. Whitelist kontrolü
+    // 1. Whitelist (Store review & ön-SMS QA hesapları - yalnızca TEST_PHONE_NUMBERS E.164 listesi için)
     const testNumbers = OtpService.getWhitelistNumbers();
     if (testNumbers.includes(phoneNumber)) {
-      const configuredTestCode = (process.env.TEST_OTP_CODE || "").trim();
-      if (process.env.NODE_ENV === "production") {
-        if (configuredTestCode.length < 6) {
-          return false;
-        }
-        return OtpService.constantTimeEquals(code, configuredTestCode);
+      const currentFailures = OtpService.failedAttempts.get(phoneNumber) ?? 0;
+      if (currentFailures >= MAX_OTP_ATTEMPTS) {
+        return false;
       }
-      const devTestCode = configuredTestCode || "123456";
-      return OtpService.constantTimeEquals(code, devTestCode);
+
+      const smsMode = (process.env.SMS_PROVIDER_MODE || "MOCK")
+        .replace(/^["']|["']$/g, "")
+        .trim()
+        .toUpperCase();
+      const configuredTestCode = (process.env.TEST_OTP_CODE || "")
+        .replace(/^["']|["']$/g, "")
+        .trim();
+
+      // Gerçek SMS (TWILIO) canlıdayken üretimde TEST_OTP_CODE zorunludur
+      if (process.env.NODE_ENV === "production" && smsMode === "TWILIO" && configuredTestCode.length < 6) {
+        return false;
+      }
+
+      const expectedTestCode = configuredTestCode.length >= 6 ? configuredTestCode : "123456";
+      const isMatch = OtpService.constantTimeEquals(code, expectedTestCode);
+      if (!isMatch) {
+        OtpService.failedAttempts.set(phoneNumber, currentFailures + 1);
+        return false;
+      }
+
+      OtpService.failedAttempts.delete(phoneNumber);
+      return true;
     }
 
     // 2. DB Kontrolü

@@ -1,7 +1,9 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:core_auth/core_auth.dart';
 import 'package:core_shared/core_shared.dart';
+import 'package:core_ui/core_ui.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'consumer_otp_verify_page.dart';
 import 'consumer_register_page.dart';
 import 'widgets/auth_layout.dart';
@@ -17,12 +19,7 @@ class LoginPage extends ConsumerStatefulWidget {
 
 class _LoginPageState extends ConsumerState<LoginPage> {
   final _phoneController = TextEditingController();
-  String _selectedCountryCode = "+90";
-
-  static const Color _kPrimaryColor = Color(0xFF00A651);
-  static const Color _kSecondaryColor = Color(0xFFFF6B00);
-  static const Color _kTextDark = Color(0xFF1F2937);
-  static const Color _kTextMuted = Color(0xFF6B7280);
+  String _selectedCountryCode = '+90';
 
   @override
   void dispose() {
@@ -30,36 +27,65 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     super.dispose();
   }
 
-  void _loginWithPhone() {
-    FocusScope.of(context).unfocus();
-
-    final phoneInput = _phoneController.text.trim();
-    if (phoneInput.isEmpty) {
+  String? _buildValidatedPhone() {
+    var digits = _phoneController.text.replaceAll(RegExp(r'\D'), '');
+    if (digits.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Telefon numarası giriniz")),
+        const SnackBar(content: Text('Lütfen cep telefonu numaranızı girin.')),
       );
-      return;
+      return null;
     }
 
-    if (_selectedCountryCode == "+90" &&
-        (phoneInput.length != 10 || !phoneInput.startsWith('5'))) {
+    if (_selectedCountryCode == '+90') {
+      if (digits.startsWith('90') && digits.length == 12) {
+        digits = digits.substring(2);
+      }
+      if (digits.startsWith('0') && digits.length == 11) {
+        digits = digits.substring(1);
+      }
+      if (digits.length != 10 || !digits.startsWith('5')) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Lütfen 5XX XXX XX XX biçiminde 10 haneli numara girin.'),
+            backgroundColor: HoppaDesignTokens.statusDanger,
+          ),
+        );
+        return null;
+      }
+    } else if (digits.length < 7) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            "Lütfen geçerli bir telefon numarası giriniz (5xxxxxxxxx)",
-          ),
-          backgroundColor: Colors.red,
+          content: Text('Lütfen geçerli bir telefon numarası girin.'),
+          backgroundColor: HoppaDesignTokens.statusDanger,
         ),
       );
-      return;
+      return null;
     }
 
-    final phone = "$_selectedCountryCode$phoneInput";
+    return '$_selectedCountryCode$digits';
+  }
+
+  void _loginWithPhone() {
+    FocusScope.of(context).unfocus();
+    final phone = _buildValidatedPhone();
+    if (phone == null) return;
     ref.read(authControllerProvider.notifier).sendOtp(phone);
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final textPrimary = isDark
+        ? HoppaDesignTokens.textPrimaryDark
+        : HoppaDesignTokens.textPrimaryLight;
+    final textSecondary = isDark
+        ? HoppaDesignTokens.textSecondaryDark
+        : HoppaDesignTokens.textSecondaryLight;
+    final borderSubtle =
+        isDark ? HoppaDesignTokens.borderDark : HoppaDesignTokens.borderLight;
+    final primary = theme.colorScheme.primary;
+
     final authState = ref.watch(authControllerProvider);
     final isLoading = authState is AuthLoading;
 
@@ -69,7 +95,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(next.errorMessage),
-            backgroundColor: Colors.red,
+            backgroundColor: HoppaDesignTokens.statusDanger,
           ),
         );
       } else if (next is OtpSentState) {
@@ -77,7 +103,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           context,
           MaterialPageRoute(
             builder: (context) => OtpVerifyPage(
-              verificationId: "",
+              verificationId: '',
               phoneNumber: next.phoneNumber,
               firstName: widget.fromCheckout ? 'checkout' : '',
               lastName: widget.fromCheckout ? 'checkout' : '',
@@ -93,9 +119,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       enableGlass: true,
       leading: canPop
           ? IconButton(
-              icon: const Icon(
+              tooltip: 'Geri Dön',
+              icon: Icon(
                 Icons.arrow_back_ios_new_rounded,
-                color: _kTextDark,
+                size: 18,
+                color: textPrimary,
               ),
               onPressed: () => Navigator.of(context).maybePop(),
             )
@@ -104,64 +132,69 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Center(
-            child: HoppaBrandLogo(height: 46),
-          ),
+          const Center(child: HoppaBrandLogo(height: 44)),
           const SizedBox(height: 14),
           Center(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: _kPrimaryColor.withValues(alpha: 0.10),
+                color: primary.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: const Text(
-                "Hızlı Teslimat • Güvenli Alışveriş",
-                style: TextStyle(
-                  color: _kPrimaryColor,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.bolt_rounded, size: 15, color: primary),
+                  const SizedBox(width: 5),
+                  Text(
+                    'KKTC Hızlı Market & Yemek',
+                    style: GoogleFonts.plusJakartaSans(
+                      color: primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             "Hoppa'ya Hoş Geldiniz",
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 22,
-              fontWeight: FontWeight.w700,
-              color: _kTextDark,
-              letterSpacing: -0.3,
+              fontWeight: FontWeight.w800,
+              color: textPrimary,
+              letterSpacing: -0.4,
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
-            "Giriş yapmak veya devam etmek için cep telefonu numaranızı girin.",
+          Text(
+            'Siparişlerinizi oluşturmak ve anlık takip etmek için telefon numaranızla devam edin.',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              color: _kTextMuted,
-              height: 1.4,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 13.5,
+              color: textSecondary,
+              height: 1.45,
             ),
           ),
           const SizedBox(height: 24),
-          const Text(
-            "Cep Telefonu Numarası",
-            style: TextStyle(
+          Text(
+            'Cep Telefonu Numarası',
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF374151),
+              color: textPrimary,
             ),
           ),
           const SizedBox(height: 8),
           AuthTextField(
             controller: _phoneController,
-            hint: "5XX XXX XX XX",
+            hint: '5XX XXX XX XX',
             icon: Icons.phone_android_rounded,
             isPhone: true,
-            primaryColor: _kPrimaryColor,
+            primaryColor: primary,
             selectedCode: _selectedCountryCode,
             textInputAction: TextInputAction.done,
             onSubmitted: (_) {
@@ -170,17 +203,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             onCodeChanged: (val) =>
                 setState(() => _selectedCountryCode = val),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
           SizedBox(
             height: 54,
             width: double.infinity,
             child: ElevatedButton(
               onPressed: isLoading ? null : _loginWithPhone,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _kPrimaryColor,
+                backgroundColor: primary,
                 foregroundColor: Colors.white,
                 elevation: 0,
-                shadowColor: Colors.transparent,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -194,88 +226,99 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         strokeWidth: 2.2,
                       ),
                     )
-                  : const Text(
-                      "Doğrulama Kodu Gönder",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Doğrulama Kodu Gönder',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 15.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.arrow_forward_rounded, size: 19),
+                      ],
                     ),
             ),
           ),
-          const SizedBox(height: 12),
-          const Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: EdgeInsets.only(top: 1),
-                child: Icon(
-                  Icons.sms_outlined,
-                  size: 16,
-                  color: _kTextMuted,
-                ),
-              ),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  "Telefonunuza 6 haneli tek kullanımlık SMS doğrulama kodu gönderilecektir.",
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: _kTextMuted,
-                    height: 1.35,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          const Divider(color: Color(0xFFE5E7EB), height: 1),
           const SizedBox(height: 14),
-          Wrap(
-            alignment: WrapAlignment.center,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              const Text(
-                "Hesabınız yok mu?",
-                style: TextStyle(
-                  fontSize: 14,
-                  color: _kTextMuted,
-                ),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const RegisterPage(),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? HoppaDesignTokens.surfaceSubtleDark
+                  : HoppaDesignTokens.surfaceSubtleLight,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: borderSubtle),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.sms_outlined, size: 16, color: primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Telefonunuza 6 haneli tek kullanımlık doğrulama kodu gönderilir; şifre gerekmez.',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      color: textSecondary,
+                      height: 1.4,
                     ),
-                  );
-                },
-                child: const Text(
-                  "Hemen Üye Ol",
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: _kSecondaryColor,
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          if (canPop)
+          const SizedBox(height: 20),
+          Divider(color: borderSubtle, height: 1),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 48,
+            child: OutlinedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const RegisterPage(),
+                  ),
+                );
+              },
+              style: OutlinedButton.styleFrom(
+                foregroundColor: HoppaDesignTokens.brandOrange,
+                side: BorderSide(
+                  color: HoppaDesignTokens.brandOrange.withValues(alpha: 0.45),
+                  width: 1.3,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              child: Text(
+                'Yeni Hesap Oluştur',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+          if (canPop) ...[
+            const SizedBox(height: 6),
             Center(
               child: TextButton(
                 onPressed: () => Navigator.of(context).maybePop(),
-                child: const Text(
-                  "Üye olmadan devam et",
-                  style: TextStyle(
-                    color: _kTextMuted,
+                child: Text(
+                  'Üye olmadan mağazalara göz at',
+                  style: GoogleFonts.plusJakartaSans(
+                    color: textSecondary,
                     fontSize: 13,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
             ),
+          ],
         ],
       ),
     );
