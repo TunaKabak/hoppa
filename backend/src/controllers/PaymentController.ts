@@ -6,7 +6,9 @@ import {
   getPaymentCallbackSecret,
   verifyHmacSignature,
 } from "../providers/payment/IPaymentProvider";
+import { StripePaymentProvider } from "../providers/payment/StripePaymentProvider";
 import { PaymentRoutingService } from "../services/PaymentRoutingService";
+import { WalletService } from "../services/WalletService";
 import { realtimeEventService } from "../services/RealtimeEventService";
 import { notificationService } from "../services/NotificationService";
 
@@ -397,9 +399,11 @@ export class PaymentController {
       }
 
       const providerStrategy = PaymentRoutingService.resolveProvider(providerNameUpper);
-      const rawPayload = {
+      const rawBodyBuffer = (req as Request & { rawBody?: Buffer }).rawBody;
+      const rawPayload: Record<string, string> = {
         ...toStringRecord(query),
         ...toStringRecord(body),
+        ...(rawBodyBuffer ? { rawBody: rawBodyBuffer.toString("utf8") } : {}),
       };
 
       const stripeSig = req.headers["stripe-signature"];
@@ -424,143 +428,24 @@ export class PaymentController {
         if (jsonMode) {
           res.status(403).json({
             error: true,
-            message: verification.reason || "Ödeme imzası doğrulanamadı.",
+            message: "Ödeme imzası doğrulanamadı.",
           });
         } else {
           renderHtmlError(
             res,
             403,
             "İmza Doğrulanamadı",
-            verification.reason || "Ödeme güvenlik imzası doğrulanamadı."
+            "Ödeme güvenlik imzası doğrulanamadı."
           );
         }
         return;
       }
 
-      const targetStatus = verification.status;
-
-      const txResult = await prisma.$transaction(async (txClient) => {
-        const updateTxResult = await txClient.paymentTransaction.updateMany({
-          where: {
-            id: txRecord.id,
-            status: PaymentStatus.PENDING,
-          },
-          data: {
-            status: targetStatus,
-          },
-        });
-
-        if (updateTxResult.count === 0) {
-          const existingTx = await txClient.paymentTransaction.findUnique({
-            where: { id: txRecord.id },
-            include: {
-              order: {
-                include: { shop: true },
-              },
-            },
-          });
-
-          return {
-            alreadyProcessed: true,
-            finalStatus: existingTx?.status ?? targetStatus,
-            order: existingTx?.order ?? txRecord.order,
-          };
-        }
-
-        const shouldCancelOrder =
-          targetStatus === PaymentStatus.FAILED &&
-          txRecord.order.status === OrderStatus.PENDING;
-
-        const updatedOrder = await txClient.order.update({
-          where: { id: txRecord.orderId },
-          data: {
-            paymentStatus: targetStatus,
-            ...(shouldCancelOrder
-              ? {
-                  status: OrderStatus.CANCELLED,
-                  cancelReason:
-                    "3D Secure ödeme doğrulaması başarısız veya iptal edildi.",
-                  cancelledAt: new Date(),
-                  cancelledBy: "PAYMENT_GATEWAY",
-                }
-              : {}),
-          },
-          include: {
-            shop: true,
-          },
-        });
-
-        return {
-          alreadyProcessed: false,
-          finalStatus: targetStatus,
-          order: updatedOrder,
-        };
-      });
-
-      if (!txResult.alreadyProcessed) {
-        try {
-          const eventPayload = {
-            orderId: txResult.order.id,
-            shopId: txResult.order.shopId,
-            consumerId: txResult.order.consumerId,
-            status: txResult.order.status,
-            paymentStatus: txResult.finalStatus,
-            providerTxId: txId,
-            provider: txRecord.provider,
-          };
-
-          const eventType =
-            txResult.finalStatus === PaymentStatus.FAILED &&
-            txResult.order.status === OrderStatus.CANCELLED
-              ? "ORDER_CANCELLED"
-              : "ORDER_STATUS_UPDATED";
-
-          realtimeEventService.publishToShop(
-            txResult.order.shopId,
-            eventType,
-            eventPayload
-          );
-          realtimeEventService.publishToUser(
-            txResult.order.consumerId,
-            eventType,
-            eventPayload
-          );
-        } catch (sseError) {
-          console.error(
-            "[PaymentController.handleThreeDCallback] SSE yayın hatası:",
-            sseError
-          );
-        }
-
-        try {
-          if (txResult.finalStatus === PaymentStatus.SUCCESS) {
-            await notificationService.sendToUser(
-              txResult.order.consumerId,
-              "Ödemeniz Onaylandı ✅",
-              "3D Secure doğrulamanız tamamlandı ve sipariş ödemeniz onaylandı.",
-              {
-                orderId: txResult.order.id,
-                paymentStatus: "SUCCESS",
-              }
-            );
-          } else {
-            await notificationService.sendToUser(
-              txResult.order.consumerId,
-              "Ödeme Başarısız ❌",
-              "3D Secure doğrulaması tamamlanamadığı için ödemeniz gerçekleştirilemedi.",
-              {
-                orderId: txResult.order.id,
-                paymentStatus: "FAILED",
-              }
-            );
-          }
-        } catch (notifyError) {
-          console.error(
-            "[PaymentController.handleThreeDCallback] Push bildirim hatası:",
-            notifyError
-          );
-        }
-      }
+      const txResult = await this.finalizePaymentTransaction(
+        txRecord,
+        verification.status,
+        txId
+      );
 
       const resultParam =
         txResult.finalStatus === PaymentStatus.SUCCESS ? "success" : "failed";
@@ -586,15 +471,455 @@ export class PaymentController {
       );
     } catch (error) {
       console.error("[PaymentController.handleThreeDCallback] Error:", error);
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Ödeme doğrulama işlemi tamamlanamadı.";
+      const safeMessage = "Ödeme doğrulama işlemi tamamlanamadı.";
       if (jsonMode) {
-        res.status(500).json({ error: true, message });
+        res.status(500).json({ error: true, message: safeMessage });
       } else {
-        renderHtmlError(res, 500, "Ödeme İşlem Hatası", message);
+        renderHtmlError(res, 500, "Ödeme İşlem Hatası", safeMessage);
       }
+    }
+  }
+
+  private async finalizePaymentTransaction(
+    txRecord: {
+      id: string;
+      orderId: string;
+      provider: string;
+      order: {
+        id: string;
+        shopId: string;
+        consumerId: string;
+        status: OrderStatus;
+        paymentMethod: string;
+        paymentStatus: PaymentStatus;
+        totalAmount: unknown;
+        deliveryFee: unknown;
+        createdAt: Date;
+        shop?: { name?: string | null; merchantId?: string | null } | null;
+      };
+    },
+    targetStatus: PaymentStatus,
+    txId: string
+  ) {
+    const txResult = await prisma.$transaction(async (txClient) => {
+      const updateTxResult = await txClient.paymentTransaction.updateMany({
+        where: {
+          id: txRecord.id,
+          status: PaymentStatus.PENDING,
+        },
+        data: {
+          status: targetStatus,
+        },
+      });
+
+      if (updateTxResult.count === 0) {
+        const existingTx = await txClient.paymentTransaction.findUnique({
+          where: { id: txRecord.id },
+          include: {
+            order: {
+              include: { shop: true },
+            },
+          },
+        });
+
+        return {
+          alreadyProcessed: true,
+          finalStatus: existingTx?.status ?? targetStatus,
+          order: existingTx?.order ?? txRecord.order,
+        };
+      }
+
+      const shouldCancelOrder =
+        targetStatus === PaymentStatus.FAILED &&
+        txRecord.order.status === OrderStatus.PENDING;
+
+      const updatedOrder = await txClient.order.update({
+        where: { id: txRecord.orderId },
+        data: {
+          paymentStatus: targetStatus,
+          ...(shouldCancelOrder
+            ? {
+                status: OrderStatus.CANCELLED,
+                cancelReason:
+                  "3D Secure ödeme doğrulaması başarısız veya iptal edildi.",
+                cancelledAt: new Date(),
+                cancelledBy: "PAYMENT_GATEWAY",
+              }
+            : {}),
+        },
+        include: {
+          shop: true,
+        },
+      });
+
+      // H-01: 3DS başarısız olduğunda siparişe bağlı kısmi Hoppa Cüzdan çekimi varsa otomatik iade et
+      if (targetStatus === PaymentStatus.FAILED) {
+        const wallet = await txClient.wallet.findUnique({
+          where: { userId: txRecord.order.consumerId },
+          select: { id: true },
+        });
+        if (wallet) {
+          const orderMarker = `Sipariş No: ${txRecord.orderId}`;
+          const [withdrawTx, existingRefundTx] = await Promise.all([
+            txClient.walletTransaction.findFirst({
+              where: {
+                walletId: wallet.id,
+                type: "WITHDRAW",
+                description: { contains: orderMarker },
+              },
+            }),
+            txClient.walletTransaction.findFirst({
+              where: {
+                walletId: wallet.id,
+                type: "REFUND",
+                description: { contains: orderMarker },
+              },
+            }),
+          ]);
+
+          if (withdrawTx && !existingRefundTx) {
+            const refundAmount = Math.abs(Number(withdrawTx.amount));
+            if (refundAmount > 0) {
+              await WalletService.refund(
+                txRecord.order.consumerId,
+                refundAmount,
+                `3D Secure Başarısız Ödeme Cüzdan İadesi (Sipariş No: ${txRecord.orderId})`,
+                txClient
+              );
+            }
+          }
+        }
+      }
+
+      return {
+        alreadyProcessed: false,
+        finalStatus: targetStatus,
+        order: updatedOrder,
+      };
+    });
+
+    if (!txResult.alreadyProcessed) {
+      try {
+        const eventPayload = {
+          orderId: txResult.order.id,
+          shopId: txResult.order.shopId,
+          consumerId: txResult.order.consumerId,
+          status: txResult.order.status,
+          paymentStatus: txResult.finalStatus,
+          providerTxId: txId,
+          provider: txRecord.provider,
+        };
+
+        const eventType =
+          txResult.finalStatus === PaymentStatus.FAILED &&
+          txResult.order.status === OrderStatus.CANCELLED
+            ? "ORDER_CANCELLED"
+            : "ORDER_STATUS_UPDATED";
+
+        realtimeEventService.publishToShop(
+          txResult.order.shopId,
+          eventType,
+          eventPayload
+        );
+        realtimeEventService.publishToUser(
+          txResult.order.consumerId,
+          eventType,
+          eventPayload
+        );
+
+        // H-01: Ödeme doğrulandıktan sonra satıcıya canlı NEW_ORDER olayı yayınla
+        if (txResult.finalStatus === PaymentStatus.SUCCESS) {
+          realtimeEventService.publishToShop(txResult.order.shopId, "NEW_ORDER", {
+            orderId: txResult.order.id,
+            shopId: txResult.order.shopId,
+            shopName: txResult.order.shop?.name || "",
+            consumerId: txResult.order.consumerId,
+            status: txResult.order.status,
+            paymentMethod: txResult.order.paymentMethod,
+            paymentStatus: txResult.finalStatus,
+            totalAmount: Number(txResult.order.totalAmount),
+            deliveryFee: Number(txResult.order.deliveryFee),
+            createdAt: txResult.order.createdAt.toISOString(),
+          });
+        }
+      } catch (sseError) {
+        console.error(
+          "[PaymentController.finalizePaymentTransaction] SSE yayın hatası:",
+          sseError
+        );
+      }
+
+      try {
+        if (txResult.finalStatus === PaymentStatus.SUCCESS) {
+          await notificationService.sendToUser(
+            txResult.order.consumerId,
+            "Ödemeniz Onaylandı ✅",
+            "3D Secure doğrulamanız tamamlandı ve sipariş ödemeniz onaylandı.",
+            {
+              orderId: txResult.order.id,
+              paymentStatus: "SUCCESS",
+            }
+          );
+          if (txResult.order.shop?.merchantId) {
+            await notificationService.sendToMerchant(
+              txResult.order.shop.merchantId,
+              "Yeni Sipariş! 🚀",
+              "Ödemesi onaylanmış yeni bir siparişiniz var. Hemen hazırlamaya başlayın!",
+              { orderId: txResult.order.id }
+            );
+          }
+        } else {
+          await notificationService.sendToUser(
+            txResult.order.consumerId,
+            "Ödeme Başarısız ❌",
+            "3D Secure doğrulaması tamamlanamadığı için ödemeniz gerçekleştirilemedi.",
+            {
+              orderId: txResult.order.id,
+              paymentStatus: "FAILED",
+            }
+          );
+        }
+      } catch (notifyError) {
+        console.error(
+          "[PaymentController.finalizePaymentTransaction] Push bildirim hatası:",
+          notifyError
+        );
+      }
+    }
+
+    return txResult;
+  }
+
+  /**
+   * POST /api/payments/stripe/webhook
+   * Stripe resmi sunucu-sunucu webhook doğrulaması (Stripe-Signature + rawBody).
+   */
+  public async handleStripeWebhook(req: Request, res: Response): Promise<void> {
+    try {
+      const stripeSig = req.headers["stripe-signature"];
+      const rawBodyBuf = (req as Request & { rawBody?: Buffer }).rawBody;
+      const rawBody = rawBodyBuf ? rawBodyBuf.toString("utf8") : "";
+
+      if (typeof stripeSig !== "string" || !rawBody) {
+        res.status(400).json({ error: true, message: "Stripe webhook imzası veya gövdesi eksik." });
+        return;
+      }
+
+      const event = JSON.parse(rawBody) as {
+        type?: string;
+        data?: {
+          object?: {
+            payment_status?: string;
+            metadata?: Record<string, string>;
+          };
+        };
+      };
+
+      const sessionObj = event.data?.object;
+      const txId = sessionObj?.metadata?.txId || "";
+      const orderId = sessionObj?.metadata?.orderId || "";
+
+      const providerStrategy = new StripePaymentProvider();
+      const statusIntent: "SUCCESS" | "FAILED" =
+        event.type === "checkout.session.completed" && sessionObj?.payment_status === "paid"
+          ? "SUCCESS"
+          : "FAILED";
+
+      const verification = await providerStrategy.verifyCallback({
+        txId,
+        orderId,
+        status: statusIntent,
+        signature: stripeSig,
+        rawPayload: {
+          stripeSignatureHeader: stripeSig,
+          rawBody,
+        },
+      });
+
+      if (!verification.valid) {
+        res.status(403).json({ error: true, message: "Stripe webhook imzası doğrulanamadı." });
+        return;
+      }
+
+      if (!txId) {
+        res.status(200).json({ received: true });
+        return;
+      }
+
+      const txRecord = await prisma.paymentTransaction.findFirst({
+        where: { providerTxId: txId },
+        include: {
+          order: { include: { shop: true } },
+        },
+      });
+
+      if (txRecord) {
+        await this.finalizePaymentTransaction(txRecord, verification.status, txId);
+      }
+
+      res.status(200).json({ received: true });
+    } catch (error) {
+      console.error("[PaymentController.handleStripeWebhook] Error:", error);
+      res.status(400).json({ error: true, message: "Stripe webhook işlenemedi." });
+    }
+  }
+
+  /**
+   * GET /api/payments/stripe/return
+   * Browser dönüşünde sahte success_url manipülasyonunu önlemek için
+   * Checkout Session bilgisini doğrudan Stripe API'den doğrulayarak sonucu gösterir.
+   */
+  public async handleStripeReturn(req: Request, res: Response): Promise<void> {
+    try {
+      const query = req.query as Record<string, unknown>;
+      const txId = readParam({}, query, ["txId"]);
+      const orderId = readParam({}, query, ["orderId"]);
+      const sessionId = readParam({}, query, ["session_id"]);
+      const canceled = readParam({}, query, ["canceled"]) === "1";
+
+      if (!txId || !orderId) {
+        renderHtmlError(res, 400, "Geçersiz İşlem", "İşlem parametreleri eksik.");
+        return;
+      }
+
+      const txRecord = await prisma.paymentTransaction.findFirst({
+        where: { providerTxId: txId },
+        include: {
+          order: { include: { shop: true } },
+        },
+      });
+
+      if (!txRecord || txRecord.orderId !== orderId) {
+        renderHtmlError(res, 404, "İşlem Bulunamadı", "Ödeme kaydı bulunamadı.");
+        return;
+      }
+
+      if (canceled || !sessionId) {
+        const result = await this.finalizePaymentTransaction(txRecord, PaymentStatus.FAILED, txId);
+        const resultParam = result.finalStatus === PaymentStatus.SUCCESS ? "success" : "failed";
+        res.redirect(
+          303,
+          `/api/payments/3d-complete?result=${resultParam}&orderId=${encodeURIComponent(orderId)}&txId=${encodeURIComponent(txId)}`
+        );
+        return;
+      }
+
+      const providerStrategy = PaymentRoutingService.resolveProvider("STRIPE");
+      let finalTargetStatus: PaymentStatus = PaymentStatus.FAILED;
+      if (providerStrategy instanceof StripePaymentProvider) {
+        const session = await providerStrategy.fetchCheckoutSession(sessionId);
+        if (
+          session.metadata?.txId === txId &&
+          session.metadata?.orderId === orderId &&
+          session.payment_status === "paid"
+        ) {
+          finalTargetStatus = PaymentStatus.SUCCESS;
+        }
+      }
+
+      const result = await this.finalizePaymentTransaction(txRecord, finalTargetStatus, txId);
+      const resultParam = result.finalStatus === PaymentStatus.SUCCESS ? "success" : "failed";
+      res.redirect(
+        303,
+        `/api/payments/3d-complete?result=${resultParam}&orderId=${encodeURIComponent(orderId)}&txId=${encodeURIComponent(txId)}`
+      );
+    } catch (error) {
+      console.error("[PaymentController.handleStripeReturn] Error:", error);
+      renderHtmlError(res, 500, "Ödeme İşlem Hatası", "Ödeme durumu doğrulanamadı.");
+    }
+  }
+
+  /**
+   * GET /api/payments/paytr/pending
+   * PayTR tarayıcı dönüşünde webhook onayını bekleyip /api/payments/3d-complete adresine yönlendirir.
+   */
+  public renderPaytrPendingPage(req: Request, res: Response): void {
+    const query = req.query as Record<string, unknown>;
+    const txId = readParam({}, query, ["txId"]);
+    const orderId = readParam({}, query, ["orderId"]);
+    if (!txId || !orderId) {
+      renderHtmlError(res, 400, "Geçersiz İşlem", "İşlem numarası eksik.");
+      return;
+    }
+
+    res
+      .status(200)
+      .setHeader("Content-Type", "text/html; charset=utf-8")
+      .send(`<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ödeme Doğrulanıyor</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8fafc; color: #0f172a; margin: 0; padding: 24px; min-height: 100vh; display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
+    .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 28px; max-width: 400px; width: 100%; text-align: center; box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08); }
+    h1 { font-size: 19px; margin: 0 0 10px; }
+    p { font-size: 14px; color: #475569; margin: 0; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Ödemeniz Doğrulanıyor...</h1>
+    <p>Banka onayı bekleniyor, lütfen bu pencereyi kapatmayın.</p>
+  </div>
+  <script>
+    (function () {
+      var txId = ${JSON.stringify(txId)};
+      var orderId = ${JSON.stringify(orderId)};
+      var attempts = 0;
+      function poll() {
+        attempts++;
+        fetch('/api/payments/status/' + encodeURIComponent(txId))
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            var st = data && data.data ? data.data.paymentStatus : '';
+            if (st === 'SUCCESS') {
+              window.location.replace('/api/payments/3d-complete?result=success&orderId=' + encodeURIComponent(orderId) + '&txId=' + encodeURIComponent(txId));
+            } else if (st === 'FAILED') {
+              window.location.replace('/api/payments/3d-complete?result=failed&orderId=' + encodeURIComponent(orderId) + '&txId=' + encodeURIComponent(txId));
+            } else if (attempts < 40) {
+              setTimeout(poll, 1500);
+            } else {
+              window.location.replace('/api/payments/3d-complete?result=failed&orderId=' + encodeURIComponent(orderId) + '&txId=' + encodeURIComponent(txId));
+            }
+          })
+          .catch(function () {
+            if (attempts < 40) setTimeout(poll, 1500);
+          });
+      }
+      poll();
+    })();
+  </script>
+</body>
+</html>`);
+  }
+
+  /**
+   * GET /api/payments/status/:txId
+   */
+  public async getPaymentStatus(req: Request, res: Response): Promise<void> {
+    try {
+      const txId = String(req.params.txId || "").trim();
+      if (!txId) {
+        res.status(400).json({ error: true, message: "txId zorunludur." });
+        return;
+      }
+      const txRecord = await prisma.paymentTransaction.findFirst({
+        where: { providerTxId: txId },
+        select: { status: true },
+      });
+      if (!txRecord) {
+        res.status(404).json({ error: true, message: "Ödeme kaydı bulunamadı." });
+        return;
+      }
+      res.status(200).json({
+        error: false,
+        data: { paymentStatus: txRecord.status },
+      });
+    } catch (error) {
+      console.error("[PaymentController.getPaymentStatus] Error:", error);
+      res.status(500).json({ error: true, message: "Ödeme durumu sorgulanamadı." });
     }
   }
 

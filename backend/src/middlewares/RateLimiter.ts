@@ -36,3 +36,39 @@ export const otpRateLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// OTP doğrulama brute-force koruması: 15 dakikada en fazla 10 deneme
+export const otpVerifyRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: {
+    error: true,
+    message: "Çok fazla hatalı doğrulama denemesi yapıldı. Lütfen daha sonra tekrar deneyiniz.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Giriş brute-force koruması: 15 dakikada en fazla 10 deneme
+export const authLoginRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: {
+    error: true,
+    message: "Çok fazla giriş denemesi yapıldı. Lütfen 15 dakika sonra tekrar deneyiniz.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Yapay zeka uç noktaları maliyet/DoS koruması: 15 dakikada en fazla 25 istek
+export const aiRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 25,
+  message: {
+    error: true,
+    message: "Yapay zeka istek sınırına ulaşıldı. Lütfen biraz bekleyip tekrar deneyiniz.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+

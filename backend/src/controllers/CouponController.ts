@@ -9,27 +9,51 @@ export class CouponController {
       const userId = req.user!.id;
       const now = new Date();
 
-      // Tüm aktif kuponları çek
-      const coupons = await prisma.coupon.findMany({
-        where: {
-          isActive: true,
-          startDate: { lte: now },
-          endDate: { gte: now }
-        },
-        include: {
-          allowedShops: { select: { shopId: true } },
-          usages: {
-            where: { userId }
+      // Tüm aktif kuponları ve referans sahipliklerini çek
+      const [coupons, referrals] = await Promise.all([
+        prisma.coupon.findMany({
+          where: {
+            isActive: true,
+            startDate: { lte: now },
+            endDate: { gte: now }
+          },
+          include: {
+            allowedShops: { select: { shopId: true } },
+            usages: {
+              where: { userId }
+            }
           }
-        }
-      });
+        }),
+        prisma.referral.findMany({
+          where: {
+            OR: [
+              { couponId: { not: null } },
+              { referredCouponId: { not: null } }
+            ]
+          },
+          select: {
+            referrerId: true,
+            referredId: true,
+            couponId: true,
+            referredCouponId: true
+          }
+        })
+      ]);
 
-      // Kullanım sınırı dolmamış kuponları filtrele
+      const referralOwnerByCouponId = new Map<string, string>();
+      for (const ref of referrals) {
+        if (ref.couponId) referralOwnerByCouponId.set(ref.couponId, ref.referrerId);
+        if (ref.referredCouponId) referralOwnerByCouponId.set(ref.referredCouponId, ref.referredId);
+      }
+
+      // Kullanım sınırı dolmamış ve başka kullanıcıya ait olmayan kuponları filtrele
       const availableCoupons = coupons.filter(coupon => {
-        // Eğer kullanıcı bu kuponu max limit kadar kullandıysa gösterme
+        const ownerUserId = referralOwnerByCouponId.get(coupon.id);
+        if (ownerUserId && ownerUserId !== userId) {
+          return false;
+        }
         const userUsageCount = coupon.usages.length;
-        // Varsayılan limit 1 olsun (veritabanı alanını story_40'taki modelden aldık, modelde 1 yoksa config)
-        const limit = 5; // default limit
+        const limit = ownerUserId ? 1 : 5;
         return userUsageCount < limit;
       });
 
@@ -46,8 +70,9 @@ export class CouponController {
       const userId = req.user!.id;
       const { code, shopId, cartAmount } = req.body;
 
-      if (!code || !shopId || cartAmount === undefined) {
-        res.status(400).json({ error: true, message: "Eksik parametreler (code, shopId, cartAmount)." });
+      const parsedCartAmount = Number(cartAmount);
+      if (!code || !shopId || cartAmount === undefined || !Number.isFinite(parsedCartAmount) || parsedCartAmount <= 0) {
+        res.status(400).json({ error: true, message: "Geçersiz veya eksik parametreler (code, shopId, cartAmount)." });
         return;
       }
 
@@ -65,14 +90,39 @@ export class CouponController {
         return;
       }
 
+      // Referans kuponu IDOR koruması: Kişiye özel davet kuponunu yalnızca hak sahibi kullanabilir
+      const linkedReferral = await prisma.referral.findFirst({
+        where: {
+          OR: [{ couponId: coupon.id }, { referredCouponId: coupon.id }]
+        },
+        select: {
+          referrerId: true,
+          referredId: true,
+          couponId: true,
+          referredCouponId: true
+        }
+      });
+
+      if (linkedReferral) {
+        const ownerId =
+          linkedReferral.couponId === coupon.id
+            ? linkedReferral.referrerId
+            : linkedReferral.referredId;
+        if (ownerId !== userId) {
+          res.status(403).json({ error: true, message: "Bu davet kuponu başka bir kullanıcıya tanımlanmıştır." });
+          return;
+        }
+      }
+
       // Kullanım sayısı kontrolü
-      if (coupon.usages.length >= 5) { // varsayılan limit 5
+      const maxUsagePerUser = linkedReferral ? 1 : 5;
+      if (coupon.usages.length >= maxUsagePerUser) {
         res.status(400).json({ error: true, message: "Bu kuponu kullanım limitinizi doldurdunuz." });
         return;
       }
 
       // Minimum sepet tutarı kontrolü
-      if (cartAmount < coupon.minOrderAmount) {
+      if (parsedCartAmount < coupon.minOrderAmount) {
         res.status(400).json({ error: true, message: `Bu kuponu kullanabilmek için sepet tutarı en az ${coupon.minOrderAmount} ₺ olmalıdır.` });
         return;
       }
@@ -96,7 +146,7 @@ export class CouponController {
       // İndirim tutarını hesapla
       let discountAmount = 0;
       if (coupon.discountType === "PERCENTAGE") {
-        discountAmount = (cartAmount * coupon.discountValue) / 100;
+        discountAmount = (parsedCartAmount * coupon.discountValue) / 100;
         if (coupon.maxDiscountAmount && discountAmount > coupon.maxDiscountAmount) {
           discountAmount = coupon.maxDiscountAmount;
         }
@@ -106,11 +156,11 @@ export class CouponController {
       }
 
       // İndirim sepet tutarından büyük olamaz
-      if (discountAmount > cartAmount) {
-        discountAmount = cartAmount;
+      if (discountAmount > parsedCartAmount) {
+        discountAmount = parsedCartAmount;
       }
 
-      const finalAmount = cartAmount - discountAmount;
+      const finalAmount = parsedCartAmount - discountAmount;
 
       res.status(200).json({
         error: false,

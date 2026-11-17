@@ -8,6 +8,16 @@ import { realtimeEventService } from "../services/RealtimeEventService";
 const prisma = new PrismaClient();
 const campaignService = new CampaignService();
 
+const SAFE_MERCHANT_PUBLIC_SELECT = {
+  id: true,
+  businessName: true,
+  phone: true,
+  businessPhone: true,
+  district: true,
+  countryCode: true,
+  status: true,
+} as const;
+
 export class OrderController {
   /**
    * Tüketici tarafından sipariş oluşturma (Checkout)
@@ -32,7 +42,7 @@ export class OrderController {
       // 1. Dükkanı bul ve aktiflik durumunu doğrula
       const shop = await prisma.shop.findUnique({
         where: { id: shopId },
-        include: { merchant: true }
+        include: { merchant: { select: SAFE_MERCHANT_PUBLIC_SELECT } }
       });
 
       if (!shop) {
@@ -144,43 +154,195 @@ export class OrderController {
         });
       }
 
-      // 2. Ürünlerin fiyatlarını veritabanından çek ve doğrula
-      const productIds = items.map((item: any) => item.productId);
+      // 2. Ürünlerin ve seçenek gruplarının fiyatlarını veritabanından çek ve doğrula
+      const productIds = Array.from(new Set(items.map((item: any) => item.productId)));
       const dbProducts = await prisma.product.findMany({
         where: {
           id: { in: productIds },
           shopId: shopId,
           isActive: true
+        },
+        include: {
+          optionGroups: {
+            include: {
+              options: {
+                where: { isActive: true }
+              }
+            }
+          }
         }
       });
 
       const dbProductMap = new Map(dbProducts.map(p => [p.id, p]));
 
-      // Talep edilen tüm ürünlerin dükkanda aktif olarak bulunduğundan emin ol
+      interface ResolvedOrderItemOption {
+        groupName: string;
+        name: string;
+        price: number;
+        quantity: number;
+        actionType: "ADD" | "REMOVE";
+        optionId: string;
+      }
+
+      const resolvedItems: Array<{
+        productId: string;
+        quantity: number;
+        unitPrice: number;
+        options: ResolvedOrderItemOption[];
+      }> = [];
+
+      // 3. Kalemleri ve opsiyonları DB fiyatları ile doğrula (client fiyatına asla güvenme)
+      let totalAmount = 0;
       for (const item of items) {
-        if (!dbProductMap.has(item.productId)) {
+        const product = dbProductMap.get(item.productId);
+        if (!product) {
           return res.status(400).json({
             error: true,
             message: `Ürün bulunamadı veya dükkanda aktif değil: ${item.productId}`
           });
         }
-        if (typeof item.quantity !== "number" || item.quantity <= 0) {
+        if (
+          typeof item.quantity !== "number" ||
+          !Number.isInteger(item.quantity) ||
+          item.quantity < 1 ||
+          item.quantity > 100
+        ) {
           return res.status(400).json({
             error: true,
-            message: `Geçersiz ürün miktarı: ${item.productId}`
+            message: `Geçersiz ürün miktarı (1-100 arası tam sayı olmalı): ${item.productId}`
           });
         }
+
+        const baseProductPrice = Number(product.price);
+        if (!Number.isFinite(baseProductPrice) || baseProductPrice < 0) {
+          return res.status(400).json({
+            error: true,
+            message: `Geçersiz ürün taban fiyatı: ${product.name}`
+          });
+        }
+
+        const dbOptionMap = new Map<
+          string,
+          {
+            groupId: string;
+            groupName: string;
+            freeSelectionsCount: number;
+            option: (typeof product.optionGroups)[number]["options"][number];
+          }
+        >();
+        for (const group of product.optionGroups) {
+          for (const opt of group.options) {
+            dbOptionMap.set(opt.id, {
+              groupId: group.id,
+              groupName: group.name,
+              freeSelectionsCount: group.freeSelectionsCount,
+              option: opt,
+            });
+          }
+        }
+
+        const rawOptions = Array.isArray(item.options) ? item.options : [];
+        if (item.options !== undefined && !Array.isArray(item.options)) {
+          return res.status(400).json({
+            error: true,
+            message: `Geçersiz ürün seçeneği biçimi: ${item.productId}`
+          });
+        }
+
+        const groupSelectionUnits = new Map<string, number>();
+        const resolvedOptions: ResolvedOrderItemOption[] = [];
+        let optionsPrice = 0;
+
+        for (const opt of rawOptions) {
+          const optionId = typeof opt?.optionId === "string" ? opt.optionId.trim() : "";
+          const found = optionId ? dbOptionMap.get(optionId) : undefined;
+          if (!found) {
+            return res.status(400).json({
+              error: true,
+              message: `Ürün için geçersiz veya pasif seçenek kimliği: ${product.name}`
+            });
+          }
+
+          const rawQty = opt?.quantity !== undefined ? Number(opt.quantity) : 1;
+          if (!Number.isInteger(rawQty) || rawQty < 1 || rawQty > found.option.maxQuantity) {
+            return res.status(400).json({
+              error: true,
+              message: `Seçenek adedi sınır dışında: ${found.option.name}`
+            });
+          }
+
+          const actionType = opt?.actionType === "REMOVE" ? "REMOVE" : "ADD";
+          if (actionType === "REMOVE" && !found.option.isRemovable) {
+            return res.status(400).json({
+              error: true,
+              message: `Bu seçenek çıkarılamaz: ${found.option.name}`
+            });
+          }
+
+          let totalOptionLinePrice = 0;
+          if (actionType === "ADD") {
+            const prevUnits = groupSelectionUnits.get(found.groupId) ?? 0;
+            const nextUnits = prevUnits + rawQty;
+            groupSelectionUnits.set(found.groupId, nextUnits);
+
+            const freeLeft = Math.max(0, found.freeSelectionsCount - prevUnits);
+            const paidUnits = Math.max(0, rawQty - freeLeft);
+            const dbUnitOptionPrice = Math.max(0, Number(found.option.price));
+            totalOptionLinePrice = Number((paidUnits * dbUnitOptionPrice).toFixed(2));
+            optionsPrice += totalOptionLinePrice;
+          }
+
+          resolvedOptions.push({
+            groupName: found.groupName,
+            name: found.option.name,
+            price: rawQty > 0 ? Number((totalOptionLinePrice / rawQty).toFixed(2)) : 0,
+            quantity: rawQty,
+            actionType,
+            optionId: found.option.id,
+          });
+        }
+
+        for (const group of product.optionGroups) {
+          const activeCount = group.options.length;
+          if (activeCount === 0) continue;
+          const selectedCount = groupSelectionUnits.get(group.id) ?? 0;
+          if (group.minSelections > 0 && selectedCount < group.minSelections) {
+            return res.status(400).json({
+              error: true,
+              message: `"${product.name}" için "${group.name}" grubundan en az ${group.minSelections} seçim yapmalısınız.`
+            });
+          }
+          if (group.maxSelections !== null && group.maxSelections > 0 && selectedCount > group.maxSelections) {
+            return res.status(400).json({
+              error: true,
+              message: `"${product.name}" için "${group.name}" grubundan en fazla ${group.maxSelections} seçim yapabilirsiniz.`
+            });
+          }
+        }
+
+        const unitPrice = Number((baseProductPrice + optionsPrice).toFixed(2));
+        if (!Number.isFinite(unitPrice) || unitPrice <= 0) {
+          return res.status(400).json({
+            error: true,
+            message: `Ürün birim fiyatı sıfırdan büyük olmalıdır: ${product.name}`
+          });
+        }
+
+        totalAmount += unitPrice * item.quantity;
+        resolvedItems.push({
+          productId: product.id,
+          quantity: item.quantity,
+          unitPrice,
+          options: resolvedOptions,
+        });
       }
 
-      // 3. Toplam sipariş tutarını hesapla
-      let totalAmount = 0;
-      for (const item of items) {
-        const product = dbProductMap.get(item.productId)!;
-        const optionsPrice = item.options && Array.isArray(item.options)
-          ? item.options.reduce((sum: number, opt: any) => sum + parseFloat(opt.price || 0), 0)
-          : 0;
-        const unitPrice = Number(product.price) + optionsPrice;
-        totalAmount += unitPrice * item.quantity;
+      totalAmount = Number(totalAmount.toFixed(2));
+      if (!Number.isFinite(totalAmount) || totalAmount <= 0) {
+        return res.status(400).json({
+          error: true,
+          message: "Sipariş toplam tutarı geçersiz."
+        });
       }
 
       // 4. Minimum dükkan sipariş limiti kontrolü (Story 49.1: Bloklanmıyor, kuryeli ise SOS uygulanıyor)
@@ -264,16 +426,18 @@ export class OrderController {
         }
       }
 
-      const forwardedProto = (req.headers["x-forwarded-proto"] as string | undefined)
-        ?.split(",")[0]
-        ?.trim();
-      const resolvedProtocol = forwardedProto || req.protocol;
-      const requestBaseUrl = (
-        process.env.PUBLIC_BASE_URL ||
-        `${resolvedProtocol}://${req.get("host") || `localhost:${process.env.PORT || 3000}`}`
-      )
+      const configuredBaseUrl = (process.env.PUBLIC_BASE_URL || "")
         .replace(/^["']|["']$/g, "")
+        .trim()
         .replace(/\/+$/, "");
+      if (!configuredBaseUrl && process.env.NODE_ENV === "production") {
+        return res.status(500).json({
+          error: true,
+          message: "Sunucu ödeme geri dönüş adresi yapılandırılmamış.",
+        });
+      }
+      const requestBaseUrl =
+        configuredBaseUrl || `http://localhost:${process.env.PORT || 3000}`;
 
       // 6. Prisma `$transaction` ile sipariş ve kalemleri kaydet
       const transactionResult = await prisma.$transaction(async (tx) => {
@@ -340,27 +504,21 @@ export class OrderController {
           }
         });
 
-        for (const item of items) {
-          const product = dbProductMap.get(item.productId)!;
-          const optionsPrice = item.options && Array.isArray(item.options)
-            ? item.options.reduce((sum: number, opt: any) => sum + parseFloat(opt.price || 0), 0)
-            : 0;
-          const unitPrice = Number(product.price) + optionsPrice;
-
+        for (const rItem of resolvedItems) {
           await tx.orderItem.create({
             data: {
               orderId: createdOrder.id,
-              productId: item.productId,
-              quantity: item.quantity,
-              unitPrice: unitPrice,
-              options: item.options && Array.isArray(item.options) ? {
-                create: item.options.map((opt: any) => ({
-                  groupName: opt.groupName || "",
+              productId: rItem.productId,
+              quantity: rItem.quantity,
+              unitPrice: rItem.unitPrice,
+              options: rItem.options.length > 0 ? {
+                create: rItem.options.map((opt) => ({
+                  groupName: opt.groupName,
                   name: opt.name,
-                  price: parseFloat(opt.price || 0),
-                  quantity: opt.quantity !== undefined ? parseInt(opt.quantity.toString()) : 1,
-                  actionType: opt.actionType || "ADD",
-                  optionId: opt.optionId || null
+                  price: opt.price,
+                  quantity: opt.quantity,
+                  actionType: opt.actionType,
+                  optionId: opt.optionId
                 }))
               } : undefined
             }
@@ -401,7 +559,17 @@ export class OrderController {
           });
         } else if (method === "ONLINE_PAYMENT") {
           if (!cardDetails) {
-            throw new Error("Online ödeme için kart bilgileri gereklidir.");
+            throw Object.assign(new Error("Online ödeme için kart özeti (BIN/token) gereklidir."), {
+              statusCode: 400,
+            });
+          }
+          if (cardDetails.cardNumber || cardDetails.cvc) {
+            throw Object.assign(
+              new Error(
+                "Güvenlik (PCI-DSS) gereği tam kart numarası ve CVC kabul edilmez."
+              ),
+              { statusCode: 400 }
+            );
           }
 
           const routeResponse = await PaymentRoutingService.routePayment({
@@ -427,7 +595,9 @@ export class OrderController {
 
           paymentUrl = routeResponse.paymentUrl;
         } else if (method === "WALLET") {
-          throw new Error("Hoppa Cüzdan bakiyeniz bu sipariş için yetersizdir.");
+          throw Object.assign(new Error("Hoppa Cüzdan bakiyeniz bu sipariş için yetersizdir."), {
+            statusCode: 400,
+          });
         }
 
         return { createdOrder, paymentUrl };
@@ -448,8 +618,12 @@ export class OrderController {
         }
       });
 
-      // Send Push Notification asynchronously to Merchant
-      if (shop.merchantId) {
+      const isPaymentConfirmedForMerchant =
+        fullOrder?.paymentMethod !== "ONLINE_PAYMENT" ||
+        fullOrder?.paymentStatus === "SUCCESS";
+
+      // Send Push Notification asynchronously to Merchant only after payment confirmation (or offline/wallet payment)
+      if (shop.merchantId && isPaymentConfirmedForMerchant) {
         setImmediate(async () => {
           try {
             const { notificationService } = await import("../services/NotificationService");
@@ -479,7 +653,9 @@ export class OrderController {
           deliveryFee: Number(fullOrder?.deliveryFee ?? transactionResult.createdOrder.deliveryFee),
           createdAt: (fullOrder?.createdAt || transactionResult.createdOrder.createdAt).toISOString()
         };
-        realtimeEventService.publishToShop(shop.id, "NEW_ORDER", newOrderPayload);
+        if (isPaymentConfirmedForMerchant) {
+          realtimeEventService.publishToShop(shop.id, "NEW_ORDER", newOrderPayload);
+        }
         realtimeEventService.publishToUser(consumerId, "NEW_ORDER", newOrderPayload);
       } catch (sseError) {
         console.error("[OrderController.createOrder] SSE NEW_ORDER yayın hatası:", sseError);
@@ -491,7 +667,14 @@ export class OrderController {
         paymentUrl: transactionResult.paymentUrl
       });
     } catch (error: any) {
-      return res.status(500).json({ error: true, message: error.message });
+      const statusCode = typeof error?.statusCode === "number" ? error.statusCode : 500;
+      if (statusCode >= 500) {
+        console.error("[OrderController.createOrder] Hatası:", error);
+      }
+      return res.status(statusCode).json({
+        error: true,
+        message: statusCode < 500 ? error.message : "Sipariş oluşturulamadı.",
+      });
     }
   }
 
@@ -510,7 +693,7 @@ export class OrderController {
         include: {
           shop: {
             include: {
-              merchant: true
+              merchant: { select: SAFE_MERCHANT_PUBLIC_SELECT }
             }
           },
           address: true,
@@ -529,7 +712,8 @@ export class OrderController {
 
       return res.status(200).json({ error: false, data: orders });
     } catch (error: any) {
-      return res.status(500).json({ error: true, message: error.message });
+      console.error("[OrderController.getConsumerOrders] Hatası:", error);
+      return res.status(500).json({ error: true, message: "Siparişler getirilemedi." });
     }
   }
 
@@ -554,7 +738,7 @@ export class OrderController {
         include: {
           shop: {
             include: {
-              merchant: true,
+              merchant: { select: SAFE_MERCHANT_PUBLIC_SELECT },
             },
           },
           address: true,
@@ -624,7 +808,7 @@ export class OrderController {
       return res.status(200).json({ error: false, data: trackingData });
     } catch (error: any) {
       console.error("Tracking fetch error:", error);
-      return res.status(500).json({ error: true, message: error.message });
+      return res.status(500).json({ error: true, message: "Takip verileri alınamadı." });
     }
   }
 
@@ -647,11 +831,17 @@ export class OrderController {
       }
 
       const orders = await prisma.order.findMany({
-        where: { shopId: shop.id },
+        where: {
+          shopId: shop.id,
+          OR: [
+            { paymentMethod: { not: "ONLINE_PAYMENT" } },
+            { paymentStatus: { in: ["SUCCESS", "REFUNDED"] } },
+          ],
+        },
         include: {
           shop: {
             include: {
-              merchant: true
+              merchant: { select: SAFE_MERCHANT_PUBLIC_SELECT }
             }
           },
           address: true,
@@ -670,7 +860,8 @@ export class OrderController {
 
       return res.status(200).json({ error: false, data: orders });
     } catch (error: any) {
-      return res.status(500).json({ error: true, message: error.message });
+      console.error("[OrderController.getMerchantOrders] Hatası:", error);
+      return res.status(500).json({ error: true, message: "İşletme siparişleri getirilemedi." });
     }
   }
 
@@ -807,8 +998,8 @@ export class OrderController {
 
         let courier = await this.findBestCourier(order.shopId, shopLat, shopLng);
 
-        // Müsait kurye yoksa mock kuryeyi fallback olarak kullan/oluştur
-        if (!courier) {
+        // Müsait kurye yoksa yalnızca geliştirme/sandbox ortamında mock kurye kullan (M-05: Prod'da asla sahte kayıt oluşturma)
+        if (!courier && process.env.NODE_ENV !== "production") {
           courier = await prisma.courier.findFirst({
             where: { phoneNumber: "+905555555555" }
           });
@@ -838,7 +1029,9 @@ export class OrderController {
             });
           }
         }
-        updateData.courierId = courier.id;
+        if (courier) {
+          updateData.courierId = courier.id;
+        }
       }
 
       const updatedOrder = await prisma.order.update({
@@ -847,7 +1040,7 @@ export class OrderController {
         include: {
           shop: {
             include: {
-              merchant: true
+              merchant: { select: SAFE_MERCHANT_PUBLIC_SELECT }
             }
           },
           address: true,
@@ -918,7 +1111,8 @@ export class OrderController {
 
       return res.status(200).json({ error: false, data: updatedOrder });
     } catch (error: any) {
-      return res.status(500).json({ error: true, message: error.message });
+      console.error("[OrderController.updateOrderStatus] Hatası:", error);
+      return res.status(500).json({ error: true, message: "Sipariş durumu güncellenemedi." });
     }
   }
 
@@ -974,6 +1168,36 @@ export class OrderController {
       }
 
       const updatedOrder = await prisma.$transaction(async (tx) => {
+        const allowedStatuses =
+          role === "merchant"
+            ? ["PENDING", "PREPARING", "ON_THE_WAY"]
+            : ["PENDING"];
+
+        const shouldMarkRefunded =
+          order.paymentStatus === "SUCCESS" &&
+          (order.paymentMethod === "ONLINE_PAYMENT" || order.paymentMethod === "WALLET");
+
+        const claimed = await tx.order.updateMany({
+          where: {
+            id: orderId,
+            status: { in: allowedStatuses as OrderStatus[] },
+          },
+          data: {
+            status: "CANCELLED",
+            cancelReason: cancelReason || "Kullanıcı tarafından iptal edildi",
+            cancelledAt: new Date(),
+            cancelledBy,
+            ...(shouldMarkRefunded ? { paymentStatus: "REFUNDED" } : {}),
+          },
+        });
+
+        if (claimed.count === 0) {
+          throw Object.assign(
+            new Error("Sipariş zaten iptal edilmiş veya mevcut durumunda iptal edilemez."),
+            { statusCode: 409 }
+          );
+        }
+
         const orderTotal = Number(order.totalAmount) + Number(order.deliveryFee);
 
         if (order.paymentMethod === "WALLET" && order.paymentStatus === "SUCCESS") {
@@ -983,19 +1207,46 @@ export class OrderController {
             `Sipariş İptal İadesi (Sipariş No: ${order.id})`,
             tx
           );
+        } else {
+          // Kısmi Hoppa Cüzdan kesintisi yapıldıysa (ör. Cüzdan + 3DS) cüzdandan düşülen tutarı tek seferlik iade et
+          const wallet = await tx.wallet.findUnique({
+            where: { userId: order.consumerId },
+            select: { id: true },
+          });
+          if (wallet) {
+            const orderMarker = `Sipariş No: ${order.id}`;
+            const [withdrawTx, existingRefundTx] = await Promise.all([
+              tx.walletTransaction.findFirst({
+                where: {
+                  walletId: wallet.id,
+                  type: "WITHDRAW",
+                  description: { contains: orderMarker },
+                },
+              }),
+              tx.walletTransaction.findFirst({
+                where: {
+                  walletId: wallet.id,
+                  type: "REFUND",
+                  description: { contains: orderMarker },
+                },
+              }),
+            ]);
+
+            if (withdrawTx && !existingRefundTx) {
+              const partialWalletAmount = Math.abs(Number(withdrawTx.amount));
+              if (partialWalletAmount > 0) {
+                await WalletService.refund(
+                  order.consumerId,
+                  partialWalletAmount,
+                  `Sipariş İptal Cüzdan İadesi (Sipariş No: ${order.id})`,
+                  tx
+                );
+              }
+            }
+          }
         }
 
-        return await tx.order.update({
-          where: { id: orderId },
-          data: {
-            status: "CANCELLED",
-            cancelReason: cancelReason || "Kullanıcı tarafından iptal edildi",
-            cancelledAt: new Date(),
-            cancelledBy,
-            ...(order.paymentMethod === "ONLINE_PAYMENT" ? { paymentStatus: "REFUNDED" } : {}),
-            ...(order.paymentMethod === "WALLET" ? { paymentStatus: "REFUNDED" } : {})
-          }
-        });
+        return await tx.order.findUniqueOrThrow({ where: { id: orderId } });
       });
 
       // Send notifications based on who cancelled
@@ -1045,7 +1296,14 @@ export class OrderController {
 
       return res.status(200).json({ error: false, data: updatedOrder });
     } catch (error: any) {
-      return res.status(500).json({ error: true, message: error.message });
+      const statusCode = typeof error?.statusCode === "number" ? error.statusCode : 500;
+      if (statusCode >= 500) {
+        console.error("[OrderController.cancelOrder] Hatası:", error);
+      }
+      return res.status(statusCode).json({
+        error: true,
+        message: statusCode < 500 ? error.message : "Sipariş iptal edilemedi.",
+      });
     }
   }
 }

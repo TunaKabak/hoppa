@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:core_ui/core_ui.dart';
 import 'package:provider/provider.dart' as p;
 import 'package:core_shared/shared/models/business_product.dart';
 import 'package:core_shared/shared/models/cart_item.dart';
@@ -109,20 +110,13 @@ class ModernProductCard extends ConsumerWidget {
                   Positioned.fill(
                     child: Padding(
                       padding: const EdgeInsets.all(0),
-                      child: ClipRRect(
+                      child: HoppaCachedImage(
+                        imageUrl: product.imageUrl,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        height: double.infinity,
                         borderRadius: BorderRadius.circular(8),
-                        child: product.imageUrl.isNotEmpty
-                            ? Image.network(
-                                product.imageUrl,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Icon(
-                                    Icons.image_not_supported,
-                                    color: Colors.grey[300],
-                                  );
-                                },
-                              )
-                            : Icon(Icons.image, color: Colors.grey[300]),
+                        fallbackIcon: Icons.shopping_bag_outlined,
                       ),
                     ),
                   ),
@@ -275,43 +269,15 @@ class ModernProductCard extends ConsumerWidget {
                         top: Radius.circular(16),
                       ),
                     ),
-                    child: ClipRRect(
+                    child: HoppaCachedImage(
+                      imageUrl: product.imageUrl,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
                       borderRadius: const BorderRadius.vertical(
                         top: Radius.circular(16),
                       ),
-                      child: product.imageUrl.isNotEmpty
-                          ? Image.network(
-                              product.imageUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Center(
-                                  child: Icon(
-                                    Icons.image_not_supported,
-                                    color: Colors.grey[300],
-                                    size: 40,
-                                  ),
-                                );
-                              },
-                              loadingBuilder: (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return Center(
-                                  child: CircularProgressIndicator(
-                                    value: loadingProgress.expectedTotalBytes != null
-                                        ? loadingProgress.cumulativeBytesLoaded /
-                                            loadingProgress.expectedTotalBytes!
-                                        : null,
-                                    strokeWidth: 2,
-                                  ),
-                                );
-                              },
-                            )
-                          : Center(
-                              child: Icon(
-                                Icons.image,
-                                color: Colors.grey[300],
-                                size: 40,
-                              ),
-                            ),
+                      fallbackIcon: Icons.shopping_bag_outlined,
                     ),
                   ),
                 ),

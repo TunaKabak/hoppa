@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:core_shared/shared/core/services/navigation_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' as riverpod;
@@ -16,18 +17,23 @@ import 'package:core_shared/shared/core/l10n/app_localizations.dart';
 import 'package:core_shared/shared/core/theme/app_theme.dart';
 import 'apps/merchant/auth/merchant_auth_wrapper.dart';
 import 'apps/merchant/merchant_order_list_page.dart';
+import 'apps/merchant/providers/merchant_api_providers.dart';
 
 import 'dart:io';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load environment variables
-  try {
-    await dotenv.load(fileName: ".env");
-  } catch (e) {
-    debugPrint("🚨 Warning: .env file not found, using fallback defaults: $e");
-    dotenv.testLoad(fileInput: 'LOCAL_IP=127.0.0.1');
+  // Prod build'lerde .env pakete gömülmez; yalnızca geliştirme modunda yüklenir.
+  if (!kReleaseMode) {
+    try {
+      await dotenv.load(fileName: ".env");
+    } catch (e) {
+      debugPrint("🚨 Warning: .env file not found, using fallback defaults: $e");
+      dotenv.testLoad(fileInput: 'LOCAL_IP=127.0.0.1');
+    }
+  } else {
+    dotenv.testLoad(fileInput: '');
   }
 
   FlavorConfig(name: "merchant", variables: {"flavor": "merchant"});
@@ -50,9 +56,15 @@ void main() async {
 
   await initializeDateFormatting('tr_TR', null);
 
-  final localIp = dotenv.env['LOCAL_IP'] ?? '127.0.0.1';
-  final apiBaseUrl = dotenv.env['API_URL'] ?? 'http://$localIp:3000';
-  print("🔌 Connecting to Backend API: $apiBaseUrl");
+  const definedApiUrl = String.fromEnvironment(
+    'API_URL',
+    defaultValue: 'https://hoppa-backend.onrender.com',
+  );
+  final localIp = kReleaseMode ? '127.0.0.1' : (dotenv.env['LOCAL_IP'] ?? '127.0.0.1');
+  final apiBaseUrl = kReleaseMode
+      ? definedApiUrl
+      : (dotenv.env['API_URL'] ?? 'http://$localIp:3000');
+  debugPrint("🔌 Connecting to Backend API: $apiBaseUrl");
 
   runApp(riverpod.ProviderScope(
     overrides: [
@@ -113,6 +125,8 @@ class _MerchantAppState extends riverpod.ConsumerState<MerchantApp> {
             ],
 
             theme: AppTheme.merchantTheme,
+            darkTheme: AppTheme.merchantDarkTheme,
+            themeMode: ref.watch(merchantThemeModeProvider),
             home: const MerchantAuthWrapper(),
           );
         },

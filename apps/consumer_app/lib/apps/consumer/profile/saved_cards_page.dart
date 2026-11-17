@@ -249,12 +249,14 @@ class _SavedCardsPageState extends ConsumerState<SavedCardsPage> {
                             setState(() => _isLoading = true);
                             try {
                               final apiClient = ref.read(apiClientProvider);
+                              final digits = numberController.text.replaceAll(RegExp(r'\D'), '');
                               await apiClient.post(
                                 '/api/consumer/cards',
                                 body: {
                                   'cardTitle': titleController.text.trim(),
                                   'cardHolderName': holderController.text.trim(),
-                                  'cardNumber': numberController.text.replaceAll(' ', ''),
+                                  'cardBin': digits.substring(0, 6),
+                                  'cardLast4': digits.substring(digits.length - 4),
                                   'cardType': selectedCardType,
                                 },
                               );

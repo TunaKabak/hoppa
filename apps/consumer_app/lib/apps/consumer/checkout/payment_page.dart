@@ -219,20 +219,31 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
           if (_savedCardCVCController.text.length < 3) {
             throw Exception("Lütfen seçtiğiniz kart için 3 haneli CVC kodunu giriniz.");
           }
-          final cleanHidden = selectedCard['cardNumberHidden'].toString().replaceAll(' ', '');
-          final bin = cleanHidden.substring(0, 6);
-          final last4 = cleanHidden.substring(cleanHidden.length - 4);
-          final mockNumber = "${bin}000000$last4";
+          final cleanHidden = selectedCard['cardNumberHidden']
+              .toString()
+              .replaceAll(RegExp(r'\s+'), '');
+          final binDigits = cleanHidden.length >= 6
+              ? cleanHidden.substring(0, 6).replaceAll(RegExp(r'\D'), '')
+              : '';
+          final last4Digits = cleanHidden.length >= 4
+              ? cleanHidden
+                  .substring(cleanHidden.length - 4)
+                  .replaceAll(RegExp(r'\D'), '')
+              : '';
+          if (binDigits.length != 6 || last4Digits.length != 4) {
+            throw Exception("Kayıtlı kart özeti doğrulanamadı.");
+          }
 
           cardDetails = {
-            'cardNumber': mockNumber,
+            'cardBin': binDigits,
+            'cardLast4': last4Digits,
+            'cardToken': selectedCard['cardToken'],
             'expiryMonth': '12',
             'expiryYear': '30',
-            'cvc': _savedCardCVCController.text,
             'cardHolderName': selectedCard['cardHolderName'],
           };
         } else {
-          // Use new card
+          // Use new card (PCI-DSS: tam PAN/CVC sunucuya gönderilmez, yalnızca 6 haneli BIN + son 4 hane)
           if (_cardNumberController.text.isEmpty ||
               _cardExpiryController.text.isEmpty ||
               _cardCVCController.text.isEmpty ||
@@ -242,6 +253,12 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
           if (_saveNewCard && _saveCardTitleController.text.trim().isEmpty) {
             throw Exception("Lütfen kaydettiğiniz kart için bir Kart Başlığı giriniz.");
           }
+          final cleanCardDigits =
+              _cardNumberController.text.replaceAll(RegExp(r'\D'), '');
+          if (cleanCardDigits.length < 12) {
+            throw Exception("Lütfen geçerli bir kart numarası girin.");
+          }
+
           final expiryParts = _cardExpiryController.text.split('/');
           if (expiryParts.length != 2) {
             throw Exception("Son kullanma tarihi AA/YY formatında olmalıdır.");
@@ -263,11 +280,11 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
           }
 
           cardDetails = {
-            'cardNumber': _cardNumberController.text.replaceAll(' ', ''),
+            'cardBin': cleanCardDigits.substring(0, 6),
+            'cardLast4': cleanCardDigits.substring(cleanCardDigits.length - 4),
             'expiryMonth': expiryParts[0],
             'expiryYear': expiryParts[1],
-            'cvc': _cardCVCController.text,
-            'cardHolderName': _cardHolderController.text,
+            'cardHolderName': _cardHolderController.text.trim(),
           };
         }
       }
@@ -311,47 +328,70 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
       final result = await orderRepo.createOrder(orderData);
       final paymentUrl = result['paymentUrl'] as String?;
 
-      // Save card to profile if checked
+      // Save card summary to profile if checked (PCI-DSS: BIN + Last4 only)
       if (!isFullyCoveredByWallet && _paymentMethod == 'online_payment' && _selectedCardId == 'new' && _saveNewCard) {
         try {
           final apiClient = ref.read(apiClientProvider);
           final cardTitleText = _saveCardTitleController.text.trim();
-          await apiClient.post(
-            '/api/consumer/cards',
-            body: {
-              'cardTitle': cardTitleText.isEmpty ? 'Kayıtlı Kartım' : cardTitleText,
-              'cardHolderName': _cardHolderController.text.trim(),
-              'cardNumber': _cardNumberController.text.replaceAll(' ', ''),
-              'cardType': _cardLogo,
-            },
-          );
+          final digitsOnly =
+              _cardNumberController.text.replaceAll(RegExp(r'\D'), '');
+          if (digitsOnly.length >= 10) {
+            await apiClient.post(
+              '/api/consumer/cards',
+              body: {
+                'cardTitle': cardTitleText.isEmpty ? 'Kayıtlı Kartım' : cardTitleText,
+                'cardHolderName': _cardHolderController.text.trim(),
+                'cardBin': digitsOnly.substring(0, 6),
+                'cardLast4': digitsOnly.substring(digitsOnly.length - 4),
+                'cardType': _cardLogo,
+              },
+            );
+          }
         } catch (e) {
           debugPrint("Silent error saving card after purchase: $e");
         }
       }
 
-      // Clear ONLY the ordered business's cart locally, preserving other business carts
-      final orderedBusinessId = cartState.currentBusinessId;
-      if (orderedBusinessId != null) {
-        cartNotifier.clearCart(orderedBusinessId);
-      } else {
-        cartNotifier.clearCart();
-      }
-      ref.read(activeReferringSourceProvider.notifier).state = 'ORGANIC';
-      ref.read(activeShopCampaignIdProvider.notifier).state = null;
+      if (!mounted) return;
 
-      if (mounted) {
-        if (paymentUrl != null && paymentUrl.isNotEmpty) {
-           Navigator.push(
-             context,
-             MaterialPageRoute(
-               builder: (context) => ThreeDSecurePage(paymentUrl: paymentUrl),
-             ),
-           );
+      void finalizeCartAfterOrder() {
+        // Clear ONLY the ordered business's cart locally, preserving other business carts
+        final orderedBusinessId = cartState.currentBusinessId;
+        if (orderedBusinessId != null) {
+          cartNotifier.clearCart(orderedBusinessId);
         } else {
-           Navigator.popUntil(context, (route) => route.isFirst);
-           _showSuccessDialog();
+          cartNotifier.clearCart();
         }
+        ref.read(activeReferringSourceProvider.notifier).state = 'ORGANIC';
+        ref.read(activeShopCampaignIdProvider.notifier).state = null;
+      }
+
+      if (paymentUrl != null && paymentUrl.isNotEmpty) {
+        final paymentSucceeded = await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ThreeDSecurePage(paymentUrl: paymentUrl),
+          ),
+        );
+        if (!mounted) return;
+        if (paymentSucceeded == true) {
+          finalizeCartAfterOrder();
+          Navigator.popUntil(context, (route) => route.isFirst);
+          _showSuccessDialog();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                "3D Secure ödemesi tamamlanmadı. Sepetiniz korundu, tekrar deneyebilirsiniz.",
+              ),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      } else {
+        finalizeCartAfterOrder();
+        Navigator.popUntil(context, (route) => route.isFirst);
+        _showSuccessDialog();
       }
     } catch (e) {
       String errorMsg = e.toString();

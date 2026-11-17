@@ -94,7 +94,8 @@ export class ShopController {
 
       return res.status(200).json({ error: false, data: shop });
     } catch (error: any) {
-      return res.status(500).json({ error: true, message: error.message });
+      console.error("[ShopController.openCloseShop] Hata:", error);
+      return res.status(500).json({ error: true, message: "Dükkan durumu güncellenemedi." });
     }
   }
 
@@ -220,7 +221,8 @@ export class ShopController {
 
       return res.status(200).json({ error: false, data: updated });
     } catch (error: any) {
-      return res.status(500).json({ error: true, message: error.message });
+      console.error("[ShopController.openCloseShop] Hata:", error);
+      return res.status(500).json({ error: true, message: "Dükkan durumu güncellenemedi." });
     }
   }
 
@@ -231,7 +233,7 @@ export class ShopController {
 
       const shop = await prisma.shop.findUnique({
         where: { merchantId },
-        include: { merchant: true }
+        select: { id: true, isActive: true }
       });
 
       if (!shop) return res.status(404).json({ error: true, message: "Dükkan bulunamadı." });
@@ -264,7 +266,8 @@ export class ShopController {
         data: updated 
       });
     } catch (error: any) {
-      return res.status(500).json({ error: true, message: error.message });
+      console.error("[ShopController.openCloseShop] Hata:", error);
+      return res.status(500).json({ error: true, message: "Dükkan durumu güncellenemedi." });
     }
   }
 
@@ -417,7 +420,8 @@ export class ShopController {
         }
       });
     } catch (error: any) {
-      return res.status(500).json({ error: true, message: error.message });
+      console.error("[ShopController.openCloseShop] Hata:", error);
+      return res.status(500).json({ error: true, message: "Dükkan durumu güncellenemedi." });
     }
   }
 
@@ -665,7 +669,8 @@ export class ShopController {
         data: enrichedShop
       });
     } catch (error: any) {
-      return res.status(500).json({ error: true, message: error.message });
+      console.error("[ShopController.openCloseShop] Hata:", error);
+      return res.status(500).json({ error: true, message: "Dükkan durumu güncellenemedi." });
     }
   }
 
@@ -689,7 +694,8 @@ export class ShopController {
 
       return res.status(200).json({ error: false, data: promotions });
     } catch (error: any) {
-      return res.status(500).json({ error: true, message: error.message });
+      console.error("[ShopController.openCloseShop] Hata:", error);
+      return res.status(500).json({ error: true, message: "Dükkan durumu güncellenemedi." });
     }
   }
 
@@ -769,7 +775,8 @@ export class ShopController {
         data: enrichedShop
       });
     } catch (error: any) {
-      return res.status(500).json({ error: true, message: error.message });
+      console.error("[ShopController.openCloseShop] Hata:", error);
+      return res.status(500).json({ error: true, message: "Dükkan durumu güncellenemedi." });
     }
   }
 
@@ -780,7 +787,15 @@ export class ShopController {
 
       const shop = await prisma.shop.findUnique({
         where: { merchantId },
-        include: { merchant: true }
+        include: {
+          merchant: {
+            select: {
+              taxNumber: true,
+              identityNumber: true,
+              businessPhone: true,
+            },
+          },
+        },
       });
 
       if (!shop) return res.status(404).json({ error: true, message: "Dükkan bulunamadı." });
@@ -888,7 +903,8 @@ export class ShopController {
         }
       });
     } catch (error: any) {
-      return res.status(500).json({ error: true, message: error.message });
+      console.error("[ShopController.openCloseShop] Hata:", error);
+      return res.status(500).json({ error: true, message: "Dükkan durumu güncellenemedi." });
     }
   }
 }

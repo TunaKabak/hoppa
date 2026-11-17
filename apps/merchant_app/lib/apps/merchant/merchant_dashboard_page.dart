@@ -2,6 +2,7 @@ import 'dart:async'; // StreamSubscription için
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:core_auth/core_auth.dart';
+import 'package:core_ui/core_ui.dart';
 import 'package:core_shared/shared/models/order_status.dart'; // Restored
 import 'package:core_shared/shared/models/order.dart' as model;
 import 'package:merchant_app/apps/merchant/merchant_order_list_page.dart';
@@ -33,6 +34,7 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
 
   // İlk açılışta mevcut siparişleri bildirim olarak saymamak için bayrak
   bool _isFirstListen = true;
+  bool _isShowingIncomingOrderDialog = false;
 
   @override
   void initState() {
@@ -102,7 +104,7 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
                 fontWeight: FontWeight.bold,
               ),
             ),
-            backgroundColor: Colors.red,
+            backgroundColor: HoppaDesignTokens.statusDanger,
             action: SnackBarAction(
               label: "GİT",
               textColor: Colors.white,
@@ -113,7 +115,240 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
             ),
           ),
         );
+        _showIncomingOrderDialog(newPendingOrders.first);
       }
+    }
+  }
+
+  Future<void> _showIncomingOrderDialog(model.Order order) async {
+    if (_isShowingIncomingOrderDialog || !mounted) return;
+    _isShowingIncomingOrderDialog = true;
+    int selectedPrepMinutes = 25;
+    bool isAccepting = false;
+
+    try {
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) {
+          return StatefulBuilder(
+            builder: (ctx, setModalState) {
+              final theme = Theme.of(ctx);
+              final shortId = order.id.length >= 6
+                  ? order.id.substring(0, 6).toUpperCase()
+                  : order.id.toUpperCase();
+              return Dialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(HoppaDesignTokens.radiusXl),
+                ),
+                backgroundColor: theme.colorScheme.surface,
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: HoppaDesignTokens.brandOrange.withValues(
+                                alpha: 0.14,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.notifications_active_rounded,
+                              color: HoppaDesignTokens.brandOrange,
+                              size: 26,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  "YENİ SİPARİŞ GELDİ",
+                                  style: TextStyle(
+                                    color: HoppaDesignTokens.brandOrange,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 12,
+                                    letterSpacing: 0.8,
+                                  ),
+                                ),
+                                Text(
+                                  "Sipariş #$shortId",
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                    color: theme.colorScheme.onSurface,
+                                    fontFeatures: HoppaDesignTokens.tabularFigures,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            "₺${order.totalAmount.toStringAsFixed(2)}",
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                              color: HoppaDesignTokens.brandGreen,
+                              fontFeatures: HoppaDesignTokens.tabularFigures,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHighest
+                              .withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ...order.items.take(3).map(
+                              (item) => Padding(
+                                padding: const EdgeInsets.only(bottom: 4),
+                                child: Text(
+                                  "${item.quantity % 1 == 0 ? item.quantity.toInt() : item.quantity}x ${item.name}",
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            if (order.items.length > 3)
+                              Text(
+                                "+${order.items.length - 3} ürün daha",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        "Tahmini Hazırlama Süresi",
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        children: [15, 25, 40].map((mins) {
+                          final isSelected = selectedPrepMinutes == mins;
+                          return ChoiceChip(
+                            label: Text("$mins dk"),
+                            selected: isSelected,
+                            onSelected: isAccepting
+                                ? null
+                                : (_) => setModalState(
+                                      () => selectedPrepMinutes = mins,
+                                    ),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 18),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: isAccepting
+                                  ? null
+                                  : () {
+                                      Navigator.pop(ctx);
+                                      _navigateToList(
+                                        context,
+                                        filter: OrderStatus.pending.value,
+                                      );
+                                    },
+                              style: OutlinedButton.styleFrom(
+                                minimumSize: const Size(0, 48),
+                              ),
+                              child: const Text("Siparişlere Git"),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            flex: 2,
+                            child: ElevatedButton.icon(
+                              onPressed: isAccepting
+                                  ? null
+                                  : () async {
+                                      setModalState(() => isAccepting = true);
+                                      try {
+                                        await ref
+                                            .read(merchantOrderRepositoryProvider)
+                                            .updateOrderStatus(
+                                              order.id,
+                                              OrderStatus.preparing.value,
+                                            );
+                                        ref.invalidate(merchantOrdersProvider);
+                                        if (ctx.mounted) {
+                                          Navigator.pop(ctx);
+                                        }
+                                        if (mounted) {
+                                          HoppaToast.show(
+                                            context,
+                                            "Sipariş #$shortId onaylandı ($selectedPrepMinutes dk).",
+                                            tone: HoppaToastTone.success,
+                                          );
+                                        }
+                                      } catch (e) {
+                                        if (ctx.mounted) {
+                                          setModalState(() => isAccepting = false);
+                                        }
+                                        if (mounted) {
+                                          HoppaToast.show(
+                                            context,
+                                            "Onaylanamadı: $e",
+                                            tone: HoppaToastTone.error,
+                                          );
+                                        }
+                                      }
+                                    },
+                              icon: isAccepting
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : const Icon(Icons.check_circle_rounded),
+                              label: const Text("Onayla & Hazırla"),
+                              style: ElevatedButton.styleFrom(
+                                minimumSize: const Size(0, 48),
+                                backgroundColor: HoppaDesignTokens.brandGreen,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      );
+    } finally {
+      _isShowingIncomingOrderDialog = false;
     }
   }
 
@@ -138,31 +373,26 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
           lowerError.contains("aktif ürün")) {
         showDialog(
           context: context,
-          builder: (context) => AlertDialog(
-            title: const Text("Ürün Bulunamadı"),
-            content: const Text(
-              "İşletmenizi sipariş alımına (Aktif) açabilmek için en az 1 aktif ürün eklemiş olmanız gerekmektedir.",
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Kapat"),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => MerchantProductListPage(
-                        businessId: widget.businessId,
-                      ),
-                    ),
-                  );
-                },
-                child: const Text("Ürünlere Git"),
-              ),
-            ],
+          builder: (ctx) => HoppaUnifiedDialog(
+            icon: Icons.inventory_2_outlined,
+            iconColor: HoppaDesignTokens.statusWarning,
+            title: "Ürün Bulunamadı",
+            content:
+                "İşletmenizi sipariş alımına (Aktif) açabilmek için en az 1 aktif ürün eklemiş olmanız gerekmektedir.",
+            cancelText: "Kapat",
+            confirmText: "Ürünlere Git",
+            onCancel: () => Navigator.pop(ctx),
+            onConfirm: () {
+              Navigator.pop(ctx);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => MerchantProductListPage(
+                    businessId: widget.businessId,
+                  ),
+                ),
+              );
+            },
           ),
         );
       } else if (lowerError.contains("lütfen dükkan ve resmi işletme") || 
@@ -170,36 +400,33 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
           lowerError.contains("resmi isletme")) {
         showDialog(
           context: context,
-          builder: (context) => AlertDialog(
-            title: const Text("Eksik Bilgi"),
-            content: const Text(
-              "Dükkanınızı açabilmek için lokasyon, çalışma saatleri ve resmi işletme (Vergi/Kimlik No) ayarlarınızı tamamlamanız gerekmektedir.",
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Kapat"),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => MerchantSettingsPage(
-                        businessId: widget.businessId,
-                      ),
-                    ),
-                  );
-                },
-                child: const Text("Ayarlara Git"),
-              ),
-            ],
+          builder: (ctx) => HoppaUnifiedDialog(
+            icon: Icons.verified_user_outlined,
+            iconColor: HoppaDesignTokens.statusWarning,
+            title: "Eksik İşletme Bilgisi",
+            content:
+                "Dükkanınızı açabilmek için lokasyon, çalışma saatleri ve resmi işletme (Vergi/Kimlik No) ayarlarınızı tamamlamanız gerekmektedir.",
+            cancelText: "Kapat",
+            confirmText: "Ayarlara Git",
+            onCancel: () => Navigator.pop(ctx),
+            onConfirm: () {
+              Navigator.pop(ctx);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => MerchantSettingsPage(
+                    businessId: widget.businessId,
+                  ),
+                ),
+              );
+            },
           ),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Durum güncellenemedi: $errorMsg")),
+        HoppaToast.show(
+          context,
+          "Durum güncellenemedi: $errorMsg",
+          tone: HoppaToastTone.error,
         );
       }
     }
@@ -237,43 +464,69 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
           children: [
             Text(
               displayBusinessName,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+                color: theme.colorScheme.onSurface,
               ),
             ),
-            Text(
-              isShopOpen ? "Dükkan AÇIK" : "Dükkan KAPALI",
-              style: TextStyle(
-                fontSize: 12,
-                color: isShopOpen ? Colors.greenAccent : Colors.redAccent,
-                fontWeight: FontWeight.bold,
-              ),
+            const SizedBox(height: 2),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isShopOpen
+                        ? HoppaDesignTokens.brandGreen
+                        : HoppaDesignTokens.statusDanger,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  isShopOpen ? "Dükkan AÇIK" : "Dükkan KAPALI",
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isShopOpen
+                        ? HoppaDesignTokens.brandGreen
+                        : HoppaDesignTokens.statusDanger,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
         centerTitle: true,
         actions: [
           Transform.scale(
-            scale: 0.8,
-            child: shopState.isLoading 
-              ? const SizedBox(
-                  width: 40, 
-                  height: 40, 
-                  child: Padding(
-                    padding: EdgeInsets.all(10.0), 
-                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+            scale: 0.85,
+            child: shopState.isLoading
+                ? SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: Padding(
+                      padding: const EdgeInsets.all(10.0),
+                      child: CircularProgressIndicator(
+                        color: theme.colorScheme.primary,
+                        strokeWidth: 2,
+                      ),
+                    ),
                   )
-                )
-              : Switch(
-                  value: isShopOpen,
-                  activeThumbColor: Colors.greenAccent,
-                  activeTrackColor: Colors.greenAccent.withValues(alpha: 0.2),
-                  inactiveThumbColor: Colors.redAccent,
-                  inactiveTrackColor: Colors.redAccent.withValues(alpha: 0.2),
-                  onChanged: _toggleShopStatus,
-                ),
+                : Switch(
+                    value: isShopOpen,
+                    activeThumbColor: HoppaDesignTokens.brandGreen,
+                    activeTrackColor:
+                        HoppaDesignTokens.brandGreen.withValues(alpha: 0.25),
+                    inactiveThumbColor: HoppaDesignTokens.statusDanger,
+                    inactiveTrackColor:
+                        HoppaDesignTokens.statusDanger.withValues(alpha: 0.2),
+                    onChanged: _toggleShopStatus,
+                  ),
           ),
           const SizedBox(width: 8),
         ],
@@ -303,7 +556,7 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
         : 1;
 
     return ordersAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const HoppaListCardSkeleton(itemCount: 4),
       error: (error, stack) => Center(child: Text("Hata: $error")),
       data: (allOrders) {
         final activeCount = allOrders.where((d) =>
@@ -328,7 +581,12 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
 
               // 1. KPI CARDS (from API)
               statsAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const HoppaListCardSkeleton(
+                  itemCount: 2,
+                  cardHeight: 84,
+                  shrinkWrap: true,
+                  padding: EdgeInsets.zero,
+                ),
                 error: (error, stack) => Center(child: Text("İstatistik Hatası: $error")),
                 data: (stats) {
                   final totalRevenue = (stats['totalRevenue'] as num?)?.toDouble() ?? 0.0;
@@ -575,6 +833,7 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: color,
+              fontFeatures: HoppaDesignTokens.tabularFigures,
             ),
           ),
           Text(
@@ -636,6 +895,7 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
                       color: Colors.white,
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
+                      fontFeatures: HoppaDesignTokens.tabularFigures,
                     ),
                   ),
                 ],
@@ -688,35 +948,29 @@ class _MerchantDashboardPageState extends ConsumerState<MerchantDashboardPage>
               final imageUrl = p.imageUrl;
               final stockCount = p.stock ?? p.stockQuantity ?? 0;
 
+              final surfaceColor = Theme.of(context).colorScheme.surface;
+              final borderColor = Theme.of(context).dividerColor;
               return Container(
                 width: 120,
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: surfaceColor,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade200),
+                  border: Border.all(color: borderColor),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: Center(
-                        child: imageUrl != null && imageUrl.isNotEmpty
-                            ? Image.network(
-                                imageUrl,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) =>
-                                    const Icon(
-                                  Icons.image,
-                                  size: 40,
-                                  color: Colors.grey,
-                                ),
-                              )
-                            : const Icon(
-                                Icons.inventory_2_outlined,
-                                size: 36,
-                                color: Colors.grey,
-                              ),
+                        child: HoppaCachedImage(
+                          imageUrl: imageUrl,
+                          width: 96,
+                          height: 72,
+                          fit: BoxFit.cover,
+                          borderRadius: BorderRadius.circular(8),
+                          fallbackIcon: Icons.inventory_2_outlined,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 8),

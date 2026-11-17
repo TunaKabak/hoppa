@@ -66,7 +66,7 @@ export class MerchantAIController {
       }`;
 
       const stableModel = "gemini-2.5-flash";
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${stableModel}:generateContent?key=${apiKey}`;
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${stableModel}:generateContent`;
 
       const payload = {
         contents: [
@@ -89,7 +89,10 @@ export class MerchantAIController {
 
       const responseData = await MerchantAIController.fetchWithRetry(geminiUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey,
+        },
         body: JSON.stringify(payload)
       });
 

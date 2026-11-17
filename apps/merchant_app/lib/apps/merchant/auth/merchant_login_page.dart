@@ -1,9 +1,7 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:core_auth/core_auth.dart';
-import 'package:core_shared/core_shared.dart';
-import 'package:core_shared/shared/core/services/database_seeder.dart';
+import 'package:core_ui/core_ui.dart';
 import 'widgets/auth_layout.dart';
 import 'widgets/auth_text_field.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -68,10 +66,10 @@ class _LoginPageState extends ConsumerState<LoginPage>
     final password = _passwordController.text.trim();
 
     if (username.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Lütfen kullanıcı adı/e-posta ve şifrenizi giriniz"),
-        ),
+      HoppaToast.show(
+        context,
+        "Lütfen kullanıcı adı/e-posta ve şifrenizi giriniz.",
+        tone: HoppaToastTone.warning,
       );
       return;
     }
@@ -145,11 +143,10 @@ class _LoginPageState extends ConsumerState<LoginPage>
     ref.listen<AuthState>(authControllerProvider, (previous, next) {
       if (!mounted) return;
       if (next is AuthError) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(next.errorMessage),
-            backgroundColor: Colors.red,
-          ),
+        HoppaToast.show(
+          context,
+          next.errorMessage,
+          tone: HoppaToastTone.error,
         );
       }
     });
@@ -474,52 +471,14 @@ class _LoginPageState extends ConsumerState<LoginPage>
             ],
 
             const SizedBox(height: 20),
-            // GİZLİ MENU
-            GestureDetector(
-              onLongPress: () async {
-                final confirm = await showDialog<bool>(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text("Verileri Sıfırla"),
-                    content: const Text(
-                      "Tüm veriler silinecek ve varsayılan veriler yüklenecek. Onaylıyor musunuz?",
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, false),
-                        child: const Text("İptal"),
-                      ),
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, true),
-                        child: const Text(
-                          "Sıfırla",
-                          style: TextStyle(color: Colors.red),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-
-                if (confirm == true) {
-                  await DatabaseSeeder().seedSystem();
-                  if (!context.mounted) return;
-                  
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Veriler başarıyla sıfırlandı!"),
-                    ),
-                  );
-                  _loadSavedProfiles();
-                }
-              },
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                child: Text(
-                  "v1.0.0 (Custom Backend)",
-                  style: GoogleFonts.inter(
-                    color: Colors.grey.shade300,
-                    fontSize: 10,
-                  ),
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Text(
+                "Hoppa İş Ortağı • v1.0.0",
+                style: GoogleFonts.plusJakartaSans(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ),

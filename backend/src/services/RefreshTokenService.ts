@@ -103,6 +103,20 @@ export class RefreshTokenService {
       };
     }
 
+    const incomingHash = this.hashToken(rawRefreshToken);
+    const incomingBuf = Buffer.from(incomingHash, "utf8");
+    const storedBuf = Buffer.from(existingToken.tokenHash || "", "utf8");
+    if (
+      incomingBuf.length !== storedBuf.length ||
+      !crypto.timingSafeEqual(incomingBuf, storedBuf)
+    ) {
+      return {
+        success: false,
+        status: 401,
+        message: "Geçersiz refresh token özeti.",
+      };
+    }
+
     // 3. REUSE DETECTION (Çalınma Tespiti): Daha önce iptal edilmiş bir token tekrar kullanılırsa!
     if (existingToken.revokedAt !== null) {
       console.warn(
@@ -156,7 +170,34 @@ export class RefreshTokenService {
       };
     }
 
-    // 6. Yeni Token Çifti Üret
+    // 6. Atomik Claim (Yarış durumu / Race Condition engellemek için ÖNCE revoke et)
+    const claimed = await prisma.refreshToken.updateMany({
+      where: {
+        id: existingToken.id,
+        revokedAt: null,
+      },
+      data: {
+        revokedAt: new Date(),
+      },
+    });
+
+    if (claimed.count === 0) {
+      console.warn(
+        `[SECURITY ALERT] Eşzamanlı/tekrarlı refresh token kullanımı tespit edildi! ID: ${existingToken.id}`
+      );
+      if (existingToken.userId) {
+        await this.revokeAllForUser(existingToken.userId);
+      } else if (existingToken.merchantId) {
+        await this.revokeAllForMerchant(existingToken.merchantId);
+      }
+      return {
+        success: false,
+        status: 403,
+        message: "Güvenlik ihlali şüphesi: Oturumunuz sonlandırıldı. Lütfen tekrar giriş yapın.",
+      };
+    }
+
+    // 7. Yeni Token Çifti Üret ve replacedBy alanını güncelle
     const newTokens = await this.createTokenPair({
       userId: existingToken.userId || undefined,
       merchantId: existingToken.merchantId || undefined,
@@ -164,12 +205,10 @@ export class RefreshTokenService {
       deviceInfo: deviceInfo || existingToken.deviceInfo || undefined,
     });
 
-    // 7. Eski token'ı revoke et ve yeni token ile ilişkilendir (Rotation)
     const newDecoded = JwtUtils.verifyRefreshToken(newTokens.refreshToken);
     await prisma.refreshToken.update({
       where: { id: existingToken.id },
       data: {
-        revokedAt: new Date(),
         replacedBy: newDecoded?.tokenId || null,
       },
     });

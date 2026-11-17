@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:core_ui/core_ui.dart';
 import 'package:provider/provider.dart' as p;
 import 'package:consumer_app/apps/consumer/business/business_provider.dart';
 import 'package:core_shared/shared/models/business.dart';
@@ -229,8 +230,13 @@ class _BusinessSelectionPageState extends ConsumerState<BusinessSelectionPage> {
                           Expanded(
                             child: ref.watch(consumerShopsProvider).when(
                                   skipLoadingOnReload: true,
-                                  loading: () => const Center(
-                                      child: CircularProgressIndicator()),
+                                  loading: () => const HoppaListCardSkeleton(
+                                    itemCount: 5,
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 12,
+                                    ),
+                                  ),
                                   error: (err, stack) {
                                     debugPrint("BusinessSelectionPage Error: $err\n$stack");
                                     return Center(
@@ -839,7 +845,7 @@ class _BusinessSelectionPageState extends ConsumerState<BusinessSelectionPage> {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.08),
+                color: Colors.black.withValues(alpha: 0.08),
                 blurRadius: 8,
                 offset: const Offset(0, 3),
               ),
@@ -861,8 +867,8 @@ class _BusinessSelectionPageState extends ConsumerState<BusinessSelectionPage> {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          Colors.black.withOpacity(0.1),
-                          Colors.black.withOpacity(0.75),
+                          Colors.black.withValues(alpha: 0.1),
+                          Colors.black.withValues(alpha: 0.75),
                         ],
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
@@ -891,7 +897,7 @@ class _BusinessSelectionPageState extends ConsumerState<BusinessSelectionPage> {
                         const SizedBox(width: 2),
                         Text(
                           "ÖNE ÇIKAN",
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.plusJakartaSans(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
                             fontSize: 7.5,
@@ -911,12 +917,12 @@ class _BusinessSelectionPageState extends ConsumerState<BusinessSelectionPage> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 6, vertical: 3),
                       decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.9),
+                        color: HoppaDesignTokens.statusDanger.withValues(alpha: 0.9),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         "KAPALI",
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.plusJakartaSans(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                           fontSize: 7.5,

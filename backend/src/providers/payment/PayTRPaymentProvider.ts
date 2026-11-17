@@ -70,17 +70,10 @@ export class PayTRPaymentProvider implements IPaymentProvider {
     const email = input.customerEmail || "customer@hoppanow.com";
     const cleanBaseUrl = input.baseUrl.replace(/\/+$/, "");
 
-    const successSig = computePaymentHmac(
-      merchantKey,
-      `${txId}:${input.orderId}:${formattedAmount}:${input.currency}:SUCCESS`
-    );
-    const failSig = computePaymentHmac(
-      merchantKey,
-      `${txId}:${input.orderId}:${formattedAmount}:${input.currency}:FAILED`
-    );
-
-    const okUrl = `${cleanBaseUrl}/api/payments/3d-callback?txId=${encodeURIComponent(txId)}&orderId=${encodeURIComponent(input.orderId)}&status=SUCCESS&sig=${encodeURIComponent(successSig)}`;
-    const failUrl = `${cleanBaseUrl}/api/payments/3d-callback?txId=${encodeURIComponent(txId)}&orderId=${encodeURIComponent(input.orderId)}&status=FAILED&sig=${encodeURIComponent(failSig)}`;
+    // Do NOT pre-sign or pass status=SUCCESS on merchant_ok_url.
+    // Final authorization relies strictly on PayTR's server-to-server webhook POST (/api/payments/3d-callback).
+    const okUrl = `${cleanBaseUrl}/api/payments/paytr/pending?txId=${encodeURIComponent(txId)}&orderId=${encodeURIComponent(input.orderId)}`;
+    const failUrl = `${cleanBaseUrl}/api/payments/3d-complete?result=failed&orderId=${encodeURIComponent(input.orderId)}&txId=${encodeURIComponent(txId)}`;
 
     const userBasket = Buffer.from(
       JSON.stringify([[`Hoppa Sipariş #${input.orderId}`, formattedAmount, 1]]),
@@ -173,80 +166,44 @@ export class PayTRPaymentProvider implements IPaymentProvider {
   ): Promise<PaymentCallbackVerificationResult> {
     const { merchantKey, merchantSalt } = this.config;
 
-    // 1. Official PayTR server-to-server webhook format
+    // Strictly accept official PayTR server-to-server webhook POST format
     const rawOid = payload.rawPayload?.merchant_oid;
     const rawStatus = payload.rawPayload?.status;
     const rawTotalAmount = payload.rawPayload?.total_amount;
     const rawHash = payload.rawPayload?.hash;
 
-    if (rawOid && rawStatus && rawTotalAmount && rawHash) {
-      const webhookData = `${rawOid}${merchantSalt}${rawStatus}${rawTotalAmount}`;
-      const isWebhookValid = verifyHmacSignature(
-        merchantKey,
-        webhookData,
-        rawHash,
-        "base64"
-      );
-
-      if (!isWebhookValid) {
-        return {
-          valid: false,
-          status: PaymentStatus.FAILED,
-          txId: payload.txId,
-          orderId: payload.orderId,
-          reason: "PayTR webhook HMAC imzası geçersiz.",
-        };
-      }
-
-      return {
-        valid: true,
-        status:
-          rawStatus.toLowerCase() === "success"
-            ? PaymentStatus.SUCCESS
-            : PaymentStatus.FAILED,
-        txId: payload.txId,
-        orderId: payload.orderId,
-      };
-    }
-
-    // 2. Signed redirect callback format
-    if (
-      !payload.txId ||
-      !payload.signature ||
-      payload.amount === undefined ||
-      !payload.currency
-    ) {
+    if (!rawOid || !rawStatus || !rawTotalAmount || !rawHash) {
       return {
         valid: false,
         status: PaymentStatus.FAILED,
         txId: payload.txId,
         orderId: payload.orderId,
-        reason: "PayTR callback parametreleri veya HMAC imzası eksik.",
+        reason: "PayTR webhook HMAC parametreleri eksik.",
       };
     }
 
-    const formattedAmount = Number(payload.amount).toFixed(2);
-    const redirectData = `${payload.txId}:${payload.orderId || ""}:${formattedAmount}:${payload.currency}:${payload.status}`;
-    const isValid = verifyHmacSignature(
+    const webhookData = `${rawOid}${merchantSalt}${rawStatus}${rawTotalAmount}`;
+    const isWebhookValid = verifyHmacSignature(
       merchantKey,
-      redirectData,
-      payload.signature
+      webhookData,
+      rawHash,
+      "base64"
     );
 
-    if (!isValid) {
+    if (!isWebhookValid) {
       return {
         valid: false,
         status: PaymentStatus.FAILED,
         txId: payload.txId,
         orderId: payload.orderId,
-        reason: "PayTR callback HMAC imza doğrulaması başarısız.",
+        reason: "PayTR webhook HMAC imzası geçersiz.",
       };
     }
 
     return {
       valid: true,
       status:
-        payload.status === "SUCCESS"
+        rawStatus.toLowerCase() === "success"
           ? PaymentStatus.SUCCESS
           : PaymentStatus.FAILED,
       txId: payload.txId,

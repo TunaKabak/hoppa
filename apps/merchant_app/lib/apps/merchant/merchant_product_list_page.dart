@@ -292,10 +292,6 @@ class _MerchantProductListPageState
   Widget _buildResponsiveActionRow(List<_ActionItem> actions) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Assume each action button takes roughly 100px width.
-        // We will show as many as fit, and put the rest in a dropdown.
-        final availableWidth = constraints.maxWidth;
-        // In this case, we're inside a Row with Spacer(), so constraints.maxWidth is infinite.
         // We actually want MediaQuery for screen width.
         final screenWidth = MediaQuery.of(context).size.width;
         // The text "X seçildi" takes ~100px. Padding is ~32px.
@@ -2035,154 +2031,6 @@ class _MerchantProductListPageState
     }
   }
 
-  void _showAddInventoryDialog(CatalogProduct product) {
-    final priceController = TextEditingController();
-    final stockController = TextEditingController(text: "0");
-    final dialogFormKey = GlobalKey<FormState>();
-    bool trackStock = false;
-
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setDialogState) {
-            return AlertDialog(
-              title: Text(
-                "Katalogdan Ürün Ekle\n${product.name}",
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              content: Form(
-                key: dialogFormKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextFormField(
-                      controller: priceController,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      decoration: const InputDecoration(
-                        labelText: "Satış Fiyatı (₺)",
-                        border: OutlineInputBorder(),
-                        prefixText: "₺ ",
-                      ),
-                      validator: (val) {
-                        if (val == null || val.isEmpty)
-                          return "Fiyat girmelisiniz.";
-                        if (double.tryParse(val) == null)
-                          return "Geçerli bir sayı girin.";
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    SwitchListTile(
-                      title: const Text("Stok Takip Et"),
-                      subtitle: const Text(
-                        "Aktif edilmezse ürün sınırsız stokta görünür.",
-                      ),
-                      value: trackStock,
-                      contentPadding: EdgeInsets.zero,
-                      onChanged: (val) {
-                        setDialogState(() {
-                          trackStock = val;
-                        });
-                      },
-                    ),
-                    if (trackStock) ...[
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: stockController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: "Stok Miktarı (Adet)",
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (val) {
-                          if (trackStock) {
-                            if (val == null || val.isEmpty)
-                              return "Stok girmelisiniz.";
-                            if (int.tryParse(val) == null)
-                              return "Geçerli bir tam sayı girin.";
-                          }
-                          return null;
-                        },
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text("İptal"),
-                ),
-                ElevatedButton(
-                  onPressed: () async {
-                    if (!dialogFormKey.currentState!.validate()) return;
-
-                    final price = double.parse(priceController.text);
-                    final stock =
-                        trackStock ? int.parse(stockController.text) : null;
-
-                    Navigator.pop(ctx); // Close dialog
-
-                    // Show loading indicator
-                    setState(() {
-                      _isCatalogLoading = true;
-                    });
-
-                    try {
-                      await ref
-                          .read(productControllerProvider.notifier)
-                          .addProductFromCatalog(
-                            product.barcode,
-                            price,
-                            stock,
-                            trackStock,
-                          );
-
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              "Ürün envanterinize başarıyla eklendi!",
-                            ),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
-                        // Animate back to Inventory tab
-                        _tabController.animateTo(0);
-                      }
-                    } catch (e) {
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text("Ürün eklenirken hata oluştu: $e"),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                      }
-                    } finally {
-                      if (mounted) {
-                        setState(() {
-                          _isCatalogLoading = false;
-                        });
-                      }
-                    }
-                  },
-                  child: const Text("Envantere Ekle"),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
   void _showBulkAddInventoryDialog() {
     final priceController = TextEditingController();
     final stockController = TextEditingController();
@@ -2282,7 +2130,7 @@ class _MerchantProductListPageState
                     _selectedCatalogProductIds.clear();
                   });
                   // Refresh inventory list
-                  ref.refresh(productControllerProvider);
+                  ref.invalidate(productControllerProvider);
                   _tabController.animateTo(0);
                 }
               } catch (e) {

@@ -173,15 +173,42 @@ export class MerchantAuthController {
    */
   public async submitRevision(req: Request, res: Response): Promise<void> {
     try {
+      const authenticatedMerchantId = req.user?.id;
+      if (!authenticatedMerchantId) {
+        res.status(401).json({ error: true, message: "Kimlik doğrulaması gerekli." });
+        return;
+      }
+
       const { merchantId, businessName, msNumber, taxNumber, phone, district, fullAddress } = req.body;
 
-      if (!merchantId) {
-        res.status(400).json({ error: true, message: "merchantId zorunludur." });
+      if (merchantId && merchantId !== authenticatedMerchantId) {
+        res.status(403).json({
+          error: true,
+          message: "Yalnızca kendi işletme başvurunuzu güncelleyebilirsiniz.",
+        });
+        return;
+      }
+
+      const targetMerchant = await prisma.merchant.findUnique({
+        where: { id: authenticatedMerchantId },
+        select: { id: true, status: true },
+      });
+
+      if (!targetMerchant) {
+        res.status(404).json({ error: true, message: "İşletme kaydı bulunamadı." });
+        return;
+      }
+
+      if (targetMerchant.status !== "REVISION") {
+        res.status(409).json({
+          error: true,
+          message: "Yalnızca revizyon istenen başvurular güncellenebilir.",
+        });
         return;
       }
 
       await prisma.merchant.update({
-        where: { id: merchantId },
+        where: { id: authenticatedMerchantId },
         data: {
           businessName,
           msNumber: msNumber ?? null,

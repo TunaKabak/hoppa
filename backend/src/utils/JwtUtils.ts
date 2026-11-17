@@ -1,7 +1,47 @@
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 
-const JWT_SECRET = process.env.JWT_SECRET || "default_super_secret_for_dev_mode";
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || JWT_SECRET;
+function resolveRequiredSecret(envName: string, devFallback: string): string {
+  const raw = process.env[envName];
+  const cleaned = raw ? raw.replace(/^["']|["']$/g, "").trim() : "";
+  if (process.env.NODE_ENV === "production") {
+    const isDefault =
+      !cleaned ||
+      cleaned === devFallback ||
+      cleaned === "default_super_secret_for_dev_mode" ||
+      cleaned === "hoppa_dev_payment_secret";
+    if (isDefault || Buffer.byteLength(cleaned, "utf8") < 32) {
+      console.error(
+        `[SECURITY FATAL] ${envName} must be set to a strong secret (>= 32 bytes) in production.`
+      );
+      process.exit(1);
+    }
+    return cleaned;
+  }
+  return cleaned || devFallback;
+}
+
+const JWT_SECRET = resolveRequiredSecret("JWT_SECRET", "default_super_secret_for_dev_mode");
+const JWT_REFRESH_SECRET = (() => {
+  const raw = process.env.JWT_REFRESH_SECRET;
+  const cleaned = raw ? raw.replace(/^["']|["']$/g, "").trim() : "";
+  if (cleaned) {
+    if (
+      process.env.NODE_ENV === "production" &&
+      Buffer.byteLength(cleaned, "utf8") < 32
+    ) {
+      console.error(
+        "[SECURITY FATAL] JWT_REFRESH_SECRET must be set to >= 32 bytes in production."
+      );
+      process.exit(1);
+    }
+    return cleaned;
+  }
+  return crypto
+    .createHmac("sha256", JWT_SECRET)
+    .update("hoppa-refresh-token-domain-v1")
+    .digest("hex");
+})();
 
 const JWT_ACCESS_EXPIRES_IN = process.env.JWT_ACCESS_EXPIRES_IN || "15m";
 const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || "30d";

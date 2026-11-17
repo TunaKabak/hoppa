@@ -41,7 +41,8 @@ export class PaymentRoutingService {
   private static readonly trBins = ["432042", "516888", "540061"];
 
   public static getPaymentMode(): PaymentMode {
-    const raw = (process.env.PAYMENT_PROVIDER_MODE || "SANDBOX")
+    const defaultMode = process.env.NODE_ENV === "production" ? "LIVE" : "SANDBOX";
+    const raw = (process.env.PAYMENT_PROVIDER_MODE || defaultMode)
       .replace(/^["']|["']$/g, "")
       .trim()
       .toUpperCase();
@@ -78,8 +79,16 @@ export class PaymentRoutingService {
   }
 
   public static async routePayment(request: PaymentRequest): Promise<PaymentResponse> {
-    const cardNumber = request.cardDetails.cardNumber.replace(/\s+/g, "");
-    const bin = cardNumber.substring(0, 6);
+    if (request.cardDetails.cardNumber || request.cardDetails.cvc) {
+      throw new Error(
+        "Güvenlik (PCI-DSS) gereği tam kart numarası ve CVC kabul edilmez. Yalnızca 6 haneli BIN, son 4 hane ve token gönderiniz."
+      );
+    }
+
+    const bin = (request.cardDetails.cardBin || "").replace(/\D/g, "").substring(0, 6);
+    if (bin.length !== 6) {
+      throw new Error("Geçerli 6 haneli kart BIN numarası (cardBin) zorunludur.");
+    }
 
     let provider: PaymentProviderName = "STRIPE";
     let routingType = "INTERNATIONAL";

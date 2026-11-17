@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { Request, Response } from 'express';
 import { prisma } from '../config/db';
 
@@ -18,27 +19,52 @@ export class SavedCardController {
     }
   }
 
-  // 2. Yeni Kart Kaydet (Mock token ile)
+  // 2. Yeni Kart Kaydet (PCI-DSS uyumlu: tam PAN/CVC kabul edilmez, yalnızca BIN + Last4 + Token)
   public async createCard(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.user!.id;
-      const { cardTitle, cardHolderName, cardNumber, cardType } = req.body;
+      const {
+        cardTitle,
+        cardHolderName,
+        cardNumber,
+        cvc,
+        cardBin,
+        cardLast4,
+        cardToken: providedToken,
+        cardType,
+      } = req.body;
 
-      if (!cardTitle || !cardHolderName || !cardNumber || !cardType) {
-        res.status(400).json({ error: true, message: "Eksik kart bilgileri." });
+      if (cardNumber !== undefined || cvc !== undefined) {
+        res.status(400).json({
+          error: true,
+          message:
+            "Güvenlik (PCI-DSS) gereği tam kart numarası ve CVC sunucuya gönderilemez. Yalnızca BIN, son 4 hane ve kart belirteci gönderiniz.",
+        });
         return;
       }
 
-      // Kart numarasını maskele: 4355 24** **** 4321
-      const cleanNum = cardNumber.replace(/\s+/g, '');
-      if (cleanNum.length < 12) {
-        res.status(400).json({ error: true, message: "Geçersiz kart numarası." });
+      const normalizedBin = typeof cardBin === "string" ? cardBin.replace(/\D/g, "") : "";
+      const normalizedLast4 = typeof cardLast4 === "string" ? cardLast4.replace(/\D/g, "") : "";
+
+      if (
+        !cardTitle ||
+        !cardHolderName ||
+        !cardType ||
+        normalizedBin.length !== 6 ||
+        normalizedLast4.length !== 4
+      ) {
+        res.status(400).json({
+          error: true,
+          message: "Geçersiz veya eksik kart özeti (cardTitle, cardHolderName, cardBin[6], cardLast4[4], cardType).",
+        });
         return;
       }
-      const cardNumberHidden = `${cleanNum.substring(0, 4)} ${cleanNum.substring(4, 6)}** **** ${cleanNum.substring(cleanNum.length - 4)}`;
 
-      // Mock token üretelim
-      const cardToken = `mock_token_${Math.random().toString(36).substring(2, 15)}`;
+      const cardNumberHidden = `${normalizedBin.substring(0, 4)} ${normalizedBin.substring(4, 6)}** **** ${normalizedLast4}`;
+      const cardToken =
+        typeof providedToken === "string" && providedToken.trim().length >= 8
+          ? providedToken.trim()
+          : `tok_${crypto.randomBytes(16).toString("hex")}`;
 
       // Kullanıcının başka kayıtlı kartı var mı? Eğer yoksa bu varsayılan karttır.
       const existingCardsCount = await prisma.savedCard.count({

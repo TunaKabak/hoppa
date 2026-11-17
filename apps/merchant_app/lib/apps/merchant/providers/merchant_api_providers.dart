@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // Note: apiClientProvider comes from core_auth but since merchant app uses it we can define or import it.
 // Assuming core_auth is imported in merchant_main_layout or we can import it.
@@ -7,6 +8,24 @@ import 'package:core_shared/shared/models/category_model.dart';
 
 import '../repositories/merchant_shop_repository.dart';
 import '../repositories/merchant_product_repository.dart';
+
+class MerchantThemeModeNotifier extends Notifier<ThemeMode> {
+  @override
+  ThemeMode build() => ThemeMode.light;
+
+  void toggle() {
+    state = state == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+  }
+
+  void setThemeMode(ThemeMode mode) {
+    state = mode;
+  }
+}
+
+final merchantThemeModeProvider =
+    NotifierProvider<MerchantThemeModeNotifier, ThemeMode>(
+      MerchantThemeModeNotifier.new,
+    );
 
 /// Süper Admin oturumunda seçili işletme bağlamını `ApiClient.activeBusinessId`
 /// ile senkronize eder ve henüz bir dükkan seçilmediyse `true` döndürür.

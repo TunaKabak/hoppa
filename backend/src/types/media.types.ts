@@ -1,13 +1,12 @@
 import { z } from "zod";
 
-// Strict allowed MIME types list for secure direct-to-cloud uploads
+// Strict allowed MIME types list for secure direct-to-cloud uploads (SVG disabled to prevent stored XSS)
 export const ALLOWED_MIME_TYPES = [
   "image/jpeg",
   "image/jpg",
   "image/png",
   "image/webp",
   "image/gif",
-  "image/svg+xml",
   "application/pdf",
   "video/mp4",
 ] as const;
@@ -36,7 +35,7 @@ export const UploadRequestSchema = z.preprocess((val: any) => {
     .regex(/^[\w\-. ]+$/, "Dosya adı geçersiz veya tehlikeli karakterler içeriyor"),
   mimeType: z.enum(ALLOWED_MIME_TYPES, {
     errorMap: () => ({ 
-      message: "Desteklenmeyen dosya türü. Sadece JPEG, PNG, WEBP, GIF, SVG, PDF ve MP4 formatları desteklenmektedir." 
+      message: "Desteklenmeyen dosya türü. Sadece JPEG, PNG, WEBP, GIF, PDF ve MP4 formatları desteklenmektedir." 
     }),
   }),
   fileSize: z.number()

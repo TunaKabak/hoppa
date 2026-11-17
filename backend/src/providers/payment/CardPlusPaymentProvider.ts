@@ -86,13 +86,10 @@ export class CardPlusPaymentProvider implements IPaymentProvider {
           failUrl: callbackUrl,
           storeType: "3d_pay_hosting",
           hash: requestHash,
-          card: {
-            holderName: input.cardDetails.cardHolderName,
-            number: input.cardDetails.cardNumber.replace(/\s+/g, ""),
-            expMonth: input.cardDetails.expiryMonth,
-            expYear: input.cardDetails.expiryYear,
-            cvv: input.cardDetails.cvc,
-          },
+          ...(input.cardDetails.cardToken ? { cardToken: input.cardDetails.cardToken } : {}),
+          ...(input.cardDetails.cardHolderName ? { cardHolderName: input.cardDetails.cardHolderName } : {}),
+          ...(input.cardDetails.cardBin ? { cardBin: input.cardDetails.cardBin } : {}),
+          ...(input.cardDetails.cardLast4 ? { cardLast4: input.cardDetails.cardLast4 } : {}),
         }),
         signal: controller.signal,
       });

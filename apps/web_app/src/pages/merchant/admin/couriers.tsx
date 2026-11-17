@@ -147,7 +147,7 @@ export default function AdminCouriersPage() {
       router.replace('/merchant/login');
       return;
     }
-    if (profile.role !== 'super_admin' && profile.role !== 'admin') {
+    if (profile.role !== 'super_admin') {
       router.replace('/merchant/dashboard');
       return;
     }

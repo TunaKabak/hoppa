@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:core_ui/core_ui.dart';
 import 'package:provider/provider.dart' as p;
 import 'package:consumer_app/apps/consumer/business/business_provider.dart';
 import 'package:core_shared/shared/models/business.dart';
@@ -363,23 +364,13 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(6),
                             ),
-                            child: ClipRRect(
+                            child: HoppaCachedImage(
+                              imageUrl: widget.shop.logoUrl,
+                              width: 28,
+                              height: 28,
+                              fit: BoxFit.cover,
                               borderRadius: BorderRadius.circular(6),
-                              child: widget.shop.logoUrl.isNotEmpty
-                                  ? Image.network(
-                                      widget.shop.logoUrl,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) => Icon(
-                                        Icons.store,
-                                        size: 14,
-                                        color: theme.primaryColor,
-                                      ),
-                                    )
-                                  : Icon(
-                                      Icons.store,
-                                      size: 14,
-                                      color: theme.primaryColor,
-                                    ),
+                              fallbackIcon: Icons.store,
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -453,11 +444,12 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                     background: Stack(
                       fit: StackFit.expand,
                       children: [
-                        Image.network(
-                          widget.shop.headerImageUrl.isNotEmpty
-                              ? widget.shop.headerImageUrl
-                              : "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80",
+                        HoppaCachedImage(
+                          imageUrl: widget.shop.headerImageUrl,
+                          width: double.infinity,
+                          height: double.infinity,
                           fit: BoxFit.cover,
+                          fallbackIcon: Icons.storefront_rounded,
                         ),
                         const DecoratedBox(
                           decoration: BoxDecoration(
@@ -494,23 +486,13 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                                   ],
                                   border: Border.all(color: Colors.white, width: 1.5),
                                 ),
-                                child: ClipRRect(
+                                child: HoppaCachedImage(
+                                  imageUrl: widget.shop.logoUrl,
+                                  width: 44,
+                                  height: 44,
+                                  fit: BoxFit.cover,
                                   borderRadius: BorderRadius.circular(8.5),
-                                  child: widget.shop.logoUrl.isNotEmpty
-                                      ? Image.network(
-                                          widget.shop.logoUrl,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) => Icon(
-                                            Icons.store,
-                                            color: theme.colorScheme.primary,
-                                            size: 24,
-                                          ),
-                                        )
-                                      : Icon(
-                                          Icons.store,
-                                          color: theme.colorScheme.primary,
-                                          size: 24,
-                                        ),
+                                  fallbackIcon: Icons.store,
                                 ),
                               ),
                               const SizedBox(width: 10),
@@ -792,7 +774,17 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                   height: 112,
                   padding: const EdgeInsets.symmetric(vertical: 6),
                   child: categoriesAsync.when(
-                    loading: () => const Center(child: CircularProgressIndicator()),
+                    loading: () => ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      itemCount: 5,
+                      separatorBuilder: (_, __) => const SizedBox(width: 12),
+                      itemBuilder: (_, __) => const HoppaShimmerBox(
+                        width: 72,
+                        height: 84,
+                        borderRadius: 16,
+                      ),
+                    ),
                     error: (err, stack) => const Center(
                       child: Icon(Icons.error_outline, color: Colors.red),
                     ),
@@ -1040,9 +1032,9 @@ class _ModernShopDetailPageState extends ConsumerState<ModernShopDetailPage> {
                   // Products Grid
                   productsAsync.when(
                     loading: () => const SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.all(50),
-                        child: Center(child: CircularProgressIndicator()),
+                      child: HoppaProductGridSkeleton(
+                        itemCount: 4,
+                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                       ),
                     ),
                     error: (err, stack) => SliverToBoxAdapter(

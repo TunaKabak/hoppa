@@ -1,13 +1,16 @@
 import 'dart:async';
+import 'package:core_ui/core_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:core_auth/core_auth.dart';
 import 'package:core_network/core_network.dart';
+import '../../../main.dart';
 import '../../models/courier_models.dart';
 import '../../services/location_service.dart';
 import '../../utils/distance_formatter.dart';
 import '../../widgets/courier_order_card.dart';
+import '../../widgets/courier_route_map_card.dart';
 import '../auth/courier_login_screen.dart';
 import '../history/courier_history_tab.dart';
 import '../onboarding/courier_status_gate_screen.dart';
@@ -121,6 +124,284 @@ class _CourierDashboardPageState extends ConsumerState<CourierDashboardPage>
   Future<void> _handleLogout() async {
     _resetSessionState();
     await ref.read(authControllerProvider.notifier).logout();
+  }
+
+  Future<void> _confirmAndLogout() async {
+    final hasActiveWork = _isOnDuty || _activeOrders.isNotEmpty;
+    final message = _activeOrders.isNotEmpty
+        ? 'Üzerinizde ${_activeOrders.length} aktif teslimat varken çıkış yapmak istediğinize emin misiniz? Canlı konum paylaşımı durdurulacaktır.'
+        : (_isOnDuty
+            ? 'Aktif nöbettesiniz. Çıkış yaptığınızda canlı GPS paylaşımı ve görev akışı durdurulacaktır.'
+            : 'Kurye oturumunuzdan çıkış yapmak istediğinize emin misiniz?');
+
+    final confirmed = await showHoppaConfirmDialog(
+      context,
+      title: 'Vardiyayı Bitir ve Çıkış Yap',
+      message: message,
+      confirmText: 'Çıkış Yap',
+      cancelText: 'Vazgeç',
+      isDestructive: true,
+      icon: hasActiveWork ? Icons.warning_amber_rounded : Icons.logout_rounded,
+    );
+    if (!confirmed || !mounted) return;
+    await _handleLogout();
+  }
+
+  void _openCourierProfileSheet(CourierProfile profile) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(HoppaDesignTokens.radiusXl),
+        ),
+      ),
+      builder: (sheetCtx) {
+        return Consumer(
+          builder: (sheetCtx, sheetRef, _) {
+            final theme = Theme.of(sheetCtx);
+            final themeMode = sheetRef.watch(courierThemeModeProvider);
+            final isNightShift = themeMode == ThemeMode.dark;
+            final phone = profile.phoneNumber ?? profile.user?.phone ?? '';
+            final vehicleParts = [
+              if (profile.vehicleType?.isNotEmpty == true) profile.vehicleType!,
+              if (profile.vehiclePlate?.isNotEmpty == true)
+                profile.vehiclePlate!,
+            ].join(' • ');
+
+            return SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: theme.dividerColor,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 26,
+                          backgroundColor:
+                              _hoppaOrange.withValues(alpha: 0.14),
+                          child: const Icon(
+                            Icons.two_wheeler_rounded,
+                            color: _hoppaOrange,
+                            size: 28,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                profile.displayName,
+                                style: const TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              if (phone.isNotEmpty)
+                                Text(
+                                  phone,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                    fontFeatures:
+                                        HoppaDesignTokens.tabularFigures,
+                                  ),
+                                ),
+                              if (vehicleParts.isNotEmpty)
+                                Text(
+                                  vehicleParts,
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: (_isOnDuty
+                                    ? HoppaDesignTokens.brandGreen
+                                    : theme.colorScheme.onSurfaceVariant)
+                                .withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            _isOnDuty ? 'NÖBETTE' : 'PASİF',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w800,
+                              color: _isOnDuty
+                                  ? HoppaDesignTokens.brandGreen
+                                  : theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHighest
+                            .withValues(alpha: 0.35),
+                        borderRadius:
+                            BorderRadius.circular(HoppaDesignTokens.radiusMd),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          Column(
+                            children: [
+                              Text(
+                                '${profile.todayDeliveriesCount}',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w900,
+                                  color: _hoppaGreen,
+                                  fontFeatures:
+                                      HoppaDesignTokens.tabularFigures,
+                                ),
+                              ),
+                              Text(
+                                'Bugünkü Teslimat',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Container(
+                            width: 1,
+                            height: 28,
+                            color: theme.dividerColor,
+                          ),
+                          Column(
+                            children: [
+                              Text(
+                                '${profile.totalDeliveriesCount}',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w900,
+                                  color: _hoppaOrange,
+                                  fontFeatures:
+                                      HoppaDesignTokens.tabularFigures,
+                                ),
+                              ),
+                              Text(
+                                'Toplam Teslimat',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SwitchListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+                      secondary: Icon(
+                        isNightShift
+                            ? Icons.nights_stay_rounded
+                            : Icons.wb_sunny_rounded,
+                        color: isNightShift
+                            ? HoppaDesignTokens.brandOrange
+                            : HoppaDesignTokens.statusWarning,
+                      ),
+                      title: const Text(
+                        'Gündüz Güneş Modu / Gece Modu',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
+                      subtitle: Text(
+                        isNightShift
+                            ? 'Gece vardiyası koyu tema aktif'
+                            : 'Güneş ışığı yüksek kontrast tema aktif',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      value: isNightShift,
+                      onChanged: (dark) {
+                        sheetRef
+                            .read(courierThemeModeProvider.notifier)
+                            .setThemeMode(
+                              dark ? ThemeMode.dark : ThemeMode.light,
+                            );
+                      },
+                    ),
+                    const Divider(height: 24),
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(sheetCtx);
+                        _confirmAndLogout();
+                      },
+                      icon: const Icon(
+                        Icons.logout_rounded,
+                        color: HoppaDesignTokens.statusDanger,
+                      ),
+                      label: const Text(
+                        'Vardiyayı Bitir ve Çıkış Yap',
+                        style: TextStyle(
+                          color: HoppaDesignTokens.statusDanger,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(
+                          double.infinity,
+                          HoppaDesignTokens.minTouchTarget,
+                        ),
+                        side: const BorderSide(
+                          color: HoppaDesignTokens.statusDanger,
+                          width: 1.5,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            HoppaDesignTokens.radiusMd,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   Future<void> _fetchProfileAndSync({bool silent = false}) async {
@@ -419,15 +700,8 @@ class _CourierDashboardPageState extends ConsumerState<CourierDashboardPage>
 
     if (authState is AuthChecking) {
       return const Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.two_wheeler_rounded, size: 52, color: _hoppaOrange),
-              SizedBox(height: 16),
-              CircularProgressIndicator(),
-            ],
-          ),
+        body: SafeArea(
+          child: HoppaListCardSkeleton(itemCount: 4),
         ),
       );
     }
@@ -438,18 +712,8 @@ class _CourierDashboardPageState extends ConsumerState<CourierDashboardPage>
 
     if (_isLoadingProfile && _profile == null) {
       return const Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 14),
-              Text(
-                'Kurye profiliniz yükleniyor...',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ],
-          ),
+        body: SafeArea(
+          child: HoppaListCardSkeleton(itemCount: 4),
         ),
       );
     }
@@ -465,7 +729,7 @@ class _CourierDashboardPageState extends ConsumerState<CourierDashboardPage>
             IconButton(
               icon: const Icon(Icons.logout_rounded),
               tooltip: 'Çıkış Yap',
-              onPressed: _handleLogout,
+              onPressed: _confirmAndLogout,
             ),
           ],
         ),
@@ -504,16 +768,23 @@ class _CourierDashboardPageState extends ConsumerState<CourierDashboardPage>
 
     final profile = _profile;
     if (profile == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: SafeArea(
+          child: HoppaListCardSkeleton(itemCount: 4),
+        ),
+      );
     }
 
     if (!profile.isApproved) {
       return CourierStatusGateScreen(
         profile: profile,
         onRefresh: () => _fetchProfileAndSync(),
-        onLogout: _handleLogout,
+        onLogout: _confirmAndLogout,
       );
     }
+
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
@@ -526,9 +797,9 @@ class _CourierDashboardPageState extends ConsumerState<CourierDashboardPage>
             ),
             Text(
               profile.displayName,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12.5,
-                color: Color(0xFF64748B),
+                color: theme.colorScheme.onSurfaceVariant,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -539,9 +810,20 @@ class _CourierDashboardPageState extends ConsumerState<CourierDashboardPage>
             padding: const EdgeInsets.only(left: 10, right: 4),
             decoration: BoxDecoration(
               color: _isOnDuty
-                  ? const Color(0xFFDCFCE7)
-                  : const Color(0xFFF1F5F9),
+                  ? (isDark
+                      ? HoppaDesignTokens.brandGreen.withValues(alpha: 0.22)
+                      : const Color(0xFFDCFCE7))
+                  : (isDark
+                      ? HoppaDesignTokens.surfaceSubtleDark
+                      : const Color(0xFFF1F5F9)),
               borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: _isOnDuty
+                    ? HoppaDesignTokens.brandGreen.withValues(alpha: 0.4)
+                    : (isDark
+                        ? HoppaDesignTokens.borderOutdoorDark
+                        : HoppaDesignTokens.borderLight),
+              ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -552,8 +834,10 @@ class _CourierDashboardPageState extends ConsumerState<CourierDashboardPage>
                     fontWeight: FontWeight.w800,
                     fontSize: 11.5,
                     color: _isOnDuty
-                        ? const Color(0xFF166534)
-                        : const Color(0xFF475569),
+                        ? (isDark
+                            ? HoppaDesignTokens.statusSuccessDark
+                            : const Color(0xFF166534))
+                        : theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(width: 4),
@@ -566,11 +850,17 @@ class _CourierDashboardPageState extends ConsumerState<CourierDashboardPage>
               ],
             ),
           ),
+          const SizedBox(width: 8),
           IconButton(
-            icon: const Icon(Icons.logout_rounded),
-            tooltip: 'Çıkış Yap',
-            onPressed: _handleLogout,
+            icon: const Icon(Icons.manage_accounts_rounded),
+            tooltip: 'Profil ve Vardiya Ayarları',
+            constraints: const BoxConstraints(
+              minWidth: HoppaDesignTokens.minTouchTarget,
+              minHeight: HoppaDesignTokens.minTouchTarget,
+            ),
+            onPressed: () => _openCourierProfileSheet(profile),
           ),
+          const SizedBox(width: 4),
         ],
       ),
       body: IndexedStack(
@@ -663,15 +953,21 @@ class _CourierDashboardPageState extends ConsumerState<CourierDashboardPage>
               ],
 
               if (_isLoadingOrders && _activeOrders.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 48),
-                  child: Center(child: CircularProgressIndicator()),
+                const HoppaListCardSkeleton(
+                  itemCount: 3,
+                  shrinkWrap: true,
+                  padding: EdgeInsets.zero,
                 )
               else if (!_isOnDuty && _activeOrders.isEmpty)
                 _buildOfflinePlaceholder()
               else if (_activeOrders.isEmpty)
                 _buildEmptyOrdersPlaceholder()
               else ...[
+                CourierRouteMapCard(
+                  activeOrders: _activeOrders,
+                  courierLatitude: position?.latitude,
+                  courierLongitude: position?.longitude,
+                ),
                 if (_activeOrders.length > 1)
                   _buildMultiOrderRouteCard(position),
                 ..._activeOrders.map(
@@ -756,15 +1052,21 @@ class _CourierDashboardPageState extends ConsumerState<CourierDashboardPage>
   }
 
   Widget _buildAssignedShopsSection(List<CourierAssignedShop> shops) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final borderColor = isDark
+        ? HoppaDesignTokens.borderOutdoorDark
+        : HoppaDesignTokens.borderLight;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Atanmış Mağazalar',
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF475569),
+            color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: 8),
@@ -772,25 +1074,25 @@ class _CourierDashboardPageState extends ConsumerState<CourierDashboardPage>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              border: Border.all(color: borderColor),
             ),
-            child: const Row(
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(
                   Icons.storefront_outlined,
                   size: 16,
-                  color: Color(0xFF64748B),
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
-                SizedBox(width: 6),
+                const SizedBox(width: 6),
                 Text(
                   'Tüm uygun mağazalar / Genel havuz',
                   style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF475569),
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -810,13 +1112,14 @@ class _CourierDashboardPageState extends ConsumerState<CourierDashboardPage>
                     ),
                     label: Text(
                       assigned.displayName,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12.5,
                         fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.onSurface,
                       ),
                     ),
-                    backgroundColor: Colors.white,
-                    side: const BorderSide(color: Color(0xFFE2E8F0)),
+                    backgroundColor: theme.colorScheme.surface,
+                    side: BorderSide(color: borderColor),
                     visualDensity: VisualDensity.compact,
                   ),
                 )
@@ -827,6 +1130,7 @@ class _CourierDashboardPageState extends ConsumerState<CourierDashboardPage>
   }
 
   Widget _buildOfflinePlaceholder() {
+    final theme = Theme.of(context);
     return Card(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 42),
@@ -835,7 +1139,7 @@ class _CourierDashboardPageState extends ConsumerState<CourierDashboardPage>
             Icon(
               Icons.power_settings_new_rounded,
               size: 64,
-              color: Colors.grey.shade400,
+              color: theme.colorScheme.onSurfaceVariant,
             ),
             const SizedBox(height: 14),
             const Text(
@@ -843,10 +1147,13 @@ class _CourierDashboardPageState extends ConsumerState<CourierDashboardPage>
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Sipariş alabilmek ve canlı konum akıtmak için sağ üstten nöbetinizi aktif edin.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Color(0xFF64748B), height: 1.4),
+              style: TextStyle(
+                color: theme.colorScheme.onSurfaceVariant,
+                height: 1.4,
+              ),
             ),
           ],
         ),
@@ -855,6 +1162,7 @@ class _CourierDashboardPageState extends ConsumerState<CourierDashboardPage>
   }
 
   Widget _buildEmptyOrdersPlaceholder() {
+    final theme = Theme.of(context);
     return Card(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 42),
@@ -871,10 +1179,13 @@ class _CourierDashboardPageState extends ConsumerState<CourierDashboardPage>
               style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Yeni siparişler atandığında burada otomatik olarak görünecektir.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Color(0xFF64748B), height: 1.4),
+              style: TextStyle(
+                color: theme.colorScheme.onSurfaceVariant,
+                height: 1.4,
+              ),
             ),
           ],
         ),
@@ -936,28 +1247,43 @@ class _CourierDashboardPageState extends ConsumerState<CourierDashboardPage>
 
     final estMinutes = ((totalKm / 35.0) * 60.0).round() + 5;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark
+        ? HoppaDesignTokens.brandGreen.withValues(alpha: 0.14)
+        : const Color(0xFFF0FDF4);
+    final cardBorder = isDark
+        ? HoppaDesignTokens.statusSuccessDark.withValues(alpha: 0.35)
+        : const Color(0xFFBBF7D0);
+    final headingColor = isDark
+        ? HoppaDesignTokens.statusSuccessDark
+        : const Color(0xFF166534);
+    final rowColor = isDark
+        ? HoppaDesignTokens.textPrimaryDark
+        : const Color(0xFF14532D);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF0FDF4),
+        color: cardBg,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFBBF7D0)),
+        border: Border.all(color: cardBorder, width: 1.3),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.alt_route_rounded, color: _hoppaGreen),
+              Icon(Icons.alt_route_rounded, color: headingColor),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'Önerilen Teslimat Sırası • ${formatDistance(totalKm)} (~$estMinutes dk)',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 13.5,
-                    color: Color(0xFF166534),
+                    color: headingColor,
+                    fontFeatures: HoppaDesignTokens.tabularFigures,
                   ),
                 ),
               ),
@@ -973,10 +1299,11 @@ class _CourierDashboardPageState extends ConsumerState<CourierDashboardPage>
               padding: const EdgeInsets.only(top: 4),
               child: Text(
                 '${i + 1}. ${entry.order.displayOrderNumber} • $target (${formatDistance(entry.legKm)})',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12.5,
-                  color: Color(0xFF14532D),
+                  color: rowColor,
                   fontWeight: FontWeight.w600,
+                  fontFeatures: HoppaDesignTokens.tabularFigures,
                 ),
               ),
             );

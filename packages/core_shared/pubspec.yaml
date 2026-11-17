@@ -43,8 +43,11 @@ dependencies:
   firebase_messaging: ^16.2.0
   flutter_local_notifications: ^22.0.1
   supabase_flutter: ^2.6.0
+  cached_network_image: ^3.4.1
 
   # Monorepo packages
+  core_ui:
+    path: ../core_ui
   core_auth:
     path: ../core_auth
   core_network:

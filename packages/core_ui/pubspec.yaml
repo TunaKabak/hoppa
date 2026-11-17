@@ -1,0 +1,21 @@
+name: core_ui
+description: "Hoppa Design System v2.0 — Shared cross-platform UI tokens, themes, shimmer skeletons, cached images, and dialogs"
+version: 0.0.1
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  google_fonts: ^6.1.0
+  cached_network_image: ^3.4.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
