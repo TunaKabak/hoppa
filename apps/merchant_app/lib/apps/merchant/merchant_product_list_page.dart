@@ -145,12 +145,10 @@ class _MerchantProductListPageState
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          "Ürün Yönetimi",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+        title: const Text("Ürün Yönetimi"),
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.menu_rounded),
@@ -158,7 +156,10 @@ class _MerchantProductListPageState
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.document_scanner_outlined, color: Colors.white),
+            icon: Icon(
+              Icons.document_scanner_outlined,
+              color: theme.colorScheme.primary,
+            ),
             tooltip: "Yapay Zeka ile Fatura/Menü Tara",
             onPressed: () {
               Navigator.push(
@@ -172,13 +173,22 @@ class _MerchantProductListPageState
         ],
         bottom: TabBar(
           controller: _tabController,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          indicatorColor: Colors.white,
           tabs: const [
-            Tab(text: "Envanterim", icon: Icon(Icons.inventory)),
-            Tab(text: "Katalogdan Ekle", icon: Icon(Icons.search)),
-            Tab(text: "Özel Ürün", icon: Icon(Icons.add_box)),
+            Tab(
+              iconMargin: EdgeInsets.only(bottom: 4),
+              icon: Icon(Icons.inventory_2_outlined, size: 19),
+              text: "Envanterim",
+            ),
+            Tab(
+              iconMargin: EdgeInsets.only(bottom: 4),
+              icon: Icon(Icons.manage_search_rounded, size: 20),
+              text: "Katalogdan Ekle",
+            ),
+            Tab(
+              iconMargin: EdgeInsets.only(bottom: 4),
+              icon: Icon(Icons.add_box_outlined, size: 19),
+              text: "Özel Ürün",
+            ),
           ],
         ),
       ),
@@ -200,10 +210,14 @@ class _MerchantProductListPageState
   }
 
   Widget _buildCatalogBulkActionBar() {
+    final theme = Theme.of(context);
     return Container(
-      color: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: Border(
+          top: BorderSide(color: theme.dividerColor.withValues(alpha: 0.4)),
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),

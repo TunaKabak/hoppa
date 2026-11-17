@@ -242,14 +242,14 @@ export default function MerchantOrdersPage() {
 
   return (
     <MerchantLayout
-      title="Canlı Sipariş Portalı"
+      title="Canlı Siparişler"
       subtitle="Mutfak, paketleme ve kurye süreçlerinizi anlık takip edin (Detay için karta tıklayın)"
       headerIcon={ShoppingBag}
       headerActions={ordersHeaderActions}
       activeTab="orders"
     >
       <Head>
-        <title>Canlı Sipariş Portalı | Hoppa Merchant</title>
+        <title>Canlı Siparişler | Hoppa Merchant</title>
       </Head>
 
       {/* Embedded CSS for Isolated 80mm Thermal Receipt Printing */}

@@ -444,14 +444,14 @@ export default function MerchantProductsPage() {
 
   return (
     <MerchantLayout
-      title="Ürün & Menü Portalı"
+      title="Ürün & Menü Yönetimi"
       subtitle={`Toplam ${products.length} ürün listeleniyor (${activeCount} tanesi aktif satışta)`}
       headerIcon={Package}
       headerActions={productHeaderActions}
       activeTab="products"
     >
       <Head>
-        <title>Ürün & Menü Portalı | Hoppa Merchant</title>
+        <title>Ürün & Menü Yönetimi | Hoppa Merchant</title>
       </Head>
 
       <div className="space-y-6">

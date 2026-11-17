@@ -1,7 +1,9 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:core_auth/core_auth.dart';
 import 'package:core_shared/core_shared.dart';
+import 'package:core_ui/core_ui.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'consumer_otp_verify_page.dart';
 import 'widgets/auth_layout.dart';
 import 'widgets/auth_text_field.dart';
@@ -18,7 +20,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _surnameController = TextEditingController();
   final _phoneController = TextEditingController();
   bool _isLoading = false;
-  String _selectedCountryCode = "+90";
+  String _selectedCountryCode = '+90';
 
   @override
   void dispose() {
@@ -28,41 +30,55 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     super.dispose();
   }
 
-  void _startRegister() async {
+  Future<void> _startRegister() async {
     if (!mounted) return;
     FocusScope.of(context).unfocus();
     final messenger = ScaffoldMessenger.of(context);
 
-    if (_nameController.text.isEmpty ||
-        _surnameController.text.isEmpty ||
-        _phoneController.text.isEmpty) {
+    final firstName = _nameController.text.trim();
+    final lastName = _surnameController.text.trim();
+    var digits = _phoneController.text.replaceAll(RegExp(r'\D'), '');
+
+    if (firstName.isEmpty || lastName.isEmpty || digits.isEmpty) {
       messenger.showSnackBar(
-        const SnackBar(content: Text("Lütfen tüm alanları doldurun.")),
+        const SnackBar(content: Text('Lütfen ad, soyad ve telefon alanlarını doldurun.')),
       );
       return;
     }
 
-    String phoneInput = _phoneController.text.trim();
-
-    if (_selectedCountryCode == "+90" &&
-        (phoneInput.length != 10 || !phoneInput.startsWith('5'))) {
+    if (_selectedCountryCode == '+90') {
+      if (digits.startsWith('90') && digits.length == 12) {
+        digits = digits.substring(2);
+      }
+      if (digits.startsWith('0') && digits.length == 11) {
+        digits = digits.substring(1);
+      }
+      if (digits.length != 10 || !digits.startsWith('5')) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Lütfen 5XX XXX XX XX biçiminde 10 haneli numara girin.'),
+            backgroundColor: HoppaDesignTokens.statusDanger,
+          ),
+        );
+        return;
+      }
+    } else if (digits.length < 7) {
       messenger.showSnackBar(
         const SnackBar(
-          content: Text(
-            "Lütfen geçerli bir telefon numarası giriniz (5xxxxxxxxx)",
-          ),
+          content: Text('Lütfen geçerli bir telefon numarası girin.'),
+          backgroundColor: HoppaDesignTokens.statusDanger,
         ),
       );
       return;
     }
 
-    String phone = "$_selectedCountryCode$phoneInput";
-
+    final phone = '$_selectedCountryCode$digits';
     setState(() => _isLoading = true);
 
     try {
-      // Check if user exists on the NestJS backend
-      final response = await ref.read(apiClientProvider).get('/api/auth/check-phone/$phone');
+      final response = await ref
+          .read(apiClientProvider)
+          .get('/api/auth/check-phone/${Uri.encodeComponent(phone)}');
       final exists = response['data']?['exists'] == true;
 
       if (exists) {
@@ -71,24 +87,23 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           messenger.showSnackBar(
             const SnackBar(
               content: Text(
-                "Bu numara ile zaten kayıtlı bir kullanıcı var. Lütfen giriş yapınız.",
+                'Bu numara zaten kayıtlı. Giriş ekranından devam edebilirsiniz.',
               ),
-              backgroundColor: Colors.orange,
+              backgroundColor: HoppaDesignTokens.statusWarning,
             ),
           );
         }
         return;
       }
 
-      // Send OTP via backend
-      ref.read(authControllerProvider.notifier).sendOtp(phone);
+      await ref.read(authControllerProvider.notifier).sendOtp(phone);
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
         messenger.showSnackBar(
-          SnackBar(
-            content: Text("Bir hata oluştu: ${e.toString()}"),
-            backgroundColor: Colors.red,
+          const SnackBar(
+            content: Text('Bağlantı kurulamadı. Lütfen tekrar deneyin.'),
+            backgroundColor: HoppaDesignTokens.statusDanger,
           ),
         );
       }
@@ -98,7 +113,17 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final textTheme = theme.textTheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final primary = theme.colorScheme.primary;
+    final textPrimary = isDark
+        ? HoppaDesignTokens.textPrimaryDark
+        : HoppaDesignTokens.textPrimaryLight;
+    final textSecondary = isDark
+        ? HoppaDesignTokens.textSecondaryDark
+        : HoppaDesignTokens.textSecondaryLight;
+    final borderSubtle =
+        isDark ? HoppaDesignTokens.borderDark : HoppaDesignTokens.borderLight;
+
     final authState = ref.watch(authControllerProvider);
     final isAuthLoading = authState is AuthLoading || _isLoading;
 
@@ -109,7 +134,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(next.errorMessage),
-            backgroundColor: Colors.red,
+            backgroundColor: HoppaDesignTokens.statusDanger,
           ),
         );
       } else if (next is OtpSentState) {
@@ -118,7 +143,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           context,
           MaterialPageRoute(
             builder: (context) => OtpVerifyPage(
-              verificationId: "",
+              verificationId: '',
               phoneNumber: next.phoneNumber,
               firstName: _nameController.text.trim(),
               lastName: _surnameController.text.trim(),
@@ -132,94 +157,138 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       showAppBar: true,
       enableGlass: true,
       leading: IconButton(
+        tooltip: 'Geri Dön',
         icon: Icon(
-          Icons.arrow_back_ios_new,
-          color: theme.colorScheme.onSurface,
+          Icons.arrow_back_ios_new_rounded,
+          size: 18,
+          color: textPrimary,
         ),
         onPressed: () => Navigator.pop(context),
       ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Center(
-            child: HoppaBrandLogo(height: 46),
+          const Center(child: HoppaBrandLogo(height: 44)),
+          const SizedBox(height: 16),
+          Text(
+            'Yeni Hesap Oluştur',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: textPrimary,
+              letterSpacing: -0.4,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Hızlı teslimatlar ve sipariş takibi için temel bilgilerinizi tamamlayın.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 13.5,
+              color: textSecondary,
+              height: 1.45,
+            ),
           ),
           const SizedBox(height: 24),
-          Text(
-            "Hemen Başlayın",
-            textAlign: TextAlign.center,
-            style: textTheme.headlineMedium?.copyWith(
-              color: theme.colorScheme.secondary,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            "Siparişlerinizi takip etmek için bilgilerinizi eksiksiz giriniz.",
-            textAlign: TextAlign.center,
-            style: textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 32),
-          _buildInputLabel("Adınız", textTheme),
+          _buildInputLabel('Adınız', textPrimary),
           const SizedBox(height: 8),
           AuthTextField(
             controller: _nameController,
-            hint: "Adınızı giriniz",
-            icon: Icons.person_rounded,
-            primaryColor: theme.colorScheme.primary,
+            hint: 'Örn: Ahmet',
+            icon: Icons.person_outline_rounded,
+            primaryColor: primary,
+            textCapitalization: TextCapitalization.words,
+            textInputAction: TextInputAction.next,
           ),
           const SizedBox(height: 16),
-          _buildInputLabel("Soyadınız", textTheme),
+          _buildInputLabel('Soyadınız', textPrimary),
           const SizedBox(height: 8),
           AuthTextField(
             controller: _surnameController,
-            hint: "Soyadınızı giriniz",
-            icon: Icons.person_outline_rounded,
-            primaryColor: theme.colorScheme.primary,
+            hint: 'Örn: Yılmaz',
+            icon: Icons.badge_outlined,
+            primaryColor: primary,
+            textCapitalization: TextCapitalization.words,
+            textInputAction: TextInputAction.next,
           ),
           const SizedBox(height: 16),
-          _buildInputLabel("Telefon Numarası", textTheme),
+          _buildInputLabel('Cep Telefonu Numarası', textPrimary),
           const SizedBox(height: 8),
           AuthTextField(
             controller: _phoneController,
-            hint: "5xxxxxxxxx",
+            hint: '5XX XXX XX XX',
             icon: Icons.phone_android_rounded,
             isPhone: true,
-            primaryColor: theme.colorScheme.primary,
+            primaryColor: primary,
             selectedCode: _selectedCountryCode,
-            onCodeChanged: (val) => setState(() => _selectedCountryCode = val),
-          ),
-          const SizedBox(height: 32),
-          SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: ElevatedButton(
-              onPressed: isAuthLoading ? null : _startRegister,
-              child: isAuthLoading
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text("Doğrulama Kodu Gönder"),
-            ),
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) {
+              if (!isAuthLoading) _startRegister();
+            },
+            onCodeChanged: (val) =>
+                setState(() => _selectedCountryCode = val),
           ),
           const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            height: 54,
+            child: ElevatedButton(
+              onPressed: isAuthLoading ? null : _startRegister,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: isAuthLoading
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.2,
+                      ),
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Doğrulama Kodu Gönder',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 15.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.arrow_forward_rounded, size: 19),
+                      ],
+                    ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Divider(color: borderSubtle, height: 1),
+          const SizedBox(height: 10),
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: RichText(
               text: TextSpan(
-                text: "Zaten hesabınız var mı? ",
-                style: textTheme.bodyMedium,
+                text: 'Zaten hesabınız var mı? ',
+                style: GoogleFonts.plusJakartaSans(
+                  color: textSecondary,
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w500,
+                ),
                 children: [
                   TextSpan(
-                    text: "Giriş Yap",
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.secondary,
-                      fontWeight: FontWeight.bold,
+                    text: 'Giriş Yap',
+                    style: GoogleFonts.plusJakartaSans(
+                      color: HoppaDesignTokens.brandOrange,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ],
@@ -231,7 +300,14 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     );
   }
 
-  Widget _buildInputLabel(String label, TextTheme textTheme) {
-    return Text(label, style: textTheme.labelSmall);
+  Widget _buildInputLabel(String label, Color color) {
+    return Text(
+      label,
+      style: GoogleFonts.plusJakartaSans(
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        color: color,
+      ),
+    );
   }
 }

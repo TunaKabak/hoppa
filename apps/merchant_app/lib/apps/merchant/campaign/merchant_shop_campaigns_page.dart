@@ -35,14 +35,12 @@ class _MerchantShopCampaignsPageState extends ConsumerState<MerchantShopCampaign
   @override
   Widget build(BuildContext context) {
     final campaignsAsync = ref.watch(merchantShopCampaignsProvider);
+    final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAF9),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text(
-          "Kampanya & Reklam Yönetimi",
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16),
-        ),
+        title: const Text("Kampanya & Reklam Yönetimi"),
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.menu_rounded),
@@ -51,10 +49,10 @@ class _MerchantShopCampaignsPageState extends ConsumerState<MerchantShopCampaign
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showCreateCampaignDialog,
-        backgroundColor: const Color(0xFFFF5200),
+        backgroundColor: theme.colorScheme.primary,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add_rounded),
-        label: Text("Yeni Kampanya", style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+        label: const Text("Yeni Kampanya", style: TextStyle(fontWeight: FontWeight.w700)),
       ),
       body: RefreshIndicator(
         onRefresh: () async {

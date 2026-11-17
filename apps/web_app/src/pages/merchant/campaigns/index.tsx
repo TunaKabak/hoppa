@@ -151,7 +151,7 @@ export default function MerchantCampaignsPage() {
 
   return (
     <MerchantLayout
-      title="Kampanya & Kupon Portalı"
+      title="Kampanya & Kupon Yönetimi"
       subtitle="Mağazanıza özel indirim kuponları tanımlayın ve kullanımları takip edin"
       headerIcon={Tag}
       headerActions={campaignHeaderActions}

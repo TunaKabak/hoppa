@@ -453,7 +453,7 @@ export default function MerchantLayout({
   };
 
   const merchantNavItems: NavItemConfig[] = [
-    { id: 'products', label: 'Ürün & Menü Portalı', icon: Package, href: '/merchant/products' },
+    { id: 'products', label: 'Ürün & Menü Yönetimi', icon: Package, href: '/merchant/products' },
     { id: 'orders', label: 'Canlı Siparişler', icon: ShoppingBag, href: '/merchant/orders', badge: pendingOrdersCount },
     { id: 'dashboard', label: 'Performans & Analiz', icon: BarChart3, href: '/merchant/dashboard' },
     { id: 'finance', label: 'Finans & Hakediş', icon: Wallet, href: '/merchant/finance' },
@@ -488,7 +488,7 @@ export default function MerchantLayout({
             <img
               src="/logo-mark.svg"
               alt="Hoppa"
-              className="w-10 h-10 rounded-xl shadow-xs ring-1 ring-black/5"
+              className="w-10 h-10 rounded-xl shadow-sm ring-1 ring-black/5"
             />
             <div className="w-6 h-6 border-2 border-[#FF6B00] border-t-transparent rounded-full animate-spin" />
             <span className="text-xs font-bold text-slate-400">Oturum doğrulanıyor...</span>
@@ -556,7 +556,7 @@ export default function MerchantLayout({
         {isMobileMenuOpen && (
           <div 
             onClick={() => setIsMobileMenuOpen(false)}
-            className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-40 md:hidden"
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-40 md:hidden"
           />
         )}
 
@@ -574,11 +574,13 @@ export default function MerchantLayout({
                 <img
                   src="/logo-mark.svg"
                   alt="Hoppa"
-                  className="w-9 h-9 rounded-xl object-cover shadow-xs ring-1 ring-black/5 shrink-0"
+                  className="w-9 h-9 rounded-xl object-cover shadow-sm ring-1 ring-black/5 shrink-0"
                 />
                 <button
+                  type="button"
                   onClick={toggleSidebarCollapse}
-                  className="hidden md:flex p-1.5 rounded-lg text-slate-400 hover:text-[#FF6B00] hover:bg-orange-500/10 dark:hover:bg-slate-800 transition-colors"
+                  aria-label="Menüyü Genişlet"
+                  className="hidden md:flex p-1.5 rounded-lg text-slate-400 hover:text-[#FF6B00] hover:bg-orange-500/10 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]"
                   title="Menüyü Genişlet"
                 >
                   <PanelLeftOpen className="w-4 h-4" />
@@ -590,7 +592,7 @@ export default function MerchantLayout({
                   <img
                     src="/logo-mark.svg"
                     alt="Hoppa"
-                    className="w-9 h-9 rounded-xl object-cover shadow-xs ring-1 ring-black/5 shrink-0"
+                    className="w-9 h-9 rounded-xl object-cover shadow-sm ring-1 ring-black/5 shrink-0"
                   />
                   <div className="min-w-0 transition-opacity duration-200">
                     <h1 className="font-black text-lg tracking-tight text-slate-900 dark:text-white leading-tight">
@@ -603,8 +605,10 @@ export default function MerchantLayout({
                 </div>
 
                 <button
+                  type="button"
                   onClick={toggleSidebarCollapse}
-                  className="hidden md:flex p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  aria-label="Menüyü Daralt"
+                  className="hidden md:flex p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]"
                   title="Menüyü Daralt"
                 >
                   <PanelLeftClose className="w-4 h-4" />
@@ -659,7 +663,7 @@ export default function MerchantLayout({
             {showShopToggle ? (
               !isSidebarCollapsed ? (
                 <div className={`border rounded-2xl p-3.5 transition-all ${
-                  isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50/80 border-slate-200/80 shadow-xs'
+                  isDark ? 'bg-slate-950/60 border-slate-800' : 'bg-slate-50/80 border-slate-200/80 shadow-sm'
                 }`}>
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
@@ -681,7 +685,7 @@ export default function MerchantLayout({
                       }`}
                     >
                       <span
-                        className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow-xs transition-transform ${
+                        className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform ${
                           isShopActive ? 'translate-x-4' : 'translate-x-1'
                         }`}
                       />
@@ -747,7 +751,7 @@ export default function MerchantLayout({
                       isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-3.5 py-2.5'
                     } ${
                       isActive 
-                        ? 'bg-[#FF6B00]/10 text-[#FF6B00] dark:bg-[#FF6B00]/15 dark:text-[#FF8C00] shadow-xs' 
+                        ? 'bg-[#FF6B00]/10 text-[#FF6B00] dark:bg-[#FF6B00]/15 dark:text-[#FF8C00] shadow-sm' 
                         : isDark 
                           ? 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/70' 
                           : 'text-slate-600 hover:text-[#FF6B00] hover:bg-orange-50/70'
@@ -806,7 +810,7 @@ export default function MerchantLayout({
                           isSidebarCollapsed ? 'justify-center p-3' : 'justify-between px-3.5 py-2.5'
                         } ${
                           isActive
-                            ? 'bg-[#FF6B00]/10 text-[#FF6B00] dark:bg-[#FF6B00]/15 dark:text-[#FF8C00] shadow-xs'
+                            ? 'bg-[#FF6B00]/10 text-[#FF6B00] dark:bg-[#FF6B00]/15 dark:text-[#FF8C00] shadow-sm'
                             : isDark
                               ? 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/70'
                               : 'text-slate-600 hover:text-[#FF6B00] hover:bg-orange-50/70'
@@ -888,31 +892,19 @@ export default function MerchantLayout({
           <header className={`sticky top-0 z-30 px-6 py-3 border-b flex items-center justify-between transition-colors backdrop-blur-md ${
             isDark 
               ? 'bg-slate-900/80 border-slate-800 text-white' 
-              : 'bg-white/80 border-slate-200/80 text-slate-800 shadow-2xs'
+              : 'bg-white/80 border-slate-200/80 text-slate-800 shadow-sm'
           }`}>
-            {/* Breadcrumb / Title Info */}
-            <div className="flex items-center gap-3">
-              <button
-                onClick={toggleSidebarCollapse}
-                className="hidden md:flex p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0"
-                title={isSidebarCollapsed ? "Sol Menüyü Genişlet" : "Sol Menüyü Daralt"}
-              >
-                {isSidebarCollapsed ? <PanelLeftOpen className="w-4 h-4 text-[#FF6B00]" /> : <PanelLeftClose className="w-4 h-4" />}
-              </button>
+            {/* Page Title Info */}
+            <div className="flex items-center gap-3 min-w-0">
               {HeaderIcon && (
                 <div className="w-9 h-9 rounded-xl bg-orange-500/10 text-[#FF6B00] flex items-center justify-center font-bold shrink-0 border border-orange-500/20">
                   <HeaderIcon className="w-4 h-4" />
                 </div>
               )}
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider hidden sm:inline">
-                    Hoppa Portal /
-                  </span>
-                  <h1 className="text-base sm:text-lg font-black tracking-tight text-slate-900 dark:text-white">
-                    {title}
-                  </h1>
-                </div>
+              <div className="min-w-0">
+                <h1 className="text-base sm:text-lg font-black tracking-tight text-slate-900 dark:text-white truncate">
+                  {title}
+                </h1>
                 {subtitle && (
                   <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate max-w-xl hidden md:block">
                     {subtitle}
